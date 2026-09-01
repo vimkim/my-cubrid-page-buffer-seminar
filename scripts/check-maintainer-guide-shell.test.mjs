@@ -105,7 +105,10 @@ const pageContracts = {
 };
 
 const learningOrder = expectedPages.learning.map((page) => `learning/${page}`);
-const completedPages = new Set(["learning/01-contract-and-objects.md"]);
+const completedPages = new Set([
+  "learning/01-contract-and-objects.md",
+  "learning/02-fix-hold-release.md",
+]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
     "../reference/source-map.md",

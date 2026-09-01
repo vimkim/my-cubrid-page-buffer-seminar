@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="620" viewBox="0 0 1080 620" role="img" aria-labelledby="title desc">
+  <title id="title">Global fix count and per-thread holder debt</title>
+  <desc id="desc">In a normal-fix example, a BCB global fix count of three excludes replacement and equals two debts in thread A's holder plus one debt in thread B's holder. One unfix consumes one entry from both the caller's holder count and the global count. Equal page pointer addresses do not merge debts.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4c6370"/>
+    </marker>
+    <style>
+      .panel{fill:#fff;stroke:#c5d2d8;stroke-width:2}.global{fill:#e9f4f3;stroke:#16847d;stroke-width:3}.thread{fill:#fff6e8;stroke:#b86b22;stroke-width:2;stroke-dasharray:8 4}.rule{fill:#eef0ff;stroke:#5968bd;stroke-width:2}.note{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.h{font:700 18px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#4c6370;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="540" y="38" text-anchor="middle" class="t">One BCB, two ownership ledgers</text>
+  <text x="540" y="66" text-anchor="middle" class="s">Normal-fix example: global total = per-thread debts, but the ledgers answer different questions.</text>
+
+  <rect x="45" y="98" rx="18" width="430" height="214" class="global"/>
+  <text x="260" y="137" text-anchor="middle" class="h">GLOBAL LEDGER — solid border</text>
+  <text x="260" y="187" text-anchor="middle" class="t">BCB global fcnt = 3</text>
+  <text x="260" y="225" text-anchor="middle" class="h">Replacement exclusion</text>
+  <text x="260" y="253" text-anchor="middle" class="s">Counts granted fixes across all threads</text>
+  <text x="260" y="280" text-anchor="middle" class="s">Positive means ordinary reuse is forbidden</text>
+
+  <rect x="550" y="98" rx="18" width="485" height="214" class="panel"/>
+  <text x="792" y="137" text-anchor="middle" class="h">PER-THREAD LEDGERS — dashed borders</text>
+  <rect x="580" y="161" rx="14" width="425" height="58" class="thread"/>
+  <text x="792" y="197" text-anchor="middle" class="h">Thread A holder fix_count = 2</text>
+  <rect x="580" y="232" rx="14" width="425" height="58" class="thread"/>
+  <text x="792" y="268" text-anchor="middle" class="h">Thread B holder fix_count = 1</text>
+  <text x="792" y="335" text-anchor="middle" class="h">Current-thread debt</text>
+
+  <path d="M475 205 H545" class="line"/>
+  <text x="510" y="193" text-anchor="middle" class="tiny">3 = 2 + 1</text>
+
+  <rect x="91" y="366" rx="16" width="898" height="96" class="rule"/>
+  <text x="540" y="401" text-anchor="middle" class="t">One unfix consumes one</text>
+  <text x="540" y="431" text-anchor="middle" class="s">Calling thread holder fix_count − 1  AND  BCB global fcnt − 1</text>
+  <text x="540" y="454" text-anchor="middle" class="tiny">A final thread debt removes its holder; global zero may make the latch idle.</text>
+
+  <path d="M540 462 V501" class="line"/>
+  <rect x="195" y="502" rx="16" width="690" height="82" class="note"/>
+  <text x="540" y="536" text-anchor="middle" class="h">Pointer equality does not merge debts</text>
+  <text x="540" y="564" text-anchor="middle" class="s">Nested fixes may return the same address; count successful calls, not unique pointers.</text>
+</svg>
