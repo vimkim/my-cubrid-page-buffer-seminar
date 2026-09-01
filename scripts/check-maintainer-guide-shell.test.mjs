@@ -115,6 +115,7 @@ const completedPages = new Set([
   "reference/invariant-index.md",
   "reference/source-map.md",
   "playbooks/change-safely.md",
+  "playbooks/debug-by-symptom.md",
   "playbooks/verify-a-change.md",
 ]);
 const learningRelatedCrossLinks = {
