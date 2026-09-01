@@ -119,6 +119,7 @@ const completedPages = new Set([
   "playbooks/verify-a-change.md",
   "advanced/acquisition-concurrency.md",
   "advanced/replacement-progress.md",
+  "advanced/recovery-and-lifecycle.md",
 ]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
