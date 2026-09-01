@@ -118,6 +118,7 @@ const completedPages = new Set([
   "playbooks/debug-by-symptom.md",
   "playbooks/verify-a-change.md",
   "advanced/acquisition-concurrency.md",
+  "advanced/replacement-progress.md",
 ]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
