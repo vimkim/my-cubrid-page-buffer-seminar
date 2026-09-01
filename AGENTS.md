@@ -32,6 +32,9 @@ This directory owns the English internal documentation set for senior engineers 
 
 ## Required checks
 
+- Run `node scripts/check-maintainer-guide.mjs` from this directory for the aggregate source checks.
+- With this directory mounted at the Copyparty URL root, run `node scripts/check-maintainer-guide.mjs --copyparty-url <base-url>` to add HTTP and available live-DOM checks. An `UNAVAILABLE` gate is a disclosure, not a pass.
+- When changing validation code, run `node --test scripts/check-maintainer-guide.test.mjs`.
 - Use one aggregate validation entry point that discovers every guide page: the Guide entry plus `learning/`, `playbooks/`, `advanced/`, and `reference/` Markdown.
 - Run the Copyparty Markdown source checker on every discovered page and resolve every relative link, including links to external Evidence references.
 - Require every displayed SVG to resolve inside `assets/`, exist, contain a `viewBox`, and contain no active content; reject unused SVGs.
