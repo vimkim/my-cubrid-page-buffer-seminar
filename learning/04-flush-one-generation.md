@@ -116,4 +116,5 @@ On an ordinary post-submission failure, the code restores G’s dirty bit if it 
 
 - [Verify at the Risk Boundary](../playbooks/verify-a-change.md)
 - [Evidence and uncertainty registry](../unresolved-or-version-sensitive-findings.md)
+- [Maintainer Invariant Index](../reference/invariant-index.md)
 - [Recovery, Allocation State, and Module Lifecycle](../advanced/recovery-and-lifecycle.md)

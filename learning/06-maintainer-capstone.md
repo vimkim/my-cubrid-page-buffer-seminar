@@ -80,5 +80,6 @@ If this becomes a real change-impact plan, another maintainer must review the ow
 
 - [Verify at the Risk Boundary](../playbooks/verify-a-change.md)
 - [Source inventory](../source-inventory.md)
+- [Maintainer Invariant Index](../reference/invariant-index.md)
 - [Evidence and uncertainty registry](../unresolved-or-version-sensitive-findings.md)
 - [Failure Unwind and Open Proof Obligations](../advanced/failure-and-proof-obligations.md)

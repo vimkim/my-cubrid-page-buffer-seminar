@@ -112,6 +112,8 @@ const completedPages = new Set([
   "learning/04-flush-one-generation.md",
   "learning/05-replace-one-frame.md",
   "learning/06-maintainer-capstone.md",
+  "reference/invariant-index.md",
+  "reference/source-map.md",
 ]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
@@ -337,7 +339,9 @@ test("learning navigation and advanced prerequisites preserve the approved depen
 test("playbooks and compact references route outward without duplicating explanations", async () => {
   for (const [relativePath, targets] of Object.entries(operationalCrossLinks)) {
     const markdown = await readFile(path.join(guideRoot, relativePath), "utf8");
-    assert.match(markdown, /## Planned scope/, relativePath);
+    if (!completedPages.has(relativePath)) {
+      assert.match(markdown, /## Planned scope/, relativePath);
+    }
     assert.match(markdown, /## Related routes/, relativePath);
     for (const target of targets) {
       assert.ok(markdown.includes(`](${target})`), `${relativePath} -> ${target}`);
