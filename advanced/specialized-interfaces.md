@@ -4,7 +4,7 @@
 **Prerequisites:** [Contract and Objects](../learning/01-contract-and-objects.md) and [Fix, Hold, and Release](../learning/02-fix-hold-release.md)
 **Capability gained:** Route narrow owner protocols and approximate diagnostics without treating them as general caller conveniences or correctness authority.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Complete pinned API inventory](../../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and exact ranges below.
+**Evidence used:** Interface contract, Verified mechanism, and Implementation policy from the [complete pinned API inventory](../../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and exact ranges below.
 
 This page groups hazardous/narrow interfaces by owner. It is not an API catalog; use the [complete API inventory](../../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md) for signatures and exhaustive coverage.
 

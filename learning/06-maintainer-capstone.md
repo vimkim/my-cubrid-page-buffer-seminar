@@ -4,7 +4,7 @@
 **Prerequisites:** [Contract and Objects](./01-contract-and-objects.md), [Fix, Hold, and Release](./02-fix-hold-release.md), [Caller Completes Correctness](./03-caller-completes-correctness.md), [Flush One Generation](./04-flush-one-generation.md), and [Replace One Frame](./05-replace-one-frame.md)
 **Capability gained:** Defend an evidence-bounded change-impact plan without promoting a source concern into an unverified production defect.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Pinned-source inventory](../source-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and exact source ranges below.
+**Evidence used:** Verified mechanism and Inference from the [pinned-source inventory](../source-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and exact source ranges below.
 
 Complete either packet for core completion. Complete both packets for advanced preparation. These are review exercises, not instructions to implement an assumed fix.
 
@@ -70,14 +70,14 @@ Source supports a control-flow gap between generation setup and ordinary rollbac
 
 ## Review rubric: argument is not observation
 
-| Criterion | Source-grounded argument | Runtime proof |
+| Criterion | Source-grounded argument | Runtime observation |
 |---|---|---|
 | Reachability | Shows a syntactic/control-flow path and its preconditions. | Forces those preconditions on the target revision. |
 | Surviving state | Predicts state from visible transitions and missing rollback. | Reads/asserts the state after the injected failure or schedule. |
 | Impact | Names plausible violated invariants and affected callers. | Demonstrates the caller-visible or progress consequence. |
 | Scope | Pins symbols and ranges to one revision. | Records build/configuration, workload, injection, and receipt. |
 
-A strong source-grounded argument earns investigation, not a “verified defect” label. Runtime proof must cross the same risk boundary the claim concerns.
+A strong source-grounded argument earns investigation, not a “verified defect” label. A runtime observation counts only when its controlled schedule or injection crosses the same risk boundary the claim concerns.
 
 ## Applied-path handoff and readiness gate
 

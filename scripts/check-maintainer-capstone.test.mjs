@@ -21,7 +21,7 @@ test("both candidate packets route status and name missing proof", async () => {
   assert.doesNotMatch(m, /\*\*Candidate\*\*|Candidate status/i);
   assert.match(m, /holder extension allocation failure/i);
   assert.match(m, /TDE.*DWB-slot.*fault injection/is);
-  assert.match(m, /source-grounded argument.*runtime proof/is);
+  assert.match(m, /source-grounded argument.*runtime observation/is);
 });
 
 test("completion, applied handoff, and peer review gates are explicit", async () => {

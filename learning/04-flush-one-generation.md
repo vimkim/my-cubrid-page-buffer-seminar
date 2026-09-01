@@ -4,7 +4,7 @@
 **Prerequisites:** [Caller Completes Correctness](./03-caller-completes-correctness.md)
 **Capability gained:** Explain and review one dirty generation from logged mutation through stable copy, WAL gating, write submission, concurrent re-dirty, completion, and ordinary rollback.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Pinned-source inventory](../source-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and the exact source ranges cited below.
+**Evidence used:** Interface contract, Verified mechanism, Implementation policy, Inference, and Runtime observation from the [pinned-source inventory](../source-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and exact source ranges below.
 
 ## Four moments that must not collapse into “written”
 
@@ -77,9 +77,9 @@ Use the wording: “the page-buffer flush path completed at its configured DWB/d
 
 ## Runtime evidence card: dirty generation and backup boundary
 
-**Setup:** Historical experiment 4 ran a 10,000-row workload with generation tracing and a synchronous backup boundary.
+**Setup:** **Revision/build/configuration/workload:** CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`, sealed CUBRID 11.5.0.2397 64-bit debug build, dedicated database `ca_pgbuf_f799e05` under captured runtime-environment hash `0c23b2fc…`, and table `ca_pb_e4` with 10,000 generation-0 rows and fixed-length payloads. The card does not preserve a separate page-buffer parameter snapshot, so configuration-dependent generalization is unsupported.
 
-**Observation:** Generation min/max was 1/1, row count and length checks passed, 58,430 dirty calls were recorded, and the accepted backup completed.
+**Observation:** Run `rebind-exp4` produced generation min/max 1/1, row count 10,000, zero length violations, and 58,430 dirty calls; `rebind-exp4-backup` completed the accepted synchronous backup.
 
 **Supported conclusion:** The run exercised expected mutation/commit state and a synchronous operational boundary.
 
@@ -105,7 +105,7 @@ Mark each statement as supported by source, runtime evidence, inference, or stil
 
 Before flush, page LSA is 140 and the lower bound is 100. Starting G sets `FLUSHING`, clears the old `DIRTY`, snapshots LSA 140/lower bound 100, then clears the resident lower bound. Log 170 creates G+1: resident page LSA 170, `DIRTY` set, and a new lower bound for G+1, while `FLUSHING` still represents G. Successful G completion clears only `FLUSHING`, so G+1 stays dirty.
 
-On an ordinary post-submission failure, the code restores G’s dirty bit if it was dirty and restores its captured lower bound before waking waiters. Source establishes this control flow. The historical runtime card does not prove this exact interleaving; a controlled schedule and failure injection are needed for runtime proof. Evaluate the earlier TDE/DWB-slot returns through `VS-12` without copying its registry status here.
+On an ordinary post-submission failure, the code restores G’s dirty bit if it was dirty and restores its captured lower bound before waking waiters. Source establishes this control flow. The recorded runtime observation does not establish this exact interleaving; a controlled schedule and failure injection are needed for runtime evidence at that boundary. Evaluate the earlier TDE/DWB-slot returns through `VS-12` without copying its registry status here.
 
 ## Learning navigation
 

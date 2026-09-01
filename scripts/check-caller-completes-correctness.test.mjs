@@ -29,14 +29,20 @@ test("the heap insert trace covers the entire caller-completed mutation", async 
     assert.ok(markdown.includes(stage), stage);
   }
   for (const anchor of [
+    "src/storage/heap_file.c:20469-20486",
     "src/storage/heap_file.c:20493-20664",
     "src/storage/heap_file.c:20821-20939",
     "src/storage/heap_file.c:23120-23324",
+    "src/storage/heap_file.c:23217-23220",
     "src/transaction/log_manager.c:2194-2226",
     "src/storage/page_buffer.c:4983-5055",
   ]) {
     assert.ok(markdown.includes(`\`${anchor}\``), anchor);
   }
+  assert.match(markdown, /heap_ovf_insert\(\).*class lock fails.*direct return/is);
+  assert.match(markdown, /class lock fails.*direct return/is);
+  assert.match(markdown, /transaction.*recovery.*obligation/is);
+  assert.match(markdown, /no.*home-page watcher.*acquired/is);
 });
 
 test("the contract ledger separates page-buffer guarantees from caller obligations", async () => {
@@ -86,6 +92,7 @@ test("the exercise audits every successful and failing ownership exit", async ()
   assert.match(markdown, /every `return` and `goto error`/i);
   assert.match(markdown, /watcher transfer/i);
   assert.match(markdown, /fix success stops being sufficient evidence/i);
+  assert.match(markdown, /overflow.*already created.*higher-layer/is);
   for (const target of [
     "./02-fix-hold-release.md",
     "./04-flush-one-generation.md",

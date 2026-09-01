@@ -4,7 +4,7 @@
 **Prerequisites:** All Core pages: [Contract and Objects](../learning/01-contract-and-objects.md), [Fix, Hold, and Release](../learning/02-fix-hold-release.md), [Caller Completes Correctness](../learning/03-caller-completes-correctness.md), [Flush One Generation](../learning/04-flush-one-generation.md), [Replace One Frame](../learning/05-replace-one-frame.md), and [Maintainer Capstone](../learning/06-maintainer-capstone.md); plus the relevant mechanism page: [acquisition](./acquisition-concurrency.md), [replacement](./replacement-progress.md), [recovery and lifecycle](./recovery-and-lifecycle.md), or [specialized interfaces](./specialized-interfaces.md)
 **Capability gained:** Turn a source-visible exceptional path into a bounded proof obligation without manufacturing a production defect claim.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Source inventory](../source-inventory.md), canonical mechanism pages, and the [uncertainty registry](../unresolved-or-version-sensitive-findings.md).
+**Evidence used:** Verified mechanism, Inference, and Historical evidence from the [source inventory](../source-inventory.md), canonical mechanism pages, and the [uncertainty registry](../unresolved-or-version-sensitive-findings.md).
 
 The uncertainty registry is the sole mutable status source. This page routes IDs and designs proofs; it never updates or copies their current status prose.
 

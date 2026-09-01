@@ -4,7 +4,7 @@
 **Prerequisites:** [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) and [Flush One Generation](../learning/04-flush-one-generation.md)
 **Capability gained:** Connect checkpoint, redo, allocation state, and module lifetime to caller ownership, generation, identity, and idempotence invariants.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Pinned-source inventory](../source-inventory.md), exact source ranges below, and the [same-revision caller survey](../../../pgbuf-analysis/f799e05_claude/analysis/research/caller-use-cases.md).
+**Evidence used:** Verified mechanism, Implementation policy, and Runtime observation from the [pinned-source inventory](../source-inventory.md), exact source ranges below, and the [same-revision caller survey](../../../pgbuf-analysis/f799e05_claude/analysis/research/caller-use-cases.md).
 
 ## Checkpoint is selective coordination
 
@@ -39,13 +39,11 @@ Temporary modes and temporary LSAs likewise belong to file/disk/log owner protoc
 
 Representative allocation ordering: `src/storage/file_manager.c:5420-5590`. Recovery-specific page callbacks: `src/storage/page_buffer.c:14896-14921,15133-15303`.
 
-## Invalidation, victimization, and logical deallocation
+## Invalidation and deallocation ownership
 
-| Operation | Owner and purpose |
-|---|---|
-| **Victimization** | Page-buffer policy reuses an eligible resident frame while the logical page remains allocated. |
-| **Invalidation** | Page-buffer coherence removes/rejects a resident mapping, often before raw volume operations or after lifecycle changes. |
-| **Logical deallocation** | File/disk/recovery ownership changes whether the page identity is allocated; page-buffer cleanup is a consequence, not the allocation decision. |
+Use the canonical [victimization, invalidation, unfix, flush, and logical-deallocation distinctions](../learning/05-replace-one-frame.md#similar-verbs-different-operations) before tracing this lifecycle route. This page extends only the owner boundary: file/disk/recovery code decides logical allocation state, while page-buffer invalidation is the required coherence consequence for a resident mapping.
+
+For Logical deallocation, review the file/disk/recovery decision first and then the page-buffer coherence consequence; do not reconstruct those operation definitions here.
 
 Raw/bypass writes require coherence: cached pages must not silently survive an external reset. File/disk protocols flush/invalidate as applicable before raw overwrite. See `src/storage/disk_manager.c:721-811` and the [core identity contract](../learning/01-contract-and-objects.md).
 
@@ -69,7 +67,7 @@ The ordering rule is structural: no daemon may touch a pool after pool finalizat
 
 ## Crash and persistence evidence boundary
 
-Existing checkpoint/backup-like observations are bounded evidence. This evidence does not prove crash redo, per-page WAL ordering, DWB recovery, torn-page handling, or home-page persistence. Source tracing establishes intended gates and cleanup; runtime proof requires controlled crash points and post-restart state validation at the claimed boundary. Use [Verify at the Risk Boundary](../playbooks/verify-a-change.md).
+Existing checkpoint/backup-like observations are bounded evidence. This evidence does not prove crash redo, per-page WAL ordering, DWB recovery, torn-page handling, or home-page persistence. Source tracing establishes intended gates and cleanup; a Runtime observation requires controlled crash points and post-restart state validation at the claimed boundary. Use [Verify at the Risk Boundary](../playbooks/verify-a-change.md).
 
 ## Related routes
 

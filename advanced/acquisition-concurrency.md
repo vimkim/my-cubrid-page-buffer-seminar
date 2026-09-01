@@ -4,7 +4,7 @@
 **Prerequisites:** [Fix, Hold, and Release](../learning/02-fix-hold-release.md)
 **Capability gained:** Trace optimized hits, load serialization, latch/promotion waits, and ordered multi-page acquisition without weakening the normal ownership contract.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Pinned-source inventory](../source-inventory.md), exact ranges below, and representative heap/B-tree callers.
+**Evidence used:** Interface contract, Verified mechanism, and Inference from the [pinned-source inventory](../source-inventory.md), exact ranges below, and representative heap/B-tree callers.
 
 The caller contract remains the core one: success creates fix debt and a borrowed lifetime; failure does not. The mechanisms below are alternative internal ways to establish or reorganize that same contract.
 

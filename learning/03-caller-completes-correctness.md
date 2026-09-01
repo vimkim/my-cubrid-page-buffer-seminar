@@ -4,7 +4,7 @@
 **Prerequisites:** [Fix, Hold, and Release](./02-fix-hold-release.md)
 **Capability gained:** Trace a mutating caller past successful acquisition, identify which layer owns each correctness condition, and audit cleanup on every exit.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Pinned-source inventory](../source-inventory.md), plus the exact source ranges cited below.
+**Evidence used:** Interface contract, Verified mechanism, and Implementation policy from the [pinned-source inventory](../source-inventory.md) and the exact source ranges cited below.
 
 ## The maintainer problem
 
@@ -37,7 +37,9 @@ The representative path is `heap_insert_logical()` at `src/storage/heap_file.c:2
 
 The caller validates its operation context, adjusts the record header, handles a possible multipage record, and ensures the class has `IX_LOCK` (or the bulk-operation equivalent). This is logical concurrency policy, not a service performed by `pgbuf_fix()`.
 
-Source: `src/storage/heap_file.c:23120-23221`.
+The order matters on one direct error exit. For a large record, `heap_ovf_insert()` succeeds inside `heap_insert_handle_multipage_record()` and replaces `recdes_p` with a forwarding record before `lock_object()` requests the class lock. If that class lock fails, `heap_insert_logical()` takes a direct return. No destination or home-page watcher has been acquired yet, so this exit has no new home-page fix debt; however, overflow storage was already created and no compensating overflow deletion is visible on the local path. Transaction recovery owns that already-created overflow/recovery obligation. This is a source-visible ordering and ownership boundary, not evidence of a surviving leak or production defect.
+
+Source: `src/storage/heap_file.c:20469-20486`, `src/storage/heap_file.c:23120-23221`, and the direct return at `src/storage/heap_file.c:23217-23220`.
 
 ### 2. Acquire and validate the destination
 
@@ -71,7 +73,7 @@ Source: `src/storage/heap_file.c:23257-23260`.
 
 On success, the caller either transfers the home watcher into the scan cache with `pgbuf_replace_watcher()` or releases it with `pgbuf_ordered_unfix()`. It then calls `heap_unfix_watchers()` for the remaining context pages. The common `error:` label calls that cleanup again, allowing later failures to converge on the same ownership audit.
 
-The direct early returns occur before this success release block. Some happen before this function has acquired a destination; the location helper has its own cleanup for a failed selection. Do not infer safety from the spelling of `return` or `goto error`: inspect the helper and the state already accumulated at that exact exit.
+The direct early returns occur before this success release block. Some happen before this function has acquired a destination; the location helper has its own cleanup for a failed selection. But “before destination acquisition” is not equivalent to “no state”: the class-lock return above can follow a successful overflow insertion. Do not infer safety from the spelling of `return` or `goto error`; inspect page-buffer debt, helper-owned state, and higher-layer recovery obligations accumulated at that exact exit.
 
 Source: `src/storage/heap_file.c:23262-23324`.
 
@@ -115,7 +117,7 @@ For every exit, record: acquired state, the function that consumes or transfers 
 
 Fix success stops being sufficient evidence immediately after acquisition: it proves protected access to the requested resident page, not a valid heap destination or a correct mutation. The location helper must establish space, slot, identity, and logical-lock conditions; the physical helper must preserve the slotted-page layout; heap logging must choose recovery meaning and cause the page LSA to advance; dirtying must publish the changed generation; and each watcher must be transferred or released.
 
-The success path transfers or ordered-unfixes the home watcher and cleans the remaining watchers. Physical-insert and later failures converge on `error:` cleanup. Earlier direct returns require local inspection: exits before destination acquisition have no new home-page debt, while a failed location selection relies on the location helper’s cleanup. This is why an exit ledger—not the presence of one common label—is the proof artifact.
+The success path transfers or ordered-unfixes the home watcher and cleans the remaining watchers. Physical-insert and later failures converge on `error:` cleanup. Earlier direct returns require local inspection: a failed location selection relies on the location helper’s cleanup, while class-lock failure has no home-page watcher but can follow overflow storage already created by `heap_ovf_insert()`. That state is a higher-layer transaction/recovery obligation, not page-buffer debt. This is why an exit ledger—not the presence of one common label—is the proof artifact.
 
 ## Learning navigation
 

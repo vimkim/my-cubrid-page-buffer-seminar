@@ -107,3 +107,24 @@ test("the migration audit records content and asset dispositions", async () => {
     assert.match(notes, new RegExp(formerContent.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 });
+
+test("core summaries route advanced replacement and lifecycle detail to one owner", async () => {
+  const [core, replacement, lifecycle] = await Promise.all([
+    readFile(path.join(guideRoot, "learning/05-replace-one-frame.md"), "utf8"),
+    readFile(path.join(guideRoot, "advanced/replacement-progress.md"), "utf8"),
+    readFile(path.join(guideRoot, "advanced/recovery-and-lifecycle.md"), "utf8"),
+  ]);
+
+  assert.match(core, /direct-victim assignment.*revocable/is);
+  assert.ok(core.includes("](../advanced/replacement-progress.md)"));
+  assert.doesNotMatch(core, /src\/storage\/page_buffer\.c:15420-15627/);
+  assert.match(replacement, /## Direct victim assignment and revocation/);
+  assert.match(replacement, /src\/storage\/page_buffer\.c:15420-15627/);
+
+  assert.match(core, /## Similar verbs, different operations/);
+  assert.doesNotMatch(lifecycle, /\| \*\*Victimization\*\* \|/);
+  assert.ok(lifecycle.includes("../learning/05-replace-one-frame.md#"));
+
+  assert.doesNotMatch(core, /Num_data_page_ioreads.*38.*0/is);
+  assert.match(replacement, /no-eviction evidence/i);
+});

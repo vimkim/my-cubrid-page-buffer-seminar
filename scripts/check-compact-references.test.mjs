@@ -12,6 +12,8 @@ test("the source map routes by region, caller, interface, and symptom", async ()
   for (const heading of ["## Broad source regions", "## Representative callers", "## Interface-family routing", "## Symptom-to-source lookup"]) assert.ok(m.includes(heading), heading);
   for (const caller of ["heap_file.c", "btree.c", "file_manager.c", "log_manager.c", "log_page_buffer.c", "log_recovery", "boot_cl.c"]) assert.match(m, new RegExp(caller.replace(".", "\\."), "i"), caller);
   assert.match(m, /bounded trace.*learning/is);
+  assert.match(m, /`src\/transaction\/log_recovery_redo\.hpp:587-668`/);
+  assert.doesNotMatch(m, /log_recovery_redo\.hpp:620-686/);
 });
 
 test("the invariant index is a stable routing table, not a second tutorial", async () => {

@@ -105,25 +105,6 @@ const pageContracts = {
 };
 
 const learningOrder = expectedPages.learning.map((page) => `learning/${page}`);
-const completedPages = new Set([
-  "page-buffer-teaching-material.md",
-  "learning/01-contract-and-objects.md",
-  "learning/02-fix-hold-release.md",
-  "learning/03-caller-completes-correctness.md",
-  "learning/04-flush-one-generation.md",
-  "learning/05-replace-one-frame.md",
-  "learning/06-maintainer-capstone.md",
-  "reference/invariant-index.md",
-  "reference/source-map.md",
-  "playbooks/change-safely.md",
-  "playbooks/debug-by-symptom.md",
-  "playbooks/verify-a-change.md",
-  "advanced/acquisition-concurrency.md",
-  "advanced/replacement-progress.md",
-  "advanced/recovery-and-lifecycle.md",
-  "advanced/specialized-interfaces.md",
-  "advanced/failure-and-proof-obligations.md",
-]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
     "../reference/source-map.md",
@@ -273,7 +254,7 @@ test("the document set exposes exactly the approved page boundaries", async () =
   }
 });
 
-test("every page starts with its reader contract and unfinished pages declare incomplete status", async () => {
+test("every completed page starts with its reader contract", async () => {
   for (const [relativePath, contract] of Object.entries(pageContracts)) {
     const markdown = await readFile(path.join(guideRoot, relativePath), "utf8");
     const escapedTitle = contract.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -291,17 +272,7 @@ test("every page starts with its reader contract and unfinished pages declare in
     );
 
     assert.match(markdown, opening, relativePath);
-    if (completedPages.has(relativePath)) {
-      assert.doesNotMatch(markdown, /> \*\*Shell status:\*\*/, relativePath);
-    } else if (relativePath === "page-buffer-teaching-material.md") {
-      assert.match(
-        markdown,
-        /> \*\*Shell status:\*\* Incomplete\. The document-set destinations remain shells;/,
-        relativePath,
-      );
-    } else {
-      assert.match(markdown, /> \*\*Shell status:\*\* Incomplete\./, relativePath);
-    }
+    assert.doesNotMatch(markdown, /> \*\*Shell status:\*\*/, relativePath);
   }
 });
 
@@ -348,9 +319,6 @@ test("learning navigation and advanced prerequisites preserve the approved depen
 test("playbooks and compact references route outward without duplicating explanations", async () => {
   for (const [relativePath, targets] of Object.entries(operationalCrossLinks)) {
     const markdown = await readFile(path.join(guideRoot, relativePath), "utf8");
-    if (!completedPages.has(relativePath)) {
-      assert.match(markdown, /## Planned scope/, relativePath);
-    }
     assert.match(markdown, /## Related routes/, relativePath);
     for (const target of targets) {
       assert.ok(markdown.includes(`](${target})`), `${relativePath} -> ${target}`);
@@ -361,9 +329,6 @@ test("playbooks and compact references route outward without duplicating explana
 test("advanced shells expose their approved prerequisites and return routes", async () => {
   for (const [relativePath, targets] of Object.entries(advancedCrossLinks)) {
     const markdown = await readFile(path.join(guideRoot, relativePath), "utf8");
-    if (!completedPages.has(relativePath)) {
-      assert.match(markdown, /## Planned scope/, relativePath);
-    }
     assert.match(markdown, /## Related routes/, relativePath);
     for (const target of targets) {
       assert.ok(markdown.includes(`](${target})`), `${relativePath} -> ${target}`);

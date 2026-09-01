@@ -4,7 +4,7 @@
 **Prerequisites:** [Flush One Generation](../learning/04-flush-one-generation.md) and [Replace One Frame](../learning/05-replace-one-frame.md)
 **Capability gained:** Analyze pinned replacement and background-progress policy without weakening the core victim-eligibility contract.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Pinned-source inventory](../source-inventory.md), exact ranges below, and the [replacement deep reference](../../../pgbuf-analysis/research/cubrid-lru-victim.md).
+**Evidence used:** Verified mechanism, Implementation policy, and Runtime observation from the [pinned-source inventory](../source-inventory.md), exact ranges below, and the [replacement deep reference](../../../pgbuf-analysis/research/cubrid-lru-victim.md).
 
 Eligibility comes before every mechanism on this page. A policy may decide where to look and how to make progress; only the [core eligibility gate](../learning/05-replace-one-frame.md) decides whether a frame is safe to reuse.
 

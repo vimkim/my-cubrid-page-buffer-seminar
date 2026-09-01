@@ -4,7 +4,7 @@
 **Prerequisites:** [Contract and Objects](../learning/01-contract-and-objects.md) and [Fix, Hold, and Release](../learning/02-fix-hold-release.md) for meaningful use
 **Capability gained:** Turn a proposed change into a caller-visible contract, ownership ledger, negative-path audit, caller review, and risk-matched evidence plan.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** Canonical learning pages, [source map](../reference/source-map.md), and [invariant index](../reference/invariant-index.md).
+**Evidence used:** Interface contract, Verified mechanism, Implementation policy, and Inference from canonical learning pages, the [source map](../reference/source-map.md), and [invariant index](../reference/invariant-index.md).
 
 ## 1. State the behavior before the diff
 

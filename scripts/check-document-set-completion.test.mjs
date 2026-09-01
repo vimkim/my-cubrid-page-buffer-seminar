@@ -8,6 +8,24 @@ import test from "node:test";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const guideRoot = path.resolve(scriptDir, "..");
+const evidenceLabels = [
+  "Interface contract",
+  "Verified mechanism",
+  "Implementation policy",
+  "Inference",
+  "Runtime observation",
+  "Historical evidence",
+];
+
+async function discoveredGuidePages() {
+  const pages = ["page-buffer-teaching-material.md"];
+  for (const directory of ["learning", "playbooks", "advanced", "reference"]) {
+    for (const entry of await readdir(path.join(guideRoot, directory))) {
+      if (entry.endsWith(".md")) pages.push(`${directory}/${entry}`);
+    }
+  }
+  return pages.sort();
+}
 
 test("all six Core pages contain one Predict-Locate-Explain check and a model answer", async () => {
   const files = (await readdir(path.join(guideRoot, "learning")))
@@ -38,6 +56,10 @@ test("runtime and historical evidence retain their boundaries", async () => {
   ]) {
     assert.ok(flush.includes(`**${field}:**`), field);
   }
+  assert.match(flush, /\*\*Setup:\*\* \*\*Revision\/build\/configuration\/workload:\*\*/i);
+  assert.match(flush, /f799e05d77d5300c6ea5753b4a6cc7caee6d8912/);
+  assert.match(flush, /debug build/i);
+  assert.match(flush, /ca_pgbuf_f799e05/);
 
   const proof = await readFile(
     path.join(guideRoot, "advanced/failure-and-proof-obligations.md"),
@@ -45,6 +67,19 @@ test("runtime and historical evidence retain their boundaries", async () => {
   );
   assert.match(proof, /Historical findings are revision-bound/i);
   assert.match(proof, /does not create a current ticket/i);
+});
+
+test("every page declares canonical evidence labels and avoids deprecated vocabulary", async () => {
+  for (const relativePath of await discoveredGuidePages()) {
+    const markdown = await readFile(path.join(guideRoot, relativePath), "utf8");
+    const evidenceLine = markdown.match(/^\*\*Evidence used:\*\* (.+)$/m)?.[1] ?? "";
+    assert.ok(
+      evidenceLabels.some((label) => evidenceLine.includes(label)),
+      `${relativePath}: evidence label`,
+    );
+    assert.doesNotMatch(markdown, /\bruntime proof\b/i, relativePath);
+    assert.doesNotMatch(markdown, /\*\*Interface invariant:\*\*/i, relativePath);
+  }
 });
 
 test("all six canonical visuals expose text-labelled accessible relationships", async () => {

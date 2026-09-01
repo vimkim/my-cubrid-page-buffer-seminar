@@ -70,7 +70,7 @@ Every SVG displayed anywhere in the document set is owned by [`assets/`](./asset
 - Keep exhaustive API inventories, experiment logs, and question banks in linked Evidence references.
 - Use `Module`, `Interface`, `Implementation`, and `seam` consistently with `CONTEXT.md`.
 - Use one Predict–Locate–Explain Understanding check and an adjacent evidence-aware model answer on each Learning page.
-- Remove presentation timing, speaker notes, slide language, audience-performance prompts, and calendar framing.
+- Remove presentation timing, speaker notes, slide language, audience-performance prompts, and day-by-day calendar framing. Retain the confirmed guide-entry duration expectations.
 
 ## Updating to another CUBRID revision
 

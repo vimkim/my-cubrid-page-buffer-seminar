@@ -4,7 +4,7 @@
 **Prerequisites:** [Target-reader baseline](./CONTEXT.md#language)
 **Capability gained:** Select the learning or operational route that matches a maintenance task and identify where its evidence status is owned.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Authoring contract](./maintainer-guide-notes.md), [source inventory](./source-inventory.md), and [evidence and uncertainty registry](./unresolved-or-version-sensitive-findings.md)
+**Evidence used:** The six canonical labels—Interface contract, Verified mechanism, Implementation policy, Inference, Runtime observation, and Historical evidence—as defined by the [authoring contract](./maintainer-guide-notes.md), [source inventory](./source-inventory.md), and [evidence and uncertainty registry](./unresolved-or-version-sensitive-findings.md)
 
 This guide is for a senior C/C++ systems engineer who understands basic database storage, buffer pools, and WAL, but does not yet know CUBRID's source structure or page-buffer protocols. It is a route selector: use the learning path to build the model, or enter through a playbook when a maintenance task already defines your question.
 

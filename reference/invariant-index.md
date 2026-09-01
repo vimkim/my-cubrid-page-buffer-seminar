@@ -4,7 +4,7 @@
 **Prerequisites:** [Target-reader baseline](../page-buffer-teaching-material.md); canonical explanations provide context
 **Capability gained:** Find a stable invariant name, canonical explanation, related playbook, and verification risk without duplicating the proof.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Source inventory](../source-inventory.md) for provenance and the linked canonical explanations.
+**Evidence used:** Interface contract, Verified mechanism, and Implementation policy from the [source inventory](../source-inventory.md) and linked canonical explanations.
 
 This is a routing index. It does not reproduce the full argument or representative source trace behind an invariant.
 

@@ -4,7 +4,7 @@
 **Prerequisites:** [Target-reader baseline](../page-buffer-teaching-material.md); individual routes name any additional prerequisite
 **Capability gained:** Locate the owning source region, representative caller, canonical explanation, and evidence owner for a maintenance question.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** Pinned source and the [source inventory](../source-inventory.md).
+**Evidence used:** Verified mechanism from pinned source and the [source inventory](../source-inventory.md).
 
 This is a routing map. Follow a link for the bounded trace; do not infer a mechanism from a broad range alone.
 
@@ -33,7 +33,7 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | File allocation/materialization | `src/storage/file_manager.c:5420-5590` | Allocation before `NEW_PAGE`, initializer ownership | [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) |
 | Log append/page LSA | `src/transaction/log_manager.c:2194-2226` | Recovery meaning crosses into page LSA update | [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) |
 | WAL forcing | `src/transaction/log_page_buffer.c:4150-4189` | Log durability gate before copied page submission | [Flush One Generation](../learning/04-flush-one-generation.md) |
-| Redo | `src/transaction/log_recovery_redo.hpp:620-686` | Recovery fetch, page-LSA gate, and redo application | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
+| Redo | `src/transaction/log_recovery_redo.hpp:587-668` | Recovery fix/gate, scope cleanup, redo application, and page-LSA update | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
 | Boot/client lifecycle | `src/transaction/boot_cl.c:1102-1449` | Outer restart/shutdown coordination; follow server/log initialization seams | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
 | Page-buffer lifetime seam | `src/transaction/log_tran_table.c:460-610` | Calls `pgbuf_initialize()`/`pgbuf_finalize()` | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
 

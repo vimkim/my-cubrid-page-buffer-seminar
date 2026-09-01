@@ -4,7 +4,7 @@
 **Prerequisites:** None for routing; linked canonical pages supply interpretation
 **Capability gained:** Route a symptom to its state owner, wait class, source region, evidence boundary, and next probe.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Source and Caller Map](../reference/source-map.md), canonical lessons, and the [uncertainty registry](../unresolved-or-version-sensitive-findings.md).
+**Evidence used:** Verified mechanism, Inference, and Runtime observation from the [Source and Caller Map](../reference/source-map.md), canonical lessons, and the [uncertainty registry](../unresolved-or-version-sensitive-findings.md).
 
 ## First classify the wait or owner
 

@@ -4,7 +4,7 @@
 **Prerequisites:** [Fix, Hold, and Release](./02-fix-hold-release.md) and [Flush One Generation](./04-flush-one-generation.md)
 **Capability gained:** Prove whether one resident frame is safe to reuse before evaluating replaceable selection and progress policy.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Pinned-source inventory](../source-inventory.md) and exact source ranges cited below.
+**Evidence used:** Verified mechanism, Implementation policy, and Runtime observation from the [pinned-source inventory](../source-inventory.md) and exact source ranges cited below.
 
 ## The maintainer question
 
@@ -30,7 +30,7 @@ The pinned ordinary LRU path scans the victim zone, rejects avoid-victim flags a
 
 Imagine a scanner observes `fcnt == 0`, but the frame is `DIRTY`; reuse would discard unpropagated bytes. Or it observes zero before a waiter/fixer commits ownership, then acts after the state changes. Or the frame is `FLUSHING`, so the copied image still refers to its identity. The number zero is one predicate sampled at one time—not a reuse proof.
 
-**Interface invariant:** no caller may retain a successful fix when a frame is rebound. **Implementation policy:** the protected final check is the seam that turns fallible candidate observations into a safe reuse decision.
+**Interface contract:** no caller may retain a successful fix when a frame is rebound. **Implementation policy:** the protected final check is the seam that turns fallible candidate observations into a safe reuse decision.
 
 ## Selection and progress are policy
 
@@ -38,13 +38,9 @@ Once hard gates pass, the analyzed revision uses policy machinery: LRU placement
 
 Keep formulas and daemon coordination in [Replacement Policy and Background Progress](../advanced/replacement-progress.md). In core review, ask: “Could this policy choice change while every hard predicate and final recheck remains intact?”
 
-### Direct assignment is a revocable reservation
+### Advanced policy boundary
 
-Direct-victim assignment is revocable.
-
-Direct-victim assignment is not irreversible ownership of the frame. The pinned flags explicitly allow the page to become fixed again; that converts the reservation to an invalid-direct-victim state. When the waiting allocator consumes it, `pgbuf_get_direct_victim()` sees that invalidation, clears it, returns `NULL`, and must request another victim.
-
-Source: flag contract at `src/storage/page_buffer.c:228-235`; assignment at `src/storage/page_buffer.c:15420-15485`; revocation/recheck at `src/storage/page_buffer.c:15591-15627`.
+Direct-victim assignment is revocable: if the candidate is fixed again before consumption, the allocator must request another candidate. That is enough for the Core policy classification; [Replacement Policy and Background Progress](../advanced/replacement-progress.md) owns the flag transitions, source trace, and progress argument.
 
 ## Similar verbs, different operations
 
@@ -60,7 +56,7 @@ Avoid-deallocation bookkeeping for vacuum is not, by itself, the ordinary victim
 
 ## Evidence boundary: the existing runs did not evict
 
-The historical cold/warm experiment observed identical checksums and `Num_data_page_ioreads` dropping from 38 to 0 on an accepted warm reuse run. That supports a cold-load/resident-reuse interpretation. It did not force eviction, identify a physical victim, or exercise direct-victim revocation, so it is not victim proof. See the [runtime evidence inventory](../source-inventory.md).
+Existing runtime observations did not force eviction or identify a physical victim, so they are not victim evidence. The [advanced replacement page](../advanced/replacement-progress.md#runtime-evidence-no-eviction-was-forced) owns the bounded interpretation; the [source inventory](../source-inventory.md) owns the receipts.
 
 ## Understanding check: predicate or policy
 

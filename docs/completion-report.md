@@ -22,7 +22,7 @@ Run from `code-analysis/page-buffer-presentation/` unless stated otherwise.
 
 | Command | Result |
 |---|---|
-| `node --test scripts/*.test.mjs` | PASS — 87/87 focused, aggregate-behavior, reader-contract, migration, and completion tests passed |
+| `node --test scripts/*.test.mjs` | PASS — 89/89 focused, aggregate-behavior, reader-contract, migration, and completion tests passed |
 | `node scripts/check-maintainer-guide.mjs` | PASS — Markdown source 17 pages; relative links; 6 displayed SVGs, 0 orphaned; English prose |
 | `node scripts/check-maintainer-guide-assets.mjs page-buffer-teaching-material.md` | PASS — compatibility entry delegated to the complete aggregate document-set validator |
 | `python /home/vimkim/.agents/skills/markdown-write/scripts/check_copyparty_markdown.py page-buffer-teaching-material.md` | PASS — stable entry source is Copyparty-compatible |

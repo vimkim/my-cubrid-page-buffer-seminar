@@ -4,7 +4,7 @@
 **Prerequisites:** A stated interface behavior and risk; begin with [Change the Module Safely](./change-safely.md)
 **Capability gained:** Choose the weakest sufficient evidence that exercises the actual change risk and disclose what remains untested.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Source inventory](../source-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and the risk statement produced by the change playbook.
+**Evidence used:** Verified mechanism, Inference, Runtime observation, and Historical evidence from the [source inventory](../source-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and the risk statement produced by the change playbook.
 
 ## Risk-to-test matrix
 
