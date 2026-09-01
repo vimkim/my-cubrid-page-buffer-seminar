@@ -120,6 +120,7 @@ const completedPages = new Set([
   "advanced/acquisition-concurrency.md",
   "advanced/replacement-progress.md",
   "advanced/recovery-and-lifecycle.md",
+  "advanced/specialized-interfaces.md",
 ]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
