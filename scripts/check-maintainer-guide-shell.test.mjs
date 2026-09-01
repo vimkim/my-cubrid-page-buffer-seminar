@@ -117,6 +117,7 @@ const completedPages = new Set([
   "playbooks/change-safely.md",
   "playbooks/debug-by-symptom.md",
   "playbooks/verify-a-change.md",
+  "advanced/acquisition-concurrency.md",
 ]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
@@ -355,7 +356,9 @@ test("playbooks and compact references route outward without duplicating explana
 test("advanced shells expose their approved prerequisites and return routes", async () => {
   for (const [relativePath, targets] of Object.entries(advancedCrossLinks)) {
     const markdown = await readFile(path.join(guideRoot, relativePath), "utf8");
-    assert.match(markdown, /## Planned scope/, relativePath);
+    if (!completedPages.has(relativePath)) {
+      assert.match(markdown, /## Planned scope/, relativePath);
+    }
     assert.match(markdown, /## Related routes/, relativePath);
     for (const target of targets) {
       assert.ok(markdown.includes(`](${target})`), `${relativePath} -> ${target}`);
