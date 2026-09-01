@@ -12,12 +12,13 @@ test("the capstone supplies the complete change-impact template", async () => {
   for (const field of ["Behavior", "Owners", "State", "Guards", "Invariants", "Unwind", "Caller impact", "Evidence seam", "Remaining uncertainty"]) assert.ok(m.includes(`**${field}:**`), field);
 });
 
-test("both candidate packets preserve status and name missing proof", async () => {
+test("both candidate packets route status and name missing proof", async () => {
   const m = await readFile(page, "utf8");
   assert.match(m, /## Packet A: `VS-11`/);
   assert.match(m, /## Packet B: `VS-12`/);
-  assert.match(m, /`VS-11`.*\*\*Candidate\*\*/is);
-  assert.match(m, /`VS-12`.*\*\*Candidate\*\*/is);
+  assert.match(m, /uncertainty registry.*alone owns `VS-11` status/is);
+  assert.match(m, /uncertainty registry.*alone owns `VS-12` status/is);
+  assert.doesNotMatch(m, /\*\*Candidate\*\*|Candidate status/i);
   assert.match(m, /holder extension allocation failure/i);
   assert.match(m, /TDE.*DWB-slot.*fault injection/is);
   assert.match(m, /source-grounded argument.*runtime proof/is);

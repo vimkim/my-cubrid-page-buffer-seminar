@@ -89,7 +89,7 @@ Validation exposes one aggregate entry point and discovers the Guide entry plus 
 
 Run `node scripts/check-maintainer-guide.mjs` from this directory for deterministic source validation. When this directory is mounted at the Copyparty URL root, add `--copyparty-url <base-url>` to request the complete discovered page/asset set and run live-DOM checks when Playwright is available. `UNAVAILABLE` reports a gate that was not run; it is not evidence that the gate passed.
 
-`maintainer-guide-validation.json` temporarily hash-pins Korean prose in the legacy Guide entry and four legacy SVGs. The exception applies only while the complete file digest matches. Any edit exposes the language failure, and the corresponding entry must be removed when later migration tickets replace or retire the file.
+`maintainer-guide-validation.json` contains no legacy-language exemptions after the English cutover. Any future exception must be explicit, digest-pinned, temporary, and removed with the migration that retires its target.
 
 The aggregate validation must:
 
@@ -132,5 +132,6 @@ The stable entry was cut over only after each former section had a complete cano
 | Deep references | Flat list replaced by intent routes and the source map |
 | Symptom-to-source index | Owned by the symptom playbook and source map |
 | Before you close an issue | Owned by the change and verification playbooks plus the capstone rubric |
+| Legacy pool, latch, and WAL-flush visuals | Useful relationships absorbed by the six canonical English visuals; obsolete files and language exemptions removed |
 
 Exhaustive catalogs, raw receipts, historical question banks, and full comparison material remain linked evidence. No parallel legacy monolith is maintained.

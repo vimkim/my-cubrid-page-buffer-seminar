@@ -47,7 +47,7 @@ Pinned-source trace:
 - Cold-miss BCB assignment and DWB/data-volume materialization: `src/storage/page_buffer.c:8392-8634`
 - Release-time BCB/page identity check and global decrement: `src/storage/page_buffer.c:6670-6703`
 
-**Evidence boundary:** this source trace establishes resident-identity serialization and convergence, not one physical I/O, fairness among waiters, or every exceptional cleanup path. In particular, holder allocation occurs after an atomic latch/`fcnt` grant on some paths; its failure window remains candidate `VS-11` in the [uncertainty registry](../unresolved-or-version-sensitive-findings.md), not an established production defect.
+**Evidence boundary:** this source trace establishes resident-identity serialization and convergence, not one physical I/O, fairness among waiters, or every exceptional cleanup path. In particular, holder allocation occurs after an atomic latch/`fcnt` grant on some paths; `VS-11` routes that failure window to the [uncertainty registry](../unresolved-or-version-sensitive-findings.md), which alone owns its current status. The source trace does not establish a production defect.
 
 ## Two ledgers, one debt per acquisition
 

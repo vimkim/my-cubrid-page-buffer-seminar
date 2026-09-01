@@ -64,7 +64,7 @@ Source: `src/storage/page_buffer.c:10908-10923` and `src/storage/page_buffer.c:1
 
 ### Unresolved early-return candidate
 
-`VS-12` remains **Candidate**, not a proven defect. TDE encryption failure and DWB-slot reservation failure return at `src/storage/page_buffer.c:10809-10828`, before the ordinary rollback block. Source inspection raises a surviving-state concern; only reachable fault injection that inspects `DIRTY`, `FLUSHING`, the oldest LSA, waiters, and retry behavior can establish impact. The [uncertainty registry](../unresolved-or-version-sensitive-findings.md) is the sole status owner.
+`VS-12` routes this proof obligation to the [uncertainty registry](../unresolved-or-version-sensitive-findings.md), the sole status owner. TDE encryption failure and DWB-slot reservation failure return at `src/storage/page_buffer.c:10809-10828`, before the ordinary rollback block. Source inspection raises a surviving-state concern; only reachable fault injection that inspects `DIRTY`, `FLUSHING`, the oldest LSA, waiters, and retry behavior can establish impact. This page does not assign defect or current-branch status.
 
 ## Persistence boundaries: name the one you observed
 
@@ -105,7 +105,7 @@ Mark each statement as supported by source, runtime evidence, inference, or stil
 
 Before flush, page LSA is 140 and the lower bound is 100. Starting G sets `FLUSHING`, clears the old `DIRTY`, snapshots LSA 140/lower bound 100, then clears the resident lower bound. Log 170 creates G+1: resident page LSA 170, `DIRTY` set, and a new lower bound for G+1, while `FLUSHING` still represents G. Successful G completion clears only `FLUSHING`, so G+1 stays dirty.
 
-On an ordinary post-submission failure, the code restores G’s dirty bit if it was dirty and restores its captured lower bound before waking waiters. Source establishes this control flow. The historical runtime card does not prove this exact interleaving; a controlled schedule and failure injection are needed for runtime proof, and the earlier TDE/DWB-slot returns remain `VS-12` Candidate.
+On an ordinary post-submission failure, the code restores G’s dirty bit if it was dirty and restores its captured lower bound before waking waiters. Source establishes this control flow. The historical runtime card does not prove this exact interleaving; a controlled schedule and failure injection are needed for runtime proof. Evaluate the earlier TDE/DWB-slot returns through `VS-12` without copying its registry status here.
 
 ## Learning navigation
 

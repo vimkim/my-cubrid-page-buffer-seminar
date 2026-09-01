@@ -32,7 +32,7 @@ Copy this structure into a change plan:
 
 ## Packet A: `VS-11` holder allocation after grant
 
-`VS-11` status is **Candidate**. The concern is that several acquisition paths update the atomic latch/fix tuple, then allocate a per-thread holder. If holder-set allocation fails, the visible local path returns failure without an obvious rollback of the earlier grant.
+The [uncertainty registry](../unresolved-or-version-sensitive-findings.md) alone owns `VS-11` status. The source-visible concern is that several acquisition paths update the atomic latch/fix tuple, then allocate a per-thread holder. If holder-set allocation fails, the visible local path returns failure without an obvious rollback of the earlier grant.
 
 **Available source evidence:** holder allocation can return `NULL` at `src/storage/page_buffer.c:6000-6055`. Normal atomic-latch paths allocate after a grant at `src/storage/page_buffer.c:6457-6522`; the awakened-waiter path does so at `src/storage/page_buffer.c:6595-6617`; the lock-free READ hit increments `fcnt` before allocation at `src/storage/page_buffer.c:7738-7773`.
 
@@ -40,11 +40,11 @@ Copy this structure into a change plan:
 
 ### Model answer A
 
-Source supports a concrete ordering argument: grant precedes a fallible holder allocation at the cited sites, and no local rollback is visible in those snippets. It does not prove supported configurations can reach the allocation failure or that state actually survives through other cleanup. Preserve Candidate status; propose the fault seam and exact postconditions before proposing code.
+Source supports a concrete ordering argument: grant precedes a fallible holder allocation at the cited sites, and no local rollback is visible in those snippets. It does not prove supported configurations can reach the allocation failure or that state actually survives through other cleanup. Do not copy or change registry status; propose the fault seam and exact postconditions before proposing code.
 
 ## Packet B: `VS-12` exceptional flush cleanup
 
-`VS-12` status is **Candidate**. The flush path marks the BCB `FLUSHING` and clears the old `DIRTY`, then TDE encryption or DWB-slot reservation can return before the ordinary rollback that restores dirty/lower-bound state.
+The [uncertainty registry](../unresolved-or-version-sensitive-findings.md) alone owns `VS-12` status. The flush path marks the BCB `FLUSHING` and clears the old `DIRTY`, then TDE encryption or DWB-slot reservation can return before the ordinary rollback that restores dirty/lower-bound state.
 
 **Available source evidence:** generation setup and early returns appear at `src/storage/page_buffer.c:10795-10828`; ordinary rollback appears at `src/storage/page_buffer.c:10908-10923`; flag restoration helpers are at `src/storage/page_buffer.c:16077-16126`.
 
@@ -52,7 +52,7 @@ Source supports a concrete ordering argument: grant precedes a fallible holder a
 
 ### Model answer B
 
-Source supports a control-flow gap between generation setup and ordinary rollback. It does not establish reachability, surviving state after surrounding cleanup, or production impact. Preserve Candidate status; test both exceptional callees and observe the ownership/flush ledgers before deciding whether any fix is required.
+Source supports a control-flow gap between generation setup and ordinary rollback. It does not establish reachability, surviving state after surrounding cleanup, or production impact. Do not copy or change registry status; test both exceptional callees and observe the ownership/flush ledgers before deciding whether any fix is required.
 
 ## Review rubric: argument is not observation
 

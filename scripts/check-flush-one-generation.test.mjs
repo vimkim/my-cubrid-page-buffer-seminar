@@ -52,7 +52,8 @@ test("the persistence boundary and evidence cards do not overclaim", async () =>
   for (const field of ["Setup", "Observation", "Supported conclusion", "Unsupported conclusion", "Receipt"]) {
     assert.ok(markdown.includes(`**${field}:**`), field);
   }
-  assert.match(markdown, /`VS-12`.*Candidate/is);
+  assert.match(markdown, /`VS-12`.*sole status owner/is);
+  assert.doesNotMatch(markdown, /`VS-12`.*\*\*Candidate\*\*/is);
   assert.match(markdown, /fault injection/i);
 });
 
