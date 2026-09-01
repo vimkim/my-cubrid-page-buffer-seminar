@@ -1,17 +1,21 @@
 # Maintainer guide authoring notes
 
-This file records the document contract for
-[`page-buffer-teaching-material.md`](./page-buffer-teaching-material.md).
-It is for people or agents maintaining the guide, not for page-buffer newcomers.
+This file records the document contract for the page-buffer maintainer-guide set. It is for people or agents maintaining the documentation, not for page-buffer newcomers.
 
 ## Document contract
 
-- Audience: senior engineers new to CUBRID who will review, debug, modify, and test `src/storage/page_buffer.c/.h`.
-- Language: Korean prose with canonical English source identifiers and systems terms.
-- Primary use: linear onboarding followed by symptom-driven lookup during real maintenance.
+- Audience: a Target maintainer is a senior C/C++ systems engineer who understands basic database storage, buffer pools, and WAL but has no assumed knowledge of CUBRID source structure or page-buffer protocols.
+- Language: English explanatory prose with canonical English source identifiers and systems terms.
 - Baseline: CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`.
-- Main narrative: Module Interface, source navigation, state model, invariants, safe-change workflow, debugging, and verification.
-- Deep catalogs: remain in linked evidence documents rather than being copied into the guide.
+- Guide entry: `page-buffer-teaching-material.md` states the audience, outcomes, evidence vocabulary, and reader routes without teaching the Module again.
+- Core maintainer path: ordered pages under `learning/` build the object model, normal ownership contract, caller responsibilities, durability reasoning, replacement reasoning, and change-impact capability.
+- Advanced maintainer path: pages under `advanced/` extend the core invariants through concurrency, replacement progress, recovery/lifecycle, specialized interfaces, and failure proof obligations.
+- Maintainer playbook path: pages under `playbooks/` support change, symptom diagnosis, and risk-matched verification during real work.
+- Evidence reference path: pages under `reference/`, plus `source-inventory.md` and `unresolved-or-version-sensitive-findings.md`, own source routing, invariant lookup, provenance, receipts, and mutable uncertainty status.
+- Canonical ownership: each concept has one canonical explanation. Playbooks provide decisions and actions, while references provide routing and evidence; both link to the explanation instead of copying it.
+- Primary use: finite linear onboarding followed by task- and symptom-driven lookup during maintenance.
+
+Use the canonical vocabulary in [`CONTEXT.md`](./CONTEXT.md) and respect the decisions under [`docs/adr/`](./docs/adr/).
 
 ## Sources of truth
 
@@ -26,36 +30,47 @@ Use evidence in this order:
 Never use an older defect summary as proof of a current defect. Carry candidates through
 [`unresolved-or-version-sensitive-findings.md`](./unresolved-or-version-sensitive-findings.md).
 
+## Evidence contract
+
+Use the strongest label the evidence actually supports:
+
+| Label | Meaning |
+|---|---|
+| **Interface contract** | Caller-visible guarantee or obligation established for the pinned revision |
+| **Verified mechanism** | Internal behavior directly established by pinned source but not promised as a stable Interface |
+| **Implementation policy** | Replaceable or tunable internal choice that may change while Interface contracts remain intact |
+| **Inference** | Defensible explanation suggested by source structure but not established as a guarantee or runtime fact |
+| **Runtime observation** | Event observed under one recorded revision, build, configuration, and workload |
+| **Historical evidence** | Evidence from another revision or earlier investigation that requires revalidation |
+
+- Put exact source anchors near implementation-specific claims.
+- Keep broad source catalogs in the Source map and provenance/conflict resolution in `source-inventory.md`.
+- Change candidate or historical status only in `unresolved-or-version-sensitive-findings.md`; other pages route by ID.
+- Runtime evidence cards state the setup, observation, supported conclusion, unsupported conclusion, and accepted receipt.
+- Use PostgreSQL and InnoDB only as brief, late contrasts after the corresponding CUBRID mechanism is understood.
+
 ## Asset contract
 
-Every SVG displayed by the guide is owned by [`assets/`](./assets/).
+Every SVG displayed anywhere in the document set is owned by [`assets/`](./assets/).
 
-- Guide links use only `./assets/<name>.svg`.
-- Each SVG has a `viewBox` and no active content.
+- The Guide entry links with `./assets/<name>.svg`; pages one directory below link with `../assets/<name>.svg`.
+- Validation resolves each target and requires it to remain inside the root asset seam.
+- Each SVG has a `viewBox`, contains no active content, and communicates meaning without depending on color alone.
 - Reused visuals are copied into this directory so the guide remains self-contained.
-- Copy only visuals the guide actually displays.
+- Keep only visuals the document set actually displays.
 - If a source visual changes, update the local copy intentionally and review its wording against the current evidence boundary.
-- The pool map must retain the warning that AOUT is disabled in the analyzed default.
-
-Run:
-
-```bash
-node scripts/check-maintainer-guide-assets.mjs page-buffer-teaching-material.md
-```
-
-The check must fail when an SVG moves outside the local asset seam, is missing, lacks a `viewBox`, or contains active content.
+- Visuals show object relationships, independent axes, converging flows, dual ledgers, durability timing, or eligibility gates; prose and source exercises own line anchors and catalogs.
 
 ## Writing rules
 
-- Lead each section with the maintainer problem it solves.
+- Lead each page or section with the maintainer problem it solves.
 - Explain the concept before the CUBRID symbol.
 - Prefer continuous prose, compact tables, and task-oriented checklists.
-- Use a visual only for object relationships, state transitions, or a multi-step lifecycle.
-- Keep exhaustive API inventories, experiment logs, and Q&A in linked references.
-- Keep source citations near implementation-specific claims.
-- Distinguish Interface contract, Implementation policy, inference, runtime observation, and historical evidence.
-- Use `Module`, `Interface`, `Implementation`, and `seam` consistently.
-- Remove presentation timing, speaker notes, slide language, and audience-performance prompts.
+- Use a visual only when relationships or state transitions are materially harder to understand in prose.
+- Keep exhaustive API inventories, experiment logs, and question banks in linked Evidence references.
+- Use `Module`, `Interface`, `Implementation`, and `seam` consistently with `CONTEXT.md`.
+- Use one Predict–Locate–Explain Understanding check and an adjacent evidence-aware model answer on each Learning page.
+- Remove presentation timing, speaker notes, slide language, audience-performance prompts, and calendar framing.
 
 ## Updating to another CUBRID revision
 
@@ -65,19 +80,23 @@ The check must fail when an SVG moves outside the local asset seam, is missing, 
 4. Re-run known-hazard symbol and control-flow searches.
 5. Regenerate line anchors.
 6. Keep old runtime counts historical unless the exact harness is rerun.
-7. Update the uncertainty register before strengthening any claim.
-8. Re-run all Markdown and asset checks.
+7. Update the uncertainty registry before strengthening any claim.
+8. Re-run the complete document-set validation.
 
-## Validation
+## Validation contract
 
-Run from this directory:
+Validation exposes one aggregate entry point and discovers the Guide entry plus every Markdown page under `learning/`, `playbooks/`, `advanced/`, and `reference/`. The discovered page set is the one source of truth for lower-level checks.
 
-```bash
-python <markdown-write-skill-dir>/scripts/check_copyparty_markdown.py page-buffer-teaching-material.md
-node scripts/check-maintainer-guide-assets.mjs page-buffer-teaching-material.md
-```
+The aggregate validation must:
 
-Then verify all repo-relative links and request every `./assets/*.svg` through the local Copyparty server. When browser automation is available, inspect the rendered `*.md?v` DOM and require every image to have nonzero natural dimensions.
+1. run the Copyparty Markdown checker on every discovered page;
+2. resolve every relative link, including linked Evidence references outside this directory;
+3. require every displayed SVG to resolve inside `assets/`, exist, contain a `viewBox`, and contain no active content;
+4. reject SVGs that no document-set page displays;
+5. detect unintended Korean prose in authored Markdown and SVG text;
+6. request every page and displayed SVG through the local Copyparty server;
+7. when browser automation is available, require nonzero image natural dimensions and no relevant render error;
+8. report live-DOM validation as unavailable when browser automation cannot run.
 
 ## Retired presentation material
 
