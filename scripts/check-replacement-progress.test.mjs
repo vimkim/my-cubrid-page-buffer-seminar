@@ -31,4 +31,5 @@ test("AOUT and runtime evidence are bounded", async () => {
   assert.match(m, /no-eviction evidence/i);
   assert.match(m, /does not prove.*replacement schedule/is);
   assert.ok(m.includes("](../../../pgbuf-analysis/research/cubrid-lru-victim.md)"));
+  assert.match(m, /Historical evidence.*`5cd4f860e`/is);
 });

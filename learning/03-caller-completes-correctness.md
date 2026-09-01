@@ -37,9 +37,9 @@ The representative path is `heap_insert_logical()` at `src/storage/heap_file.c:2
 
 The caller validates its operation context, adjusts the record header, handles a possible multipage record, and ensures the class has `IX_LOCK` (or the bulk-operation equivalent). This is logical concurrency policy, not a service performed by `pgbuf_fix()`.
 
-The order matters on one direct error exit. For a large record, `heap_ovf_insert()` succeeds inside `heap_insert_handle_multipage_record()` and replaces `recdes_p` with a forwarding record before `lock_object()` requests the class lock. If that class lock fails, `heap_insert_logical()` takes a direct return. No destination or home-page watcher has been acquired yet, so this exit has no new home-page fix debt; however, overflow storage was already created and no compensating overflow deletion is visible on the local path. Transaction recovery owns that already-created overflow/recovery obligation. This is a source-visible ordering and ownership boundary, not evidence of a surviving leak or production defect.
+The order matters on one direct error exit. For a large record, `heap_ovf_insert()` succeeds inside `heap_insert_handle_multipage_record()` and replaces `recdes_p` with a forwarding record before `lock_object()` requests the class lock. If that class lock fails, `heap_insert_logical()` takes a direct return. No destination or home-page watcher has been acquired yet, so this exit has no new home-page fix debt; however, overflow storage was already created and no compensating overflow deletion is visible on the local path. The successful overflow operation attaches its system operation to the outer transaction, so transaction recovery owns that already-created overflow/recovery obligation. This is a source-visible ordering and ownership boundary, not evidence of a surviving leak or production defect.
 
-Source: `src/storage/heap_file.c:20469-20486`, `src/storage/heap_file.c:23120-23221`, and the direct return at `src/storage/heap_file.c:23217-23220`.
+Source: overflow setup in `src/storage/heap_file.c:20469-20486`; successful system-operation attachment and local-error abort in `src/storage/overflow_file.c:146-258`; wrapper order in `src/storage/heap_file.c:23120-23221`; and the direct return at `src/storage/heap_file.c:23217-23220`.
 
 ### 2. Acquire and validate the destination
 

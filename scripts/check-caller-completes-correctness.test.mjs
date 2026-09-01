@@ -34,6 +34,7 @@ test("the heap insert trace covers the entire caller-completed mutation", async 
     "src/storage/heap_file.c:20821-20939",
     "src/storage/heap_file.c:23120-23324",
     "src/storage/heap_file.c:23217-23220",
+    "src/storage/overflow_file.c:146-258",
     "src/transaction/log_manager.c:2194-2226",
     "src/storage/page_buffer.c:4983-5055",
   ]) {
@@ -42,6 +43,7 @@ test("the heap insert trace covers the entire caller-completed mutation", async 
   assert.match(markdown, /heap_ovf_insert\(\).*class lock fails.*direct return/is);
   assert.match(markdown, /class lock fails.*direct return/is);
   assert.match(markdown, /transaction.*recovery.*obligation/is);
+  assert.match(markdown, /system operation.*outer transaction/is);
   assert.match(markdown, /no.*home-page watcher.*acquired/is);
 });
 
