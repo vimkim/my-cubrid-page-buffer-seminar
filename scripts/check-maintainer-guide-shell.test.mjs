@@ -111,6 +111,7 @@ const completedPages = new Set([
   "learning/03-caller-completes-correctness.md",
   "learning/04-flush-one-generation.md",
   "learning/05-replace-one-frame.md",
+  "learning/06-maintainer-capstone.md",
 ]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [

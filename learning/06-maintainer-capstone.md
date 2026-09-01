@@ -2,15 +2,74 @@
 
 **Level:** Core
 **Prerequisites:** [Contract and Objects](./01-contract-and-objects.md), [Fix, Hold, and Release](./02-fix-hold-release.md), [Caller Completes Correctness](./03-caller-completes-correctness.md), [Flush One Generation](./04-flush-one-generation.md), and [Replace One Frame](./05-replace-one-frame.md)
-**Capability gained:** Planned — defend a source-grounded change-impact plan covering behavior, owners, invariants, unwind, callers, evidence, and uncertainty.
+**Capability gained:** Defend an evidence-bounded change-impact plan without promoting a source concern into an unverified production defect.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** [Authoring contract](../maintainer-guide-notes.md) only; this shell asserts no page-buffer mechanism.
+**Evidence used:** [Pinned-source inventory](../source-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and exact source ranges below.
 
-> **Shell status:** Incomplete. This page reserves the canonical destination and makes no page-buffer implementation claims yet.
+Complete either packet for core completion. Complete both packets for advanced preparation. These are review exercises, not instructions to implement an assumed fix.
 
-## Planned scope
+## Reusable change-impact template
 
-This page will own the change-impact template, evidence-bounded review packets, review rubric, and handoff from Core completion to applied or Advanced work.
+Copy this structure into a change plan:
+
+**Behavior:** What externally or internally observable behavior may change?
+
+**Owners:** Which thread, module, and caller own each resource or decision?
+
+**State:** Which fields, flags, counters, pointers, and queues change?
+
+**Guards:** Which latch, mutex, atomic order, transaction lock, or caller precondition protects each transition?
+
+**Invariants:** What must remain true before and after every transition?
+
+**Unwind:** For every failure/restart exit, what state is restored, transferred, or consumed?
+
+**Caller impact:** Which callers observe return values, retained ownership, retry, timing, or changed contracts?
+
+**Evidence seam:** What is established by source tracing, and what controlled test or observation can reach the risk boundary?
+
+**Remaining uncertainty:** What is still an inference, version-sensitive, unreachable, or unobserved?
+
+## Packet A: `VS-11` holder allocation after grant
+
+`VS-11` status is **Candidate**. The concern is that several acquisition paths update the atomic latch/fix tuple, then allocate a per-thread holder. If holder-set allocation fails, the visible local path returns failure without an obvious rollback of the earlier grant.
+
+**Available source evidence:** holder allocation can return `NULL` at `src/storage/page_buffer.c:6000-6055`. Normal atomic-latch paths allocate after a grant at `src/storage/page_buffer.c:6457-6522`; the awakened-waiter path does so at `src/storage/page_buffer.c:6595-6617`; the lock-free READ hit increments `fcnt` before allocation at `src/storage/page_buffer.c:7738-7773`.
+
+**Proof still required:** force holder extension allocation failure separately on normal hit, lock-free hit, and awakened waiter. Inspect the atomic latch tuple, global `fcnt`, per-thread holder list, waiter state, return value, and ability to acquire/release afterward. A controlled schedule is required for waiter and lock-free variants.
+
+### Model answer A
+
+Source supports a concrete ordering argument: grant precedes a fallible holder allocation at the cited sites, and no local rollback is visible in those snippets. It does not prove supported configurations can reach the allocation failure or that state actually survives through other cleanup. Preserve Candidate status; propose the fault seam and exact postconditions before proposing code.
+
+## Packet B: `VS-12` exceptional flush cleanup
+
+`VS-12` status is **Candidate**. The flush path marks the BCB `FLUSHING` and clears the old `DIRTY`, then TDE encryption or DWB-slot reservation can return before the ordinary rollback that restores dirty/lower-bound state.
+
+**Available source evidence:** generation setup and early returns appear at `src/storage/page_buffer.c:10795-10828`; ordinary rollback appears at `src/storage/page_buffer.c:10908-10923`; flag restoration helpers are at `src/storage/page_buffer.c:16077-16126`.
+
+**Proof still required:** reachable TDE and DWB-slot fault injection on the target configuration, followed by inspection of `DIRTY`, `FLUSHING`, `oldest_unflush_lsa`, waiters, victim eligibility, retry, and restart. A concurrent re-dirty schedule is a separate case.
+
+### Model answer B
+
+Source supports a control-flow gap between generation setup and ordinary rollback. It does not establish reachability, surviving state after surrounding cleanup, or production impact. Preserve Candidate status; test both exceptional callees and observe the ownership/flush ledgers before deciding whether any fix is required.
+
+## Review rubric: argument is not observation
+
+| Criterion | Source-grounded argument | Runtime proof |
+|---|---|---|
+| Reachability | Shows a syntactic/control-flow path and its preconditions. | Forces those preconditions on the target revision. |
+| Surviving state | Predicts state from visible transitions and missing rollback. | Reads/asserts the state after the injected failure or schedule. |
+| Impact | Names plausible violated invariants and affected callers. | Demonstrates the caller-visible or progress consequence. |
+| Scope | Pins symbols and ranges to one revision. | Records build/configuration, workload, injection, and receipt. |
+
+A strong source-grounded argument earns investigation, not a “verified defect” label. Runtime proof must cross the same risk boundary the claim concerns.
+
+## Applied-path handoff and readiness gate
+
+After the paper packet, run at least one controlled caller regression or narrow runtime probe on the target revision. Record setup, expected transition, actual observation, unsupported conclusions, and a reproducible receipt through [Verify at the Risk Boundary](../playbooks/verify-a-change.md).
+
+If this becomes a real change-impact plan, another maintainer must review the ownership ledger, negative paths, evidence boundary, and remaining uncertainty before the artifact counts as readiness evidence.
 
 ## Learning navigation
 
@@ -21,4 +80,5 @@ This page will own the change-impact template, evidence-bounded review packets, 
 
 - [Verify at the Risk Boundary](../playbooks/verify-a-change.md)
 - [Source inventory](../source-inventory.md)
+- [Evidence and uncertainty registry](../unresolved-or-version-sensitive-findings.md)
 - [Failure Unwind and Open Proof Obligations](../advanced/failure-and-proof-obligations.md)
