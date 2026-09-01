@@ -107,3 +107,30 @@ The aggregate validation must:
 The previous 52-minute narrative and 55-question appendix remain available as source material at
 [`CUBRID_PAGE_BUFFER_PRESENTATION_KO.md`](../../pgbuf-analysis/f799e05_claude/CUBRID_PAGE_BUFFER_PRESENTATION_KO.md).
 Do not merge that deck back into the maintainer guide wholesale. Pull only evidence or explanations that directly help a maintainer locate, change, debug, or verify the Module.
+
+## Monolith migration audit
+
+The stable entry was cut over only after each former section had a complete canonical destination. This table is the durable disposition record; retired wording remains available in Git history.
+
+| Former content | Final disposition |
+|---|---|
+| Opening and 14-section contents | Rewritten as the compact guide entry, reader outcomes, evidence legend, and intent routes |
+| Start here | Successful-fix contract moved to Core page 1; evidence vocabulary moved to the guide entry |
+| Module, Interface, and seams | Boundary model condensed in Core page 1; seam audit moved to the change playbook; families moved to the source map |
+| Source-tree orientation | Bounded traces distributed through learning exercises; broad ranges and callers moved to the source map |
+| Core object and state model | Rewritten in Core page 1 before pool topology |
+| Acquisition Interface | Normal contract moved to Core page 2; fast and unusual paths moved to advanced acquisition |
+| Ownership and concurrency | Ledgers and pointer lifetime moved to Core page 2; promotion, queues, and ordered access moved to advanced acquisition |
+| Mutation, durability, and replacement | Split among Core pages 3, 4, and 5 |
+| Maintainer invariants | Introduced in their canonical learning pages and indexed compactly in the invariant reference |
+| How to change safely | Consolidated in the change playbook |
+| Debugging playbooks | Consolidated in the symptom playbook with links to canonical explanations |
+| Verification strategy | Consolidated in the verification playbook; bounded observations remain in evidence cards and references |
+| Known hazards and evidence boundaries | Proof method moved to the advanced failure page; copied statuses removed in favor of registry IDs |
+| First-week maintainer path | Calendar framing removed; practice embedded in learning checks, capstone, and duration guidance in the entry |
+| Compact glossary | Page-buffer objects taught in Core page 1; durable authoring terms retained in `CONTEXT.md` |
+| Deep references | Flat list replaced by intent routes and the source map |
+| Symptom-to-source index | Owned by the symptom playbook and source map |
+| Before you close an issue | Owned by the change and verification playbooks plus the capstone rubric |
+
+Exhaustive catalogs, raw receipts, historical question banks, and full comparison material remain linked evidence. No parallel legacy monolith is maintained.

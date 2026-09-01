@@ -106,6 +106,7 @@ const pageContracts = {
 
 const learningOrder = expectedPages.learning.map((page) => `learning/${page}`);
 const completedPages = new Set([
+  "page-buffer-teaching-material.md",
   "learning/01-contract-and-objects.md",
   "learning/02-fix-hold-release.md",
   "learning/03-caller-completes-correctness.md",
@@ -370,7 +371,7 @@ test("advanced shells expose their approved prerequisites and return routes", as
   }
 });
 
-test("the guide entry exposes every route while retaining the usable monolith", async () => {
+test("the guide entry exposes every stable route without retaining the monolith", async () => {
   const markdown = await readFile(
     path.join(guideRoot, "page-buffer-teaching-material.md"),
     "utf8",
@@ -386,6 +387,6 @@ test("the guide entry exposes every route while retaining the usable monolith", 
       "[Evidence and uncertainty registry](./unresolved-or-version-sensitive-findings.md)",
     ),
   );
-  assert.ok(markdown.indexOf("## Maintainer routes") < markdown.indexOf("## Contents"));
-  assert.match(markdown, /## 1\. Start here/);
+  assert.doesNotMatch(markdown, /^## Contents$/m);
+  assert.doesNotMatch(markdown, /^## 1\. Start here$/m);
 });
