@@ -105,6 +105,7 @@ const pageContracts = {
 };
 
 const learningOrder = expectedPages.learning.map((page) => `learning/${page}`);
+const completedPages = new Set(["learning/01-contract-and-objects.md"]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
     "../reference/source-map.md",
@@ -254,7 +255,7 @@ test("the document set exposes exactly the approved page boundaries", async () =
   }
 });
 
-test("every page starts with its approved reader contract and incomplete status", async () => {
+test("every page starts with its reader contract and unfinished pages declare incomplete status", async () => {
   for (const [relativePath, contract] of Object.entries(pageContracts)) {
     const markdown = await readFile(path.join(guideRoot, relativePath), "utf8");
     const escapedTitle = contract.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -272,7 +273,9 @@ test("every page starts with its approved reader contract and incomplete status"
     );
 
     assert.match(markdown, opening, relativePath);
-    if (relativePath === "page-buffer-teaching-material.md") {
+    if (completedPages.has(relativePath)) {
+      assert.doesNotMatch(markdown, /> \*\*Shell status:\*\*/, relativePath);
+    } else if (relativePath === "page-buffer-teaching-material.md") {
       assert.match(
         markdown,
         /> \*\*Shell status:\*\* Incomplete\. The document-set destinations remain shells;/,
