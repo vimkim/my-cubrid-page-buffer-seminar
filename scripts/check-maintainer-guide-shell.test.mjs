@@ -110,6 +110,7 @@ const completedPages = new Set([
   "learning/02-fix-hold-release.md",
   "learning/03-caller-completes-correctness.md",
   "learning/04-flush-one-generation.md",
+  "learning/05-replace-one-frame.md",
 ]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
