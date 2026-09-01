@@ -1,4 +1,12 @@
-# CUBRID Page Buffer Maintainer Welcome Guide
+# CUBRID Page Buffer Maintainer Guide
+
+**Level:** Guide entry
+**Prerequisites:** [Target-reader baseline](./CONTEXT.md#language)
+**Capability gained:** Select the learning or operational route that matches a maintenance task and identify where its evidence status is owned.
+**Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
+**Evidence used:** [Authoring contract](./maintainer-guide-notes.md), [source inventory](./source-inventory.md), and [evidence and uncertainty registry](./unresolved-or-version-sensitive-findings.md)
+
+> **Shell status:** Incomplete. The document-set destinations remain shells; the retained narrative below remains the usable learning surface until final cutover.
 
 > 새로 합류한 senior engineer가 `src/storage/page_buffer.c/.h`를 읽고, review하고, 안전하게 수정하기 위한 internal guide
 >
@@ -17,6 +25,18 @@
 5. 위험에 맞는 test와 runtime probe로 검증한다.
 
 처음에는 [1. Start here](#1-start-here)부터 [8. Maintainer invariants](#8-maintainer-invariants)까지 순서대로 읽는다. 실제 issue를 맡은 뒤에는 [9. How to change the Module safely](#9-how-to-change-the-module-safely), [10. Debugging playbooks](#10-debugging-playbooks), [11. Verification strategy](#11-verification-strategy)를 작업용 checklist로 사용한다.
+
+## Maintainer routes
+
+| Need | Start here |
+|---|---|
+| Build the Core mental model | [Learn the module](./learning/01-contract-and-objects.md) |
+| Review or modify code | [Work on a change](./playbooks/change-safely.md) |
+| Investigate behavior | [Diagnose a symptom](./playbooks/debug-by-symptom.md) |
+| Select sufficient evidence | [Verify a change](./playbooks/verify-a-change.md) |
+| Locate the owning code | [Find the source](./reference/source-map.md) |
+| Check provenance or claim status | [Check evidence and uncertainty](./source-inventory.md) and the [Evidence and uncertainty registry](./unresolved-or-version-sensitive-findings.md) |
+| Extend Core reasoning | [Continue to Advanced work](./advanced/acquisition-concurrency.md) |
 
 ## Contents
 
