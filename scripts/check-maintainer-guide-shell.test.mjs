@@ -114,6 +114,8 @@ const completedPages = new Set([
   "learning/06-maintainer-capstone.md",
   "reference/invariant-index.md",
   "reference/source-map.md",
+  "playbooks/change-safely.md",
+  "playbooks/verify-a-change.md",
 ]);
 const learningRelatedCrossLinks = {
   "learning/01-contract-and-objects.md": [
