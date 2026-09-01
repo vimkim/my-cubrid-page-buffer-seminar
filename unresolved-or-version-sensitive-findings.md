@@ -1,0 +1,104 @@
+# Unresolved or version-sensitive findings
+
+> Purpose: keep teaching claims honest. This is not a defect ticket list.
+>
+> Primary teaching baseline: CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`.
+> Older findings from `5cd4f860e` and `e6ed61e` are historical until rechecked.
+
+## Confidence labels
+
+| Label | Meaning |
+|---|---|
+| **Verified at f799e05** | Directly visible in the pinned source or its captured, same-revision evidence |
+| **Candidate** | Source control flow exposes a cleanup or proof obligation, but reachability and production impact were not demonstrated |
+| **Inference** | A plausible explanation of the implementation, not a stable public contract |
+| **Historical** | Established at another revision or in an older experiment; useful for teaching, not current proof |
+| **Open** | The available corpus does not settle the question |
+
+## A. Current pinned-revision interface hazards
+
+| ID | Status | Finding | Evidence and teaching treatment |
+|---|---|---|---|
+| `VS-01` | **Verified at f799e05** | Release builds declare/macro-map `pgbuf_fix_without_validation_release`, but repository-wide analysis found no definition or caller. Calling it would create a link failure. | `src/storage/page_buffer.h:320-326`; [`api-inventory.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Teach it as a dead/incomplete interface, never as an optimization option. |
+| `VS-02` | **Verified at f799e05** | `pgbuf_copy_to_area()` prose and executable `do_fetch` branch disagree. On a normally compiled miss with `do_fetch=false`, the function may return the caller area without filling it. | `src/storage/page_buffer.c:4701-4817`, especially `4739-4760`; [`api-inventory.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Do not present this helper as a general page-read abstraction. |
+| `VS-03` | **Verified at f799e05** | Outside `ENABLE_UNUSED_FUNCTION`, `pgbuf_copy_from_area()` effectively ignores `do_fetch` and always follows the `NEW_PAGE` fix/skip-logging path. | `src/storage/page_buffer.c:4819-4912`; [`api-inventory.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Restrict the helper to its existing owner protocol. |
+| `VS-04` | **Verified at f799e05** | Names in the `pgbuf_peek_stats()` declaration drift from the meanings used by the definition for later output positions. Types remain compatible. | `src/storage/page_buffer.h:449-454`; `src/storage/page_buffer.c:14748-14847`. Do not label dashboards from parameter names alone. |
+| `VS-05` | **Verified at f799e05** | Some waiter, prevent-deallocation, SHOW, and statistics interfaces deliberately expose approximate snapshots, sometimes without the BCB mutex. | `src/storage/page_buffer.c:14748-14847,17323-17530`; [`internal-mechanisms.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/internal-mechanisms.md). Use them for diagnostics and scheduling, not as mutation/deallocation authorization. |
+| `VS-06` | **Verified at f799e05** | Historical comments call some validation/page-type/temporary-LSA behavior debug-only even though executable release paths also use it. | [`api-inventory.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Follow code behavior; avoid repeating stale scope language. |
+
+## B. Current pinned-revision cleanup and proof obligations
+
+These are source-visible candidates, not observed production failures.
+
+| ID | Status | Source-visible condition | Why it matters | Evidence needed to promote the claim |
+|---|---|---|---|---|
+| `VS-10` | **Candidate** | A DWB read error can return from the cold-miss load path before the ordinary provisional-BCB cleanup. | A miss loader owns internal state even though the caller receives no page. | Fault injection at `dwb_read_page()`, plus an audit of callee side effects and the invalid/hash/load-lock state after return. `src/storage/page_buffer.c:8510-8515`. |
+| `VS-11` | **Candidate** | Holder allocation may fail after an atomic latch/fix grant; several call sites show no visible local rollback. | The caller may receive `NULL` while an internal `fcnt` or latch grant remains. | Force holder extension allocation failure on normal hit, lock-free hit, and awakened waiter paths; inspect holder list, latch tuple, and `fcnt`. |
+| `VS-12` | **Candidate** | TDE encryption and DWB-slot reservation errors return before the ordinary FLUSHING/DIRTY/oldest-LSA rollback. | A BCB could retain a flushing state or lose retryable dirty-generation bookkeeping. | Reachable fault injection for both callees, followed by waiter wakeup, dirty/LSA, victim eligibility, and restart checks. `src/storage/page_buffer.c:10809-10828`. |
+| `VS-13` | **Verified behavior; impact open** | Deferred flush failure triggered during `pgbuf_unfix()` is cleared because `pgbuf_unfix()` has no error return. | A normal caller cannot synchronously observe that asynchronous flush request failure. | Decide whether the owner protocol deliberately relies on monitoring/retry, or whether an error-bearing interface is required. `src/storage/page_buffer.c:6860-6875`. |
+| `VS-14` | **Inference / proof obligation** | Lock-free READ-hit success has no post-CAS VPID recheck. | Safety depends on permanent BCB storage and the invariant that a positive `fcnt` excludes victim reuse. | A formal or concurrency-test proof covering the load/victim identity transition and memory ordering. `src/storage/page_buffer.c:7725-7786`. |
+| `VS-15` | **Open source anomaly** | `file_dealloc()` contains `assert (error_code != NO_ERROR)` immediately before its normal exit even though the success value starts as `NO_ERROR`. | The assertion looks inconsistent, but no page-buffer teaching claim depends on it. | Recheck build configuration and reachable success paths. `src/storage/file_manager.c:6296-6299`. |
+| `VS-16` | **Open diagnostic anomaly** | `pgbuf_rv_dealloc_undo_compensate()` has a debug-only diagnostic that appears to read a locally declared VPID without visible initialization. | Affects diagnostic reliability, not the type/flag restoration taught in the course. | Compile/run the diagnostic branch or trace macro expansion. `src/storage/page_buffer.c:15314-15335`. |
+
+## C. Policy and timing that must not be taught as contract
+
+| Topic | What is source-confirmed | What remains version-sensitive |
+|---|---|---|
+| LRU layout | The pinned revision has private/shared LRUs and LRU1/LRU2/LRU3 zones. | Zone thresholds, quota tuning, queue choice, and scan order are policy, not caller contract. |
+| AOUT / 2Q history | The code has an AOUT mechanism. Older evidence records it disabled through parameter tuning. | Whether it remains disabled in a newer branch; never summarize current CUBRID as simply “2Q” without rechecking. |
+| Direct victims | Assignments are revalidated and may be revoked if the BCB becomes fixed again. | Exact fairness and starvation bounds are not proved. |
+| Latch timeout | Unconditional wait may terminate through transaction timeout/interrupt, and zero-wait can become conditional. | Exact wall-clock timing and scheduler fairness are not guaranteed. |
+| Daemon cadence | The pinned source divides work among maintain, flush, post-flush, and flush-control daemons. | Wakeup thresholds, intervals, and ownership may change independently of fix/unfix semantics. |
+| Monitoring | SHOW and counters expose useful gauges/events. | They are not transaction-consistent state, physical-device-I/O counters, or exact unique-page counts. |
+
+## D. Historical findings requiring revalidation
+
+The older defect report
+[`pgbuf-defects-report_5cd4f860e_claude.md`](../../pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md)
+was produced at `5cd4f860e`, not the teaching baseline `f799e05`.
+
+| Historical ID | Older finding | Current use |
+|---|---|---|
+| D1 | Early flush-error paths leak FLUSHING/dirty bookkeeping. | Partly re-established as `VS-12` at `f799e05`; still a candidate until fault-injected. |
+| D2 | `direct_victims` initialization used the wrong `sizeof`. | Do not teach or ticket from this package until rechecked at the target branch. |
+| D3 | Direct-victim maintenance loop condition prevented its body from running. | Historical design-debugging example only. |
+| D4 | `big_private_lrus_with_victims` appeared to have no initial producer. | Historical queue-topology finding only. |
+| D5 | `double_write_buffer_size=2M` was rejected and prevented boot. | Configuration usability observation, not a page-buffer invariant. Reproduce on the intended release before use. |
+| D6 | Several counters used conflicting or partial definitions. | The general warning remains valid; each exact metric definition must be rechecked. |
+| D7 | Parameter tuning forcibly disabled AOUT despite 2Q-oriented comments. | Teach only as a pinned/historical caveat. |
+| D8 | `pgbuf_peek_stats` declaration names drifted. | Re-established as `VS-04` at `f799e05`. |
+
+## E. Runtime evidence boundaries
+
+| Evidence set | Verified observation | Do not infer |
+|---|---|---|
+| Audited experiments at `f799e05` | Cold/warm scans produce the same answer and a captured page-buffer ioread signature falls to zero on the immediate repeat. | Physical device miss, exact I/O source, or permanent residency. |
+| Logging-only live monitor | Statement-level fix/unfix, hit/miss, promotion, dirty calls, and WAL-sync-before-page-flush order were observed twice. | Production latency, release-build overhead, unprobed ordered-watcher/victim/DWB internals. |
+| Debug validation traffic | Full scan activity includes many volume-header/bitmap fixes. | That these counts represent release-build cost. |
+| Idle observation | A polling observer generated its own catalog/page-buffer traffic. | That background activity belongs to the workload being measured. |
+
+Sources:
+
+- [`runtime-path-monitoring.md`](../../pgbuf-analysis/f799e05_claude/analysis/monitoring/runtime-path-monitoring.md)
+- [`report-audit.md`](../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/report-audit.md)
+- [`experiments-and-quizzes.md`](../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md)
+
+## F. Questions deliberately left open
+
+1. Are `VS-10`, `VS-11`, and `VS-12` reachable under supported configurations, and what exact state survives each injected failure?
+2. Which of the historical replacement findings still exist on the branch used by new developers today?
+3. What fairness claim, if any, is intended for page-latch promotion and direct-victim assignment?
+4. Should `pgbuf_fix_without_validation_release` be implemented, removed, or hidden from release headers?
+5. Should the copy-area helpers be repaired, documented as specialized, or replaced with a narrower interface?
+6. Which page-buffer metrics are stable operational contracts versus implementation-local diagnostics?
+7. Which source revision should be used for the next delivery of this course? Line references must be regenerated if it is not `f799e05`.
+
+## G. Maintenance rule
+
+When updating the teaching package to another CUBRID revision:
+
+1. Diff `page_buffer.h` and the compact source-map ranges in `page_buffer.c`.
+2. Re-run symbol searches for all `VS-*` entries.
+3. Revalidate the acquisition, ownership, ordered-fix, dirty-generation, WAL, victim, and failure-unwind diagrams.
+4. Keep historical experiment numbers labeled historical unless the exact harness is rerun.
+5. Move resolved items out of this file only when the target source or runtime evidence proves resolution.

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" font-family="-apple-system, 'Segoe UI', 'Noto Sans KR', sans-serif" font-size="13" role="img" aria-labelledby="pool-title pool-desc">
+  <title id="pool-title">CUBRID page-buffer pool structure map</title>
+  <desc id="pool-desc">VPID hash, BCB, frame, LRU links, thread holder ledger, and dormant AOUT history relationships.</desc>
+  <defs>
+    <marker id="ah-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="ah-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706"/>
+    </marker>
+    <marker id="ah-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
+    </marker>
+    <marker id="ah-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="600" fill="#ffffff"/>
+  <text x="30" y="32" font-size="16" font-weight="700" fill="#0f172a">pgbuf_Pool — 하나의 BCB가 여러 색인에 동시에 꿰여 있다</text>
+
+  <!-- hash table -->
+  <text x="30" y="78" font-weight="700" fill="#2563eb">buf_hash_table</text>
+  <text x="30" y="94" fill="#475569" font-size="12">PGBUF_BUFFER_HASH[]</text>
+  <g stroke="#334155" fill="#f8fafc">
+    <rect x="30" y="104" width="150" height="30"/>
+    <rect x="30" y="134" width="150" height="30" fill="#dbeafe"/>
+    <rect x="30" y="164" width="150" height="30"/>
+    <rect x="30" y="194" width="150" height="30"/>
+  </g>
+  <text x="40" y="124" fill="#475569" font-size="12">bucket …</text>
+  <text x="40" y="154" fill="#1d4ed8" font-size="12">bucket = h(VPID)</text>
+  <text x="40" y="184" fill="#475569" font-size="12">bucket …</text>
+  <text x="40" y="214" fill="#475569" font-size="12">bucket …</text>
+  <text x="30" y="248" fill="#1d4ed8" font-size="12">hash_mutex + hash chain 앵커</text>
+  <text x="30" y="264" fill="#1d4ed8" font-size="12">+ lock chain 앵커 (miss 적재 중 대기)</text>
+
+  <!-- LRU header -->
+  <rect x="330" y="52" width="300" height="44" fill="#fffbeb" stroke="#d97706"/>
+  <text x="345" y="70" font-weight="700" fill="#b45309">buf_LRU_list[k] : PGBUF_LRU_LIST</text>
+  <text x="345" y="87" fill="#92400e" font-size="12">top/bottom · zone 1|2|3 · victim_hint</text>
+
+  <!-- BCB A -->
+  <rect x="300" y="130" width="260" height="158" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+  <text x="315" y="152" font-weight="700" fill="#0f172a">PGBUF_BCB  A</text>
+  <text x="315" y="172" fill="#334155" font-size="12">vpid · mutex · atomic_latch(fcnt)</text>
+  <text x="315" y="190" fill="#334155" font-size="12">flags: DIRTY | FLUSHING | …</text>
+  <text x="315" y="208" fill="#334155" font-size="12">oldest_unflush_lsa</text>
+  <text x="315" y="226" fill="#1d4ed8" font-size="12">hash_next ─ hash chain 링크</text>
+  <text x="315" y="244" fill="#b45309" font-size="12">prev_BCB / next_BCB ─ LRU 링크</text>
+  <text x="315" y="262" fill="#475569" font-size="12">iopage_buffer ─ frame 포인터</text>
+
+  <!-- BCB B -->
+  <rect x="300" y="356" width="260" height="130" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+  <text x="315" y="378" font-weight="700" fill="#0f172a">PGBUF_BCB  B</text>
+  <text x="315" y="398" fill="#334155" font-size="12">vpid · atomic_latch · flags</text>
+  <text x="315" y="416" fill="#1d4ed8" font-size="12">hash_next = NULL</text>
+  <text x="315" y="434" fill="#b45309" font-size="12">prev_BCB / next_BCB ─ LRU 링크</text>
+  <text x="315" y="452" fill="#475569" font-size="12">iopage_buffer ─ frame 포인터</text>
+
+  <!-- frames -->
+  <rect x="690" y="150" width="230" height="112" fill="#f1f5f9" stroke="#64748b"/>
+  <text x="705" y="172" font-weight="700" fill="#334155">PGBUF_IOPAGE_BUFFER  A</text>
+  <text x="705" y="192" fill="#475569" font-size="12">bcb ─ 역포인터</text>
+  <text x="705" y="210" fill="#475569" font-size="12">iopage: FILEIO_PAGE</text>
+  <text x="705" y="228" fill="#475569" font-size="12">(disk에 실제로 기록되는 bytes,</text>
+  <text x="705" y="244" fill="#475569" font-size="12"> prv.lsa = page LSA 포함)</text>
+
+  <rect x="690" y="366" width="230" height="112" fill="#f1f5f9" stroke="#64748b"/>
+  <text x="705" y="388" font-weight="700" fill="#334155">PGBUF_IOPAGE_BUFFER  B</text>
+  <text x="705" y="408" fill="#475569" font-size="12">bcb ─ 역포인터</text>
+  <text x="705" y="426" fill="#475569" font-size="12">iopage: FILEIO_PAGE</text>
+
+  <!-- holder -->
+  <rect x="30" y="400" width="200" height="96" fill="#ecfdf5" stroke="#059669"/>
+  <text x="45" y="422" font-weight="700" fill="#047857">thrd_holder_info[t]</text>
+  <text x="45" y="442" fill="#065f46" font-size="12">PGBUF_HOLDER_ANCHOR (per thread)</text>
+  <text x="45" y="462" fill="#065f46" font-size="12">└ PGBUF_HOLDER { bufptr = A,</text>
+  <text x="45" y="480" fill="#065f46" font-size="12">   fix_count = 1 }</text>
+
+  <!-- arrows: hash -->
+  <path d="M 180 149 H 240 V 200 H 300" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ah-blue)"/>
+  <text x="196" y="142" fill="#1d4ed8" font-size="12">chain 시작</text>
+  <path d="M 292 226 H 268 V 412 H 300" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ah-blue)"/>
+  <text x="180" y="320" fill="#1d4ed8" font-size="12">A.hash_next → B</text>
+
+  <!-- arrows: LRU -->
+  <path d="M 480 96 V 130" fill="none" stroke="#d97706" stroke-width="1.6" marker-end="url(#ah-amber)"/>
+  <text x="490" y="118" fill="#b45309" font-size="12">top</text>
+  <path d="M 480 288 V 356" fill="none" stroke="#d97706" stroke-width="1.6" marker-end="url(#ah-amber)"/>
+  <text x="490" y="326" fill="#b45309" font-size="12">next_BCB (LRU 순서)</text>
+  <path d="M 480 486 V 520" fill="none" stroke="#d97706" stroke-width="1.6" marker-end="url(#ah-amber)"/>
+  <text x="490" y="540" fill="#b45309" font-size="12">… bottom (victim은 아래쪽에서 탐색)</text>
+
+  <!-- arrows: frame pairing -->
+  <path d="M 560 200 H 690" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah-slate)" marker-start="url(#ah-slate)"/>
+  <text x="580" y="192" fill="#475569" font-size="12">iopage_buffer ⇄ bcb (1:1)</text>
+  <path d="M 560 420 H 690" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah-slate)" marker-start="url(#ah-slate)"/>
+
+  <!-- arrows: holder -->
+  <path d="M 230 448 H 262 V 270 H 300" fill="none" stroke="#059669" stroke-width="1.6" marker-end="url(#ah-green)"/>
+  <text x="120" y="530" fill="#047857" font-size="12">이 thread가 지금 쥔 fix들의 장부</text>
+
+  <!-- AOUT note -->
+  <rect x="690" y="500" width="230" height="72" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="4 3"/>
+  <text x="705" y="522" font-weight="700" fill="#475569">buf_AOUT_list (ghost history; analyzed default disabled)</text>
+  <text x="705" y="542" fill="#64748b" font-size="12">victim으로 쫓겨난 VPID만 기억.</text>
+  <text x="705" y="558" fill="#64748b" font-size="12">frame도 BCB도 없다 ─ 이력 전용.</text>
+</svg>
