@@ -30,6 +30,20 @@ Copy this structure into a change plan:
 
 **Remaining uncertainty:** What is still an inference, version-sensitive, unreachable, or unobserved?
 
+## Understanding check: Predict–Locate–Explain
+
+### Predict
+
+Choose packet A or B. Before following its ranges, use the change-impact template to predict the state owned when the exceptional return occurs, the postconditions required for a safe return, and the caller-visible consequence if any debt survives. Treat this as a hypothesis, not a defect conclusion.
+
+### Locate
+
+Trace the selected packet's cited source ranges in the pinned revision. Mark the acquisition or generation setup, the fallible operation, every local and callee-side cleanup, the return, the next retry owner, and the registry ID that owns current status.
+
+### Explain
+
+Defend which of the five proof levels the available source reaches: source-visible control flow, reachability, surviving state, production impact, and current-branch status. Then name the highest test seam that could close the next level. Compare your artifact with the packet-specific model answer immediately below it.
+
 ## Packet A: `VS-11` holder allocation after grant
 
 The [uncertainty registry](../unresolved-or-version-sensitive-findings.md) alone owns `VS-11` status. The source-visible concern is that several acquisition paths update the atomic latch/fix tuple, then allocate a per-thread holder. If holder-set allocation fails, the visible local path returns failure without an obvious rollback of the earlier grant.
