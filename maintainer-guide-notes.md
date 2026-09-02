@@ -60,7 +60,8 @@ Every SVG displayed anywhere in the document set is owned by [`assets/`](./asset
 - Reused visuals are copied into this directory so the guide remains self-contained.
 - Keep only visuals the document set actually displays.
 - If a source visual changes, update the local copy intentionally and review its wording against the current evidence boundary.
-- Visuals show object relationships, independent axes, converging flows, dual ledgers, durability timing, or eligibility gates; prose and source exercises own line anchors and catalogs.
+- Visuals show object relationships, independent axes, converging flows, dual ledgers, durability timing, eligibility gates, protection-gap timelines, wait queues, or progress loops; prose and source exercises own line anchors and catalogs.
+- Advanced pages may display a visual when a reader question shows that a mechanism's state transitions are hard to follow in prose; the visual still belongs to the root asset seam and to exactly one owning page.
 
 ## Writing rules
 
@@ -74,6 +75,15 @@ Every SVG displayed anywhere in the document set is owned by [`assets/`](./asset
 - Use `Module`, `Interface`, `Implementation`, and `seam` consistently with `CONTEXT.md`.
 - Use one Predict–Locate–Explain Understanding check and an adjacent evidence-aware model answer on each Learning page.
 - Remove presentation timing, speaker notes, slide language, audience-performance prompts, and day-by-day calendar framing. Retain the confirmed guide-entry duration expectations.
+
+## Reader question intake loop
+
+Reader questions recorded against a draft (for example `questions-b4179ee/questions.md`) are Reader question intake: keep the file unedited and digest-pinned in `maintainer-guide-validation.json`. Handle each question twice.
+
+1. Give it a Question disposition in `questions/migration-audit.md` that maps to a Canonical question with an evidence-aware answer.
+2. Ask what made the reader stumble in the Canonical explanation itself. An undefined term (DWB, load owner, provisional BCB, page header identity), a label in a visual, or a mechanism deferred without a summary is a guide defect. Fix it on the owning page, add or reword a visual only when the state transitions are materially harder in prose, and link the page's Related routes to the Canonical questions that rehearse the point.
+
+The Question bank answers the question; the Learning or Advanced page removes the reason it was asked.
 
 ## Updating to another CUBRID revision
 
@@ -137,6 +147,6 @@ The stable entry was cut over only after each former section had a complete cano
 | Deep references | Flat list replaced by intent routes and the source map |
 | Symptom-to-source index | Owned by the symptom playbook and source map |
 | Before you close an issue | Owned by the change and verification playbooks plus the capstone rubric |
-| Legacy pool, latch, and WAL-flush visuals | Useful relationships absorbed by the six canonical English visuals; obsolete files and language exemptions removed |
+| Legacy pool, latch, and WAL-flush visuals | Useful relationships absorbed by the canonical English visuals (six at cutover; three more added from Reader question intake); obsolete files and language exemptions removed |
 
 Exhaustive catalogs, raw receipts, historical question banks, and full comparison material remain linked evidence. No parallel legacy monolith is maintained.

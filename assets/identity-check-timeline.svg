@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="560" viewBox="0 0 1180 560" role="img" aria-labelledby="title desc">
+  <title id="title">Three identity checks close three different protection gaps in one normal fix</title>
+  <desc id="desc">A left-to-right timeline of one normal fix. Gap A lies between the unprotected hash-chain observation and taking the BCB mutex; identity recheck 1 closes it by comparing the BCB VPID again under the mutex. Gap B lies between hit or miss preparation and the common convergence point; identity recheck 2 compares the BCB identity with the identity stored in the page header. Gap C is the borrowed-use period; identity recheck 3 revalidates the BCB and page header at unfix before the global fix count is decremented. Each check validates a different observation under different protection, so none of them can replace another.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .gap{fill:#fff3df;stroke:#b86b22;stroke-width:2;stroke-dasharray:8 5}.check{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.mark{fill:#173f57;stroke:#173f57}.axis{fill:none;stroke:#48626f;stroke-width:3;marker-end:url(#arrow)}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.h{font:700 17px Inter,Arial,sans-serif;fill:#173443}.s{font:14px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#48626f;stroke-width:2;marker-end:url(#arrow)}.band{font:700 13px Inter,Arial,sans-serif;fill:#7a4a14;letter-spacing:1px}.bandc{font:700 13px Inter,Arial,sans-serif;fill:#0f6b65;letter-spacing:1px}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">One normal fix, three protection gaps, three identity checks</text>
+
+  <text x="40" y="82" class="band">WHAT MAY HAVE CHANGED SINCE THE LAST OBSERVATION</text>
+  <rect x="40" y="94" rx="14" width="350" height="112" class="gap"/>
+  <text x="56" y="120" class="h">Gap A: candidate seen without protection</text>
+  <text x="56" y="146" class="s">Hash chain walked before the BCB mutex is held.</text>
+  <text x="56" y="168" class="s">A victimizer may unlink this BCB and rebind it</text>
+  <text x="56" y="190" class="s">to another VPID in that window.</text>
+
+  <rect x="415" y="94" rx="14" width="350" height="112" class="gap"/>
+  <text x="431" y="120" class="h">Gap B: bytes prepared, not cross-checked</text>
+  <text x="431" y="146" class="s">Hit: resident bytes found. Miss: bytes just read</text>
+  <text x="431" y="168" class="s">from the DWB image or the data volume. Control</text>
+  <text x="431" y="190" class="s">block and page image could still disagree.</text>
+
+  <rect x="790" y="94" rx="14" width="350" height="112" class="gap"/>
+  <text x="806" y="120" class="h">Gap C: borrowed use</text>
+  <text x="806" y="146" class="s">The caller holds latch, fcnt, and holder, then</text>
+  <text x="806" y="168" class="s">calls unfix with a PAGE_PTR. The pointer is an</text>
+  <text x="806" y="190" class="s">address into a reusable frame, not an identity.</text>
+
+  <path d="M215 206 V262" class="line"/>
+  <path d="M590 206 V262" class="line"/>
+  <path d="M965 206 V262" class="line"/>
+
+  <path d="M40 300 H1130" class="axis"/>
+  <text x="1090" y="290" class="tiny">time</text>
+  <circle cx="215" cy="300" r="9" class="mark"/>
+  <circle cx="590" cy="300" r="9" class="mark"/>
+  <circle cx="965" cy="300" r="9" class="mark"/>
+  <text x="215" y="332" text-anchor="middle" class="tiny">lock BCB</text>
+  <text x="590" y="332" text-anchor="middle" class="tiny">hit and miss converge</text>
+  <text x="965" y="332" text-anchor="middle" class="tiny">unfix</text>
+
+  <text x="40" y="368" class="bandc">WHICH OBSERVATION EACH CHECK VALIDATES, AND UNDER WHAT PROTECTION</text>
+  <rect x="40" y="382" rx="14" width="350" height="118" class="check"/>
+  <text x="56" y="408" class="h">Identity recheck 1: under the BCB mutex</text>
+  <text x="56" y="434" class="s">Is bufptr-&gt;vpid still the requested VPID?</text>
+  <text x="56" y="456" class="s">Fail: unlock this BCB and walk the chain again.</text>
+  <text x="56" y="478" class="tiny">closes Gap A; protection: BCB mutex</text>
+
+  <rect x="415" y="382" rx="14" width="350" height="118" class="check"/>
+  <text x="431" y="408" class="h">Identity recheck 2: at convergence</text>
+  <text x="431" y="434" class="s">BCB vpid equals page header volid/pageid?</text>
+  <text x="431" y="456" class="s">Fail: no PAGE_PTR; new BCB back to the invalid list.</text>
+  <text x="431" y="478" class="tiny">closes Gap B; protection: BCB mutex, hit or miss</text>
+
+  <rect x="790" y="382" rx="14" width="350" height="118" class="check"/>
+  <text x="806" y="408" class="h">Identity recheck 3: while releasing</text>
+  <text x="806" y="434" class="s">BCB identity non-null and header still agrees,</text>
+  <text x="806" y="456" class="s">then holder minus one, then global fcnt minus one.</text>
+  <text x="806" y="478" class="tiny">closes Gap C; debug assertion under the BCB mutex</text>
+
+  <text x="40" y="540" class="s">Each check guards a different gap under different protection. Removing one leaves that gap unguarded; it does not make the other two redundant.</text>
+</svg>

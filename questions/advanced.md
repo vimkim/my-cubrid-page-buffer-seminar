@@ -38,7 +38,7 @@ Prerequisite: [Acquisition Concurrency and Multi-page Ownership](../advanced/acq
 - **Retrieval mode:** Scenario
 - **Prerequisite:** [Acquisition Concurrency](../advanced/acquisition-concurrency.md)
 - **Capability tested:** Draw queue, wakeup, retry, timeout, and interrupt states for one hundred writers.
-- **Inspect:** `src/storage/page_buffer.c:6277-7582`
+- **Inspect:** `src/storage/page_buffer.c:6277-7590`
 
 **Question:** One hundred threads request an incompatible WRITE latch unconditionally. Describe what is serialized, what may wake or retry, and which fairness or completion claims the source does not justify.
 

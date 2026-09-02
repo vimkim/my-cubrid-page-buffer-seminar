@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { canonicalVisualOwners } from "./canonical-visuals.mjs";
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const guideRoot = path.resolve(scriptDir, "..");
 const evidenceLabels = [
@@ -82,15 +84,8 @@ test("every page declares canonical evidence labels and avoids deprecated vocabu
   }
 });
 
-test("all six canonical visuals expose text-labelled accessible relationships", async () => {
-  const owners = {
-    "durability-chain.svg": "learning/04-flush-one-generation.md",
-    "fix-contract.svg": "learning/02-fix-hold-release.md",
-    "object-ownership-map.svg": "learning/01-contract-and-objects.md",
-    "ownership-ledgers.svg": "learning/02-fix-hold-release.md",
-    "state-axes.svg": "learning/01-contract-and-objects.md",
-    "victim-eligibility.svg": "learning/05-replace-one-frame.md",
-  };
+test("every canonical visual exposes text-labelled accessible relationships on its owning page", async () => {
+  const owners = canonicalVisualOwners;
 
   for (const [asset, owner] of Object.entries(owners)) {
     const [svg, markdown] = await Promise.all([
@@ -144,8 +139,8 @@ test("the completion report records deterministic, HTTP, DOM, migration, and sco
     "node scripts/check-maintainer-guide.mjs",
     "--copyparty-url http://127.0.0.1:39497/",
     "27 pages",
-    "6 displayed",
-    "33 resources",
+    "9 displayed",
+    "36 resources",
     "Playwright is not installed",
     "Migration audit",
     "be16718",

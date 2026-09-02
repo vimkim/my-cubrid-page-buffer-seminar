@@ -11,6 +11,7 @@ const guideRoot = path.resolve(scriptDir, "..");
 const pagePath = path.join(guideRoot, "learning/02-fix-hold-release.md");
 const fixContractPath = path.join(guideRoot, "assets/fix-contract.svg");
 const ownershipLedgersPath = path.join(guideRoot, "assets/ownership-ledgers.svg");
+const identityTimelinePath = path.join(guideRoot, "assets/identity-check-timeline.svg");
 const hangulPattern = /[\u3131-\u318e\u3200-\u321e\u3260-\u327f\ua960-\ua97c\uac00-\ud7a3\ud7b0-\ud7fb]/u;
 
 test("the acquisition lesson separates fetch intent, latch mode, and wait condition", async () => {
@@ -113,7 +114,8 @@ test("the normal resident hit and cold miss converge after explicit identity rec
   assert.match(markdown, /normal resident hit/i);
   assert.match(markdown, /cold miss/i);
   assert.match(markdown, /waiter.*retries lookup/i);
-  assert.match(markdown, /ownership debt.*committed/i);
+  assert.match(markdown, /fix debt is recorded/i);
+  assert.doesNotMatch(markdown, /ownership debt is committed|commit debt wording|Grant and commit debt/i);
   for (const marker of [
     "Identity recheck 1",
     "Identity recheck 2",
@@ -136,15 +138,117 @@ test("the normal resident hit and cold miss converge after explicit identity rec
   assert.match(svg, /<desc[^>]*>[^<]+<\/desc>/);
   assert.doesNotMatch(svg, hangulPattern);
   assert.doesNotMatch(svg, /lock-free/i);
+  assert.doesNotMatch(svg, /Debt commit|commit debt/i);
   for (const label of [
     "Resident hit",
     "Cold miss",
     "Retry lookup",
     "Identity confirmed",
-    "Debt commit",
-    "Same success postcondition",
+    "page header",
+    "Fix debt recorded",
+    "One success postcondition",
+    "one PAGE_PTR that owes one unfix",
   ]) {
     assert.ok(svg.includes(label), label);
+  }
+});
+
+test("the lesson defines its trace vocabulary and explains why three identity checks are not redundant", async () => {
+  const [markdown, svg] = await Promise.all([
+    readFile(pagePath, "utf8"),
+    readFile(identityTimelinePath, "utf8"),
+  ]);
+
+  assert.match(markdown, /### Vocabulary the trace depends on/);
+  for (const term of [
+    "**Hash candidate**",
+    "**VPID load lock and load owner**",
+    "**Provisional BCB**",
+    "**DWB**",
+    "**Page header identity**",
+    "**Fix debt**",
+    "**Stale-observation boundary**",
+  ]) {
+    assert.ok(markdown.includes(term), term);
+  }
+  assert.match(markdown, /double-write buffer/i);
+  assert.match(markdown, /`FILEIO_PAGE\.prv`/);
+  assert.match(markdown, /registering the record first, not from having searched/i);
+  assert.match(markdown, /not yet linked into the hash chain/i);
+  assert.doesNotMatch(markdown, /Grant and commit debt/);
+
+  assert.match(markdown, /### Why three identity checks are not redundant/);
+  assert.match(
+    markdown,
+    /!\[Three identity checks closing three protection gaps\]\(\.\.\/assets\/identity-check-timeline\.svg\)/,
+  );
+  assert.match(markdown, /Removing one check leaves its gap unguarded/i);
+  assert.match(markdown, /debug-build assertions/i);
+  for (const anchor of [
+    "src/storage/page_buffer.c:8638-8690",
+    "src/storage/page_buffer.c:5433-5475,11243-11290",
+  ]) {
+    assert.ok(markdown.includes(`\`${anchor}\``), anchor);
+  }
+
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]+<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]+<\/desc>/);
+  assert.doesNotMatch(svg, hangulPattern);
+  for (const label of [
+    "Gap A",
+    "Gap B",
+    "Gap C",
+    "Identity recheck 1",
+    "Identity recheck 2",
+    "Identity recheck 3",
+    "page header",
+    "does not make the other two redundant",
+  ]) {
+    assert.ok(svg.includes(label), label);
+  }
+});
+
+test("the lesson summarizes waiting, the cold-miss sequence, and holder attribution and routes their mechanisms", async () => {
+  const markdown = await readFile(pagePath, "utf8");
+
+  assert.match(markdown, /### The cold miss in order, and where it can stall/);
+  assert.match(markdown, /`PSTAT_PB_NUM_IOREADS`/);
+  assert.doesNotMatch(markdown, /the `ioreads` counter/);
+
+  assert.match(markdown, /## When the latch cannot be granted now/);
+  assert.match(markdown, /`LK_ZERO_WAIT`/);
+  assert.match(markdown, /served one at a time as each holder releases/i);
+  // The queue-walk mechanism is owned by the Advanced page; the Core summary must route, not restate it.
+  assert.doesNotMatch(markdown, /head is a reader|head is a writer|`page_latch_timeout_in_msecs`/i);
+  assert.ok(
+    markdown.includes(
+      "](../advanced/acquisition-concurrency.md#worked-case-one-hundred-unconditional-write-requests)",
+    ),
+  );
+
+  assert.match(markdown, /\*\*Who holds this BCB\?\*\*/);
+  assert.match(markdown, /`thrd_hold_list`/);
+  assert.match(markdown, /`latch_last_thread`.*`src\/storage\/page_buffer\.c:524`/);
+  for (const anchor of [
+    "src/storage/page_buffer.c:7981-8178,11598-11604",
+    "src/storage/page_buffer.c:8181-8403",
+    "src/storage/page_buffer.c:8497",
+    "src/storage/page_buffer.c:6277-6634",
+  ]) {
+    assert.ok(markdown.includes(`\`${anchor}\``), anchor);
+  }
+  for (const route of [
+    "../questions/core.md#pgbuf-qb-008-who-is-the-vpid-load-owner",
+    "../questions/core.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once",
+    "../questions/core.md#pgbuf-qb-010-what-does-bcb-and-page-header-agreement-mean",
+    "../questions/core.md#pgbuf-qb-012-what-is-the-resident-hit-stale-observation-boundary",
+    "../questions/core.md#pgbuf-qb-015-what-do-fcnt-and-per-thread-holders-tell-you",
+    "../questions/core.md#pgbuf-qb-018-is-fix-debt-the-same-as-commit-debt",
+    "../questions/advanced.md#pgbuf-qb-033-how-are-many-unconditional-write-waiters-handled",
+    "../questions/advanced.md#pgbuf-qb-040-what-happens-when-no-free-bcb-is-immediately-available",
+  ]) {
+    assert.ok(markdown.includes(`](${route})`), route);
   }
 });
 

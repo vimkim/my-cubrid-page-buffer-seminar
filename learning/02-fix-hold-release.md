@@ -28,16 +28,44 @@ Expected non-acquisition is part of some owner protocols. On an `OLD_PAGE_IF_IN_
 
 ![Normal resident hit and cold miss converging on one fix contract](../assets/fix-contract.svg)
 
-The visual deliberately follows the normal mutex-protected path. It shows where a normal resident hit and a cold miss do different preparation, then converge; the optimized READ path is an advanced continuation, not a prerequisite for understanding the contract.
+The visual deliberately follows the normal mutex-protected path. It shows where a normal resident hit and a cold miss do different preparation, then converge; the optimized READ path is an advanced continuation, not a prerequisite for understanding the contract. The success box at the bottom is shared on purpose: whichever branch ran, the caller receives the same four facts—the page is resident, the requested latch is granted, both ledgers record this acquisition, and one borrowed `PAGE_PTR` owes one unfix. A caller therefore never reasons differently about a hit than about a miss.
 
-1. **Locate.** A resident hit finds a BCB whose current `vpid` initially matches the request. A cold miss enters the VPID-keyed buffer-lock protocol. One thread becomes the load owner; a waiter sleeps, wakes, and retries lookup instead of receiving the owner's provisional BCB.
-2. **Identity recheck 1 — after protecting a hit candidate.** Hash lookup checks the candidate's `vpid`, acquires the BCB mutex, and checks the `vpid` again. If reuse changed the identity in between, lookup releases the candidate and retries. This is the resident-hit stale-observation boundary.
-3. **Materialize on a miss.** The load owner allocates a reusable BCB/frame, assigns the requested `VPID`, and obtains the old bytes from DWB or the data volume for `OLD_PAGE`. This protocol serializes resident-identity preparation; it does not prove exactly one physical device I/O.
-4. **Identity recheck 2 — at convergence.** Hit and miss reach the common path with the BCB mutex held. The code sets the page header identity where the mode permits it, then checks the page-header VPID against the BCB identity. A mismatch exits without returning a borrowed pointer.
-5. **Grant and commit debt.** `pgbuf_latch_bcb_upon_fix()` grants the compatible latch and updates global `fcnt` plus the current thread's holder. Ownership debt is committed for the successful fix when this helper returns `NO_ERROR` with both ledgers established. Only then may the common path return `PAGE_PTR`; a newly loaded BCB is also published and its VPID load lock is released before return.
-6. **Identity recheck 3 — while releasing.** The mutex-based unfix path asserts that the BCB still has a non-null identity and that the page-header identity still agrees before it decrements global `fcnt`. This protects the release transition; the borrowed pointer itself must not be treated as an identity proof.
+### Vocabulary the trace depends on
+
+| Term | Meaning in this trace |
+|---|---|
+| **Hash candidate** | A BCB found by walking the `VPID` hash chain. Until the BCB mutex is held and its `vpid` is compared again, it is an observation, not a resident-identity proof. |
+| **VPID load lock and load owner** | On a miss, the thread registers the requested `VPID` in the hash anchor's buffer-lock chain, using the lock record reserved for its own thread index. The first thread to register becomes the load owner. A later thread that misses on the same `VPID` finds the record, links itself as a waiter, and sleeps. Ownership comes from registering the record first, not from having searched: every missing thread searched, but only one registered first. |
+| **Provisional BCB** | The BCB the load owner takes from the invalid list or victimizes, assigns the requested `VPID`, and resets to an idle latch. It is not yet linked into the hash chain, so no other thread can find it. A woken waiter cannot be handed this object because it has no protected reference to something unpublished; it re-runs lookup and finds the BCB only after the owner publishes it. |
+| **DWB** | CUBRID's double-write buffer: a staging area through which flushed page images pass before they reach the data volume. A cold read consults DWB first because the newest image of the page may still be there; otherwise it reads the data volume through file I/O. |
+| **Page header identity** | The reserved header at the start of every page image, `FILEIO_PAGE.prv`, carries the page's own `pageid`, `volid`, and LSA. "BCB and page header agree" means the control block's `vpid` equals the identity stored inside the bytes it claims to hold. |
+| **Fix debt** | The obligation, created by one successful fix, to call unfix exactly once. This guide does not say "commit debt": that wording suggests transaction commit, which the page buffer never performs. |
+| **Stale-observation boundary** | The point after which an observation about a hit candidate can be trusted: the protected identity recheck. Anything observed before it—`vpid`, flags, frame association—may describe a BCB that has since been rebound to another page. |
+
+### The six steps
+
+1. **Locate.** A resident hit finds a BCB whose current `vpid` initially matches the request. A cold miss enters the VPID-keyed buffer-lock protocol. One thread becomes the load owner; a waiter sleeps, wakes, and retries lookup instead of receiving the owner's provisional BCB. The searcher and the load owner are decided by different mechanisms: search is an unprotected chain walk, while load ownership is a lock record registered under the hash-anchor mutex.
+2. **Identity recheck 1 — after protecting a hit candidate.** Hash lookup compares the candidate's `vpid`, acquires the BCB mutex, and compares the `vpid` again. The recheck exists because the first comparison happened without protection: between that read and the mutex acquisition, a victimizer holding the same mutex may have unlinked the BCB from the hash chain and a new loader may have assigned it another `VPID`. If the identity changed, lookup releases the candidate and walks the chain again. This is the resident-hit stale-observation boundary.
+3. **Materialize on a miss.** The load owner allocates a reusable BCB/frame, assigns the requested `VPID`, and obtains the old bytes from DWB or the data volume for `OLD_PAGE`; for `NEW_PAGE` it initializes the frame and header instead of reading. This protocol serializes resident-identity preparation; it does not prove exactly one physical device I/O, because DWB, the operating system, and the device each have their own caches.
+4. **Identity recheck 2 — at convergence.** Hit and miss reach the common path with the BCB mutex held. The code sets the page header identity where the header is still empty (a fresh `NEW_PAGE` frame, or an immature page met during redo recovery), then compares the page-header `volid`/`pageid` against the BCB identity. A mismatch exits without returning a borrowed pointer; a freshly loaded BCB is returned to the invalid list and the load lock is released so waiters can retry.
+5. **Grant the latch and record the fix debt.** `pgbuf_latch_bcb_upon_fix()` grants the compatible latch and updates global `fcnt` plus the current thread's holder. The fix debt is recorded for the successful fix when this helper returns `NO_ERROR` with both ledgers established. Only then may the common path return `PAGE_PTR`; a newly loaded BCB is also published into the hash chain and its VPID load lock is released before return.
+6. **Identity recheck 3 — while releasing.** The mutex-based unfix path asserts that the BCB still has a non-null identity and that the page-header identity still agrees before it decrements global `fcnt`. These are debug-build assertions, so in a release build this recheck documents the caller's obligation rather than guarding it at runtime. The borrowed pointer itself must never be treated as an identity proof.
 
 The common caller-visible postcondition is therefore independent of preparation: the requested page is resident, the requested latch is granted, this acquisition is represented in both ledgers, and one borrowed `PAGE_PTR` is returned with one release debt.
+
+### Why three identity checks are not redundant
+
+![Three identity checks closing three protection gaps](../assets/identity-check-timeline.svg)
+
+Each check validates a different observation under different protection, so none of them can stand in for another:
+
+| Check | Gap it closes | What could have changed | Cost |
+|---|---|---|---|
+| Recheck 1 under the BCB mutex | Between the unprotected chain walk and taking the mutex | A victimizer unlinked the BCB and a loader rebound it to another `VPID` | Two integer compares under a mutex the thread already holds |
+| Recheck 2 at convergence | Between preparing bytes (hit or miss) and granting access | The control block and the page image disagree: a wrong or corrupted read, or a stale association | Two integer compares against the frame header |
+| Recheck 3 at unfix | The borrowed-use period | The caller's `PAGE_PTR` is an address into reusable storage, not an identity token | Debug assertion only |
+
+Removing one check leaves its gap unguarded. It does not make the other two redundant, because they never observed that gap.
 
 Pinned-source trace:
 
@@ -45,9 +73,33 @@ Pinned-source trace:
 - Protected hash-candidate VPID rechecks: `src/storage/page_buffer.c:7594-7722`
 - VPID-keyed load owner/waiter protocol and wakeup: `src/storage/page_buffer.c:7981-8178`
 - Cold-miss BCB assignment and DWB/data-volume materialization: `src/storage/page_buffer.c:8392-8634`
+- Victimization unlinks a BCB from the hash chain before its identity can be reassigned: `src/storage/page_buffer.c:8638-8690`
+- Page-header identity set and compare: `src/storage/page_buffer.c:5433-5475,11243-11290`
 - Release-time BCB/page identity check and global decrement: `src/storage/page_buffer.c:6670-6703`
 
 **Evidence boundary:** this source trace establishes resident-identity serialization and convergence, not one physical I/O, fairness among waiters, or every exceptional cleanup path. In particular, holder allocation occurs after an atomic latch/`fcnt` grant on some paths; `VS-11` routes that failure window to the [uncertainty registry](../unresolved-or-version-sensitive-findings.md), which alone owns its current status. The source trace does not establish a production defect.
+
+### The cold miss in order, and where it can stall
+
+A miss is the longest normal path, so it is where a performance question usually lands. The pinned order is:
+
+1. **Register the load lock.** Under the hash-anchor mutex, the thread either becomes load owner or finds an existing record and sleeps as a waiter. A load waiter's sleep has no timeout of its own; it relies on the owner's publication or on interruption.
+2. **Allocate a frame.** The owner takes a BCB from the invalid list, else searches the LRU lists for an eligible victim, else waits to be assigned one. This is the step that can block when the pool is under pressure; [Replacement Policy and Background Progress](../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop) owns that loop.
+3. **Read the bytes.** `OLD_PAGE` consults DWB first and otherwise reads the data volume; the `PSTAT_PB_NUM_IOREADS` counter increments before that choice is made. `NEW_PAGE` initializes the frame instead.
+4. **Decrypt if needed.** A page under transparent data encryption is decrypted in place.
+5. **Confirm identity, grant, publish.** Identity recheck 2, the latch grant, insertion into the hash chain, and release of the load lock, which wakes every load waiter.
+
+Pinned source: load-lock registration and the untimed waiter sleep at `src/storage/page_buffer.c:7981-8178,11598-11604`; frame allocation at `src/storage/page_buffer.c:8181-8403`; read-source choice, the counter increment at `src/storage/page_buffer.c:8497`, decryption, and header initialization at `src/storage/page_buffer.c:8392-8634`.
+
+Each step is a separate seam where time can go: hash-anchor mutex contention, waiting behind another thread's load of the same page, waiting for a frame, the read itself, decryption, and finally the wakeup of waiters. A performance regression must be attributed to one of these seams with timing evidence; a rising miss counter alone says only that the page was not resident. [Where can a cold-miss performance regression arise?](../questions/maintenance-scenarios.md#pgbuf-qb-063-where-can-a-cold-miss-performance-regression-arise) rehearses that attribution.
+
+## When the latch cannot be granted now
+
+The three caller choices decide the outcome when the requested latch conflicts with the current holders. A **conditional** request returns without a grant and without debt; when the transaction's lock-wait setting is `LK_ZERO_WAIT`, the Module also raises `ER_LK_PAGE_TIMEOUT`. An **unconditional** request joins the BCB's wait queue and sleeps with a bounded timeout; as conflicting holders release, queued requests are granted in turn, and a granted waiter returns the same success postcondition as an immediate grant. A **timeout** or an **interrupt** ends the wait without debt.
+
+One hundred unconditional WRITE requests on one page are therefore served one at a time as each holder releases. For a Core maintainer that is the whole contract: success after waiting creates exactly one fix debt, and failure creates none. Queue order, reader grouping, promotion, the timeout errors, and why fairness is not a contract belong to [the hundred-writer worked case](../advanced/acquisition-concurrency.md#worked-case-one-hundred-unconditional-write-requests).
+
+Pinned source: the grant-or-wait decision and conditional rejection at `src/storage/page_buffer.c:6277-6634`.
 
 ## Two ledgers, one debt per acquisition
 
@@ -61,6 +113,8 @@ For the successful normal fixes in the example below, the two counters reconcile
 | Current thread's holder `fix_count` | This thread's nested granted fixes on one BCB | The thread's release debt and whether its holder record remains live. It does not summarize other threads. |
 
 Suppose thread A fixes one resident page twice under a compatible latch and thread B fixes it once. The BCB's global `fcnt` is 3; A has one holder whose `fix_count` is 2; B has one holder whose `fix_count` is 1. Nested fixes can return the same `PAGE_PTR`, but they create separate call-level debt. Counting unique pointer values would undercount ownership.
+
+**Who holds this BCB?** The BCB carries no list of holder threads. Attribution is stored the other way round: each thread owns a holder list (`thrd_hold_list` in its holder anchor) whose entries point at the BCBs that thread owes. To answer "which threads hold this page" a diagnostic must scan every thread's holder list, which is what the debug dump routines do; `latch_last_thread` on the BCB (`src/storage/page_buffer.c:524`) records only the most recent grantee in server builds and is a debugging aid, not a ledger. This design is deliberate: many readers may own one BCB at once, so a single owner field would be wrong, and the per-thread list is exactly what unfix and request-end cleanup need to walk.
 
 **Invariant:** every successful acquisition creates exactly one release debt. One normal `pgbuf_unfix()` decrements the calling thread's nested holder count and the BCB's global count by one. The holder record is removed when that thread's count reaches zero; the BCB may become latch-idle when global `fcnt` reaches zero. Neither event means the resident page was flushed or evicted.
 
@@ -90,7 +144,7 @@ Blocking promotion and ordered watcher protocols may temporarily release and rea
 
 ## Advanced mechanisms deliberately deferred
 
-This page gives the ordinary contract a stable shape before concurrency optimizations and multi-page protocols are introduced. Continue to [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md) for the lock-free READ hit and its memory-ordering proof, blocking promotion and its release/reacquire boundary, and ordered watchers with release/reorder/refix. Those mechanisms must preserve the identity, debt, and pointer-lifetime invariants taught here; they are not alternative shortcuts around them.
+This page gives the ordinary contract a stable shape before concurrency optimizations and multi-page protocols are introduced. Continue to [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md) for the lock-free READ hit and its memory-ordering proof, the full latch wait queue with reader grouping and timeout handling, blocking promotion and its release/reacquire boundary, and ordered watchers with release/reorder/refix. Continue to [Replacement Policy and Background Progress](../advanced/replacement-progress.md) for what happens when a cold miss finds no free frame. Those mechanisms must preserve the identity, debt, and pointer-lifetime invariants taught here; they are not alternative shortcuts around them.
 
 ## Understanding check: Predict–Locate–Explain
 
@@ -114,7 +168,7 @@ Annotate one bounded normal call path:
 
 Produce one reviewable artifact with two parts:
 
-- an **annotated call path** from caller choices through locate, both acquisition identity checks, the debt-commit boundary, borrowed return, and matching release;
+- an **annotated call path** from caller choices through locate, both acquisition identity checks, the fix-debt record, borrowed return, and matching release;
 - a **debt ledger** with one row per event and separate columns for global `fcnt`, A's holder, B's holder, and pointer usability.
 
 Finish with one sentence explaining why equal pointer addresses do not change the number of debts, and one sentence stating what the trace does not prove.
@@ -129,7 +183,7 @@ VPID + OLD_PAGE + READ + unconditional
   -> lock BCB, recheck candidate VPID                 [identity recheck 1]
   -> verify page-header VPID against BCB identity     [identity recheck 2]
   -> grant compatible READ latch
-  -> increment BCB global fcnt and A/B holder count   [debt commit]
+  -> increment BCB global fcnt and A/B holder count   [fix debt recorded]
   -> return borrowed PAGE_PTR
   -> matching unfix: decrement caller holder, then global fcnt
 ```
@@ -157,6 +211,11 @@ Thus the global `fcnt` values rise through 1, 2, and 3 while the thread ledgers 
 ## Related routes
 
 - [Practice latch and lock ownership](../questions/core.md#pgbuf-qb-013-how-does-a-page-latch-differ-from-a-transaction-lock)
+- [Practice the load owner and waiter trace](../questions/core.md#pgbuf-qb-008-who-is-the-vpid-load-owner)
+- [Practice the identity rechecks](../questions/core.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once) and [page-header agreement](../questions/core.md#pgbuf-qb-010-what-does-bcb-and-page-header-agreement-mean)
+- [Practice the stale-observation boundary](../questions/core.md#pgbuf-qb-012-what-is-the-resident-hit-stale-observation-boundary)
+- [Practice the two ledgers](../questions/core.md#pgbuf-qb-015-what-do-fcnt-and-per-thread-holders-tell-you) and [fix debt naming](../questions/core.md#pgbuf-qb-018-is-fix-debt-the-same-as-commit-debt)
+- [Practice many unconditional writers](../questions/advanced.md#pgbuf-qb-033-how-are-many-unconditional-write-waiters-handled) and [no free BCB](../questions/advanced.md#pgbuf-qb-040-what-happens-when-no-free-bcb-is-immediately-available)
 - [Change the Module Safely](../playbooks/change-safely.md)
 - [Source and Caller Map](../reference/source-map.md)
 - [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md)

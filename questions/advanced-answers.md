@@ -38,7 +38,7 @@ Use IDs to pair these answers with [Advanced prompts](./advanced.md). Follow the
 
 - **Evidence:** Verified mechanism; Inference
 - **Canonical guide:** [Acquisition Concurrency](../advanced/acquisition-concurrency.md)
-- **Source anchors:** `src/storage/page_buffer.c:6277-7582`
+- **Source anchors:** `src/storage/page_buffer.c:6277-7590`
 - **Confidence/limit:** Queue and exit paths are visible; strict FIFO, starvation freedom, and exact timing are not proved.
 - **Prompt:** [Attempt this question](./advanced.md#pgbuf-qb-033-how-are-many-unconditional-write-waiters-handled)
 

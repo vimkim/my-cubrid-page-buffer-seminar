@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="560" viewBox="0 0 1120 560" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="610" viewBox="0 0 1120 610" role="img" aria-labelledby="title desc">
   <title id="title">Normal resident hit and cold miss converge on one fix contract</title>
-  <desc id="desc">Three caller choices enter a normal fix. Expected absence returns no page and creates no debt. A protected resident hit and a VPID-serialized cold miss converge at identity confirmation, latch grant, and the global and thread debt commit before returning the same successful postcondition.</desc>
+  <desc id="desc">Three caller choices enter a normal fix. Expected absence returns no page and creates no debt. A protected resident hit and a VPID-serialized cold miss converge at identity confirmation, latch grant, and the global and thread fix-debt record before returning the same successful postcondition: the page is resident, the latch is granted, both ledgers hold this acquisition, and one borrowed page pointer carries one release debt.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
     <style>
@@ -20,37 +20,44 @@
 
   <path d="M414 145 V208 H548" class="line"/>
   <text x="430" y="183" class="tiny">HIT</text>
-  <rect x="549" y="166" rx="16" width="238" height="92" class="hit"/>
-  <text x="668" y="201" text-anchor="middle" class="t">Resident hit</text>
-  <text x="668" y="229" text-anchor="middle" class="s">lock BCB, recheck VPID</text>
+  <rect x="549" y="160" rx="16" width="270" height="98" class="hit"/>
+  <text x="684" y="193" text-anchor="middle" class="t">Resident hit</text>
+  <text x="684" y="220" text-anchor="middle" class="s">lock BCB, recheck VPID</text>
+  <text x="684" y="243" text-anchor="middle" class="tiny">identity recheck 1</text>
 
-  <path d="M414 145 V354 H548" class="line"/>
-  <text x="430" y="330" class="tiny">MISS</text>
-  <rect x="549" y="306" rx="16" width="238" height="98" class="miss"/>
-  <text x="668" y="340" text-anchor="middle" class="t">Cold miss</text>
-  <text x="668" y="367" text-anchor="middle" class="s">VPID load owner prepares BCB</text>
-  <text x="668" y="390" text-anchor="middle" class="tiny">DWB or data volume for OLD_PAGE</text>
+  <path d="M414 145 V364 H548" class="line"/>
+  <text x="430" y="340" class="tiny">MISS</text>
+  <rect x="549" y="302" rx="16" width="270" height="124" class="miss"/>
+  <text x="684" y="334" text-anchor="middle" class="t">Cold miss</text>
+  <text x="684" y="360" text-anchor="middle" class="s">load owner fills an unpublished BCB</text>
+  <text x="684" y="382" text-anchor="middle" class="tiny">OLD_PAGE: DWB image, else data volume</text>
+  <text x="684" y="400" text-anchor="middle" class="tiny">NEW_PAGE: initialize, no read</text>
+  <text x="684" y="418" text-anchor="middle" class="tiny">other missing threads wait, then retry</text>
 
-  <path d="M625 306 V276 H518 V307" class="retry"/>
+  <path d="M640 302 V276 H518 V307" class="retry"/>
   <text x="532" y="291" class="tiny">Retry lookup</text>
 
-  <path d="M787 212 H848 V254" class="line"/>
-  <path d="M787 355 H848 V306" class="line"/>
-  <rect x="811" y="254" rx="16" width="272" height="78" class="box"/>
-  <text x="947" y="285" text-anchor="middle" class="t">Identity confirmed</text>
-  <text x="947" y="312" text-anchor="middle" class="s">BCB and page header agree</text>
+  <path d="M819 209 H872 V254" class="line"/>
+  <path d="M819 364 H872 V345" class="line"/>
+  <rect x="835" y="254" rx="16" width="272" height="90" class="box"/>
+  <text x="971" y="284" text-anchor="middle" class="t">Identity confirmed</text>
+  <text x="971" y="310" text-anchor="middle" class="s">BCB vpid = page header volid/pageid</text>
+  <text x="971" y="332" text-anchor="middle" class="tiny">identity recheck 2</text>
 
-  <path d="M947 332 V374" class="line"/>
-  <rect x="811" y="375" rx="16" width="272" height="92" class="commit"/>
-  <text x="947" y="408" text-anchor="middle" class="t">Debt commit</text>
-  <text x="947" y="436" text-anchor="middle" class="s">latch + global fcnt + thread holder</text>
+  <path d="M971 344 V386" class="line"/>
+  <rect x="835" y="387" rx="16" width="272" height="92" class="commit"/>
+  <text x="971" y="420" text-anchor="middle" class="t">Fix debt recorded</text>
+  <text x="971" y="448" text-anchor="middle" class="s">latch granted, global fcnt +1,</text>
+  <text x="971" y="468" text-anchor="middle" class="s">this thread's holder +1</text>
 
-  <path d="M947 467 V498" class="line"/>
-  <rect x="744" y="499" rx="16" width="339" height="50" class="success"/>
-  <text x="914" y="530" text-anchor="middle" class="t w">Same success postcondition</text>
+  <path d="M971 479 V510" class="line"/>
+  <rect x="768" y="511" rx="16" width="339" height="84" class="success"/>
+  <text x="937" y="540" text-anchor="middle" class="t w">One success postcondition</text>
+  <text x="937" y="564" text-anchor="middle" class="s w">resident, latched, both ledgers updated,</text>
+  <text x="937" y="584" text-anchor="middle" class="s w">one PAGE_PTR that owes one unfix</text>
 
-  <path d="M327 94 H286 V498 H470" class="retry"/>
-  <rect x="471" y="477" rx="14" width="232" height="70" class="none"/>
-  <text x="587" y="506" text-anchor="middle" class="t">Expected no page</text>
-  <text x="587" y="532" text-anchor="middle" class="s">NULL, no debt</text>
+  <path d="M327 94 H286 V546 H470" class="retry"/>
+  <rect x="471" y="511" rx="14" width="232" height="70" class="none"/>
+  <text x="587" y="540" text-anchor="middle" class="t">Expected no page</text>
+  <text x="587" y="566" text-anchor="middle" class="s">NULL, no debt</text>
 </svg>

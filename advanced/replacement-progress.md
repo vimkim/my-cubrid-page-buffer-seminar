@@ -16,6 +16,23 @@ Quota policy adjusts private-list targets from activity and redistributes pressu
 
 Source: structures and list state at `src/storage/page_buffer.c:560-773`; initialization at `src/storage/page_buffer.c:5744-5903`; ordinary selection at `src/storage/page_buffer.c:9293-9538`; quota policy at `src/storage/page_buffer.c:13942-14440`. Detailed routing: [CUBRID LRU/victim fact sheet](../../../pgbuf-analysis/research/cubrid-lru-victim.md).
 
+## No free BCB: the allocation progress loop
+
+![Allocation progress loop when no free BCB is immediately available](../assets/allocation-progress.svg)
+
+A cold miss needs a frame, and "the free list is empty" is sometimes described as the start of an infinite wait. The pinned allocator is a loop with bounded exits, not an open-ended wait:
+
+1. **Invalid list first.** `pgbuf_allocate_bcb()` takes a BCB from the invalid (free) list when one exists. Those BCBs are used by nobody and need no flush or recheck.
+2. **Victim search.** Otherwise `pgbuf_get_victim()` searches the LRU lists in a fixed order: the thread's own private list when it is over quota, then other private lists, then the shared lists, and finally the thread's own private list even under quota as a last resort. A found candidate still passes the [core eligibility gate](../learning/05-replace-one-frame.md) under the BCB mutex before it is reused.
+3. **Wait for a direct victim (server mode).** If nothing is eligible and the page-flush daemon is available, the thread enqueues itself in the direct-victim waiter queue—high priority for vacuum threads and for threads that hold a hot page or a page others are waiting on, low priority otherwise—wakes the page-flush daemon, and sleeps with the same latch timeout used by latch waiters. Producers of direct victims are victim flush, post-flush, LRU direct assignment, and vacuum unfix in the LRU3 zone.
+4. **Resume and revalidate.** A thread resumed with an assigned BCB locks it and revalidates. If another thread fixed the page in between, the assignment is revoked and the allocator retries the wait with high priority. An interrupt or shutdown un-assigns any BCB and returns `ER_INTERRUPTED`. A timeout ends the wait with an error and no frame.
+5. **No daemon.** In stand-alone mode or during recovery, the thread flushes synchronously and searches the LRU lists again.
+6. **Explicit failure.** If no BCB was produced and no earlier error is set, the allocator reports `ER_PB_ALL_BUFFERS_DIRTY` and the fix returns without a page pointer.
+
+So an empty free list starts a progress protocol whose every path ends in an assignment, a retry, an interrupt, a timeout, or an explicit error. Two limits remain. The source's own comment acknowledges that a waiter depends on producers and describes a theoretical "forgotten waiter" whose only exit is the timeout; the [uncertainty registry](../unresolved-or-version-sensitive-findings.md) records that fairness and starvation bounds for direct victims are not proved. And the timeout, queue priorities, and search order are Implementation policy that another revision may change.
+
+Source: allocation loop at `src/storage/page_buffer.c:8181-8403`; victim search order at `src/storage/page_buffer.c:9067-9265`; direct-victim consumption and revocation at `src/storage/page_buffer.c:15592-15660`; high-priority classification at `src/storage/page_buffer.c:11734-11790`.
+
 ## Direct victim assignment and revocation
 
 Direct victims are a progress mechanism for allocators already waiting for a frame. A provider assigns an eligible BCB to a waiting thread; the consumer later locks and revalidates it. If an active worker fixed the page again in the intervening window, invalidation revokes the assignment and the allocator asks for another candidate.
@@ -63,6 +80,7 @@ Existing cold/warm and pressure-adjacent observations are no-eviction evidence: 
 ## Related routes
 
 - Practice: [LRU domains and zones](../questions/advanced.md#pgbuf-qb-037-what-do-lru-domains-and-zones-decide)
+- Practice: [no free BCB](../questions/advanced.md#pgbuf-qb-040-what-happens-when-no-free-bcb-is-immediately-available) and [why the allocator reports no victim](../questions/maintenance-scenarios.md#pgbuf-qb-068-why-can-the-allocator-report-no-victim)
 - Core prerequisite: [Flush One Generation](../learning/04-flush-one-generation.md)
 - Core prerequisite: [Replace One Frame](../learning/05-replace-one-frame.md)
 - Investigate a symptom: [Diagnose Page-buffer Symptoms](../playbooks/debug-by-symptom.md)

@@ -23,6 +23,23 @@ test("direct and background progress retain generation and timing boundaries", a
   for (const anchor of ["src/storage/page_buffer.c:9293-9538", "src/storage/page_buffer.c:15420-15627", "src/storage/page_buffer.c:16972-17298"]) assert.ok(m.includes(`\`${anchor}\``), anchor);
 });
 
+test("the no-free-BCB allocation loop is visual, bounded, and routed to its questions", async () => {
+  const m = await readFile(page, "utf8");
+  const svg = await readFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/allocation-progress.svg"), "utf8");
+  assert.match(m, /## No free BCB: the allocation progress loop/);
+  assert.match(m, /!\[Allocation progress loop when no free BCB is immediately available\]\(\.\.\/assets\/allocation-progress\.svg\)/);
+  for (const term of ["`pgbuf_allocate_bcb()`", "`pgbuf_get_victim()`", "invalid (free) list", "direct-victim waiter queue", "high priority", "`ER_INTERRUPTED`", "`ER_PB_ALL_BUFFERS_DIRTY`", "forgotten waiter", "Implementation policy"]) assert.ok(m.includes(term), term);
+  assert.match(m, /not an open-ended wait/i);
+  assert.match(m, /every path ends in an assignment, a retry, an interrupt, a timeout, or an explicit error/i);
+  for (const anchor of ["src/storage/page_buffer.c:8181-8403", "src/storage/page_buffer.c:9067-9265"]) assert.ok(m.includes(`\`${anchor}\``), anchor);
+  assert.ok(m.includes("](../questions/advanced.md#pgbuf-qb-040-what-happens-when-no-free-bcb-is-immediately-available)"));
+  assert.ok(m.includes("](../questions/maintenance-scenarios.md#pgbuf-qb-068-why-can-the-allocator-report-no-victim)"));
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
+  for (const label of ["Invalid (free) list", "Victim search", "direct-victim waiter queue", "Interrupt or shutdown", "Timeout", "ER_PB_ALL_BUFFERS_DIRTY"]) assert.ok(svg.includes(label), label);
+});
+
 test("AOUT and runtime evidence are bounded", async () => {
   const m = await readFile(page, "utf8");
   assert.match(m, /AOUT.*data structures/is);

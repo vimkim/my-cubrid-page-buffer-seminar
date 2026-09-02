@@ -18,7 +18,9 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | `src/storage/page_buffer.c:1641-1945` | pool initialization/finalization | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
 | `src/storage/page_buffer.c:2125-3354` | public fix/unfix/invalidate entry region | [Fix, Hold, and Release](../learning/02-fix-hold-release.md) |
 | `src/storage/page_buffer.c:460-488,5911-6085` | BCB/holder ownership structures and holder allocation | [Contract and Objects](../learning/01-contract-and-objects.md) |
+| `src/storage/page_buffer.c:7041-7590` | latch wait queue, timed sleep, timeout cleanup, zero-crossing wakeup | [Acquisition Concurrency](../advanced/acquisition-concurrency.md#latch-queue-classify-the-outcome) |
 | `src/storage/page_buffer.c:7594-8634` | resident lookup, lock-free READ hit, miss/load convergence | [Acquisition Concurrency](../advanced/acquisition-concurrency.md) |
+| `src/storage/page_buffer.c:8181-8403,9067-9265` | BCB allocation progress loop and victim search order | [Replacement Progress](../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop) |
 | `src/storage/page_buffer.c:9293-9538` | ordinary victim eligibility and LRU candidate path | [Replace One Frame](../learning/05-replace-one-frame.md) |
 | `src/storage/page_buffer.c:10723-10962` | one snapshot/WAL/write generation | [Flush One Generation](../learning/04-flush-one-generation.md) |
 | `src/storage/page_buffer.c:12268-13531` | ordered fix, reordering, and ordered unfix | [Acquisition Concurrency](../advanced/acquisition-concurrency.md) |
@@ -55,7 +57,7 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | Fix or holder count grows | holder list, `fcnt`, all success/failure exits around `6000-6085,6277-6883` | [Diagnosis](../playbooks/debug-by-symptom.md) and [ownership lesson](../learning/02-fix-hold-release.md) |
 | Latch wait or apparent hang | atomic latch tuple, waiter state, buffer-lock/load owner | [Advanced acquisition](../advanced/acquisition-concurrency.md) |
 | Persistent dirty/flush state | `DIRTY`, `FLUSHING`, both LSAs, `10723-10962` | [Flush generation](../learning/04-flush-one-generation.md) |
-| No victim under pressure | hard predicates at `9293-9538` before quota/daemon policy | [Replacement lesson](../learning/05-replace-one-frame.md) |
+| No victim under pressure | hard predicates at `9293-9538` before quota/daemon policy; then the allocation loop exits at `8181-8403` | [Replacement lesson](../learning/05-replace-one-frame.md), then [allocation progress](../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop) |
 | Wrong resident identity/corruption | hash/VPID publication and final identity rechecks | [Contract](../learning/01-contract-and-objects.md) |
 | Misleading SHOW/counter result | exact counter increment/snapshot site | [Specialized interfaces](../advanced/specialized-interfaces.md) |
 

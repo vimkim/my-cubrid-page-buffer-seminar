@@ -21,8 +21,23 @@ test("wait and promotion claims preserve evidence limits", async () => {
   const m = await readFile(page, "utf8");
   for (const term of ["conditional rejection", "timeout", "wakeup", "barging", "blocking promotion", "stale"]) assert.match(m, new RegExp(term, "i"), term);
   assert.match(m, /does not establish strict FIFO.*starvation freedom.*exact timeout/is);
-  assert.match(m, /`src\/storage\/page_buffer\.c:6277-7582`/);
+  assert.match(m, /`src\/storage\/page_buffer\.c:6277-7590`/);
   assert.match(m, /`src\/storage\/page_buffer\.c:2842-3050`/);
+});
+
+test("the hundred-writer worked case is visual, bounded, and routed to its question", async () => {
+  const m = await readFile(page, "utf8");
+  const svg = await readFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/latch-wait-queue.svg"), "utf8");
+  assert.match(m, /### Worked case: one hundred unconditional WRITE requests/);
+  assert.match(m, /!\[Unconditional WRITE waiters queued on one BCB and granted one zero-crossing at a time\]\(\.\.\/assets\/latch-wait-queue\.svg\)/);
+  for (const term of ["`next_wait_thrd`", "`waiter_exists`", "`pgbuf_timed_sleep()`", "`pgbuf_wakeup_reader_writer()`", "`page_latch_timeout_in_msecs`", "reader grouping", "holder re-entry", "`ER_PAGE_LATCH_TIMEDOUT`", "not as an Interface contract"]) assert.ok(m.includes(term), term);
+  assert.match(m, /one grant per zero-crossing/i);
+  for (const anchor of ["src/storage/page_buffer.c:7041-7450", "src/storage/page_buffer.c:7452-7590", "src/base/system_parameter.c:5308-5319"]) assert.ok(m.includes(`\`${anchor}\``), anchor);
+  assert.ok(m.includes("](../questions/advanced.md#pgbuf-qb-033-how-are-many-unconditional-write-waiters-handled)"));
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
+  for (const label of ["W1", "W100", "waiter_exists", "Granted", "Timeout", "Interrupt", "not a fairness theorem"]) assert.ok(svg.includes(label), label);
 });
 
 test("ordered watchers cover ranking, refix, failure, and revalidation", async () => {

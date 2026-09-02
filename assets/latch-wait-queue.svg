@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="670" viewBox="0 0 1180 670" role="img" aria-labelledby="title desc">
+  <title id="title">Unconditional incompatible latch requests queue on the BCB and are granted one zero-crossing at a time</title>
+  <desc id="desc">A BCB holds an atomic latch tuple with mode WRITE, fix count one, and the waiter-exists bit set. One hundred unconditional WRITE requesters are appended to the BCB wait queue in arrival order; a blocking promoter is inserted at the head. Each waiter sleeps with a timed wait and honours interrupts. When the holder unfixes and the fix count reaches zero, the releasing thread walks the queue from the head: it skips entries that already gave up, leaves flush waiters in place, grants every queued READ waiter when the head is a reader, or grants only the first WRITE waiter and stops when the head is a writer. The waker updates the latch tuple; the woken waiter records its own holder. Outcomes are grant, timeout treated as a deadlock victim, or interrupt with removal and no debt. This is a serialized handoff, not a fairness theorem.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .bcb{fill:#173f57;stroke:#173f57;stroke-width:2}.q{fill:#fff3df;stroke:#b86b22;stroke-width:2}.qtail{fill:#f6f7f8;stroke:#6b7780;stroke-width:2;stroke-dasharray:8 5}.rule{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.ok{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.warn{fill:#fff3df;stroke:#b86b22;stroke-width:2}.none{fill:#f6f7f8;stroke:#6b7780;stroke-width:2;stroke-dasharray:8 5}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.h{font:700 17px Inter,Arial,sans-serif;fill:#173443}.s{font:14px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.w{fill:#fff}.wt{font:700 15px Inter,Arial,sans-serif;fill:#173443}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}.thin{fill:none;stroke:#48626f;stroke-width:2;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">One hundred unconditional WRITE requests on one latched page</text>
+
+  <rect x="40" y="70" rx="16" width="300" height="140" class="bcb"/>
+  <text x="56" y="98" class="h w">BCB atomic latch tuple</text>
+  <text x="56" y="126" class="s w">latch_mode = WRITE</text>
+  <text x="56" y="150" class="s w">fcnt = 1 (current holder)</text>
+  <text x="56" y="174" class="s w">waiter_exists = 1</text>
+  <text x="56" y="198" class="s w">next_wait_thrd: head of the wait queue</text>
+
+  <path d="M340 140 H392" class="line"/>
+  <rect x="394" y="110" rx="12" width="108" height="60" class="q"/>
+  <text x="448" y="135" text-anchor="middle" class="wt">W1</text>
+  <text x="448" y="156" text-anchor="middle" class="tiny">WRITE</text>
+  <path d="M502 140 H520" class="thin"/>
+  <rect x="522" y="110" rx="12" width="108" height="60" class="q"/>
+  <text x="576" y="135" text-anchor="middle" class="wt">W2</text>
+  <text x="576" y="156" text-anchor="middle" class="tiny">WRITE</text>
+  <path d="M630 140 H648" class="thin"/>
+  <rect x="650" y="110" rx="12" width="108" height="60" class="q"/>
+  <text x="704" y="135" text-anchor="middle" class="wt">W3</text>
+  <text x="704" y="156" text-anchor="middle" class="tiny">WRITE</text>
+  <path d="M758 140 H776" class="thin"/>
+  <text x="800" y="146" class="h">...</text>
+  <path d="M826 140 H844" class="thin"/>
+  <rect x="846" y="110" rx="12" width="108" height="60" class="q"/>
+  <text x="900" y="135" text-anchor="middle" class="wt">W100</text>
+  <text x="900" y="156" text-anchor="middle" class="tiny">WRITE</text>
+  <path d="M954 140 H972" class="thin"/>
+  <rect x="974" y="106" rx="12" width="180" height="68" class="qtail"/>
+  <text x="1064" y="132" text-anchor="middle" class="s">tail: a new incompatible</text>
+  <text x="1064" y="154" text-anchor="middle" class="s">request appends here</text>
+
+  <text x="394" y="92" class="tiny">a blocking promoter is inserted at the head instead of the tail</text>
+  <text x="394" y="200" class="tiny">every waiter sleeps with a timed wait bounded by page_latch_timeout_in_msecs and honours interrupts</text>
+
+  <path d="M190 210 V250" class="line"/>
+  <rect x="40" y="252" rx="16" width="1114" height="170" class="rule"/>
+  <text x="56" y="282" class="h">Holder unfixes, fcnt reaches 0, latch mode becomes NO_LATCH: the releasing thread walks the queue from the head</text>
+  <text x="56" y="312" class="s">1. Skip entries that already gave up: their request mode was reset to NO_LATCH by timeout or interrupt.</text>
+  <text x="56" y="336" class="s">2. Leave FLUSH waiters in place; they are woken by flush completion, not by unfix.</text>
+  <text x="56" y="360" class="s">3. Head is a reader: grant every queued READ waiter and leave writers in place. Head is a writer: grant only that writer, then stop.</text>
+  <text x="56" y="384" class="s">4. The waker sets the new latch mode and adds the waiter's requested fix count; the woken waiter only records its own holder.</text>
+  <text x="56" y="408" class="s">5. If blocked readers or writers remain, waiter_exists stays set so newcomers keep queueing instead of barging.</text>
+
+  <path d="M220 422 V462" class="line"/>
+  <path d="M597 422 V462" class="line"/>
+  <path d="M974 422 V462" class="line"/>
+
+  <rect x="40" y="464" rx="14" width="360" height="130" class="ok"/>
+  <text x="56" y="492" class="h">Granted</text>
+  <text x="56" y="516" class="s">Latch, global fcnt, and this thread's holder</text>
+  <text x="56" y="538" class="s">are set: one fix debt, the same postcondition</text>
+  <text x="56" y="560" class="s">as an immediate grant.</text>
+
+  <rect x="417" y="464" rx="14" width="360" height="130" class="warn"/>
+  <text x="433" y="492" class="h">Timeout: treated as a deadlock victim</text>
+  <text x="433" y="516" class="s">ER_PAGE_LATCH_TIMEDOUT is raised, then</text>
+  <text x="433" y="538" class="s">ER_LK_UNILATERALLY_ABORTED (infinite lock wait)</text>
+  <text x="433" y="560" class="s">or ER_LK_PAGE_TIMEOUT (finite lock wait).</text>
+  <text x="433" y="582" class="s">The request ends without a fix debt.</text>
+
+  <rect x="794" y="464" rx="14" width="360" height="130" class="none"/>
+  <text x="810" y="492" class="h">Interrupt</text>
+  <text x="810" y="516" class="s">The thread removes itself from the queue</text>
+  <text x="810" y="538" class="s">and returns an error: no page pointer,</text>
+  <text x="810" y="560" class="s">no fix debt.</text>
+
+  <text x="40" y="630" class="s">One hundred writers are served one grant per zero-crossing. Holder re-entry, promoters at the head, and reader grouping can reorder service,</text>
+  <text x="40" y="652" class="s">so this is a serialized handoff, not a fairness theorem. Strict FIFO, starvation freedom, and exact timing are not established by the source.</text>
+</svg>

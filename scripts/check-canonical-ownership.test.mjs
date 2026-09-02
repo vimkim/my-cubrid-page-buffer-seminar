@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { canonicalVisualNames } from "./canonical-visuals.mjs";
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const guideRoot = path.resolve(scriptDir, "..");
 const pageDirectories = ["learning", "playbooks", "advanced", "reference"];
@@ -55,15 +57,9 @@ test("guide pages route VS IDs without copying mutable statuses", async () => {
   }
 });
 
-test("the final asset seam contains and displays exactly six canonical visuals", async () => {
-  const expected = [
-    "durability-chain.svg",
-    "fix-contract.svg",
-    "object-ownership-map.svg",
-    "ownership-ledgers.svg",
-    "state-axes.svg",
-    "victim-eligibility.svg",
-  ];
+test("the final asset seam contains and displays exactly the canonical visual roster", async () => {
+  const expected = [...canonicalVisualNames];
+  assert.equal(expected.length, 9);
   const assets = (await readdir(path.join(guideRoot, "assets")))
     .filter((entry) => entry.endsWith(".svg"))
     .sort();
