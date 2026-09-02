@@ -140,6 +140,43 @@
         </ol>
       </section>
 
+      <section class="section" id="oldest-unflush-purpose">
+        <div class="eyebrow">02A · Why the lower bound exists</div>
+        <h2>Checkpoint must remember where the dirty generation began</h2>
+        <p class="big-claim"><code>DIRTY</code> says that propagation is owed. The <code>page LSA</code> says how new the resident image has become. Only <code>oldest_unflush_lsa</code> preserves how far back the current unpaid generation reaches.</p>
+        <p>A checkpoint chooses a log boundary and asks the page buffer to flush eligible dirty pages whose unpropagated history reaches that boundary. It also needs the smallest lower bound among dirty pages that remain, because recovery may still have to redo from there. This is a range question—“does this dirty generation contain work at or before the boundary?”—not a latest-value question.</p>
+        <img class="diagram" src="../../assets/oldest-unflush-checkpoint.svg" alt="A page dirtied at LSAs 100 and 140, checkpoint boundary 150, and later change 170 showing why oldest-unflush 100 selects the page although page LSA is 170">
+        <p class="caption">Assume P is unfixed and otherwise flushable when the checkpoint scans it. The boundary selects the generation by its beginning; the copied page LSA still supplies the WAL force target.</p>
+        <h3>The counterexample that makes the field necessary</h3>
+        <ol>
+          <li>Disk has P through LSA 80. Log A at 100 first dirties P: latest is 100 and oldest is 100.</li>
+          <li>Log B at 140 changes the same unflushed generation: latest moves to 140, but oldest remains 100.</li>
+          <li>The checkpoint chooses <code>flush_upto_lsa = 150</code>.</li>
+          <li>Before the scan, log C at 170 changes P again: latest moves to 170, while oldest remains 100 because none of A/B/C has been propagated yet.</li>
+        </ol>
+        <table>
+          <thead><tr><th>Candidate test</th><th>Result</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td><code>page LSA 170 &gt; 150</code></td><td>Would skip P if misused as the checkpoint predicate.</td><td>It answers only “what is the latest logged change in these bytes?” and hides unpaid A at 100.</td></tr>
+            <tr><td><code>oldest 100 ≤ 150</code></td><td>Selects P.</td><td>The still-unpropagated generation began before the checkpoint boundary.</td></tr>
+          </tbody>
+        </table>
+        <p>After selection, flush does not write an old 100-version. It copies the current generation containing A+B+C, carries oldest 100 for checkpoint accounting, and forces WAL through the copied page LSA 170 before submitting that image. The two coordinates cooperate rather than compete.</p>
+        <h3>Lifetime of the lower bound</h3>
+        <table>
+          <thead><tr><th>Moment</th><th>Resident lower bound</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>Clean generation</td><td><code>NULL</code></td><td>No logged dirty history is waiting under this field.</td></tr>
+            <tr><td>First logged dirty change</td><td>Initialize once from the new page LSA.</td><td>Marks the beginning of this unpropagated generation.</td></tr>
+            <tr><td>More changes before flush</td><td>Keep the old value.</td><td>Advancing it would forget earlier unpaid changes.</td></tr>
+            <tr><td>Flush G opens</td><td>Copy it locally, then set resident value to <code>NULL</code>.</td><td>G owns the old lower bound; a concurrent G+1 change can establish a new one.</td></tr>
+            <tr><td>Ordinary G failure</td><td>Restore the copied value.</td><td>The unpaid generation remains visible for retry and checkpoint accounting.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>Do not rename it mentally:</strong> it is not the oldest LSA ever seen by the page, not the oldest active transaction, and not a field persisted in the page header. It is volatile BCB metadata for the beginning of the current unpropagated dirty generation.</div>
+        <p class="source-note"><strong>Where the pinned source says this:</strong> the field comment defines it at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L541"><code>page_buffer.c:541</code></a>. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5041-L5071"><code>pgbuf_set_lsa()</code></a> initializes it only when <code>NULL</code>. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4172-L4186"><code>pgbuf_flush_checkpoint()</code></a> states the checkpoint goal; its <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4247-L4257"><code>4247–4257</code></a> predicate skips a dirty page only when its oldest lower bound is newer than <code>flush_upto_lsa</code>, and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4533-L4600"><code>4533–4600</code></a> revalidates and returns the smallest remaining lower bound. The log manager uses that result to establish the next redo point at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L6974-L7030"><code>log_page_buffer.c:6974–7030</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L7217-L7225"><code>7217–7225</code></a>.</p>
+      </section>
+
       <section class="section" id="generation">
         <div class="eyebrow">03 · Ordinary success path</div>
         <h2>Follow the generation, not just the BCB</h2>
@@ -234,6 +271,7 @@
       <a href="#copy-versus-dwb">0B. Copy versus DWB</a>
       <a href="#moments">1. Four moments</a>
       <a href="#lsas">2. Two LSAs</a>
+      <a href="#oldest-unflush-purpose">2A. Why oldest-unflush</a>
       <a href="#generation">3. Ordinary path</a>
       <a href="#redirty">4. Concurrent re-dirty</a>
       <a href="#failure">5. Failure unwind</a>

@@ -13,191 +13,160 @@
   <div class="topline"><span>CUBRID page buffer · lesson 0007</span><a href="../index.html">Course home</a></div>
   <header class="hero">
     <div class="eyebrow">Core capability · replacement</div>
-    <h1>Prove eligibility before choosing a victim</h1>
-    <p>By the end, you can separate non-negotiable reuse safety from changeable LRU and progress policy.</p>
-    <div class="pills"><span class="pill">Identity</span><span class="pill">Ownership</span><span class="pill">Generation</span><span class="pill">Wait state</span><span class="pill">Revalidation</span><span class="pill">Policy</span></div>
+    <h1>Find space for one missing page without stealing live work</h1>
+    <p>By the end, you can tell the simple replacement story, reject an unsafe victim, and explain why the final check must happen under protection.</p>
+    <div class="pills"><span class="pill">Invalid list first</span><span class="pill">Victim</span><span class="pill">fcnt</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Recheck</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
-      <section class="section" id="identity-meaning">
-        <div class="eyebrow">00 · Decode BCB identity</div>
-        <h2>One stable slot can represent different pages over time</h2>
-        <p>A BCB is a preallocated buffer-pool descriptor paired with one frame. Its memory address is stable, but its <strong>current identity</strong> is the resident page named by <code>bcb-&gt;vpid</code>. Safe victimization ends that mapping so the same BCB/frame slot can later represent another VPID.</p>
-        <table>
-          <thead><tr><th>Time</th><th>Same BCB address</th><th>Current identity</th><th>State</th></tr></thead>
-          <tbody>
-            <tr><td>T1</td><td><code>BCB[42]</code></td><td>VPID A</td><td>Resident in exactly one LRU list/zone.</td></tr>
-            <tr><td>T2</td><td><code>BCB[42]</code></td><td>No resident VPID</td><td>Safely detached/invalid for reuse.</td></tr>
-            <tr><td>T3</td><td><code>BCB[42]</code></td><td>VPID B</td><td>Rebound and later placed in one LRU list/zone.</td></tr>
-          </tbody>
-        </table>
-        <p><strong>Many threads may fix the same current BCB</strong> when latch compatibility permits—for example, multiple READ holders. That is shared ownership of one page identity, recorded by global <code>fcnt</code> plus per-thread holders. It is not multiple BCB identities.</p>
-        <p><strong>One BCB is not in many LRUs at once.</strong> Private and shared LRUs are alternative list domains. LRU1/LRU2/LRU3 are zones within its one current LRU. A BCB may move between lists or become detached over time, but its single link fields cannot make it an ordinary member of several lists simultaneously.</p>
-        <div class="callout"><strong>What an identity mismatch would mean:</strong> code saved an unprotected candidate observation while the slot represented A, but later examined the same BCB address after it had been rebound to B. It must discard the stale A-based decision and retry. In the ordinary LRU path, holding the LRU mutex and then acquiring BCB protection prevents this during the final detach; the helper is not merely an explicit <code>saved_vpid == bcb-&gt;vpid</code> test.</div>
-      </section>
-
-      <section class="section" id="split">
-        <div class="eyebrow">01 · Two questions</div>
-        <h2>Safe now? Then: preferable now?</h2>
-        <img class="diagram" src="../../assets/victim-eligibility.svg" alt="Hard victim predicates and final protected recheck gate replacement policy">
-        <p class="caption">Policy receives only candidates that have survived the hard gate and protected handoff.</p>
-        <table>
-          <thead><tr><th>Layer</th><th>Question</th><th>May optimization change it?</th></tr></thead>
-          <tbody>
-            <tr><td>Eligibility</td><td>Can these frame bytes and this mapping be discarded and rebound without violating any right or propagation debt?</td><td>No—not while preserving the interface contract.</td></tr>
-            <tr><td>Policy</td><td>Among eligible frames, which one best serves locality, fairness, quota, and allocation progress?</td><td>Yes, if every hard predicate and final recheck remains intact.</td></tr>
-          </tbody>
-        </table>
-        <p class="big-claim">An optimization may reorder safe candidates. It may not manufacture safety.</p>
-      </section>
-
-      <section class="section" id="gates">
-        <div class="eyebrow">02 · Hard eligibility</div>
-        <h2>Five proofs stand between observation and reuse</h2>
+      <section class="section" id="story">
+        <div class="eyebrow">01 · Start with the need</div>
+        <h2>A page miss needs a slot to hold the incoming bytes</h2>
+        <p>Suppose page B is requested but is not resident. The page buffer needs one BCB/frame slot for B.</p>
         <ol>
-          <li><strong>Identity is stable:</strong> the BCB still represents the VPID and list candidate that selection examined.</li>
-          <li><strong>No ownership remains:</strong> global <code>fcnt</code>, per-thread holders, granted rights, and transient claims cannot authorize any remaining fixer.</li>
-          <li><strong>No generation debt remains:</strong> DIRTY would discard unpropagated bytes; FLUSHING would rebind while a copied generation still refers to this identity.</li>
-          <li><strong>No conflicting waiter exists:</strong> latch waiters or in-progress protocol states can carry rights that a casual counter read omits.</li>
-          <li><strong>Final protected revalidation succeeds:</strong> lock the BCB and recheck identity, flags, ownership, zone, and handoff conditions immediately before unlink or reuse.</li>
+          <li><strong>Try the invalid list first.</strong> An invalid BCB has no resident page identity and needs no eviction.</li>
+          <li><strong>If no invalid slot exists, search the LRU victim zone.</strong> A resident page must leave before its slot can be reused.</li>
+          <li><strong>Choose only a safe victim.</strong> Never steal bytes from a fixer, discard unflushed changes, or race an in-progress handoff.</li>
+          <li><strong>Detach, then rebind.</strong> After the old mapping is safely removed, the same BCB/frame slot can load B.</li>
         </ol>
-        <p class="source-note"><strong>Verified mechanism:</strong> pinned ordinary LRU selection scans the victim zone, rejects avoid-victim flags and fixed frames, conditionally locks the BCB, calls <code>pgbuf_is_bcb_victimizable(..., true)</code>, and only then removes it from the list. Read <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9293-L9538"><code>page_buffer.c:9293–9538</code></a>.</p>
+        <p class="big-claim">Replacement is not “find the oldest page.” It is “find an old-enough page that is safe to reuse now.”</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8235"><code>pgbuf_allocate_bcb()</code></a> documents and implements invalid-list first, then LRU victim search.</p>
+      </section>
+
+      <section class="section" id="structures-cost">
+        <div class="eyebrow">01A · Data structures and cost</div>
+        <h2>“Try the invalid list” means pop one linked-list head</h2>
+        <img class="diagram" src="../../assets/replacement-data-structures.svg" alt="BCB table array feeding a singly linked invalid list, a bounded doubly linked LRU scan, hash removal, page read, and new mapping publication">
+        <p class="caption">The array owns storage. The invalid and LRU links organize subsets of those stable BCB slots at runtime.</p>
+        <p>At startup, <code>BCB_table</code> is allocated as a contiguous array. Initialization sets each slot's <code>next_BCB</code> to the next slot, so building the initial invalid list is <code>O(N)</code> once. The runtime allocation path does not repeat that array loop.</p>
+        <p>The invalid list has one <code>invalid_top</code> pointer, a count, and a mutex. Its nodes are BCBs connected through <code>next_BCB</code>. Allocation performs an unlocked empty hint, locks and rechecks, moves the head to its next node, unlocks, then locks the returned BCB and changes it to the void zone. That is one-node <code>O(1)</code> list work—not an array scan. The <code>invalid_mutex</code> may still wait under contention, so constant work does not promise constant wall-clock latency.</p>
+        <table>
+          <thead><tr><th>Operation</th><th>Structure touched</th><th>Local work</th><th>What can dominate elapsed time</th></tr></thead>
+          <tbody>
+            <tr><td>Build initial free population</td><td>Contiguous BCB array linked once.</td><td><code>O(N)</code> at page-buffer initialization.</td><td>One-time allocation/initialization; not miss-path cost.</td></tr>
+            <tr><td>Take one invalid BCB</td><td>Singly linked head via <code>invalid_top</code>/<code>next_BCB</code>.</td><td><code>O(1)</code>: no traversal.</td><td>Invalid-list mutex scheduling and returned BCB lock.</td></tr>
+            <tr><td>Search one LRU list</td><td>Doubly linked list, walking <code>prev_BCB</code> from a hint or bottom.</td><td><code>O(K)</code>, with source bound <code>K ≤ 1000</code> per list call.</td><td>LRU mutex wait, cache misses, how many candidates fail, and how many lists policy probes.</td></tr>
+            <tr><td>Recheck one candidate</td><td>BCB flags, atomic latch, waiter pointer under BCB protection.</td><td><code>O(1)</code> field checks; BCB try-lock does not wait and skips on failure.</td><td>Repeated skips can lengthen the surrounding scan.</td></tr>
+            <tr><td>Detach a known LRU node</td><td>Its previous/next links plus zone/count metadata.</td><td><code>O(1)</code>.</td><td>Work is performed while the LRU mutex is held.</td></tr>
+            <tr><td>Remove old resident mapping</td><td>VPID hash bucket's singly linked chain.</td><td><code>O(B)</code> for bucket length <code>B</code>.</td><td>Hash-anchor mutex wait and collisions.</td></tr>
+            <tr><td>Load requested old page</td><td>DWB lookup or data-volume read into the frame.</td><td>Not usefully described as <code>O(1)</code> CPU work.</td><td>Storage/cache path and decryption; commonly much larger than pointer updates.</td></tr>
+            <tr><td>Publish loaded BCB</td><td>Hash-chain head and one LRU insertion.</td><td>Each link insertion is <code>O(1)</code>.</td><td>Hash/LRU mutex contention.</td></tr>
+          </tbody>
+        </table>
+        <h3>How many LRU nodes can one allocation inspect?</h3>
+        <p>One call of the per-list scanner stops after at most 1,000 links. The higher-level policy can try the caller's private LRU, other private lists, shared lists, and a final own-list fallback. Therefore “the whole allocation is at most 1,000 checks” would be false: it is up to 1,000 per visited list call, with early return on the first protected eligible candidate.</p>
+        <div class="callout"><strong>About “how long”:</strong> the pinned source gives operation bounds, not a calibrated nanosecond value. It records <code>PSTAT_PB_ALLOC_BCB</code>, <code>PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM</code>, list-search timers, and condition-wait time. Use those counters or a focused benchmark for a target workload; do not convert Big-O into a latency claim.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> BCB array construction and initial links are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>page_buffer.c:5559–5660</code></a>; invalid-list structure and head initialization at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L626-L634"><code>626–634</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5907-L5919"><code>5907–5919</code></a>; constant-time pop/push at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8905-L8983"><code>8905–8983</code></a>; bounded LRU scan at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9327-L9537"><code>9327–9537</code></a>; hash removal at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7883-L7957"><code>7883–7957</code></a>.</p>
+      </section>
+
+      <section class="section" id="slot">
+        <div class="eyebrow">02 · Understand what is reused</div>
+        <h2>The slot stays; the page identity changes</h2>
+        <p>A BCB is a reusable descriptor paired with one reusable frame. Their pool addresses are stable. The current resident page is named by <code>bcb-&gt;vpid</code>, and that identity changes only through the controlled detach/load sequence.</p>
+        <table>
+          <thead><tr><th>Time</th><th>Same pool slot</th><th>What it represents</th></tr></thead>
+          <tbody>
+            <tr><td>Before replacement</td><td><code>BCB[42] + frame[42]</code></td><td>Resident page A.</td></tr>
+            <tr><td>After safe detach</td><td><code>BCB[42] + frame[42]</code></td><td>No resident page; available for controlled reuse.</td></tr>
+            <tr><td>After the miss loads</td><td><code>BCB[42] + frame[42]</code></td><td>Resident page B.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>Keep this distinction:</strong> victimizing A removes A's in-memory mapping. It does not deallocate logical page A from the database.</div>
+      </section>
+
+      <section class="section" id="gate">
+        <div class="eyebrow">03 · Use the safety gate</div>
+        <h2>Ask four plain questions before reuse</h2>
+        <img class="diagram" src="../../assets/victim-eligibility.svg" alt="A safety gate checking ownership, dirty and flushing state, waiters and transient flags, then protected revalidation before victim selection">
+        <p class="caption">LRU position suggests a candidate. It never overrides the safety gate.</p>
+        <table>
+          <thead><tr><th>Question</th><th>Unsafe example</th><th>Why reuse must wait</th></tr></thead>
+          <tbody>
+            <tr><td>Is anybody using it?</td><td><code>fcnt &gt; 0</code></td><td>A successful fixer still owns the frame and may use its borrowed pointer.</td></tr>
+            <tr><td>Are changed bytes still unpaid?</td><td><code>DIRTY</code> or <code>FLUSHING</code></td><td>Dirty bytes still need propagation, or a copied generation still owns completion work.</td></tr>
+            <tr><td>Is another operation waiting or claiming it?</td><td><code>next_wait_thrd != NULL</code> or an avoid-victim flag</td><td>A waiter, invalidation, or direct-victim handoff still refers to this BCB.</td></tr>
+            <tr><td>Are these facts still true now?</td><td>The earlier scan was made without BCB protection.</td><td>A fixer or flusher may have changed the candidate after it was first observed.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Shortcut to reject:</strong> <code>fcnt == 0</code> means “no current fixer was counted.” It does not also mean clean, not flushing, no waiters, and safely detached.</div>
       </section>
 
       <section class="section" id="handoff-details">
-        <div class="eyebrow">02A · Expand the protected handoff</div>
-        <h2>A scan observation is not a right to detach</h2>
-        <table>
-          <thead><tr><th>Moment</th><th>What is protected</th><th>What the result means</th></tr></thead>
-          <tbody>
-            <tr><td>LRU scan</td><td>The LRU mutex stabilizes list links and zone membership.</td><td>Cheap reads say <code>BCB[42]</code>, currently VPID A, looks eligible. BCB ownership and flags may still change.</td></tr>
-            <tr><td>Before BCB lock</td><td>No BCB protection yet.</td><td>“All clear” is only a sample. A fixer, unfixer, flush, or direct-victim transition can make it stale.</td></tr>
-            <tr><td><code>PGBUF_BCB_TRYLOCK()</code></td><td>The scan refuses to wait for the BCB while holding the LRU mutex.</td><td>Failure means another protected BCB transition owns the seam; skip this candidate.</td></tr>
-            <tr><td>Protected recheck</td><td>LRU mutex plus BCB mutex.</td><td>Re-read current flags, ownership, waiter, latch, identity/zone state. Only current all-clear state authorizes unlink.</td></tr>
-            <tr><td>Detach and return</td><td>Remove under the LRU mutex, change the BCB to <code>PGBUF_VOID_ZONE</code>, return it still BCB-locked.</td><td>The allocator receives exclusive handoff for victimization/rebind; no stale A-based decision is applied later to a slot representing B.</td></tr>
-          </tbody>
-        </table>
-        <div class="callout"><strong>What “stale” means:</strong> the observation was true when read but no longer describes the state on which detach would act. Protection does not preserve the old sample forever; it establishes a fresh all-clear state and blocks conflicting transitions across the destructive handoff.</div>
-        <table>
-          <thead><tr><th>Blocker</th><th>Concrete source state</th><th>Why it matters</th></tr></thead>
-          <tbody>
-            <tr><td>Owner</td><td><code>atomic_latch.fcnt &gt; 0</code></td><td>A granted fixer still owns the frame.</td></tr>
-            <tr><td>Waiter</td><td><code>next_wait_thrd != NULL</code></td><td>A queued latch/flush transition still expects this BCB and must be granted, rejected, or awakened correctly.</td></tr>
-            <tr><td>Transient claim</td><td>Non-idle latch without BCB protection, failed BCB try-lock, or direct-victim assignment/invalidation flag.</td><td>This is a guide umbrella, not one field: another ownership or handoff transition may be in progress.</td></tr>
-            <tr><td>DIRTY</td><td>Current resident generation still owes propagation.</td><td>Reuse would overwrite bytes that have not crossed their page-image boundary.</td></tr>
-            <tr><td>FLUSHING</td><td>An older copied generation still owns completion work.</td><td>Rebind could let old completion clear flags or wake state for a new identity; concurrent G+1 may also be DIRTY.</td></tr>
-          </tbody>
-        </table>
-        <p class="source-note"><strong>Verified mechanism:</strong> prefilters, try-lock, protected recheck, detach, and locked return are at <code>page_buffer.c:9399–9478</code>; fixed/waiter/latch checks at <code>9265–9325</code>; invalid-victim flags at <code>221–263,16217–16231</code>.</p>
+        <div class="eyebrow">04 · Close the race</div>
+        <h2>Scan cheaply, then make the destructive decision under locks</h2>
+        <ol>
+          <li>The LRU mutex stabilizes the list while the scanner finds a likely candidate.</li>
+          <li><code>PGBUF_BCB_TRYLOCK()</code> tries to protect that BCB. It does not wait while holding the LRU mutex; failure skips the candidate.</li>
+          <li>With BCB protection held, <code>pgbuf_is_bcb_victimizable(..., true)</code> checks the candidate's current ownership, waiters, and avoid-victim state again.</li>
+          <li>Only a passing candidate is removed from the LRU. It is returned still BCB-locked so victimization/rebind owns an exclusive handoff.</li>
+        </ol>
+        <p>Why check twice? The first read is a <em>hint</em>. Between that read and the BCB lock, another thread may fix the page or start a flush. The protected read is the decision. If the facts changed, skip and continue searching.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> victim predicates are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9265-L9325"><code>page_buffer.c:9265–9325</code></a>; scan, try-lock, protected recheck, detach, and locked return are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>9399–9478</code></a>.</p>
       </section>
 
-      <section class="section" id="counterexample">
-        <div class="eyebrow">03 · Break the shortcut</div>
-        <h2><code>fcnt == 0</code> is one sample, not a reuse proof</h2>
+      <section class="section" id="no-victim">
+        <div class="eyebrow">05 · When no slot is safe</div>
+        <h2>The allocator waits or retries; it does not steal a fixed page</h2>
+        <p>If every candidate is fixed, dirty, flushing, waiting, or in another handoff, victim search returns nothing. A flush can make a dirty candidate clean. An unfix can end ownership. In server mode, an allocating thread may wait for a directly assigned victim and retry if that candidate is fixed again before consumption.</p>
+        <p>The LRU policy decides which safe candidate to prefer and how to make progress. It may change across revisions. The safety rule does not: a successful fixer or incomplete flush generation must not survive the slot's rebind.</p>
         <table>
-          <thead><tr><th>Candidate also has…</th><th>Why zero fixes is insufficient</th></tr></thead>
+          <thead><tr><th>Mechanism</th><th>Its job</th></tr></thead>
           <tbody>
-            <tr><td>DIRTY</td><td>Reuse would discard a resident generation that still needs propagation.</td></tr>
-            <tr><td>FLUSHING</td><td>An in-flight copy still carries this frame identity; Lesson 6's generation is incomplete.</td></tr>
-            <tr><td>A latch waiter</td><td>The waiter may carry a pending acquisition right not represented by the sampled count.</td></tr>
-            <tr><td>Changed identity or zone</td><td>The selection observation became stale before the handoff.</td></tr>
+            <tr><td>Safety gate</td><td>Answers “may this slot be reused now?”</td></tr>
+            <tr><td>LRU zones, private/shared lists, quota, hints</td><td>Order or locate candidates that may be preferable.</td></tr>
+            <tr><td>Flush and direct-victim progress</td><td>Help produce an eligible slot when the first search finds none.</td></tr>
           </tbody>
         </table>
-        <div class="callout warn"><strong>Reasoning trap:</strong> “unfixed” is not a synonym for “victimizable.” It answers only the current fix-debt coordinate.</div>
-      </section>
-
-      <section class="section" id="allocation-pressure">
-        <div class="eyebrow">03A · When the search starts</div>
-        <h2>A miss tries the invalid list before any victim</h2>
-        <p><code>pgbuf_allocate_bcb()</code> is entered only for a page that is not resident and needs materialization. It first takes an identity-free BCB from the invalid list. Only when that returns nothing does it search LRU3 for a victim. “Pool full” therefore means no free/invalid slot is immediately available; some slots may instead be fixed, provisional, flushing, or in direct handoff.</p>
-        <p>If every BCB is fixed, every candidate fails the ownership gate and the Module never steals one. Server mode waits for a direct victim and relies on an eventual unfix; if ownership never ends, timeout, interrupt, or shutdown ends the request. Without an available daemon, the code flushes/searches synchronously and ultimately fails if no victim appears. The fallback error can be <code>ER_PB_ALL_BUFFERS_DIRTY</code> even when “all fixed” is the actual blocker.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> invalid-list-first allocation and the demand condition are at <code>page_buffer.c:8181–8235</code>; server wait/retry and bounded exits at <code>8236–8403</code>.</p>
-      </section>
-
-      <section class="section" id="policy">
-        <div class="eyebrow">04 · Changeable machinery</div>
-        <h2>Only eligible frames enter replacement policy</h2>
-        <p>LRU zones and placement, private versus shared domains, quotas, candidate queues or hints, and direct assignment affect locality, fairness, CPU cost, and progress. They do not redefine whether reuse is safe.</p>
-        <p>A direct-victim assignment is revocable: if its candidate is fixed again before consumption, the allocator requests another candidate. Policy yields to newly acquired ownership; it does not force reuse.</p>
-        <p class="source-note"><strong>Implementation policy:</strong> the specific zones, quotas, queue priorities, search order, and timeout strategy belong to this revision. The hard interface condition remains: no successful fixer or incomplete generation may survive a rebind.</p>
-      </section>
-
-      <section class="section" id="lru-lifetime">
-        <div class="eyebrow">04A · LRU structure and lifetime</div>
-        <h2>List objects persist; assignments and membership change</h2>
-        <table>
-          <thead><tr><th>Lifetime</th><th>Concrete shape</th><th>Transition</th></tr></thead>
-          <tbody>
-            <tr><td>LRU object</td><td>One pool-owned array: shared indices followed by private indices. Each double-linked list has one mutex, top/bottom, zone boundaries, victim hint, counts, thresholds, quota, ticks, flags, and index.</td><td>Allocated and initialized with the page buffer; destroyed only at page-buffer finalization.</td></tr>
-            <tr><td>Private context assignment</td><td>A session count attaches contexts to a private list; a list may serve more than one context.</td><td><code>pgbuf_assign_private_lru()</code> increments assignment; <code>pgbuf_release_private_lru()</code> decrements it without destroying the list or immediately emptying its BCBs.</td></tr>
-            <tr><td>BCB membership</td><td>One <code>prev_BCB</code>/<code>next_BCB</code> pair and one zone + 16-bit LRU index encoded in <code>flags</code>.</td><td>Add asserts no existing LRU membership. Private-to-shared movement removes under the old mutex, passes through <code>PGBUF_VOID_ZONE</code>, then adds under the new mutex.</td></tr>
-          </tbody>
-        </table>
-        <p>This is how the implementation ensures a BCB is not in private and shared LRUs simultaneously: it has storage for one list link pair and one encoded list index, and move helpers perform remove-then-add while maintaining zone counts, hints, and sanity assertions.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> structures at <code>page_buffer.c:499–623</code>; array lifetime at <code>1921–1985,5744–5800</code>; add/remove/move at <code>9695–9879,10200–10415</code>; encoded membership at <code>15900–16030</code>; private assignment lifetime at <code>14513–14650</code>. Quota values and formulas are in Lesson 12.</p>
+        <p class="source-note"><strong>Implementation policy:</strong> wait/retry is pinned at <code>page_buffer.c:8236–8403</code>. Detailed LRU lifetime, quota, and direct-victim behavior belong to the linked Core and Advanced pages, not this first mental model.</p>
       </section>
 
       <section class="section" id="verbs">
-        <div class="eyebrow">05 · Keep lifecycle verbs separate</div>
-        <h2>Release, propagate, rebind, invalidate, and deallocate are different operations</h2>
+        <div class="eyebrow">06 · Do not mix up the verbs</div>
+        <h2>Unfix, flush, and victimize solve different debts</h2>
         <table>
-          <thead><tr><th>Operation</th><th>What changes</th><th>What usually remains</th></tr></thead>
+          <thead><tr><th>Operation</th><th>What ends</th><th>What can remain</th></tr></thead>
           <tbody>
-            <tr><td>Unfix</td><td>One caller's fix debt is consumed.</td><td>The resident VPID ↔ BCB/frame mapping.</td></tr>
-            <tr><td>Flush</td><td>One copied dirty generation is propagated.</td><td>Residency and possibly a newer DIRTY generation.</td></tr>
-            <tr><td>Victimization</td><td>A safe resident frame is detached for reuse.</td><td>The logical page still exists on storage.</td></tr>
-            <tr><td>Invalidation</td><td>A resident mapping is removed or rejected for coherence/lifecycle reasons.</td><td>Logical allocation unless separately changed.</td></tr>
-            <tr><td>Logical deallocation</td><td>File/disk ownership says the page no longer exists as allocated storage.</td><td>No automatic proof that every cached reference is already gone.</td></tr>
+            <tr><td>Unfix</td><td>One caller's fix debt.</td><td>The page can remain resident and dirty.</td></tr>
+            <tr><td>Flush</td><td>One copied generation's propagation debt.</td><td>The page can remain resident, and a newer generation can be dirty.</td></tr>
+            <tr><td>Victimize</td><td>The old resident mapping, after every safety condition passes.</td><td>The logical page still exists on storage.</td></tr>
           </tbody>
         </table>
-        <p>Avoid-deallocation bookkeeping for vacuum is not itself an ordinary victim blocker; do not infer that similarly named lifecycle machinery participates in LRU eligibility.</p>
-      </section>
-
-      <section class="section" id="evidence">
-        <div class="eyebrow">06 · Evidence boundary</div>
-        <h2>The existing runtime runs did not evict a frame</h2>
-        <p class="big-claim">Source establishes the pinned selection mechanism. The recorded workload did not force eviction or identify a physical victim.</p>
-        <p>Therefore it cannot validate victim order, physical-frame reuse, direct-victim revocation, or pressure-path fairness. Those claims require a bounded pressure experiment with frame identity and state observations—not merely a successful workload in a pool that never filled.</p>
       </section>
 
       <section class="section" id="retrieval">
         <div class="eyebrow">07 · Retrieval practice</div>
-        <h2>Classify the blocker before discussing preference</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="the candidate is not eligible because a latch waiter is a hard ownership or wait-state blocker even though fcnt was sampled at zero and the page is clean -> under-quota private-list membership is policy and cannot make the candidate safe -> the scan observations can become stale, so BCB-protected final revalidation of identity, flags, ownership, zone, and handoff is required -> if a direct-assigned candidate is fixed again, the assignment is revoked and allocation requests another candidate -> source verifies the ordinary gate; the existing runtime run provides no eviction evidence." data-concepts='[{"label":"waiter is a hard blocker","terms":["waiter","hard","unsafe","not eligible"]},{"label":"fcnt zero is insufficient","terms":["fcnt","zero","insufficient","sample"]},{"label":"under-quota membership is policy","terms":["quota","private","policy","preference"]},{"label":"protected final revalidation","terms":["lock","protected","recheck","revalidate","identity"]},{"label":"direct assignment is revocable","terms":["direct","revoke","fixed","another"]},{"label":"runtime did not prove eviction","terms":["runtime","no eviction","source","evidence"]}]'>
+        <h2>Choose the only possible candidate</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now repeat the decision without the table." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="page B misses -> invalid list is empty, so inspect LRU candidates -> A is fixed and cannot be stolen -> C is dirty and must be flushed before reuse -> D is clean and unfixed but is only a candidate, not yet a victim -> acquire BCB protection and recheck ownership, waiters, and avoid-victim state -> if still clear, detach D and rebind the slot for B; otherwise continue searching -> LRU preference never overrides the safety gate." data-concepts='[{"label":"invalid list before victim search","terms":["invalid","first","empty","lru"]},{"label":"fixed candidate rejected","terms":["a","fixed","owner","reject"]},{"label":"dirty candidate needs flush","terms":["c","dirty","flush"]},{"label":"candidate differs from victim","terms":["d","candidate","not yet","victim"]},{"label":"protected final recheck","terms":["lock","protect","recheck","waiter"]},{"label":"detach then rebind","terms":["detach","rebind","b"]}]'>
           <h3>Prompt</h3>
-          <p>A candidate is in the victim zone, has sampled <code>fcnt == 0</code>, is clean and not FLUSHING, has a latch waiter, and belongs to an under-quota private LRU.</p>
-          <p><strong>Your task:</strong> decide whether it is eligible; classify every observation as hard predicate or policy; state why protection is still needed; then explain what happens if a directly assigned candidate is fixed again.</p>
-          <textarea aria-label="Your victim eligibility decision" placeholder="Close the gate diagram, then argue safety before preference."></textarea>
-          <button type="button" data-check>Check replacement argument</button>
-          <button type="button" class="secondary" data-reveal>Reveal model decision</button>
+          <p>Page B misses and the invalid list is empty. The LRU scan sees A with <code>fcnt = 1</code>, C with <code>DIRTY</code>, and D with <code>fcnt = 0</code>, no dirty/flushing flag, and no observed waiter.</p>
+          <p>Which pages are immediately rejected? Is D already a victim, or only a candidate? Describe the final protected step before D's slot can represent B.</p>
+          <textarea aria-label="Your replacement decision" placeholder="Start at the invalid list, reject A and C, then explain D's protected recheck and rebind."></textarea>
+          <button type="button" data-check>Check replacement story</button>
+          <button type="button" class="secondary" data-reveal>Reveal model spine</button>
           <div class="feedback" aria-live="polite"></div>
         </div>
-        <p>Paste your answer into the chat. I will check predicate/policy separation, stale-observation reasoning, vocabulary, and evidence strength before recording mastery.</p>
       </section>
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
-        <h2>Trace the protected handoff</h2>
-        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9293-L9538"><code>page_buffer.c:9293–9538</code></a>. Annotate unprotected scan observations, try-lock, <code>pgbuf_is_bcb_victimizable(..., true)</code>, and list removal. For each field, ask what could change between scan and protected decision.</p>
-        <p><a href="../reference/replacement-safety-card.html">Open the printable replacement-safety card →</a></p>
+        <h2>Trace one candidate from scan to detach</h2>
+        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>page_buffer.c:9399–9478</code></a>. Mark four points: cheap prefilter, BCB try-lock, protected victimizable check, and LRU removal.</p>
+        <p><a href="../../learning/05-replace-one-frame.md">Open the canonical replacement chapter →</a> · <a href="../../advanced/replacement-progress.md">Open advanced progress details →</a></p>
         <p><a href="0006-flush-one-generation.html">← Return to Lesson 0006</a> · <a href="0008-defend-a-safe-change.html">Continue to Lesson 0008 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lesson map</strong>
-      <a href="#identity-meaning">0. BCB identity</a>
-      <a href="#split">1. Eligibility vs policy</a>
-      <a href="#gates">2. Five hard proofs</a>
-      <a href="#handoff-details">2A. Protected handoff</a>
-      <a href="#counterexample">3. Break fcnt == 0</a>
-      <a href="#allocation-pressure">3A. Allocation pressure</a>
-      <a href="#policy">4. Policy machinery</a>
-      <a href="#lru-lifetime">4A. LRU lifetime</a>
-      <a href="#verbs">5. Lifecycle verbs</a>
-      <a href="#evidence">6. Evidence boundary</a>
-      <a href="#retrieval">7. Decide it back</a>
+      <a href="#story">1. Why a slot is needed</a>
+      <a href="#structures-cost">1A. Structures and cost</a>
+      <a href="#slot">2. What gets reused</a>
+      <a href="#gate">3. Four safety questions</a>
+      <a href="#handoff-details">4. Protected recheck</a>
+      <a href="#no-victim">5. No safe slot</a>
+      <a href="#verbs">6. Three verbs</a>
+      <a href="#retrieval">7. Choose a candidate</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/replacement-safety-card.html">Replacement-safety card</a>
@@ -207,7 +176,7 @@
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever a safety predicate, policy choice, lifecycle verb, or evidence boundary is unclear.</footer>
+  <footer class="footer">If replacement still feels abstract, retell only this chain: invalid slot → safe candidate → protected recheck → detach → rebind.</footer>
 </main>
 </body>
 </html>

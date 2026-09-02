@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="780" viewBox="0 0 1240 780" role="img" aria-labelledby="title desc">
+  <title id="title">Replacement data structures and structural costs</title>
+  <desc id="desc">The BCB table is allocated as an array once. Invalid BCBs are organized as a mutex-protected singly linked list and popped from the head in constant time without scanning the array. Resident candidates are organized in doubly linked LRU lists and scanned from a victim hint or the bottom through at most one thousand nodes per list call. Detaching a known LRU node is constant time, deleting it from its hash bucket is linear in bucket chain length, and loading an old page requires storage input output.</desc>
+  <defs>
+    <marker id="arrow-replace" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .array{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.invalid{fill:#e9f4f3;stroke:#16847d;stroke-width:2.5}.lru{fill:#eef0ff;stroke:#5968bd;stroke-width:2.5}.cost{fill:#fff6e8;stroke:#b86b22;stroke-width:2.5}.io{fill:#fde9e5;stroke:#b74b3c;stroke-width:2.5}.t{font:700 24px Inter,Arial,sans-serif;fill:#173443}.h{font:700 17px Inter,Arial,sans-serif;fill:#173443}.s{font:14px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.code{font:14px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#173443}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow-replace)}.both{fill:none;stroke:#5968bd;stroke-width:2}.dash{fill:none;stroke:#8a9aa2;stroke-width:2;stroke-dasharray:7 5;marker-end:url(#arrow-replace)}
+    </style>
+  </defs>
+
+  <text x="620" y="38" text-anchor="middle" class="t">Invalid-list allocation is a head pop; LRU victim selection is a bounded list scan</text>
+
+  <text x="55" y="85" class="h">1 · One-time pool construction</text>
+  <text x="55" y="110" class="s">Contiguous BCB table; initialization links every slot once — O(N)</text>
+  <rect x="55" y="130" width="150" height="70" class="array"/><rect x="205" y="130" width="150" height="70" class="array"/><rect x="355" y="130" width="150" height="70" class="array"/><rect x="505" y="130" width="150" height="70" class="array"/><rect x="655" y="130" width="150" height="70" class="array"/>
+  <text x="130" y="160" text-anchor="middle" class="code">BCB[0]</text><text x="280" y="160" text-anchor="middle" class="code">BCB[1]</text><text x="430" y="160" text-anchor="middle" class="code">BCB[2]</text><text x="580" y="160" text-anchor="middle" class="code">BCB[3]</text><text x="730" y="160" text-anchor="middle" class="code">BCB[N-1]</text>
+  <text x="430" y="187" text-anchor="middle" class="tiny">stable pool slots; each is paired with one frame</text>
+  <path d="M805 165 H925" class="line"/>
+  <rect x="935" y="125" rx="14" width="250" height="80" class="cost"/>
+  <text x="1060" y="157" text-anchor="middle" class="h">Startup only</text>
+  <text x="1060" y="184" text-anchor="middle" class="code">for i = 0 … N-1</text>
+
+  <text x="55" y="255" class="h">2 · Runtime invalid-list path</text>
+  <rect x="55" y="280" rx="14" width="190" height="88" class="invalid"/>
+  <text x="150" y="314" text-anchor="middle" class="code">invalid_top</text>
+  <text x="150" y="342" text-anchor="middle" class="s">mutex-protected head</text>
+  <rect x="330" y="280" rx="14" width="190" height="88" class="invalid"/>
+  <text x="425" y="314" text-anchor="middle" class="code">BCB[2]</text><text x="425" y="342" text-anchor="middle" class="s">VPID = NULL</text>
+  <rect x="605" y="280" rx="14" width="190" height="88" class="invalid"/>
+  <text x="700" y="314" text-anchor="middle" class="code">BCB[0]</text><text x="700" y="342" text-anchor="middle" class="s">next_BCB link</text>
+  <rect x="880" y="280" rx="14" width="190" height="88" class="invalid"/>
+  <text x="975" y="314" text-anchor="middle" class="code">BCB[5]</text><text x="975" y="342" text-anchor="middle" class="s">next_BCB = NULL</text>
+  <path d="M245 324 H322" class="line"/><path d="M520 324 H597" class="line"/><path d="M795 324 H872" class="line"/>
+  <rect x="1090" y="280" rx="14" width="110" height="88" class="cost"/>
+  <text x="1145" y="315" text-anchor="middle" class="h">Pop head</text><text x="1145" y="343" text-anchor="middle" class="code">O(1)</text>
+  <text x="55" y="398" class="s">No BCB-array scan. Lock → recheck head → unlink one node → unlock → lock returned BCB.</text>
+
+  <text x="55" y="455" class="h">3 · Runtime LRU victim path when invalid list is empty</text>
+  <rect x="55" y="480" rx="14" width="180" height="88" class="lru"/>
+  <text x="145" y="514" text-anchor="middle" class="h">LRU top</text><text x="145" y="542" text-anchor="middle" class="code">hotter</text>
+  <rect x="305" y="480" rx="14" width="180" height="88" class="lru"/>
+  <text x="395" y="514" text-anchor="middle" class="code">…</text><text x="395" y="542" text-anchor="middle" class="s">prev / next</text>
+  <rect x="555" y="480" rx="14" width="180" height="88" class="lru"/>
+  <text x="645" y="514" text-anchor="middle" class="h">victim_hint</text><text x="645" y="542" text-anchor="middle" class="code">start here</text>
+  <rect x="805" y="480" rx="14" width="180" height="88" class="lru"/>
+  <text x="895" y="514" text-anchor="middle" class="h">LRU bottom</text><text x="895" y="542" text-anchor="middle" class="code">colder</text>
+  <path d="M235 512 H297" class="both"/><path d="M297 536 H235" class="both"/><path d="M485 512 H547" class="both"/><path d="M547 536 H485" class="both"/><path d="M735 512 H797" class="both"/><path d="M797 536 H735" class="both"/>
+  <rect x="1030" y="480" rx="14" width="170" height="88" class="cost"/>
+  <text x="1115" y="511" text-anchor="middle" class="h">Scan links</text><text x="1115" y="537" text-anchor="middle" class="code">O(K)</text><text x="1115" y="558" text-anchor="middle" class="tiny">K ≤ 1000 / list call</text>
+  <path d="M895 568 C895 608 645 608 645 576" class="dash"/>
+  <text x="55" y="608" class="s">Per node: flag/fcnt/wait-state prefilter. Candidate: BCB try-lock + protected recheck. Known-node LRU detach is O(1).</text>
+
+  <rect x="55" y="650" rx="14" width="330" height="90" class="cost"/>
+  <text x="220" y="682" text-anchor="middle" class="h">Remove old hash mapping</text>
+  <text x="220" y="712" text-anchor="middle" class="code">O(hash bucket length)</text>
+  <rect x="455" y="650" rx="14" width="330" height="90" class="io"/>
+  <text x="620" y="682" text-anchor="middle" class="h">Load old page bytes</text>
+  <text x="620" y="712" text-anchor="middle" class="code">DWB / storage I/O</text>
+  <rect x="855" y="650" rx="14" width="330" height="90" class="invalid"/>
+  <text x="1020" y="682" text-anchor="middle" class="h">Publish new mapping</text>
+  <text x="1020" y="712" text-anchor="middle" class="code">hash-head + LRU add = O(1)</text>
+  <path d="M385 695 H447" class="line"/><path d="M785 695 H847" class="line"/>
+  <text x="620" y="768" text-anchor="middle" class="tiny">Big-O counts local work; mutex contention, waiting, and storage latency require measurement.</text>
+</svg>

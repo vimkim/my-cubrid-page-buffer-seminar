@@ -39,6 +39,65 @@ A successful same-thread fix of the same BCB increments the matching entry's `fi
 
 There is no per-thread holder hash table or BCB-owned reverse holder list in this path, so lookup is O(`H`) in the number of distinct BCBs held by that thread. Source: exact traversal at `src/storage/page_buffer.c:6090-6126`; normal match/allocate branches at `6494-6531`; resident READ fast path at `7753-7782`.
 
+## Why an ownership ledger is necessary
+
+![A global fix count cannot identify which thread owns each release debt](../assets/why-thread-holder.svg)
+
+The BCB's global `fcnt` and the per-thread holder solve different problems. Global `fcnt` tells replacement and latch code how many granted fixes exist across all threads. It cannot attribute those grants. If `fcnt == 3`, the BCB alone cannot distinguish “Thread A owns two and Thread B owns one” from three other ownership distributions.
+
+That attribution is required because the public release operation receives a `THREAD_ENTRY` and `PAGE_PTR`, not a unique acquisition token. The Module must reconstruct whether this caller owns the corresponding BCB and how many nested calls it still owes:
+
+| Required decision | Why global BCB state is insufficient | Holder responsibility |
+|---|---|---|
+| Matching unfix | A positive `fcnt` proves only that somebody has debt. Decrementing it for a non-owner would consume another thread's grant. | A matching `bufptr` identifies this caller's debt; `fix_count` consumes one of this thread's nested grants. A missing holder lets the helper produce `ER_PB_UNFIXED_PAGEPTR`, subject to the release-path caveat below. |
+| Reentrant acquisition and promotion | Global latch mode and total do not reveal the caller's existing share. | Holder presence identifies an existing owner. Comparing global `fcnt` with holder `fix_count` tells promotion whether this thread owns all current fixes or other readers exist. |
+| Request-end cleanup | A pool scan can find fixed BCBs but cannot assign their nested debts to the terminating request's thread. | `pgbuf_unfix_all()` enumerates that thread's hold list as the cleanup and diagnostic safety net. |
+| Ordered multi-page fixing | A global count cannot reconstruct which pages and watcher relationships belong to this thread when pages must be conditionally released and re-fixed. | `pgbuf_ordered_fix()` walks the thread's holders and preserves per-binding watcher/rank information. |
+| Per-owner diagnostics | BCB state can report a total and latch mode, not the acquisition sites or which holder dirtied the page. | Holder statistics, watcher links, and debug fix-site fields attach observations to the owning thread–BCB binding. |
+
+Removing the entry without replacing its information would therefore leave global replacement protection but break caller-specific ownership accounting. The same `PAGE_PTR` may have been returned by multiple nested fixes and may also be held by other threads; pointer equality and global `fcnt` do not provide a release ledger.
+
+### This ledger is not a complete misuse guard
+
+The holder is used in release builds, but that does not mean every fix/unfix programming error is prevented:
+
+- **Missing unfix:** the per-thread holder and global `fcnt` remain. The leaked ownership can keep the BCB out of replacement. At request termination, release `pgbuf_unfix_all()` repeatedly unfixes entries from that thread's list; non-release code asserts and reports them. This is delayed cleanup/diagnosis, not prevention at the faulty call site.
+- **Extra or wrong-thread unfix:** `pgbuf_unlatch_thrd_holder()` detects the missing caller entry and returns `ER_PB_UNFIXED_PAGEPTR`. In the pinned ordinary release flow, however, `pgbuf_unfix()` does not fail closed on that result: the lock-free READ path has no holder-status parameter, while `pgbuf_unlatch_bcb_upon_unfix()` decrements global `fcnt` before its later `holder_status` check. The old `PAGE_PTR` is already invalid after the final valid unfix and may refer to a reused BCB. Holder detection therefore does not make double-unfix safe.
+
+The accurate separation is: holder attribution is part of normal release semantics; extra fix-site tracking, pointer validation, and assertions are debug aids; robust misuse rejection is a separate proof obligation. Current status is owned by [`VS-17`](../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations).
+
+The linked list itself is not mandatory. A per-thread hash keyed by BCB could reduce lookup cost; an explicit acquisition handle could make each fix return a release token; a BCB-owned reverse map could record every owner. But each alternative preserves equivalent attribution and introduces its own memory, synchronization, cleanup, and API obligations. The legitimate design question is “which ownership-ledger representation should we use?”, not “can ownership knowledge disappear?”
+
+### Could owner records move into each BCB?
+
+Yes. For WRITE mode, a single `write_owner_thread_id` plus global `fcnt` could identify the exclusive owner and its total nested count. That is enough to replace the current forward lookup for WRITE re-entry.
+
+READ mode permits multiple simultaneous owners. A BCB-side design therefore needs a reader set. If nested fixes remain legal, membership alone is insufficient: after A fixes twice and unfixes once, A must remain in the set; after its second unfix, A must leave it. The BCB-side representation naturally becomes a map from thread ID to nested count. It has moved the core `PGBUF_HOLDER` tuple into a shared reverse index rather than erased it.
+
+| Representation | Benefit | Cost or semantic change |
+|---|---|---|
+| Current per-thread linked list | Thread-local ownership updates, compact small-`H` case, direct iteration for ordered fixing. | O(`H`) lookup by BCB; no direct “who owns this BCB?” query. |
+| Per-thread hash plus iterable list | Expected O(1) lookup while retaining forward ownership and ordered enumeration. | Additional memory, rehash/lifecycle logic, and two-structure consistency. |
+| BCB-side WRITE owner plus reader map | Direct BCB-to-owner lookup. | Shared map updates on READ fix/unfix, synchronization/allocation at the hot BCB, and still one count per nested reader owner. |
+| Explicit acquisition handle | Exact release token can eliminate lookup for an individual unfix. | API-wide change; re-entry, promotion aggregation, and watcher ordering still need ownership grouping. |
+
+The BCB does not reverse-reference holders at the pinned revision. It owns global `atomic_latch.fcnt` and waiter/latch state. `pgbuf_find_thrd_holder(thread_p, bufptr)` searches from the caller's anchor to a matching `bufptr`; victimization asks only whether global ownership remains and never enumerates holder threads. `latch_last_thread` is only the most recent grantee, not an authoritative current-owner field and not a replacement for a multi-reader set.
+
+### Consumer survey: core, policy, legacy, and debug uses
+
+| Consumer | Classification | Source-visible use |
+|---|---|---|
+| Normal grant and latch promotion | General-protocol behavior | Holder presence controls re-entry versus blocking; holder count is compared with/subtracted from global `fcnt`, saved across a blocking promotion, and restored after wakeup. |
+| Ordered fix and ordered callback | Specialized protocol behavior | The thread list is enumerated; watcher/rank/latch/count state is saved while pages are released, sorted, and re-fixed. |
+| Allocation high-priority classification | Progress policy | Held BCBs are scanned for waiters and important hot page types. This affects direct-victim wait priority, not basic ownership correctness. |
+| Dirty/unfix holder statistics | Observability | Per-owner dirtied/read/write history feeds performance metrics and can be redesigned without changing basic residency safety. |
+| `pgbuf_unfix_all()` | Legacy cleanup | Its own comment says outstanding pages should not exist at request termination and the system should eventually prevent the situation. It is a safety net, not the architectural reason for the ledger. |
+| `fixed_at`, tracker, validation, assertions | Debug support | These augment the release fields only in non-release/debug configurations. |
+
+The codebase also contains a useful counterexample: `pgbuf_simple_fix()`/`pgbuf_simple_unfix()` use only global `fcnt`. Their warning restricts them to temporary-file reads, notes that a writer makes the scheme unsafe, and forbids mixing them with general FIX/latch. A holder is therefore not intrinsic to residency counting. It is required by the current general protocol's richer owner-sensitive latch, promotion, and ordered-watcher semantics.
+
+Source: holder/BCB fields at `src/storage/page_buffer.c:460-535`; holder-free simple protocol at `2688-2811`; caller-aware promotion at `2850-3024` and grant at `6312-6634`; missing-holder detection and nested decrement at `6128-6184`; ordinary unfix at `3062-3201` and global decrement at `6636-6703`; legacy cleanup at `3277-3357`; progress classification at `11705-11785`; ordered fixing/callback at `12250-13350`; watcher attachment through the holder at `13613-13709`.
+
 ## Two lifetimes must be distinguished
 
 ### Backing-storage lifetime

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="720" viewBox="0 0 1240 720" role="img" aria-labelledby="title desc">
+  <title id="title">A global fix count cannot replace per-thread holder ledgers</title>
+  <desc id="desc">One BCB has global fix count three. Thread A owns two nested fixes and Thread B owns one, while Thread C owns none. Per-thread holders let normal unfix consume the caller's debt, detect that Thread C has no debt, decide whether Thread A is the only reader during promotion, and enumerate pages for cleanup. A warning notes that the pinned release unfix path does not reliably fail closed after missing-holder detection. Removing holders without an equivalent ownership ledger leaves the global count ambiguous.</desc>
+  <defs>
+    <marker id="arrow-holder" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .bcb{fill:#fff6e8;stroke:#b86b22;stroke-width:2.5}.thread{fill:#eef0ff;stroke:#5968bd;stroke-width:2.5}.none{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.good{fill:#e9f4f3;stroke:#16847d;stroke-width:2.5}.bad{fill:#fde9e5;stroke:#b74b3c;stroke-width:2.5}.t{font:700 24px Inter,Arial,sans-serif;fill:#173443}.h{font:700 17px Inter,Arial,sans-serif;fill:#173443}.s{font:14px Inter,Arial,sans-serif;fill:#526874}.code{font:14px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#173443}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow-holder)}.dash{fill:none;stroke:#8a9aa2;stroke-width:2;stroke-dasharray:7 5}.x{font:700 28px Inter,Arial,sans-serif;fill:#b74b3c}
+    </style>
+  </defs>
+
+  <text x="620" y="38" text-anchor="middle" class="t">Global residency debt needs per-thread ownership attribution</text>
+
+  <rect x="445" y="72" rx="16" width="350" height="125" class="bcb"/>
+  <text x="620" y="108" text-anchor="middle" class="h">BCB A · shared state</text>
+  <text x="620" y="141" text-anchor="middle" class="code">global fcnt = 3 · latch = READ</text>
+  <text x="620" y="170" text-anchor="middle" class="tiny">No holder reverse list; callers search from thread to BCB</text>
+
+  <rect x="55" y="245" rx="16" width="330" height="125" class="thread"/>
+  <text x="220" y="281" text-anchor="middle" class="h">Thread A holder</text>
+  <text x="220" y="314" text-anchor="middle" class="code">bufptr = A · fix_count = 2</text>
+  <text x="220" y="343" text-anchor="middle" class="s">Two matching unfix calls are owed</text>
+
+  <rect x="455" y="245" rx="16" width="330" height="125" class="thread"/>
+  <text x="620" y="281" text-anchor="middle" class="h">Thread B holder</text>
+  <text x="620" y="314" text-anchor="middle" class="code">bufptr = A · fix_count = 1</text>
+  <text x="620" y="343" text-anchor="middle" class="s">One matching unfix call is owed</text>
+
+  <rect x="855" y="245" rx="16" width="330" height="125" class="none"/>
+  <text x="1020" y="281" text-anchor="middle" class="h">Thread C</text>
+  <text x="1020" y="314" text-anchor="middle" class="code">no holder for A</text>
+  <text x="1020" y="343" text-anchor="middle" class="s">The ledger can detect missing ownership</text>
+
+  <path d="M300 238 L550 197" class="line"/><path d="M620 238 V197" class="line"/><path d="M940 238 L690 197" class="dash"/>
+
+  <rect x="55" y="425" rx="16" width="350" height="150" class="good"/>
+  <text x="230" y="461" text-anchor="middle" class="h">Correct unfix</text>
+  <text x="82" y="496" class="code">A: own 2 → 1</text>
+  <text x="82" y="525" class="code">BCB: global 3 → 2</text>
+  <text x="82" y="554" class="s">Both ledgers consume the same grant.</text>
+
+  <rect x="445" y="425" rx="16" width="350" height="150" class="good"/>
+  <text x="620" y="461" text-anchor="middle" class="h">Promotion and cleanup</text>
+  <text x="472" y="496" class="code">global fcnt == own fix_count?</text>
+  <text x="472" y="525" class="s">No: another reader exists.</text>
+  <text x="472" y="554" class="s">The thread list also enumerates cleanup debt.</text>
+
+  <rect x="835" y="425" rx="16" width="350" height="150" class="bad"/>
+  <text x="1010" y="461" text-anchor="middle" class="h">Missing-holder detection</text>
+  <text x="862" y="496" class="code">C: no matching holder</text>
+  <text x="862" y="526" class="x">×</text>
+  <text x="900" y="525" class="s">The helper reports an ownership error.</text>
+  <text x="862" y="554" class="s">Pinned release unfix does not reliably fail closed.</text>
+
+  <path d="M220 370 V417" class="line"/><path d="M620 370 V417" class="line"/><path d="M1020 370 V417" class="line"/>
+
+  <rect x="125" y="630" rx="16" width="990" height="64" class="bad"/>
+  <text x="620" y="657" text-anchor="middle" class="h">Remove the entry with no replacement → ownership becomes ambiguous</text>
+  <text x="620" y="682" text-anchor="middle" class="s">A BCB-side owner map can replace this direction—but readers still require per-owner membership and nesting state.</text>
+</svg>

@@ -74,6 +74,35 @@ Imagine a scanner observes `fcnt == 0`, but the frame is `DIRTY`; reuse would di
 
 Victim selection is demand-driven by a miss that must materialize a page. `pgbuf_allocate_bcb()` first tries the invalid/free list. Only when that list returns no BCB does it call `pgbuf_get_victim()` and search the LRUs. “The pool is full” is a reasonable shorthand for “no identity-free pool slot is immediately available,” but it does not mean every slot is an ordinary LRU member: slots can be fixed, provisional, flushing, directly assigned, or in another transient state.
 
+### Concrete structures and operation costs
+
+![Invalid-list head pop, bounded LRU scan, and mapping replacement costs](../assets/replacement-data-structures.svg)
+
+The BCB pool storage and the runtime lists are different layers. `BCB_table` is one contiguous array allocated at page-buffer initialization. The initialization loop pairs every BCB with one frame and sets each BCB's `next_BCB` to the next array entry. `pgbuf_initialize_invalid_list()` then points `invalid_top` at `BCB[0]`. Building this initial chain is O(`N`) once for `N` buffers.
+
+At runtime, “try the invalid list” does **not** mean scan the BCB array. `PGBUF_INVALID_LIST` is a mutex, `invalid_top`, and `invalid_cnt`; its BCB nodes form a singly linked list through `next_BCB`. `pgbuf_get_bcb_from_invalid_list()` first reads an unlocked empty hint, then locks and rechecks. On success it advances `invalid_top` by one link, decrements the count, unlocks the list, locks the returned BCB, clears its list link, and moves it to the void zone. The list manipulation is O(1), although mutex scheduling can make wall-clock time variable. Returning a BCB to the invalid list is likewise a head push.
+
+The LRU path is different. Each LRU is doubly linked. `pgbuf_get_victim_from_lru_list()` starts from `victim_hint` or the bottom and follows `prev_BCB` within the victim zone. One invocation examines at most `MAX_DEPTH == 1000` nodes. Its local scan cost is O(`K`) for `K ≤ 1000`; each cheap reject is constant-time flag/ownership work, and a plausible candidate receives a non-waiting BCB try-lock plus protected constant-time recheck. Removing a known node from the doubly linked LRU is O(1).
+
+The higher-level `pgbuf_get_victim()` may visit the caller's private list, other private lists, shared lists, and a final own-list fallback. Therefore 1,000 is a per-list-call bound, not a whole-allocation bound. Total scan work is shaped by the number of list calls and their inspected depths, with an early return on the first protected eligible candidate.
+
+After LRU detach, `pgbuf_victimize_bcb()` removes the old VPID mapping from its hash bucket. That bucket is a singly linked chain, so removal is O(`B`) for bucket length `B`, plus possible hash-mutex wait. Loading a requested old page then uses DWB or data-volume I/O (and possibly decryption); storage latency is not meaningfully captured by calling the CPU step O(1). Publishing the new mapping at the hash head and adding the BCB to one LRU are constant-link insertions, again with possible mutex contention.
+
+| Stage | Structural CPU work | Latency qualification |
+|---|---|---|
+| Initial BCB/invalid chain | O(`N`) once | Startup only. |
+| Invalid-list pop or push | O(1) | No array scan; shared invalid-list mutex may wait. |
+| One LRU-list scan | O(`K`), `K ≤ 1000` | LRU mutex, cache behavior, failed try-locks, and candidate distribution matter. |
+| Protected candidate recheck | O(1) | Try-lock skips rather than waiting, but repeated skips extend the scan. |
+| Known-node LRU detach | O(1) | Performed under the LRU mutex. |
+| Old hash mapping removal | O(`B`) | `B` is bucket-chain length; hash mutex may wait. |
+| Old-page materialization | Storage operation | DWB/file read and optional decryption can dominate. |
+| Hash-head/LRU publication | O(1) link work | Hash/LRU mutex wait remains workload-dependent. |
+
+The pinned source does not provide a universal nanosecond duration. It instruments allocation, victim-search subphases, and condition waits through `PSTAT_PB_ALLOC_BCB`, `PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM`, list-search timers, and condition-wait timers. Use those observations or a focused benchmark for the target build and workload; Big-O alone is not a latency measurement.
+
+Source: invalid-list structure at `src/storage/page_buffer.c:626-634`; BCB array/link initialization at `5559-5660`; invalid head initialization and pop/push at `5907-5919,8905-8983`; per-list bound and scan at `9327-9537`; high-level list selection at `9067-9263`; hash deletion at `7883-7957`; BCB allocation timing at `8181-8403`.
+
 If every BCB is fixed, the invalid list is empty and every LRU candidate fails ownership eligibility. The page buffer never steals one. With the page-flush daemon available, the requesting server thread enters the direct-victim wait protocol; an unfix can eventually make a clean BCB eligible and feed it. If ownership never ends, the request can leave only through timeout, interrupt, or shutdown. Without the daemon, the code flushes/searches synchronously and expects a victim; if none is produced, the allocation ultimately fails (the fallback error name is `ER_PB_ALL_BUFFERS_DIRTY`, even though “all fixed” is the actual reason in this scenario). This outcome exposes leaked or excessive ownership rather than weakening safety.
 
 Source: demand and invalid-list-first rule at `src/storage/page_buffer.c:8181-8235`; wait/retry/bounded exits at `src/storage/page_buffer.c:8236-8403`; fixed/waiter rejection at `src/storage/page_buffer.c:9265-9325`.

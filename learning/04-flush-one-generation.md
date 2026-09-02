@@ -43,6 +43,35 @@ The timeline extends the worked example by one event: log 170 arrives while G is
 
 Source: page-LSA/lower-bound coupling at `src/storage/page_buffer.c:4983-5055`; flush consumption at `src/storage/page_buffer.c:10723-10962`.
 
+### Why `DIRTY` and page LSA cannot replace `oldest_unflush_lsa`
+
+`DIRTY` is a yes/no propagation debt. Page LSA is the latest logged change included in the resident bytes. A checkpoint needs a third fact: the earliest logged change in the current dirty generation that has not yet been propagated.
+
+![Checkpoint selection by the beginning of an unpropagated dirty generation](../assets/oldest-unflush-checkpoint.svg)
+
+Suppose disk has page P through LSA 80. A first change at 100 sets page LSA and `oldest_unflush_lsa` to 100. A second change at 140 advances page LSA to 140 but must leave the lower bound at 100. The checkpoint then chooses `flush_upto_lsa = 150`. Before the scan, another change at 170 advances page LSA to 170; because no image containing the older work has been propagated yet, `oldest_unflush_lsa` remains 100.
+
+Assume P is unfixed and otherwise flushable when scanned:
+
+| Value used as checkpoint predicate | Answer | Consequence |
+|---|---|---|
+| page LSA 170 > boundary 150 | “The latest included change is newer than the boundary.” | Misusing this value would skip P and hide still-unpropagated change A at 100. |
+| oldest-unflush 100 ≤ boundary 150 | “This dirty generation began at or before the boundary.” | Select P for checkpoint propagation. |
+
+Selection by 100 does not mean writing a historical page version. Flush copies the current image containing A+B+C, carries lower bound 100 for checkpoint accounting, and uses copied page LSA 170 as the WAL force target. The lower bound decides whether the generation crosses the checkpoint boundary; the page LSA decides how far WAL must precede that captured image.
+
+The field's lifetime preserves this meaning:
+
+1. A clean generation has a null lower bound.
+2. The first logged dirty change initializes it from the new page LSA.
+3. Later changes advance page LSA but do not advance the lower bound; doing so would forget older unpaid history.
+4. A flush copies the lower bound and clears the resident field, letting a concurrent G+1 mutation establish a new lower bound.
+5. Ordinary flush failure restores the copied value so the old debt remains retryable and visible to checkpoint accounting.
+
+It is not the oldest LSA ever seen by the page, the oldest active transaction, or persisted page-header state. It is volatile BCB metadata scoped to the current unpropagated dirty generation.
+
+**Where the source says this:** the field comment calls it “the oldest LSA record of the page that has not been written to disk” at `src/storage/page_buffer.c:541`. `pgbuf_set_lsa()` initializes it only when null at `5041-5071`. The contract comment for `pgbuf_flush_checkpoint()` says it flushes dirty unfixed pages whose LSA reaches the checkpoint and returns the smallest LSA among remaining dirty buffers at `4172-4186`; selection uses `oldest_unflush_lsa` against `flush_upto_lsa` at `4247-4257`, then revalidates concurrent state and computes the remaining minimum at `4533-4600`. The log manager calls this operation to find the next redo point at `src/transaction/log_page_buffer.c:6974-7030` and records the resulting smallest LSA at `7217-7225`.
+
 ## One flush-generation timeline
 
 `pgbuf_bcb_flush_with_wal()` enters with BCB protection held. For an ordinary successful generation G, read the order exactly:

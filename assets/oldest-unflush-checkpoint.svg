@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="790" viewBox="0 0 1240 790" role="img" aria-labelledby="title desc">
+  <title id="title">The latest page LSA cannot replace the oldest unflushed LSA at checkpoint</title>
+  <desc id="desc">Page P is clean through LSA 80. Changes at 100 and 140 make its page LSA advance while oldest unflush LSA stays 100. A checkpoint boundary is taken at 150, then a concurrent change advances page LSA to 170. Comparing only page LSA 170 to boundary 150 would hide the unpropagated change at 100. Oldest unflush LSA 100 shows that this generation contains checkpoint-relevant debt, so checkpoint selects the page, forces WAL through the copied page LSA 170, and flushes the copied image. A later resident generation at LSA 200 starts its own oldest unflush LSA at 200.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .base{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.change{fill:#eef0ff;stroke:#5968bd;stroke-width:2.5}.boundary{fill:#fff6e8;stroke:#b86b22;stroke-width:2.5}.bad{fill:#fde9e5;stroke:#b74b3c;stroke-width:2}.good{fill:#e9f4f3;stroke:#16847d;stroke-width:2.5}.t{font:700 23px Inter,Arial,sans-serif;fill:#173443}.h{font:700 17px Inter,Arial,sans-serif;fill:#173443}.s{font:14px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.code{font:14px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#173443}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}.cut{fill:none;stroke:#b86b22;stroke-width:3;stroke-dasharray:8 6}.muted{fill:none;stroke:#8a9aa2;stroke-width:2;stroke-dasharray:7 5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="620" y="38" text-anchor="middle" class="t">Checkpoint asks for the earliest unpropagated change, not only the latest page change</text>
+
+  <rect x="35" y="70" rx="14" width="220" height="115" class="base"/>
+  <text x="145" y="103" text-anchor="middle" class="h">Clean page P</text>
+  <text x="145" y="136" text-anchor="middle" class="code">disk through LSA 80</text>
+  <text x="145" y="163" text-anchor="middle" class="code">oldest = NULL</text>
+
+  <rect x="310" y="70" rx="14" width="240" height="115" class="change"/>
+  <text x="430" y="103" text-anchor="middle" class="h">Change A · log 100</text>
+  <text x="430" y="136" text-anchor="middle" class="code">page LSA = 100</text>
+  <text x="430" y="163" text-anchor="middle" class="code">oldest = 100</text>
+
+  <rect x="605" y="70" rx="14" width="240" height="115" class="change"/>
+  <text x="725" y="103" text-anchor="middle" class="h">Change B · log 140</text>
+  <text x="725" y="136" text-anchor="middle" class="code">page LSA = 140</text>
+  <text x="725" y="163" text-anchor="middle" class="code">oldest = 100</text>
+
+  <rect x="935" y="70" rx="14" width="270" height="115" class="change"/>
+  <text x="1070" y="103" text-anchor="middle" class="h">Concurrent C · log 170</text>
+  <text x="1070" y="136" text-anchor="middle" class="code">page LSA = 170</text>
+  <text x="1070" y="163" text-anchor="middle" class="code">oldest = 100</text>
+
+  <path d="M255 127 H302" class="line"/><path d="M550 127 H597" class="line"/><path d="M845 127 H927" class="line"/>
+  <path d="M885 55 V207" class="cut"/>
+  <rect x="780" y="210" rx="12" width="210" height="54" class="boundary"/>
+  <text x="885" y="233" text-anchor="middle" class="h">Checkpoint boundary</text>
+  <text x="885" y="253" text-anchor="middle" class="code">flush_upto = 150</text>
+
+  <rect x="55" y="305" rx="16" width="520" height="160" class="bad"/>
+  <text x="315" y="340" text-anchor="middle" class="h">Page LSA alone gives the wrong checkpoint question</text>
+  <text x="82" y="377" class="code">page LSA 170 &gt; boundary 150</text>
+  <text x="82" y="408" class="s">This says only that the latest included change is newer.</text>
+  <text x="82" y="437" class="s">It hides that unpropagated change A began at 100.</text>
+
+  <rect x="665" y="305" rx="16" width="520" height="160" class="good"/>
+  <text x="925" y="340" text-anchor="middle" class="h">Oldest unflush answers the checkpoint question</text>
+  <text x="692" y="377" class="code">oldest 100 ≤ boundary 150</text>
+  <text x="692" y="408" class="s">This dirty generation contains work at or before the boundary.</text>
+  <text x="692" y="437" class="s">Select P even though its latest page LSA is now 170.</text>
+  <path d="M575 385 H657" class="line"/>
+
+  <rect x="150" y="520" rx="16" width="940" height="105" class="boundary"/>
+  <text x="620" y="553" text-anchor="middle" class="h">Checkpoint flushes the whole captured image G</text>
+  <text x="620" y="583" text-anchor="middle" class="code">copy page LSA 170 · carry oldest 100 · force WAL through 170 · submit G</text>
+  <text x="620" y="608" text-anchor="middle" class="s">The boundary selects the page; the copied page LSA still controls its WAL gate.</text>
+  <path d="M925 465 V512" class="line"/>
+
+  <rect x="150" y="680" rx="16" width="440" height="78" class="good"/>
+  <text x="370" y="711" text-anchor="middle" class="h">Captured G completes</text>
+  <text x="370" y="739" text-anchor="middle" class="code">A/B/C covered by submitted image</text>
+  <rect x="650" y="680" rx="16" width="440" height="78" class="change"/>
+  <text x="870" y="711" text-anchor="middle" class="h">Later resident G+1 · log 200</text>
+  <text x="870" y="739" text-anchor="middle" class="code">page LSA = 200 · oldest = 200</text>
+  <path d="M620 625 V660 H370 V672" class="muted"/><path d="M620 660 H870 V672" class="muted"/>
+</svg>

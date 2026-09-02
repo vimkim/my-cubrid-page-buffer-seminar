@@ -39,6 +39,7 @@ These are source-visible candidates, not observed production failures.
 | `VS-14` | **Inference / proof obligation** | Lock-free READ-hit success has no post-CAS VPID recheck. | Safety depends on permanent BCB storage and the invariant that a positive `fcnt` excludes victim reuse. | A formal or concurrency-test proof covering the load/victim identity transition and memory ordering. `src/storage/page_buffer.c:7725-7786`. |
 | `VS-15` | **Open source anomaly** | `file_dealloc()` contains `assert (error_code != NO_ERROR)` immediately before its normal exit even though the success value starts as `NO_ERROR`. | The assertion looks inconsistent, but no page-buffer teaching claim depends on it. | Recheck build configuration and reachable success paths. `src/storage/file_manager.c:6296-6299`. |
 | `VS-16` | **Open diagnostic anomaly** | `pgbuf_rv_dealloc_undo_compensate()` has a debug-only diagnostic that appears to read a locally declared VPID without visible initialization. | Affects diagnostic reliability, not the type/flag restoration taught in the course. | Compile/run the diagnostic branch or trace macro expansion. `src/storage/page_buffer.c:15314-15335`. |
+| `VS-17` | **Candidate** | `pgbuf_unlatch_thrd_holder()` reports a missing caller holder, but ordinary release `pgbuf_unfix()` does not fail closed before BCB accounting: the lock-free READ path does not consume `holder_status`, and the protected path decrements global `fcnt` before checking it. | An extra or wrong-thread unfix may consume another owner's fix debt; after a final valid unfix, the stale `PAGE_PTR` may also observe a reused BCB. The holder is therefore not a reliable release-build double-unfix guard. | Add targeted release-build tests for an immediate double unfix, wrong-thread unfix while another owner remains, READ fast-path conditions, and reuse between calls. Inspect holder lists, global `fcnt`, latch mode, errors, waiter handoff, and subsequent victim/fix behavior. `src/storage/page_buffer.c:3062-3201,6128-6184,6636-6703,7807-7835`. |
 
 ## C. Policy and timing that must not be taught as contract
 
@@ -85,7 +86,7 @@ Sources:
 
 ## F. Questions deliberately left open
 
-1. Are `VS-10`, `VS-11`, and `VS-12` reachable under supported configurations, and what exact state survives each injected failure?
+1. Are `VS-10`, `VS-11`, `VS-12`, and `VS-17` reachable under supported configurations, and what exact state survives each injected failure?
 2. Which of the historical replacement findings still exist on the branch used by new developers today?
 3. What fairness claim, if any, is intended for page-latch promotion and direct-victim assignment?
 4. Should `pgbuf_fix_without_validation_release` be implemented, removed, or hidden from release headers?

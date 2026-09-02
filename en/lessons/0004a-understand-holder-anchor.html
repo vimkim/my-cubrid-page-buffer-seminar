@@ -66,8 +66,61 @@
         <p class="source-note"><strong>Verified mechanism:</strong> the exact traversal is pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6090-L6126"><code>page_buffer.c:6090–6126</code></a>. Normal fix looks up at <code>6319</code>, increments a match at <code>6494–6510</code>, and allocates a first entry at <code>6511–6531</code>. The resident READ fast path repeats the match-or-allocate decision at <code>7753–7782</code>.</p>
       </section>
 
+      <section class="section" id="why-holder">
+        <div class="eyebrow">04 · Why the thread needs a ledger</div>
+        <h2>Global fcnt protects residency; the holder attributes debt to its owner</h2>
+        <p class="big-claim">The BCB can say “three fixes exist,” but it cannot say that Thread A owns two, Thread B owns one, and Thread C owns none. The holder supplies that missing attribution.</p>
+        <img class="diagram" src="../../assets/why-thread-holder.svg" alt="A BCB global fix count of three separated into two debts for Thread A, one for Thread B, and none for Thread C">
+        <p class="caption">The two ledgers are deliberately redundant in total but different in meaning: global replacement safety versus caller-specific ownership.</p>
+        <table>
+          <thead><tr><th>Question the code must answer</th><th>What global state can say</th><th>What the holder adds</th></tr></thead>
+          <tbody>
+            <tr><td>May this BCB be victimized?</td><td><code>fcnt &gt; 0</code> says some ownership remains, so no.</td><td>No owner identity is needed for this global gate.</td></tr>
+            <tr><td>Does this caller have debt for A?</td><td><code>fcnt &gt; 0</code> says only that somebody owns debt.</td><td>A matching <code>bufptr</code> proves this thread owns debt; no match lets the helper report an ownership error.</td></tr>
+            <tr><td>How many nested fixes does this caller owe?</td><td><code>fcnt</code> mixes all threads.</td><td><code>fix_count</code> lets one unfix consume exactly one of this thread's grants.</td></tr>
+            <tr><td>Is this reader the only owner during promotion?</td><td>The global total alone cannot isolate the caller's share.</td><td>Comparing global <code>fcnt</code> with this holder's <code>fix_count</code> reveals whether other readers exist.</td></tr>
+            <tr><td>What must ordered multi-page fixing revisit?</td><td>A BCB-by-BCB pool scan would not preserve this thread's watcher, rank, and owner grouping.</td><td>The thread list enumerates precisely its outstanding BCB bindings and attached watcher state.</td></tr>
+          </tbody>
+        </table>
+        <h3>Important: the holder is not a complete release-build misuse guard</h3>
+        <p>If a caller omits unfix, the holder and global debt remain; the mistake is not prevented at the call site. In a release build, <code>pgbuf_unfix_all()</code> uses the thread list as a request-end cleanup safety net. Debug builds instead assert and report outstanding holders. Until cleanup, the leaked fix can keep a BCB ineligible for replacement.</p>
+        <p>An extra or wrong-thread unfix is even more important to distinguish. <code>pgbuf_unlatch_thrd_holder()</code> notices a missing entry and returns <code>ER_PB_UNFIXED_PAGEPTR</code>, but the pinned ordinary release path is not fail-closed: the lock-free READ release does not consume that status, and the protected release decrements global <code>fcnt</code> before checking it. After the final valid unfix, the old <code>PAGE_PTR</code> is contractually invalid and may already name reused storage. Therefore the holder exposes ownership information, but it does not make double-unfix safe or reliably stop its state mutation at this revision.</p>
+        <div class="callout warn"><strong>Precise conclusion:</strong> holder fields exist and drive normal release-build behavior; only extra debug tracking and assertions are debug-only. Misuse prevention is a separate, incomplete property routed as <code>VS-17</code>.</div>
+        <h3>Does the BCB reverse-reference its holders?</h3>
+        <p>No. The BCB stores global <code>atomic_latch.fcnt</code>, latch/wait state, flags, and page identity, but no authoritative holder-thread list. A fix call already has <code>thread_p</code> and <code>bufptr</code>, so <code>pgbuf_find_thrd_holder(thread_p, bufptr)</code> starts from that thread's <code>thrd_hold_list</code> and compares <code>holder-&gt;bufptr == bufptr</code>. The arrow points from thread-owned entry to BCB. Victimization needs only the global “any fixes remain?” answer and therefore reads global <code>fcnt</code> instead of enumerating owners.</p>
+        <h3>Could owner identity be moved into the BCB?</h3>
+        <p><strong>Yes; that is a legitimate redesign.</strong> A <code>write_owner_thread_id</code> would be enough to identify the sole WRITE owner, and the BCB's global <code>fcnt</code> could also be that owner's nested total while WRITE is exclusive. This would remove the holder lookup for that case.</p>
+        <p>READ is the harder case. Many threads may hold the same BCB at once. Distinguishing an existing reader from a new reader therefore requires a BCB-side set, not one owner ID. If nested fixes remain legal, each reader needs its own count: after Thread A fixes twice and unfixes once, the set must know A is still an existing reader; after its second unfix, it must remove A. The natural BCB-side record is therefore <code>&lt;thread_id, fix_count&gt;</code>—the same core information as <code>PGBUF_HOLDER</code>, stored and indexed in the reverse direction.</p>
+        <table>
+          <thead><tr><th>Representation</th><th>What improves</th><th>Cost moved elsewhere</th></tr></thead>
+          <tbody>
+            <tr><td>Current per-thread list</td><td>Thread-local updates, direct ordered-fix enumeration, compact common case.</td><td>Lookup by BCB is linear in this thread's held-set depth; BCB cannot list its owners.</td></tr>
+            <tr><td>Per-thread hash</td><td>Expected constant-time BCB lookup while preserving the forward ownership direction.</td><td>More memory and lifecycle complexity; ordered enumeration still needs iteration support.</td></tr>
+            <tr><td>BCB-side WRITE owner + reader map</td><td>Direct lookup from a hot BCB to an owner record.</td><td>Every shared READ fix/unfix updates a BCB-owned map, adding synchronization, allocation, and cache contention at the shared object.</td></tr>
+            <tr><td>Explicit acquisition handle</td><td>Unfix can identify one exact acquisition without searching.</td><td>Changes the PAGE_PTR-only API and still needs aggregation for re-entry, promotion, and ordered watchers.</td></tr>
+          </tbody>
+        </table>
+        <h3>What the full consumer survey found</h3>
+        <table>
+          <thead><tr><th>Consumer</th><th>Release-build use</th><th>How central is it?</th></tr></thead>
+          <tbody>
+            <tr><td>Normal latch grant and blocking promotion</td><td>Tests holder presence, compares/subtracts <code>fix_count</code>, temporarily removes the entry, and recreates it after wakeup.</td><td>Core behavior of the current general fix protocol.</td></tr>
+            <tr><td>Ordered fix/callback</td><td>Enumerates held pages and preserves watcher, rank, latch mode, and nested counts across release/re-fix.</td><td>Core behavior of that specialized multi-page protocol.</td></tr>
+            <tr><td>Allocation progress priority</td><td><code>pgbuf_is_thread_high_priority()</code> scans held BCBs to see whether they have waiters or contain important hot page types.</td><td>Progress policy, not basic ownership correctness.</td></tr>
+            <tr><td>Dirty and unfix performance accounting</td><td>Tracks whether this owner dirtied the page and which latch modes it used.</td><td>Observability; removable if the metrics are removed or redesigned.</td></tr>
+            <tr><td>Request-end cleanup</td><td><code>pgbuf_unfix_all()</code> walks remaining entries.</td><td>Legacy safety net by its own comment, not the primary design reason.</td></tr>
+            <tr><td>Fix-site strings, pointer validation, assertions</td><td>Compiled only into non-release/debug configurations.</td><td>Debug-only additions, unlike the holder's core fields.</td></tr>
+          </tbody>
+        </table>
+        <h3>The code already has a holder-free counterexample</h3>
+        <p><code>pgbuf_simple_fix()</code> and <code>pgbuf_simple_unfix()</code> update only global <code>fcnt</code>. Their source warning limits the protocol to temporary-file reads, says a write can make it unsafe, and forbids mixing it with general FIX/latch use. This proves a holder is not intrinsically required merely to keep one frame resident. It also shows what must be surrendered: general READ/WRITE latch ownership, re-entry/promotion semantics, ordered watchers, and owner attribution.</p>
+        <div class="callout"><strong>Codebase-reviewed conclusion:</strong> global <code>fcnt</code> is sufficient for the narrow trusted latchless temporary-read protocol. The current general fix API needs per-owner state because of the semantics it promises. That state could move or change shape; it cannot be deleted while those semantics stay unchanged.</div>
+        <div class="callout warn"><strong>The narrow answer:</strong> existing-reader versus new-reader is one important use, but not the only one. The same per-owner state supplies READ-to-WRITE promotion and nested membership lifetime. Ordered watcher handling also uses the forward list. <code>pgbuf_unfix_all()</code> is only a legacy request-end safety net documented by its own source comment; it is not the primary justification for holders.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> grant, re-entry, waiter barging, and promotion use caller ownership at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6312-L6537"><code>page_buffer.c:6312–6537</code></a>; missing-holder detection and nested decrement are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6128-L6184"><code>6128–6184</code></a>; the ordinary unfix flow is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3062-L3201"><code>pgbuf_unfix()</code></a> plus global decrement at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6636-L6703"><code>6636–6703</code></a>. Holder-free simple fix is restricted at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2688-L2811"><code>page_buffer.c:2688–2811</code></a>; progress classification is at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11705-L11785"><code>11705–11785</code></a>. The legacy cleanup comment and enumeration are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3277-L3357"><code>pgbuf_unfix_all()</code></a>; ordered fixing consumes the same thread list and watcher records beginning at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L12250-L12425"><code>pgbuf_ordered_fix()</code></a>.</p>
+      </section>
+
       <section class="section" id="two-links">
-        <div class="eyebrow">04 · Two list roles</div>
+        <div class="eyebrow">05 · Two list roles</div>
         <h2>The same entry storage changes lists and link fields</h2>
         <table>
           <thead><tr><th>Entry state</th><th>Owning list</th><th>Link used</th><th>BCB meaning</th></tr></thead>
@@ -80,7 +133,7 @@
       </section>
 
       <section class="section" id="lifetime">
-        <div class="eyebrow">05 · Storage lifetime versus binding lifetime</div>
+        <div class="eyebrow">06 · Storage lifetime versus binding lifetime</div>
         <h2>Final unfix removes the binding, not the backing allocation</h2>
         <img class="diagram" src="../../assets/holder-entry-lifetime.svg" alt="Holder entry moving from a thread free list to its active list and back">
         <p class="caption">The entry is recycled; one logical thread–BCB binding is temporary.</p>
@@ -89,7 +142,7 @@
       </section>
 
       <section class="section" id="unfix-cost">
-        <div class="eyebrow">06 · Unfix and cost</div>
+        <div class="eyebrow">07 · Unfix and cost</div>
         <h2>Can this become very slow? Yes, when one thread holds many distinct pages</h2>
         <p>Let <code>H</code> be the number of distinct BCBs currently held by this thread—not the buffer-pool size, lifetime fix count, or sum of nested debts. Because the active list has no BCB-to-holder index, position determines the work:</p>
         <table>
@@ -116,7 +169,7 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">08 · Retrieval practice</div>
         <h2>Explain A×3 without saying “the anchor finds its position”</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now repeat it without the diagram." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="the thread resolves its one anchor -> pgbuf_find_thrd_holder starts at thrd_hold_list and linearly compares each holder bufptr with BCB A -> first successful fix allocates and prepends one holder with fix_count 1 -> two repeated successful fixes find the same entry and raise fix_count to 3 without changing num_hold_cnt -> each unfix scans for the entry and decrements it -> the third unfix removes the zero-count entry and pushes its storage to thrd_free_list." data-concepts='[{"label":"one anchor per thread","terms":["anchor","thread","one","index"]},{"label":"linear lookup from list head","terms":["linear","scan","head","thrd_hold_list"]},{"label":"comparison by BCB pointer","terms":["bufptr","bcb","pointer","compare"]},{"label":"same entry counts nested fixes","terms":["same","entry","fix_count","3"]},{"label":"num_hold_cnt stays one","terms":["num_hold_cnt","one","length","distinct"]},{"label":"final unfix recycles entry","terms":["unfix","zero","remove","free list","recycle"]}]'>
           <h3>Prompt</h3>
@@ -142,10 +195,11 @@
       <a href="#two-objects">1. Anchor versus entry</a>
       <a href="#read-snapshot">2. Read the snapshot</a>
       <a href="#find-existing">3. Find existing debt</a>
-      <a href="#two-links">4. Two list roles</a>
-      <a href="#lifetime">5. Entry lifetime</a>
-      <a href="#unfix-cost">6. Release cost</a>
-      <a href="#retrieval">7. Teach it back</a>
+      <a href="#why-holder">4. Why keep a holder?</a>
+      <a href="#two-links">5. Two list roles</a>
+      <a href="#lifetime">6. Entry lifetime</a>
+      <a href="#unfix-cost">7. Release cost</a>
+      <a href="#retrieval">8. Teach it back</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../../learning/02-fix-hold-release.md">Canonical Core page</a>
