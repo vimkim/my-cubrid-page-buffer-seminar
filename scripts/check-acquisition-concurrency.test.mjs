@@ -31,7 +31,7 @@ test("the hundred-writer worked case is visual, bounded, and routed to its quest
   assert.match(m, /### Worked case: one hundred unconditional WRITE requests/);
   assert.match(m, /!\[Unconditional WRITE waiters queued on one BCB and granted one zero-crossing at a time\]\(\.\.\/assets\/latch-wait-queue\.svg\)/);
   for (const term of ["`next_wait_thrd`", "`waiter_exists`", "`pgbuf_timed_sleep()`", "`pgbuf_wakeup_reader_writer()`", "`page_latch_timeout_in_msecs`", "reader grouping", "holder re-entry", "`ER_PAGE_LATCH_TIMEDOUT`", "not as an Interface contract"]) assert.ok(m.includes(term), term);
-  assert.match(m, /a zero-crossing, the only moment at which the queue is walked/);
+  assert.match(m, /zero-crossing that starts a grant scan/i);
   assert.match(m, /one grant per zero-crossing/i);
   for (const anchor of ["src/storage/page_buffer.c:7041-7450", "src/storage/page_buffer.c:7452-7590", "src/base/system_parameter.c:5308-5319"]) assert.ok(m.includes(`\`${anchor}\``), anchor);
   assert.ok(m.includes("](../questions/advanced.md#pgbuf-qb-033-how-are-many-unconditional-write-waiters-handled)"));
@@ -44,7 +44,8 @@ test("the hundred-writer worked case is visual, bounded, and routed to its quest
 test("ordered watchers cover ranking, refix, failure, and revalidation", async () => {
   const m = await readFile(page, "utf8");
   for (const term of ["rank", "group", "conditional acquisition", "release", "sort", "refix", "partial failure", "`page_was_unfixed`", "page-local observations"]) assert.match(m, new RegExp(term, "i"), term);
-  assert.match(m, /`src\/storage\/page_buffer\.c:12268-13531`/);
+  assert.match(m, /`src\/storage\/page_buffer\.c:12186-13063`/);
+  assert.match(m, /`src\/storage\/page_buffer\.c:13065-13531`/);
   assert.match(m, /`src\/storage\/btree\.c:28365-28393`/);
   assert.match(m, /`src\/storage\/heap_file\.c:20493-20664`/);
   assert.ok(m.includes("](../learning/02-fix-hold-release.md)"));
@@ -52,24 +53,24 @@ test("ordered watchers cover ranking, refix, failure, and revalidation", async (
 
 const assetDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets");
 
-test("the promotion outcomes are visual and the blocking path is labelled as an unfixed window", async () => {
+test("the promotion outcomes are visual and distinguish thread ownership from page-state continuity", async () => {
   const m = await readFile(page, "utf8");
   const svg = await readFile(path.join(assetDir, "promotion-outcomes.svg"), "utf8");
-  const aAt = m.indexOf('## Blocking promotion releases observations');
+  const aAt = m.indexOf('## Blocking promotion uses queue priority to preserve page state');
   const vAt = m.indexOf('](../assets/promotion-outcomes.svg)');
   const bAt = m.indexOf('## Ordered watchers');
-  assert.ok(aAt > 0, '## Blocking promotion releases observations');
+  assert.ok(aAt > 0, '## Blocking promotion uses queue priority to preserve page state');
   assert.ok(vAt > aAt, "visual follows its section heading");
   assert.ok(bAt > vAt, "visual sits before the next section");
-  assert.match(m, /!\[Four promotion outcomes and the unfixed window of the blocking path\]\(\.\.\/assets\/promotion-outcomes\.svg\)/);
+  assert.match(m, /!\[Four promotion outcomes and the queue-head continuity bridge of the blocking path\]\(\.\.\/assets\/promotion-outcomes\.svg\)/);
   assert.match(m, /`PGBUF_PROMOTE_ONLY_READER`/);
-  assert.match(m, /saved fix count travels with the request/i);
-  assert.match(m, /no second debt is created/i);
+  assert.match(m, /same fix count.*preserves page-byte observations/is);
+  assert.match(m, /internal ownership gap/is);
   assert.match(svg, /<svg[^>]+viewBox=/);
   assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
   assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
   assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
-  for (const label of ["In-place promotion", "Conditional failure: ER_PAGE_LATCH_PROMOTE_FAIL", "Blocking promotion", "Woken with WRITE", "Error or interrupt", "Unfixed window", "no second debt"]) assert.ok(svg.includes(label), label);
+  for (const label of ["In-place promotion", "Conditional failure: ER_PAGE_LATCH_PROMOTE_FAIL", "Blocking promotion", "Woken with WRITE", "Blocking failure", "Internal ownership gap", "no second debt"]) assert.ok(svg.includes(label), label);
 });
 
 test("the ordered-fix visual shows the canonical order, the release rule, and the refix", async () => {

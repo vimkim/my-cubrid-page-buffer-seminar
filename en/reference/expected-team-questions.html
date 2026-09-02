@@ -303,7 +303,7 @@
         <details>
           <summary>Show direct answer</summary>
           <div class="model-answer">
-            <p><strong>Answer:</strong> The counts are configuration- and mode-dependent. Auto shared count derives from <code>MAX_NTRANS</code>, targets roughly 1,000 buffers per list, and has a floor of four; explicit count is capped at 1,000. In server mode, private count <code>-1</code> derives from transaction plus vacuum capacity, <code>0</code> disables private quotas, and a positive count has a floor of four. One BCB belongs to one list. Quotas guide placement and search; they do not cap fixes or authorize reuse.</p>
+            <p><strong>Answer:</strong> The counts are configuration- and mode-dependent. Auto shared count derives from <code>MAX_NTRANS</code>, targets roughly 1,000 buffers per list, and has a floor of four; explicit shared count is capped at 1,000. That number does not cap private lists. In server mode, private count <code>-1</code> becomes <code>MAX_NTRANS + 50</code>, <code>0</code> disables private quotas, and an explicit positive count is 4–4,050 at this baseline. Automatic <code>MAX_NTRANS</code> includes reserved connections and is not clamped to 1,000 in the initializer. One BCB belongs to one list. Quotas guide placement and search; they do not cap fixes or authorize reuse.</p>
             <p><strong>Answer:</strong> Shared LRU1/LRU2 defaults are 40%/5%; private quota targets reserve 5%/5%. Activity-weighted private quotas are smoothed, capped at 5,000 pages and half the pool, while the shared remainder has a minimum target of 50 per list. All numbers are pinned policy, not Interface contract.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:1071-1118,5744-5903,13942-14624</code></p>
             <p class="answer-route"><a href="../../advanced/replacement-progress.md#counts-quotas-and-zone-boundaries-at-the-pinned-revision">Canonical LRU details</a></p>
@@ -370,7 +370,7 @@
         <details>
           <summary>Show direct answer</summary>
           <div class="model-answer">
-            <p><strong>Answer:</strong> There is no single priority number. The order is layered: domain pressure chooses own over-quota private, other private, shared, then own under-quota private; only LRU3 is scanned from its hint or oldest end for at most 1,000 candidates; then the final safety gate may reject the preferred candidate. A separate high/low queue prioritizes direct-victim waiters, not BCB eligibility.</p>
+            <p><strong>Answer:</strong> There is no single priority number. The order is layered: domain pressure chooses own over-quota private, other private, shared, then own under-quota private; one already-selected LRU3 is walked from its hint or oldest end for at most 1,000 BCB-node visits; then the final safety gate may reject the preferred candidate. A separate high/low queue prioritizes direct-victim waiters, not BCB eligibility.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:9067-9538,11734-11790</code></p>
             <p class="answer-route"><a href="../../advanced/replacement-progress.md#how-the-victim-search-assigns-priority">Canonical priority explanation</a></p>
           </div>

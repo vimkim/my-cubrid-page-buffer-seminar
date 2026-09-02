@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 920" role="img" aria-labelledby="title desc">
+  <title id="title">CUBRID AOUT ghost history, admission decisions, and disablement evidence</title>
+  <desc id="desc">Eviction can record only a page identity and former LRU index in a FIFO plus hash ghost history. On a later load, ordinary first unfix uses an AOUT miss, same-private hit, or other-private hit to choose private middle, private top, or shared middle. The pinned build forces the AOUT ratio to zero after a historical assertion and core report involving bad queue links.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.ink{fill:#173448}.muted{fill:#526d80}.title{font:700 29px system-ui,sans-serif}.sub{font:16px system-ui,sans-serif}.head{font:700 18px system-ui,sans-serif}.body{font:15px system-ui,sans-serif}.small{font:14px system-ui,sans-serif}.mono{font:700 14px ui-monospace,SFMono-Regular,monospace}.box{fill:#fff;stroke:#9db2c1;stroke-width:2}.blue{fill:#e8efff;stroke:#5875e8;stroke-width:2}.green{fill:#e6f7f3;stroke:#119c8d;stroke-width:2}.amber{fill:#fff3d9;stroke:#e08a00;stroke-width:2}.red{fill:#ffe9e6;stroke:#e55347;stroke-width:2}.purple{fill:#f3eafe;stroke:#8d53ca;stroke-width:2}.line{stroke:#315468;stroke-width:3;fill:none;marker-end:url(#arrow)}.dash{stroke:#7890a0;stroke-width:2;stroke-dasharray:8 7;fill:none}.node{fill:#fff;stroke:#748c9c;stroke-width:1.6}.badge{fill:#173448}.badgeText{fill:#fff;font:700 14px system-ui,sans-serif}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#315468"/></marker>
+  </defs>
+  <rect class="bg" width="1400" height="920" rx="28"/>
+  <text class="title ink" x="700" y="47" text-anchor="middle">AOUT remembers an evicted identity, not the page</text>
+  <text class="sub muted" x="700" y="76" text-anchor="middle">Pinned ordinary non-vacuum path: ghost history changes first-unfix admission; it never bypasses victim safety.</text>
+
+  <rect class="blue" x="48" y="112" width="230" height="126" rx="18"/>
+  <text class="head ink" x="163" y="148" text-anchor="middle">Eligible victim leaves</text>
+  <text class="body muted" x="163" y="180" text-anchor="middle">BCB/frame will be reused</text>
+  <text class="mono ink" x="163" y="210" text-anchor="middle">VPID A, lru_idx = j</text>
+  <path class="line" d="M278 175H357"/>
+
+  <rect class="purple" x="357" y="104" width="352" height="142" rx="18"/>
+  <text class="head ink" x="533" y="140" text-anchor="middle">AOUT ghost history</text>
+  <text class="mono ink" x="533" y="169" text-anchor="middle">{ VPID, former lru_idx }</text>
+  <text class="body muted" x="533" y="197" text-anchor="middle">global FIFO + hash + preallocated nodes</text>
+  <text class="small muted" x="533" y="223" text-anchor="middle">No BCB · no frame · no page bytes · no fix</text>
+  <path class="line" d="M709 175H788"/>
+
+  <rect class="green" x="788" y="112" width="260" height="126" rx="18"/>
+  <text class="head ink" x="918" y="148" text-anchor="middle">VPID A is loaded later</text>
+  <text class="body muted" x="918" y="180" text-anchor="middle">new resident slot is VOID</text>
+  <text class="body muted" x="918" y="208" text-anchor="middle">until final unfix</text>
+  <path class="line" d="M1048 175H1127"/>
+
+  <rect class="amber" x="1127" y="112" width="225" height="126" rx="18"/>
+  <text class="head ink" x="1240" y="148" text-anchor="middle">Lookup and consume</text>
+  <text class="body muted" x="1240" y="180" text-anchor="middle">AOUT returns old j</text>
+  <text class="body muted" x="1240" y="208" text-anchor="middle">or NOT_FOUND</text>
+
+  <text class="head ink" x="700" y="289" text-anchor="middle">Admission result at the first zero-crossing unfix</text>
+  <rect class="red" x="48" y="320" width="304" height="176" rx="18"/>
+  <text class="head ink" x="200" y="354" text-anchor="middle">AOUT OFF</text>
+  <text class="mono ink" x="200" y="384" text-anchor="middle">max_count = 0</text>
+  <text class="body muted" x="76" y="420">Private domain → private LRU1 top</text>
+  <text class="body muted" x="76" y="450">No private domain → shared middle</text>
+  <text class="small muted" x="76" y="480">No first-touch filtering in private admission.</text>
+
+  <rect class="amber" x="382" y="320" width="304" height="176" rx="18"/>
+  <text class="head ink" x="534" y="354" text-anchor="middle">AOUT ON · miss</text>
+  <text class="mono ink" x="534" y="384" text-anchor="middle">NOT_FOUND</text>
+  <text class="body muted" x="410" y="420">Private domain → private middle</text>
+  <text class="body muted" x="410" y="450">No private domain → shared middle</text>
+  <text class="small muted" x="410" y="480">One-touch arrivals start below the hot zone.</text>
+
+  <rect class="green" x="716" y="320" width="304" height="176" rx="18"/>
+  <text class="head ink" x="868" y="354" text-anchor="middle">AOUT ON · same-private hit</text>
+  <text class="mono ink" x="868" y="384" text-anchor="middle">current lru_idx == old j</text>
+  <text class="body muted" x="744" y="420">Private domain → private LRU1 top</text>
+  <text class="body muted" x="744" y="450">Re-reference evidence earns hot admission.</text>
+  <text class="small muted" x="744" y="480">The ghost entry is removed during lookup.</text>
+
+  <rect class="blue" x="1050" y="320" width="302" height="176" rx="18"/>
+  <text class="head ink" x="1201" y="354" text-anchor="middle">AOUT ON · other-private hit</text>
+  <text class="mono ink" x="1201" y="384" text-anchor="middle">current lru_idx != old j</text>
+  <text class="body muted" x="1078" y="420">Fall through → shared middle</text>
+  <text class="body muted" x="1078" y="450">Cross-domain reuse becomes shared.</text>
+  <text class="small muted" x="1078" y="480">No private domain also uses shared middle.</text>
+
+  <rect class="red" x="48" y="540" width="848" height="250" rx="18"/>
+  <text class="head ink" x="472" y="577" text-anchor="middle">Why the pinned build is off</text>
+  <rect class="node" x="78" y="607" width="230" height="70" rx="12"/>
+  <text class="mono ink" x="193" y="636" text-anchor="middle">CBRD-20741</text>
+  <text class="small muted" x="193" y="660" text-anchor="middle">assertion / core + bad links</text>
+  <path class="line" d="M308 642H370"/>
+  <rect class="node" x="370" y="607" width="230" height="70" rx="12"/>
+  <text class="mono ink" x="485" y="636" text-anchor="middle">CBRD-21135</text>
+  <text class="small muted" x="485" y="660" text-anchor="middle">disable until root cause fixed</text>
+  <path class="line" d="M600 642H662"/>
+  <rect class="node" x="662" y="607" width="204" height="70" rx="12"/>
+  <text class="mono ink" x="764" y="636" text-anchor="middle">ratio := 0</text>
+  <text class="small muted" x="764" y="660" text-anchor="middle">startup tuning</text>
+  <text class="body muted" x="78" y="718">Then initialization sets max_count = 0 and returns before allocating FIFO/hash storage.</text>
+  <text class="body muted" x="78" y="749">The add/remove routines short-circuit, so configuration alone cannot activate this pinned path.</text>
+  <rect class="badge" x="238" y="764" width="468" height="30" rx="15"/><text class="badgeText" x="472" y="784" text-anchor="middle">The issue records an unknown root cause — do not invent one.</text>
+
+  <rect class="box" x="926" y="540" width="426" height="250" rx="18"/>
+  <text class="head ink" x="1139" y="577" text-anchor="middle">What revival could improve</text>
+  <text class="body muted" x="956" y="614">• filter one-touch private admissions into middle</text>
+  <text class="body muted" x="956" y="646">• recognize re-reference after eviction</text>
+  <text class="body muted" x="956" y="678">• recognize reuse across private domains</text>
+  <text class="head ink" x="1139" y="720" text-anchor="middle">What must be paid first</text>
+  <text class="body muted" x="956" y="750">Fix and stress the dormant queue; audit cleanup,</text>
+  <text class="body muted" x="956" y="775">global-mutex contention, memory, and hit-rate impact.</text>
+
+  <rect class="badge" x="142" y="837" width="1116" height="46" rx="23"/>
+  <text class="badgeText" x="700" y="856" text-anchor="middle">AOUT changes admission preference only.</text>
+  <text class="badgeText" x="700" y="875" text-anchor="middle">It never makes a fixed, dirty, flushing, or waiter-bearing BCB safe to victimize.</text>
+</svg>

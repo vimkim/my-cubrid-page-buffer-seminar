@@ -13,6 +13,7 @@ const expectedPages = {
   advanced: [
     "acquisition-concurrency.md",
     "failure-and-proof-obligations.md",
+    "holder-entry-lifecycle.md",
     "recovery-and-lifecycle.md",
     "replacement-progress.md",
     "specialized-interfaces.md",
@@ -30,7 +31,16 @@ const expectedPages = {
     "debug-by-symptom.md",
     "verify-a-change.md",
   ],
-  reference: ["invariant-index.md", "source-map.md"],
+  reference: [
+    "alternating-reader-writer-wakeup-cost.md",
+    "cross-database-replacement-policy-comparison.md",
+    "dirty-page-flush-actors.md",
+    "invariant-index.md",
+    "read-to-write-promotion-rationale.md",
+    "replacement-policy-quantities-and-costs.md",
+    "source-map.md",
+    "victim-scan-cap-and-aout-evidence.md",
+  ],
 };
 
 const pageContracts = {
@@ -45,6 +55,10 @@ const pageContracts = {
   "advanced/failure-and-proof-obligations.md": {
     level: "Advanced",
     title: "Failure Unwind and Open Proof Obligations",
+  },
+  "advanced/holder-entry-lifecycle.md": {
+    level: "Advanced",
+    title: "Holder Entry Structure, Lifetime, and Unfix Cost",
   },
   "advanced/recovery-and-lifecycle.md": {
     level: "Advanced",

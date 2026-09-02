@@ -25,7 +25,7 @@ One BCB belongs to one LRU list at a time; “private and shared LRU” names al
 | Policy input | Pinned behavior |
 |---|---|
 | Shared-list count | Hidden `num_LRU_chains`; zero means auto-size from `MAX_NTRANS`, reduce the count to keep roughly 1,000 buffers per list, and never use fewer than four. An explicit value is capped at 1,000. |
-| Private-list count | `num_private_chains`; in server mode, `-1` means `MAX_NTRANS + VACUUM_MAX_WORKER_COUNT`, `0` disables private quotas, and a positive value is clamped to at least four. Stand-alone mode uses no private lists. |
+| Private-list count | `num_private_chains`; in server mode, `-1` means `MAX_NTRANS + VACUUM_MAX_WORKER_COUNT`, `0` disables private quotas, and a positive value is clamped to at least four. The explicit parameter maximum is 4,050 at this baseline, but the automatic formula includes reserved connections and is not clamped to either 1,000 or 4,050 in this initializer. Stand-alone mode uses no private lists. |
 | Total list count | Shared plus private. Initialization allocates one contiguous LRU array for that total. |
 | Shared zone targets | `lru_hot_ratio` defaults to 0.40 and `lru_buffer_ratio` to 0.05. Each is clamped to 0.05–0.90, and their sum is constrained to leave at least 0.05 for LRU3. |
 | Private zone targets | Each private quota reserves 5% for LRU1 and 5% for LRU2; the remaining quota can age into LRU3. |
@@ -111,7 +111,7 @@ Source: `src/storage/page_buffer.c:1053-1061,2408-2489,6730-7038,7724-7787,10210
 There is no scalar “victim priority” stored on every BCB. Priority is the composition of three ordered decisions:
 
 1. **Domain order:** search the caller's own private list first when it is over quota, then advertised other private lists, then shared lists, and finally its own under-quota private list. If the own list is materially over quota, the other-private step consumes only the big-private queue; shared search still follows in the pinned control flow.
-2. **Recency inside a list:** inspect only LRU3, beginning at its victim hint or bottom and scanning at most 1,000 candidates toward newer entries. Fixed or avoid-victim BCBs are skipped; the scan uses a nonblocking BCB lock while holding the LRU mutex.
+2. **Recency inside a list:** inspect only LRU3, beginning at its victim hint or bottom and visiting at most 1,000 BCB positions toward newer entries. Fixed or avoid-victim BCBs are skipped; the scan uses a nonblocking BCB lock while holding the LRU mutex. This is one selected-list visit budget, not a private-list-count limit or whole-allocation bound.
 3. **Safety override:** after the policy finds a candidate, the final BCB-protected identity, ownership, flag, dirty/flush, and list-state checks can reject it. Hard eligibility always outranks policy preference.
 
 Direct-victim waiters have a separate queue priority: vacuum workers and threads already holding a hot or contended page use the high-priority queue; other waiters use the low-priority queue. That decides which waiter receives a produced candidate, not whether the candidate is safe.
@@ -154,7 +154,7 @@ nodes demoted during one zone adjustment.
 | Add/remove/boost a known BCB | Doubly linked neighbors plus boundaries/counts | O(1), excluding adjustment it triggers |
 | Zone adjustment | Oldest LRU1/LRU2 nodes, one by one | O(D) |
 | Advertise/consume an LRU index | Bounded lock-free circular queue | No P/S traversal; CAS retry makes wall-clock cost contention-dependent |
-| Victim attempt on one selected list | Backward walk in its LRU3 | O(min(Z3, 1,000)); BCB mutex acquisition is nonblocking |
+| Victim attempt on one selected list | Optional zone demotion, then backward walk in its LRU3 | O(D + min(Z3, 1,000)); `D` is demotion work outside the scan cap, and BCB mutex acquisition is nonblocking |
 | Quota adjustment when it runs | All L descriptors plus demotions | O(L + D) |
 | Page load or flush | Storage/log/DWB path | Latency-bound I/O; not meaningfully described as O(1) |
 
@@ -230,15 +230,46 @@ The page-flush daemon is not the only thread that can flush a dirty page. Checkp
 
 Daemon count, ownership, and cadence are version-sensitive implementation policy, not caller guarantees. Wake thresholds, periods, priorities, batch sizes, and quota formulas must be rechecked on the target revision and configuration. Do not encode them into the fix/unfix contract.
 
-Source: `src/storage/page_buffer.c:9549-9648,16972-17255`; lifecycle gate at `src/transaction/boot_sr.c:2405-2441`; default page-flush interval at `src/base/system_parameter.c:1806-1829`; DWB daemons at `src/storage/double_write_buffer.cpp:4017-4152`. Detailed control-loop ledger: [Dirty-page Flush Actors](../reference/dirty-page-flush-actors.md#four-independent-control-loops).
+Source: `src/storage/page_buffer.c:9549-9648`; daemon tasks at `src/storage/page_buffer.c:16972-17255`; lifecycle gate at `src/transaction/boot_sr.c:2405-2441`; default page-flush interval at `src/base/system_parameter.c:1806-1829`; DWB daemons at `src/storage/double_write_buffer.cpp:4017-4152`. Detailed control-loop ledger: [Dirty-page Flush Actors](../reference/dirty-page-flush-actors.md#four-independent-control-loops).
 
-## AOUT caveat: structures present, analyzed default disabled
+## AOUT: a dormant ghost-history admission filter
 
-AOUT data structures and code implement a ghost-history idea: remember recently evicted VPIDs so later insertion policy can react to reuse. However, the analyzed revision explicitly forces `data_aout_ratio` to zero pending an older issue, so AOUT is disabled in the analyzed default.
+![AOUT ghost records, ordinary first-unfix admission outcomes, and the disablement chain](../assets/aout-ghost-admission.svg)
 
-Do not summarize the pinned/current system unconditionally as “using 2Q.” On another revision, verify parameter initialization and runtime configuration before claiming the mechanism participates.
+### What it stores—and what it does not
 
-Source: AOUT initialization/use at `src/storage/page_buffer.c:5807-5903,10475-10720`; analyzed-default override at `src/base/system_parameter.c:9976-9986`. Deep reference: [CUBRID LRU/victim fact sheet](../../../pgbuf-analysis/research/cubrid-lru-victim.md).
+The source describes AOUT as the out-history part of 2Q. It is one global, bounded FIFO plus VPID hash. Each preallocated `PGBUF_AOUT_BUF` stores only `{ VPID, former lru_idx, next, prev }`. It does **not** retain the BCB, frame, page bytes, latch, dirty state, or a fix. Calling it a ghost history is literal: it remembers that an identity recently left and which LRU index it left, without keeping the page resident.
+
+If enabled, its capacity would be `min(floor(num_buffers × data_aout_ratio), 32768)`. Victim removal adds the old VPID at the FIFO top, recycling the bottom when full. A later load first owns a different or reused BCB in VOID; at its ordinary first zero-crossing unfix, AOUT lookup removes the ghost and returns the saved LRU index. The admission branch then acts as follows:
+
+| Current context and AOUT result | Pinned dormant branch placement |
+|---|---|
+| Private LRU; AOUT disabled | Private LRU1 top. This is the path currently executed. |
+| Private LRU; enabled but ghost miss | Current private LRU middle, initially below the hot top. |
+| Private LRU; ghost records the same LRU index | Current private LRU1 top: refault evidence earns hot admission. |
+| Private LRU; ghost records another LRU index | Shared LRU middle: cross-domain reuse becomes shared. |
+| No private LRU | Shared LRU middle, regardless of ghost outcome. |
+
+The saved index identifies a list, not a transaction or permanent owner. AOUT changes admission preference only. It never makes a fixed, dirty, flushing, or waiter-bearing BCB eligible for victimization.
+
+### Proof that it is disabled
+
+There are four independent links in the evidence chain:
+
+1. Historical [CBRD-20741](http://jira.cubrid.org/browse/CBRD-20741) records repeated 10.1 crashes/assertions in `pgbuf_add_vpid_to_aout_list()` and queue dumps with inconsistent/cyclic links. The issue remains Confirmed and Unresolved. Its discussion explicitly says the root cause was not known.
+2. Follow-up [CBRD-21135](http://jira.cubrid.org/browse/CBRD-21135) says `data_aout_ratio` would be disabled until CBRD-20741 was fixed. Commit [`d3554deee`](https://github.com/CUBRID/cubrid/commit/d3554deee3a5e2e6d2030113db550eaea42a5fa4) implemented that decision.
+3. The pinned `prm_tune_parameters()` still unconditionally writes `"0"` to the parameter with the comment `disable AOUT list until we fix CBRD-20741`. This is stronger than merely having a zero default: a nonzero startup configuration is overwritten.
+4. `pgbuf_initialize_aout_list()` reads that zero, sets `max_count = 0`, and returns before allocating nodes or hashes. Add and lookup/remove functions short-circuit when `max_count <= 0`.
+
+This proves deliberate disablement at the pinned baseline and its historical reason. It does **not** prove that today's dormant code reproduces the old crash: the JIRA stack used an older replacement topology, and the historical investigation never established a root cause. Do not summarize even the pinned system as actively “using 2Q.”
+
+### What a safe revival could improve—and what it would cost
+
+The dormant branches support three source-derived benefits, not measured performance claims. First-seen private pages would enter at the middle instead of every new page entering LRU1 top, which can reduce one-pass scan pollution. A same-private refault would still enter at the top, rewarding demonstrated reuse after eviction. A refault whose ghost came from another private list would enter shared middle, recognizing cross-domain demand. This history costs metadata rather than page frames.
+
+Revival is not “delete one forced-zero line.” Every eviction insertion and cold-page lookup takes the single global `Aout_mutex`; a maximum 32,768-entry history may churn quickly in a large pool; and middle admission can discard genuinely useful new pages sooner. More importantly, the historical queue corruption must be reproduced or shown obsolete, list/hash/free-list invariants must survive concurrent stress, and the pinned full-list cleanup helper `pgbuf_remove_private_from_aout_list()` has no caller, so private-list reassignment and stale saved indices need an explicit audit. Only then can AOUT-on/off workloads compare hit rate, victim-search work, mutex contention, and tail latency.
+
+Source: structures at `src/storage/page_buffer.c:635-666`; initialization at `5802-5903`; ordinary admission at `6885-6994`; eviction add and refault lookup/remove at `9473,10468-10636`; unused whole-history cleanup at `10638-10721`; forced zero at `src/base/system_parameter.c:9975-9987`. Evidence audit: [Victim scan cap and AOUT status](../reference/victim-scan-cap-and-aout-evidence.md). The original policy context is Johnson and Shasha's [2Q paper](https://www.vldb.org/conf/1994/P439.PDF); CUBRID's exact private/shared admission branches remain its own implementation policy.
 
 ## Runtime evidence: no eviction was forced
 

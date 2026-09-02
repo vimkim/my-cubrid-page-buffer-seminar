@@ -125,7 +125,7 @@ test("organization-facing verification uses standard project concepts", async ()
   }
   assert.doesNotMatch(
     verification + guideMarkdown.join("\n"),
-    /\bjust(?:file)?\b/i,
+    /`just(?:\s+[^`]+)?`|\bjustfile\b/i,
   );
 });
 

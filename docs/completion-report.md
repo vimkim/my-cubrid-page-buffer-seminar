@@ -168,3 +168,28 @@ budget, not a strict assignment cap. The uncertainty registry owns this
 source-visible, runtime-unproven condition as `VS-20`. Existing Core, Advanced,
 source-inventory, and expected-team-question routes were corrected so intended
 maintenance behavior is not presented as verified execution.
+
+## Victim-scan cap and AOUT follow-up
+
+Reader question 10 separates three source values that previously looked like
+one limit. One `pgbuf_get_victim_from_lru_list()` call follows intrusive
+`prev_BCB` links through LRU3 of one already selected LRU and stops after at
+most 1,000 BCB visits; this does not cap the number of private LRUs. At the
+pinned baseline, a positive explicit `num_private_chains` is floored to four
+and capped at 4,050 by parameter validation, while the default `-1` expands to
+`MAX_NTRANS + 50` without a 1,000 clamp in the initializer. A new Core visual
+keeps selected-list depth, list count, and whole-helper zone-demotion work
+separate.
+
+The Advanced replacement page and paired English/Korean Lesson 0007 now give
+AOUT one canonical explanation. AOUT is a bounded global FIFO/hash of ghost
+records `{VPID, former lru_idx}` rather than a second resident cache. The
+dormant admission branches distinguish first-seen, same-private refault, and
+cross-private refault pages. The disablement evidence is explicit: historical
+CBRD-20741 records an assertion/core, CBRD-21135 says its cause was unknown,
+commit `d3554deee3a5` added the override, and pinned parameter tuning still
+forces the ratio to zero. The guide therefore describes possible scan-
+resistance benefits as inference, not measured improvement, and states that
+removing the override alone is not a safe revival plan. Exact derivations and
+version boundaries live in
+`reference/victim-scan-cap-and-aout-evidence.md`.

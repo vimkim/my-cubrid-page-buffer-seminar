@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">LRU list count and per-list victim scan depth are independent quantities</title>
+  <desc id="desc">A candidate queue selects one LRU descriptor by integer index. One scanner then follows previous BCB links inside that selected list's LRU3 for at most one thousand visited nodes. Private list count, list population, and scan depth are separate values.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f8fafc}.ink{fill:#173448}.muted{fill:#526d80}.title{font:700 29px system-ui,sans-serif}.sub{font:16px system-ui,sans-serif}.head{font:700 18px system-ui,sans-serif}.body{font:15px system-ui,sans-serif}.mono{font:700 15px ui-monospace,SFMono-Regular,monospace}.box{fill:#fff;stroke:#9db2c1;stroke-width:2}.blue{fill:#e8efff;stroke:#5875e8;stroke-width:2}.green{fill:#e6f7f3;stroke:#119c8d;stroke-width:2}.amber{fill:#fff3d9;stroke:#e08a00;stroke-width:2}.red{fill:#ffe9e6;stroke:#e55347;stroke-width:2}.line{stroke:#315468;stroke-width:3;fill:none;marker-end:url(#arrow)}.dash{stroke:#7890a0;stroke-width:2;stroke-dasharray:8 7;fill:none}.node{fill:#fff;stroke:#748c9c;stroke-width:1.7}.visited{fill:#fff0c9;stroke:#d77f00;stroke-width:2}.stop{fill:#ffe4e1;stroke:#d94437;stroke-width:2}.badge{fill:#173448}.badgeText{fill:#fff;font:700 14px system-ui,sans-serif}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#315468"/></marker>
+  </defs>
+  <rect class="bg" width="1400" height="760" rx="28"/>
+  <text class="title ink" x="700" y="48" text-anchor="middle">1,000 bounds BCB visits inside one selected LRU</text>
+  <text class="sub muted" x="700" y="77" text-anchor="middle">It does not bound the number of private LRU objects, and it does not bound the whole allocation attempt.</text>
+
+  <rect class="blue" x="48" y="116" width="270" height="226" rx="18"/>
+  <text class="head ink" x="183" y="150" text-anchor="middle">P private LRU descriptors</text>
+  <rect class="node" x="79" y="174" width="208" height="34" rx="8"/><text class="mono ink" x="183" y="196" text-anchor="middle">private[0]</text>
+  <rect class="node" x="79" y="217" width="208" height="34" rx="8"/><text class="mono ink" x="183" y="239" text-anchor="middle">private[1]</text>
+  <text class="head muted" x="183" y="280" text-anchor="middle">⋮</text>
+  <rect class="node" x="79" y="292" width="208" height="34" rx="8"/><text class="mono ink" x="183" y="314" text-anchor="middle">private[P − 1]</text>
+
+  <path class="line" d="M318 229H405"/>
+  <rect class="green" x="405" y="163" width="270" height="132" rx="18"/>
+  <text class="head ink" x="540" y="198" text-anchor="middle">Candidate-index queue</text>
+  <text class="body muted" x="540" y="228" text-anchor="middle">consume one advertised integer</text>
+  <rect class="badge" x="467" y="245" width="146" height="30" rx="15"/><text class="badgeText" x="540" y="265" text-anchor="middle">lru_idx = j</text>
+  <path class="line" d="M675 229H760"/>
+
+  <rect class="amber" x="760" y="116" width="592" height="226" rx="18"/>
+  <text class="head ink" x="1056" y="150" text-anchor="middle">Only selected LRU j is locked and walked</text>
+  <rect class="node" x="797" y="178" width="112" height="48" rx="10"/><text class="mono ink" x="853" y="207" text-anchor="middle">LRU1</text>
+  <rect class="node" x="925" y="178" width="112" height="48" rx="10"/><text class="mono ink" x="981" y="207" text-anchor="middle">LRU2</text>
+  <rect class="visited" x="1053" y="178" width="62" height="48" rx="10"/><text class="mono ink" x="1084" y="207" text-anchor="middle">z</text>
+  <rect class="visited" x="1125" y="178" width="62" height="48" rx="10"/><text class="mono ink" x="1156" y="207" text-anchor="middle">z−1</text>
+  <text class="head muted" x="1211" y="209" text-anchor="middle">···</text>
+  <rect class="visited" x="1240" y="178" width="74" height="48" rx="10"/><text class="mono ink" x="1277" y="207" text-anchor="middle">z−999</text>
+  <path class="line" d="M1308 252H1072"/>
+  <text class="body muted" x="1190" y="277" text-anchor="middle">follow prev_BCB toward newer entries</text>
+  <text class="body ink" x="1056" y="311" text-anchor="middle">Stop on success, end of LRU3, candidate-count exhaustion, or 1,000 visits.</text>
+
+  <path class="dash" d="M183 342V382H1056V342"/>
+  <text class="body muted" x="620" y="405" text-anchor="middle">The other P − 1 descriptors are not traversed by this selected-list call.</text>
+
+  <rect class="box" x="48" y="438" width="402" height="247" rx="18"/>
+  <text class="head ink" x="249" y="474" text-anchor="middle">1. Private-list count P</text>
+  <text class="body muted" x="78" y="511">Automatic server setting:</text>
+  <text class="mono ink" x="78" y="539">P = MAX_NTRANS + 50</text>
+  <text class="body muted" x="78" y="576">Explicit pinned parameter range:</text>
+  <text class="mono ink" x="78" y="604">0 = off; otherwise 4 … 4,050</text>
+  <text class="body muted" x="78" y="641">This controls descriptor-array size.</text>
+  <text class="body muted" x="78" y="666">It is not MAX_DEPTH.</text>
+
+  <rect class="box" x="499" y="438" width="402" height="247" rx="18"/>
+  <text class="head ink" x="700" y="474" text-anchor="middle">2. Selected-list population Z3</text>
+  <text class="body muted" x="529" y="511">Number of BCB nodes currently in</text>
+  <text class="body muted" x="529" y="535">the selected list's victim zone.</text>
+  <text class="mono ink" x="529" y="576">0 ≤ Z3 ≤ pool BCB count</text>
+  <text class="body muted" x="529" y="613">Z3 may be greater than 1,000.</text>
+  <text class="body muted" x="529" y="641">A later call may resume from an</text>
+  <text class="mono ink" x="529" y="666">updated victim_hint</text>
+
+  <rect class="red" x="950" y="438" width="402" height="247" rx="18"/>
+  <text class="head ink" x="1151" y="474" text-anchor="middle">3. One call's visit budget K</text>
+  <text class="body muted" x="980" y="511">Loop counter incremented once per</text>
+  <text class="mono ink" x="980" y="539">bufptr = bufptr-&gt;prev_BCB</text>
+  <text class="mono ink" x="980" y="580">K ≤ min(reachable Z3, 1,000)</text>
+  <text class="body muted" x="980" y="617">Higher-level allocation can make</text>
+  <text class="body muted" x="980" y="641">several selected-list calls, each</text>
+  <text class="body muted" x="980" y="666">with its own fresh K budget.</text>
+
+  <rect class="badge" x="420" y="707" width="560" height="34" rx="17"/>
+  <text class="badgeText" x="700" y="730" text-anchor="middle">Three quantities, three different questions: P ≠ Z3 ≠ K</text>
+</svg>

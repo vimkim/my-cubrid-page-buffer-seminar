@@ -49,7 +49,7 @@ These are source-visible candidates, not observed production failures.
 | Topic | What is source-confirmed | What remains version-sensitive |
 |---|---|---|
 | LRU layout | The pinned revision has private/shared LRUs and LRU1/LRU2/LRU3 zones. | Zone thresholds, quota tuning, queue choice, and scan order are policy, not caller contract. |
-| AOUT / 2Q history | The code has an AOUT mechanism. Older evidence records it disabled through parameter tuning. | Whether it remains disabled in a newer branch; never summarize current CUBRID as simply “2Q” without rechecking. |
+| AOUT / 2Q history | The pinned code retains a bounded ghost FIFO/hash and its admission branches, but `prm_tune_parameters()` unconditionally overwrites `data_aout_ratio` with zero. Initialization and add/remove therefore short-circuit. | Whether another branch still forces zero and whether its dormant code is safe. CBRD-20741/CBRD-21135 document an older crash and an unknown cause; they do not prove the pinned dormant implementation reproduces it. Never summarize current CUBRID as simply “2Q” without rechecking. |
 | Direct victims | Assignments are revalidated and may be revoked if the BCB becomes fixed again. | Exact fairness and starvation bounds are not proved. |
 | Latch timeout | Unconditional wait may terminate through transaction timeout/interrupt, and zero-wait can become conditional. | Exact wall-clock timing and scheduler fairness are not guaranteed. |
 | Daemon cadence | The pinned source divides work among maintain, flush, post-flush, and flush-control daemons. | Wakeup thresholds, intervals, and ownership may change independently of fix/unfix semantics. |
@@ -69,7 +69,7 @@ was produced at `5cd4f860e`, not the teaching baseline `f799e05`.
 | D4 | `big_private_lrus_with_victims` appeared to have no initial producer. | Historical queue-topology finding only. |
 | D5 | `double_write_buffer_size=2M` was rejected and prevented boot. | Configuration usability observation, not a page-buffer invariant. Reproduce on the intended release before use. |
 | D6 | Several counters used conflicting or partial definitions. | The general warning remains valid; each exact metric definition must be rechecked. |
-| D7 | Parameter tuning forcibly disabled AOUT despite 2Q-oriented comments. | Teach only as a pinned/historical caveat. |
+| D7 | CBRD-20741 recorded an assertion/core in an older AOUT insertion path. CBRD-21135 and commit `d3554deee3a5` disabled AOUT while stating that the cause was unknown. The pinned source still contains the forced-zero tuning. | Teach the forced-zero state as verified at the pinned revision and the crash/root-cause account as historical evidence. Do not claim the dormant pinned code reproduces the old failure or that removing the override alone is a fix. See [the exact audit](reference/victim-scan-cap-and-aout-evidence.md#4-evidence-that-aout-is-disabled-because-of-a-bug). |
 | D8 | `pgbuf_peek_stats` declaration names drifted. | Re-established as `VS-04` at `f799e05`. |
 
 ## E. Runtime evidence boundaries

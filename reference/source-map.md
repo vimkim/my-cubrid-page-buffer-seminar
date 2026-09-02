@@ -24,8 +24,9 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | `src/storage/page_buffer.c:7041-7590` | latch wait queue, timed sleep, timeout cleanup, zero-crossing wakeup | [Acquisition Concurrency](../advanced/acquisition-concurrency.md#latch-queue-classify-the-outcome) |
 | `src/storage/page_buffer.c:7594-8634` | resident lookup, lock-free READ hit, miss/load convergence | [Acquisition Concurrency](../advanced/acquisition-concurrency.md) |
 | `src/storage/page_buffer.c:8181-8403,9067-9265` | BCB allocation progress loop and victim search order | [Replacement Progress](../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop) |
-| `src/storage/page_buffer.c:9293-9538` | ordinary victim eligibility and LRU candidate path | [Replace One Frame](../learning/05-replace-one-frame.md) |
+| `src/storage/page_buffer.c:9293-9538` | ordinary victim eligibility and the at-most-1,000 BCB-node walk in one selected LRU3 | [Replace One Frame](../learning/05-replace-one-frame.md), then [scan-cap evidence](./victim-scan-cap-and-aout-evidence.md#1-what-the-1000-node-scan-actually-does) |
 | `src/storage/page_buffer.c:5744-5903,6636-6994,9695-10353,13942-14624` | LRU domain counts, placement, zone movement, and quota assignment | [Replacement Progress](../advanced/replacement-progress.md#counts-quotas-and-zone-boundaries-at-the-pinned-revision) |
+| `src/storage/page_buffer.c:635-666,5802-5903,6885-6994,10468-10721`; `src/base/system_parameter.c:3463-3474,9975-9987` | AOUT ghost structure, dormant admission branches, and the forced-zero disablement | [AOUT admission filter](../advanced/replacement-progress.md#aout-a-dormant-ghost-history-admission-filter), then [AOUT evidence](./victim-scan-cap-and-aout-evidence.md#3-what-aout-is) |
 | `src/storage/page_buffer.c:15674-15728,16370-16506` | lock-free advertisement and consumption of private/shared LRU indices with victims | [Replacement Progress](../advanced/replacement-progress.md#how-a-caller-finds-another-private-list) |
 | `src/storage/page_buffer.c:10723-10962` | one snapshot/WAL/write generation | [Flush One Generation](../learning/04-flush-one-generation.md) |
 | `src/storage/page_buffer.c:12186-13531` | ordered comparison, fix input/output, reordering, callback, and ordered unfix | [Acquisition Concurrency](../advanced/acquisition-concurrency.md#ordered-fix-input-and-output-contract) |
@@ -54,7 +55,7 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | page LSA, dirty, flush, checkpoint | `page_buffer.h:357-415` | [Core generation](../learning/04-flush-one-generation.md), then [lifecycle](../advanced/recovery-and-lifecycle.md) |
 | copy/scan/simple access or diagnostics | `page_buffer.h:376-465` | [Specialized interfaces](../advanced/specialized-interfaces.md) |
 | invalidate/deallocate | `page_buffer.h:312-355` plus file/disk caller | [Recovery and lifecycle](../advanced/recovery-and-lifecycle.md) |
-| victim selection/progress | internal `page_buffer.c` regions above | [Core eligibility](../learning/05-replace-one-frame.md), then [policy](../advanced/replacement-progress.md) |
+| victim selection/progress | internal `page_buffer.c` regions above | [Core eligibility and scan cap](../learning/05-replace-one-frame.md), then [policy and AOUT](../advanced/replacement-progress.md) |
 
 ## Symptom-to-source lookup
 
@@ -63,7 +64,7 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | Fix or holder count grows | holder list, `fcnt`, all success/failure exits around `6000-6085,6277-6883` | [Diagnosis](../playbooks/debug-by-symptom.md) and [ownership lesson](../learning/02-fix-hold-release.md) |
 | Latch wait or apparent hang | atomic latch tuple, waiter state, buffer-lock/load owner | [Advanced acquisition](../advanced/acquisition-concurrency.md) |
 | Persistent dirty/flush state | `DIRTY`, `FLUSHING`, both LSAs, `10723-10962` | [Flush generation](../learning/04-flush-one-generation.md) |
-| No victim under pressure | hard predicates at `9293-9538` before quota/daemon policy; then the allocation loop exits at `8181-8403` | [Replacement lesson](../learning/05-replace-one-frame.md), then [allocation progress](../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop) |
+| No victim under pressure | hard predicates and bounded selected-LRU3 walk at `9293-9538` before quota/daemon policy; then the allocation loop exits at `8181-8403` | [Replacement lesson](../learning/05-replace-one-frame.md), then [allocation progress](../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop) |
 | Wrong resident identity/corruption | hash/VPID publication and final identity rechecks | [Contract](../learning/01-contract-and-objects.md) |
 | Misleading SHOW/counter result | exact counter increment/snapshot site | [Specialized interfaces](../advanced/specialized-interfaces.md) |
 

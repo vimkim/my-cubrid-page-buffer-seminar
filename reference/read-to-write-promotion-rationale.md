@@ -6,7 +6,7 @@
 
 **Source baseline:** CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
 
-**Evidence used:** Pinned source and repository history only. No runtime experiment is claimed.
+**Evidence used:** Verified mechanism and Historical evidence from pinned source and repository history. No runtime experiment is claimed.
 
 ## Short answer
 

@@ -46,7 +46,7 @@
           <tbody>
             <tr><td>최초 free population 구성</td><td>한 번 연결하는 contiguous BCB array.</td><td>Page-buffer initialization에서 <code>O(N)</code>.</td><td>한 번의 allocation/initialization이며 miss-path cost가 아닙니다.</td></tr>
             <tr><td>Invalid BCB 하나 획득</td><td><code>invalid_top</code>/<code>next_BCB</code>를 쓰는 singly linked head.</td><td>Traversal 없는 <code>O(1)</code>.</td><td>Invalid-list mutex scheduling과 반환된 BCB lock.</td></tr>
-            <tr><td>LRU list 하나 search</td><td>Hint 또는 bottom부터 <code>prev_BCB</code>로 걷는 doubly linked list.</td><td><code>O(K)</code>, source bound는 list call마다 <code>K ≤ 1000</code>.</td><td>LRU mutex wait, cache miss, 실패 candidate 수, policy가 방문한 list 수.</td></tr>
+            <tr><td>선택된 LRU 하나 search</td><td>Optional zone demotion 뒤 hint 또는 bottom부터 <code>prev_BCB</code>로 걷는 doubly linked list.</td><td><code>O(M + K)</code>, scan bound는 selected-list call마다 <code>K ≤ 1000</code>.</td><td>LRU mutex wait, demotion, cache miss, 실패 candidate 수, policy의 selected-list call 수.</td></tr>
             <tr><td>Candidate 하나 recheck</td><td>BCB protection 아래의 BCB flag, atomic latch, waiter pointer.</td><td><code>O(1)</code> field check. BCB try-lock은 기다리지 않고 실패 시 skip합니다.</td><td>반복 skip이 바깥 scan을 길게 만들 수 있습니다.</td></tr>
             <tr><td>알고 있는 LRU node detach</td><td>Previous/next link와 zone/count metadata.</td><td><code>O(1)</code>.</td><td>LRU mutex를 가진 동안 수행합니다.</td></tr>
             <tr><td>이전 resident mapping 제거</td><td>VPID hash bucket의 singly linked chain.</td><td><code>O(B)</code>, 여기서 bucket length는 <code>B</code>입니다.</td><td>Hash-anchor mutex wait와 collision.</td></tr>
@@ -54,10 +54,50 @@
             <tr><td>Loaded BCB publish</td><td>Hash-chain head와 LRU insertion 하나.</td><td>각 link insertion은 <code>O(1)</code>.</td><td>Hash/LRU mutex contention.</td></tr>
           </tbody>
         </table>
-        <h3>Allocation 하나가 LRU node를 몇 개 볼 수 있습니까?</h3>
-        <p>Per-list scanner 호출 하나는 최대 1,000 link에서 멈춥니다. Higher-level policy는 caller의 private LRU, 다른 private list, shared list, 마지막 own-list fallback을 시도할 수 있습니다. 따라서 “allocation 전체가 최대 1,000개만 확인한다”는 말은 틀립니다. 방문한 list call마다 최대 1,000개이며, protected eligible candidate를 처음 찾으면 일찍 반환합니다.</p>
+        <h3>“1,000 links”는 이미 선택된 LRU 하나 안의 node 방문 수입니다</h3>
+        <img class="diagram" src="../../assets/lru-scan-depth-vs-list-count.svg" alt="candidate index queue가 private LRU 하나를 선택한 뒤 그 list의 LRU3 안에서 BCB node를 최대 1,000개 걷고, private list 개수는 별도 수량임을 보여 주는 그림">
+        <p class="caption">Private-list count <code>P</code>, 선택된 list의 LRU3 population <code>Z3</code>, 이 호출의 visit count <code>K</code>를 섞으면 안 됩니다.</p>
+        <p><code>pgbuf_get_victim_from_lru_list(thread_p, lru_idx)</code>는 LRU index 하나를 받습니다. 그 list를 lock하고 <code>victim_hint</code>, 없으면 <code>bottom</code>에서 시작해 LRU3 안에서 <code>bufptr-&gt;prev_BCB</code>를 따라갑니다. Loop body에 한 번 들어가면 BCB 위치 하나를 방문한 것입니다. 해당 BCB를 검사하고, 필요하면 try-lock 후 recheck한 다음 반환하거나 link 하나를 이동합니다. 이 body가 한 호출에서 최대 1,000번 실행됩니다. LRU descriptor 1,000개를 검사한다는 뜻도, victim 1,000개를 만든다는 뜻도 아닙니다.</p>
+        <table>
+          <thead><tr><th>수량</th><th>무엇을 세는가</th><th>1,000이 상한인가?</th></tr></thead>
+          <tbody>
+            <tr><td><code>P</code></td><td>Pool-wide LRU array 안의 private LRU descriptor 수.</td><td><strong>아니요.</strong> 자동 server mode는 <code>MAX_NTRANS + 50</code>을 사용합니다. 명시 양수값은 이 baseline에서 4–4,050입니다.</td></tr>
+            <tr><td><code>Z3</code></td><td>선택된 list의 LRU3에 들어 있는 BCB node 수.</td><td><strong>아니요.</strong> Pool population 범위에서 1,000을 넘을 수 있습니다.</td></tr>
+            <tr><td><code>K</code></td><td>이 selected-list 호출이 방문한 BCB 위치 수.</td><td><strong>예.</strong> <code>K ≤ min(reachable Z3, 1000)</code>이고, 성공이나 다른 종료 조건이 있으면 더 작습니다.</td></tr>
+          </tbody>
+        </table>
+        <p>Higher-level policy는 caller의 private LRU, advertise된 다른 private list, advertise된 shared list, 마지막 own-list fallback에 대해 selected-list 호출을 여러 번 할 수 있습니다. 호출마다 새로운 1,000-node budget을 가집니다. 선택한 private list가 over quota이면 scan 전에 boundary node <code>M</code>개를 demote할 수도 있는데, 이 작업은 <code>MAX_DEPTH</code> 밖입니다. 따라서 helper 전체는 <code>O(M + K)</code>, linked-list scan 자체는 bounded <code>O(K)</code>입니다.</p>
+        <div class="callout"><strong>다른 1,000과 혼동하지 마세요.</strong> Pinned source는 명시적인 <em>shared</em> <code>num_LRU_chains</code>를 1,000으로 제한하고 자동 shared list 하나당 buffer 약 1,000개를 목표로 합니다. 어느 쪽도 private LRU 개수의 상한이 아닙니다.</div>
         <div class="callout"><strong>“얼마나 오래”에 관하여:</strong> pinned source에는 operation bound가 있지만 보정된 nanosecond 값은 없습니다. <code>PSTAT_PB_ALLOC_BCB</code>, <code>PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM</code>, list-search timer, condition-wait time을 기록합니다. Target workload에서는 이 counter나 focused benchmark를 사용해야 하며 Big-O를 latency claim으로 바꾸면 안 됩니다.</div>
-        <p class="source-note"><strong>Verified mechanism:</strong> BCB array construction과 initial link는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>page_buffer.c:5559–5660</code></a>, invalid-list structure와 head initialization은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L626-L634"><code>626–634</code></a>와 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5907-L5919"><code>5907–5919</code></a>, constant-time pop/push는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8905-L8983"><code>8905–8983</code></a>, bounded LRU scan은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9327-L9537"><code>9327–9537</code></a>, hash removal은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7883-L7957"><code>7883–7957</code></a>에 있습니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> BCB array construction과 initial link는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>page_buffer.c:5559–5660</code></a>, invalid-list structure와 head initialization은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L626-L634"><code>626–634</code></a>와 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5907-L5919"><code>5907–5919</code></a>, constant-time pop/push는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8905-L8983"><code>8905–8983</code></a>, bounded LRU scan과 pre-scan adjustment는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9327-L9537"><code>9327–9537</code></a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9984-L10048"><code>9984–10048</code></a>, private count는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L13941-L13985"><code>13941–13985</code></a>에 있습니다.</p>
+      </section>
+
+      <section class="section" id="aout">
+        <div class="eyebrow">01B · Ghost history</div>
+        <h2>AOUT은 page가 떠났다는 사실만 기억하며 page 자체를 보관하지 않습니다</h2>
+        <img class="diagram" src="../../assets/aout-ghost-admission.svg" alt="축출된 VPID와 과거 LRU index가 AOUT FIFO와 hash에 들어가고, 이후 miss, same-private hit, other-private hit에 따라 first-unfix admission이 달라지는 과정과 과거 비활성화 근거를 보여 주는 그림">
+        <p class="caption">Dormant path는 admission preference만 바꿉니다. Victim safety gate를 느슨하게 만들지 않습니다.</p>
+        <p>AOUT은 2Q의 out-history idea를 CUBRID가 구현한 구조입니다. Global FIFO 하나와 hash가 작은 ghost record <code>{ VPID, former lru_idx }</code>를 저장합니다. Record 안에는 BCB, frame, page image, fix, latch, dirty state가 없습니다. 활성화된다면 capacity는 <code>min(floor(num_buffers × data_aout_ratio), 32768)</code>입니다.</p>
+        <p>Page가 victimized되면 identity가 AOUT에 들어갈 수 있습니다. 그 VPID가 다시 load되면 첫 final unfix가 ghost를 consume하고 과거 list index를 admission evidence로 사용합니다.</p>
+        <table>
+          <thead><tr><th>일반 private-domain case</th><th>Placement</th><th>의미</th></tr></thead>
+          <tbody>
+            <tr><td>AOUT off—현재 pinned path</td><td>Private LRU1 top</td><td>모든 new private page가 ghost filter를 건너뜁니다.</td></tr>
+            <tr><td>AOUT on, miss</td><td>Current private LRU middle</td><td>처음 본 identity를 hot top 아래에서 시작시킵니다.</td></tr>
+            <tr><td>AOUT on, same-private hit</td><td>Current private LRU1 top</td><td>Eviction 뒤 refault가 reuse를 증명했습니다.</td></tr>
+            <tr><td>AOUT on, other-private hit</td><td>Shared LRU middle</td><td>Private domain을 가로지른 reuse를 shared로 분류합니다.</td></tr>
+          </tbody>
+        </table>
+        <h3>왜 꺼져 있나요?</h3>
+        <ol>
+          <li><a href="http://jira.cubrid.org/browse/CBRD-20741">CBRD-20741</a>은 과거 10.1 build 여러 개에서 <code>pgbuf_add_vpid_to_aout_list()</code> crash/assertion과 깨진 cyclic queue link를 기록했습니다. Issue는 Confirmed, Unresolved 상태이며 discussion은 root cause를 알지 못한다고 명시합니다.</li>
+          <li><a href="http://jira.cubrid.org/browse/CBRD-21135">CBRD-21135</a>는 defect가 해결될 때까지 <code>data_aout_ratio</code>를 끄기로 결정했습니다. Commit <a href="https://github.com/CUBRID/cubrid/commit/d3554deee3a5e2e6d2030113db550eaea42a5fa4"><code>d3554deee</code></a>가 이 workaround를 구현했습니다.</li>
+          <li>Pinned <code>prm_tune_parameters()</code>도 ratio를 무조건 0으로 설정합니다. Initialization은 <code>max_count = 0</code>으로 두고 FIFO/hash storage를 할당하기 전에 return하며 add와 lookup path는 no-op이 됩니다.</li>
+        </ol>
+        <div class="callout warn"><strong>Evidence boundary:</strong> pinned revision이 과거 unresolved crash 때문에 AOUT을 의도적으로 끈 사실은 증명됩니다. 그러나 dormant pinned implementation이 그 오래된 crash를 여전히 재현한다는 뜻은 아니며, issue 자체가 모른다고 한 root cause를 새로 단정할 수도 없습니다.</div>
+        <h3>되살리면 좋아질까요?</h3>
+        <p>Correctness를 먼저 고친다면 가능성이 있습니다. Dormant branch는 ghost miss를 private middle에 넣어 one-pass scan pollution을 줄이고, same-private refault를 hot top에서 보상하며, cross-private reuse를 알아볼 수 있습니다. 이는 source에서 유도한 효과이지 측정된 성능 향상이 아닙니다. 반대로 eviction/refault마다 global <code>Aout_mutex</code>를 거치고 bounded metadata와 hash work가 생기며, 유용한 first-seen page가 더 빨리 밀릴 수 있습니다. Queue corruption, concurrent list/hash/free-list invariant, private-list reassignment, startup/shutdown, ratio boundary를 stress test한 뒤에 hit rate, victim-search work, mutex contention, tail latency를 비교해야 합니다.</p>
+        <p class="source-note"><strong>Verified mechanism and historical evidence:</strong> AOUT structure와 capacity는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L635-L666"><code>page_buffer.c:635–666</code></a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5802-L5882"><code>5802–5882</code></a>, admission은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6885-L6994"><code>6885–6994</code></a>, forced zero는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L9975-L9987"><code>system_parameter.c:9975–9987</code></a>에 있습니다. <a href="../../reference/victim-scan-cap-and-aout-evidence.md">전체 evidence audit</a>도 참고하세요.</p>
       </section>
 
       <section class="section" id="slot">
@@ -161,6 +201,7 @@
       <strong>강의 지도</strong>
       <a href="#story">1. Slot이 필요한 이유</a>
       <a href="#structures-cost">1A. 자료구조와 비용</a>
+      <a href="#aout">1B. AOUT ghost history</a>
       <a href="#slot">2. 재사용되는 것</a>
       <a href="#gate">3. Safety 질문 네 개</a>
       <a href="#handoff-details">4. Protected recheck</a>

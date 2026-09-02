@@ -303,7 +303,7 @@
         <details>
           <summary>직접 답변 보기</summary>
           <div class="model-answer">
-            <p><strong>답변:</strong> 개수는 설정과 실행 mode에 따라 달라집니다. shared 자동 개수는 <code>MAX_NTRANS</code>에서 시작해 list당 약 1,000 buffers를 목표로 하며 최소 네 개이고, 명시값 상한은 1,000입니다. server mode에서 private 개수 <code>-1</code>은 transaction과 vacuum capacity로부터 계산하고, <code>0</code>은 private quota를 끄며, 양수는 최소 네 개입니다. 한 BCB는 한 list에만 속합니다. quota는 placement와 search를 이끌 뿐 fix 수를 제한하거나 reuse를 허가하지 않습니다.</p>
+            <p><strong>답변:</strong> 개수는 설정과 실행 mode에 따라 달라집니다. Shared 자동 개수는 <code>MAX_NTRANS</code>에서 시작해 list당 약 1,000 buffers를 목표로 하며 최소 네 개이고, 명시 shared count 상한은 1,000입니다. 이 숫자는 private list의 상한이 아닙니다. Server mode에서 private count <code>-1</code>은 <code>MAX_NTRANS + 50</code>이 되고, <code>0</code>은 private quota를 끄며, 명시 양수는 이 baseline에서 4–4,050입니다. Automatic <code>MAX_NTRANS</code>에는 reserved connection도 들어가며 initializer가 1,000으로 clamp하지 않습니다. 한 BCB는 한 list에만 속합니다. Quota는 placement와 search를 이끌 뿐 fix 수를 제한하거나 reuse를 허가하지 않습니다.</p>
             <p><strong>답변:</strong> shared LRU1/LRU2 기본 비율은 40%/5%이고 private quota target은 5%/5%를 확보합니다. activity-weighted private quota는 smoothing되며 5,000 pages와 pool 절반으로 제한되고, shared remainder는 list당 최소 target 50을 둡니다. 이 숫자는 모두 고정 revision의 policy이지 Interface contract가 아닙니다.</p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:1071-1118,5744-5903,13942-14624</code></p>
             <p class="answer-route"><a href="../../advanced/replacement-progress.md#counts-quotas-and-zone-boundaries-at-the-pinned-revision">Canonical LRU 상세 설명</a></p>
@@ -370,7 +370,7 @@
         <details>
           <summary>직접 답변 보기</summary>
           <div class="model-answer">
-            <p><strong>답변:</strong> 단일 priority number는 없습니다. 순서는 계층적입니다. domain pressure가 own over-quota private, other private, shared, own under-quota private 순서를 정하고, LRU3만 hint 또는 가장 오래된 끝에서 최대 1,000 candidates까지 scan하며, 마지막 safety gate가 선호 candidate를 거절할 수 있습니다. 별도의 high/low queue는 direct-victim waiter의 순서를 정할 뿐 BCB eligibility를 정하지 않습니다.</p>
+            <p><strong>답변:</strong> 단일 priority number는 없습니다. 순서는 계층적입니다. Domain pressure가 own over-quota private, other private, shared, own under-quota private 순서를 정하고, 이미 선택된 LRU3 하나를 hint 또는 가장 오래된 끝에서 BCB node 최대 1,000개까지 걸으며, 마지막 safety gate가 선호 candidate를 거절할 수 있습니다. 별도의 high/low queue는 direct-victim waiter의 순서를 정할 뿐 BCB eligibility를 정하지 않습니다.</p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:9067-9538,11734-11790</code></p>
             <p class="answer-route"><a href="../../advanced/replacement-progress.md#how-the-victim-search-assigns-priority">Canonical priority 설명</a></p>
           </div>
