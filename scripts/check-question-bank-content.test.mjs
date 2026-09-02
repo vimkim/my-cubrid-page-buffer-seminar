@@ -83,3 +83,36 @@ test("Core retrieval answers the current Reader-intake concepts", async () => {
   ];
   assert.equal(createHash("sha256").update(intake).digest("hex"), configured);
 });
+
+test("Advanced retrieval has twenty-five paired questions in mechanism order", async () => {
+  const [prompts, answers] = await Promise.all([
+    readFile(path.join(root, "questions/advanced.md"), "utf8"),
+    readFile(path.join(root, "questions/advanced-answers.md"), "utf8"),
+  ]);
+  const expected = Array.from(
+    { length: 25 },
+    (_, index) => `PGBUF-QB-${String(index + 31).padStart(3, "0")}`,
+  );
+
+  assert.deepEqual(ids(prompts), expected);
+  assert.deepEqual(ids(answers), expected);
+  for (const heading of [
+    "Acquisition concurrency",
+    "Replacement progress",
+    "Recovery and lifecycle",
+    "Specialized interfaces and observability",
+    "Failure and proof obligations",
+  ]) {
+    assert.match(prompts, new RegExp(`^## ${heading}$`, "m"), heading);
+    assert.match(answers, new RegExp(`^## ${heading}$`, "m"), heading);
+  }
+  for (const page of [
+    "acquisition-concurrency.md",
+    "replacement-progress.md",
+    "recovery-and-lifecycle.md",
+    "specialized-interfaces.md",
+    "failure-and-proof-obligations.md",
+  ]) {
+    assert.ok(prompts.includes(`../advanced/${page}`), page);
+  }
+});
