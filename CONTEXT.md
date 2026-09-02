@@ -76,6 +76,42 @@ _Avoid_: Known behavior, current defect
 A learning-page exercise that asks the reader to predict behavior, locate its source transition, and explain the governing invariant in a small reviewable artifact.
 _Avoid_: Quiz, knowledge check
 
+**Question bank**:
+A navigable Evidence reference for self-study retrieval and source tracing, with model answers that link back to canonical explanations instead of reproducing a parallel tutorial.
+_Avoid_: Quiz, exam, assessment bank
+
+**Core retrieval question**:
+A question mapped to the ordered Core learning path that helps a target maintainer rehearse Core completion evidence.
+_Avoid_: Beginner question, mandatory question
+
+**Advanced retrieval question**:
+An optional question mapped to an Advanced or maintainer-task route for reasoning about mechanism, policy, failure, or proof boundaries beyond Core completion.
+_Avoid_: Expert-only question, bonus question
+
+**Applied exercise**:
+A source-tracing or controlled-runtime task that asks the reader to produce evidence while preserving the setup, observation, supported conclusion, and unsupported conclusion boundaries.
+_Avoid_: Lab, executable quiz
+
+**Question disposition**:
+The migration record for one legacy question: retained, merged, rewritten, superseded, or excluded, with its destination and rationale.
+_Avoid_: Copy status, import status
+
+**Canonical question**:
+A selected, deduplicated, and pinned-source-validated question in the current Question bank, identified independently from every legacy source item that contributed to it.
+_Avoid_: Imported question, migrated question
+
+**Canonical question ID**:
+The immutable `PGBUF-QB-*` identity of one Canonical question; ordering, route, wording, and legacy provenance may change without reusing the identity for another question.
+_Avoid_: Question number, legacy ID
+
+**Retrieval mode**:
+The kind of work a Canonical question asks the reader to perform: Explain, Trace, Scenario, or Proof obligation; it describes the evidence artifact rather than rating the reader.
+_Avoid_: Difficulty, level, score
+
+**Reader question intake**:
+Unedited questions recorded by a guide reader and held as feedback until each is answered, source-validated, and given a Question disposition.
+_Avoid_: Question bank, draft answer
+
 **Capstone review**:
 A source-grounded change analysis that demonstrates the reader can connect interface behavior, state ownership, invariants, failure cleanup, caller impact, and verification without implementing the change.
 _Avoid_: Final exam, capstone project

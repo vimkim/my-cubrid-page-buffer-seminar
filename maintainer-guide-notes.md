@@ -12,6 +12,7 @@ This file records the document contract for the page-buffer maintainer-guide set
 - Advanced maintainer path: pages under `advanced/` extend the core invariants through concurrency, replacement progress, recovery/lifecycle, specialized interfaces, and failure proof obligations.
 - Maintainer playbook path: pages under `playbooks/` support change, symptom diagnosis, and risk-matched verification during real work.
 - Evidence reference path: pages under `reference/`, plus `source-inventory.md` and `unresolved-or-version-sensitive-findings.md`, own source routing, invariant lookup, provenance, receipts, and mutable uncertainty status.
+- Question-bank path: pages under `questions/` provide optional Core retrieval, Advanced retrieval, maintainer scenarios, and Applied exercises with prompts separated from evidence-aware answers; they link Canonical explanations instead of reproducing them.
 - Canonical ownership: each concept has one canonical explanation. Playbooks provide decisions and actions, while references provide routing and evidence; both link to the explanation instead of copying it.
 - Primary use: finite linear onboarding followed by task- and symptom-driven lookup during maintenance.
 
@@ -67,7 +68,7 @@ Every SVG displayed anywhere in the document set is owned by [`assets/`](./asset
 - Explain the concept before the CUBRID symbol.
 - Prefer continuous prose, compact tables, and task-oriented checklists.
 - Use a visual only when relationships or state transitions are materially harder to understand in prose.
-- Keep exhaustive API inventories, experiment logs, and question banks in linked Evidence references.
+- Keep exhaustive API inventories and experiment logs in linked Evidence references. Maintain the selected Canonical Question bank under `questions/`; keep historical banks as linked migration evidence.
 - Use `Module`, `Interface`, `Implementation`, and `seam` consistently with `CONTEXT.md`.
 - Use one Predict–Locate–Explain Understanding check and an adjacent evidence-aware model answer on each Learning page.
 - Remove presentation timing, speaker notes, slide language, audience-performance prompts, and day-by-day calendar framing. Retain the confirmed guide-entry duration expectations.
@@ -85,7 +86,7 @@ Every SVG displayed anywhere in the document set is owned by [`assets/`](./asset
 
 ## Validation contract
 
-Validation exposes one aggregate entry point and discovers the Guide entry plus every Markdown page under `learning/`, `playbooks/`, `advanced/`, and `reference/`. The discovered page set is the one source of truth for lower-level checks.
+Validation exposes one aggregate entry point and discovers the Guide entry plus every Markdown page under `learning/`, `playbooks/`, `advanced/`, `reference/`, and `questions/`. The discovered page set is the one source of truth for lower-level checks.
 
 Run `node scripts/check-maintainer-guide.mjs` from this directory for deterministic source validation. When this directory is mounted at the Copyparty URL root, add `--copyparty-url <base-url>` to request the complete discovered page/asset set and run live-DOM checks when Playwright is available. `UNAVAILABLE` reports a gate that was not run; it is not evidence that the gate passed.
 

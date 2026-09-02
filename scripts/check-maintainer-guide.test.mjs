@@ -57,6 +57,21 @@ async function createValidDocumentSet() {
     "reference/source-map.md",
     "# Source map\n\n[Evidence](../../evidence.md)\n",
   );
+  const questionPages = {
+    "questions/README.md": "# Question bank\n\n[Core prompts](./core.md)\n",
+    "questions/core.md": "# Core prompts\n\n[Answers](./core-answers.md)\n",
+    "questions/core-answers.md": "# Core answers\n\n[Prompts](./core.md)\n",
+    "questions/advanced.md": "# Advanced prompts\n\n[Answers](./advanced-answers.md)\n",
+    "questions/advanced-answers.md": "# Advanced answers\n\n[Prompts](./advanced.md)\n",
+    "questions/maintenance-scenarios.md": "# Maintenance scenarios\n\n[Answers](./maintenance-scenarios-answers.md)\n",
+    "questions/maintenance-scenarios-answers.md": "# Maintenance scenario answers\n\n[Prompts](./maintenance-scenarios.md)\n",
+    "questions/applied-exercises.md": "# Applied exercises\n\n[Answers](./applied-exercises-answers.md)\n",
+    "questions/applied-exercises-answers.md": "# Applied exercise answers\n\n[Prompts](./applied-exercises.md)\n",
+    "questions/migration-audit.md": "# Migration audit\n\n**Migration status:** In progress\n",
+  };
+  for (const [relativePath, markdown] of Object.entries(questionPages)) {
+    await write(guideRoot, relativePath, markdown);
+  }
   await write(fixture, "evidence.md", "# Evidence\n");
   await write(
     guideRoot,
@@ -83,7 +98,7 @@ test("the aggregate command discovers and validates every guide reading mode", a
   const guideRoot = await createValidDocumentSet();
   const result = await runValidator(guideRoot);
 
-  assert.match(result.stdout, /Markdown source: PASS \(5 pages\)/);
+  assert.match(result.stdout, /Markdown source: PASS \(15 pages\)/);
   assert.match(result.stdout, /Relative links: PASS/);
   assert.match(result.stdout, /SVG assets: PASS \(1 displayed, 0 orphaned\)/);
   assert.match(result.stdout, /English prose: PASS/);
@@ -143,6 +158,20 @@ test("the aggregate command rejects a broken raw HTML relative link", async () =
 
   await assert.rejects(runValidator(guideRoot), (error) => {
     assert.match(error.stderr, /\.\.\/missing\.html: relative link does not exist/);
+    return true;
+  });
+});
+
+test("the aggregate command rejects a broken Question-bank link", async () => {
+  const guideRoot = await createValidDocumentSet();
+  await write(
+    guideRoot,
+    "questions/core.md",
+    "# Core prompts\n\n[Missing canonical explanation](../learning/missing.md)\n",
+  );
+
+  await assert.rejects(runValidator(guideRoot), (error) => {
+    assert.match(error.stderr, /\.\.\/learning\/missing\.md: relative link does not exist/);
     return true;
   });
 });
@@ -234,13 +263,23 @@ test("the aggregate command requests every page and displayed SVG from Copyparty
       `http://127.0.0.1:${address.port}/`,
     ]);
 
-    assert.match(result.stdout, /Copyparty HTTP: PASS \(6 resources\)/);
+    assert.match(result.stdout, /Copyparty HTTP: PASS \(16 resources\)/);
     assert.deepEqual(requests.sort(), [
       "/advanced/concurrency.md?v",
       "/assets/page-journey.svg",
       "/learning/contract.md?v",
       "/page-buffer-teaching-material.md?v",
       "/playbooks/change.md?v",
+      "/questions/README.md?v",
+      "/questions/advanced-answers.md?v",
+      "/questions/advanced.md?v",
+      "/questions/applied-exercises-answers.md?v",
+      "/questions/applied-exercises.md?v",
+      "/questions/core-answers.md?v",
+      "/questions/core.md?v",
+      "/questions/maintenance-scenarios-answers.md?v",
+      "/questions/maintenance-scenarios.md?v",
+      "/questions/migration-audit.md?v",
       "/reference/source-map.md?v",
     ]);
   } finally {
@@ -298,6 +337,16 @@ test("every discovered page runs through the configured Markdown source checker"
     "learning/contract.md",
     "page-buffer-teaching-material.md",
     "playbooks/change.md",
+    "questions/README.md",
+    "questions/advanced-answers.md",
+    "questions/advanced.md",
+    "questions/applied-exercises-answers.md",
+    "questions/applied-exercises.md",
+    "questions/core-answers.md",
+    "questions/core.md",
+    "questions/maintenance-scenarios-answers.md",
+    "questions/maintenance-scenarios.md",
+    "questions/migration-audit.md",
     "reference/source-map.md",
   ]);
 });
@@ -428,6 +477,20 @@ test("Korean SVG accessibility text fails the language gate", async () => {
 
   await assert.rejects(runValidator(guideRoot), (error) => {
     assert.match(error.stderr, /assets\/page-journey\.svg: contains Korean prose/);
+    return true;
+  });
+});
+
+test("Korean prose in a Question-bank page fails the language gate", async () => {
+  const guideRoot = await createValidDocumentSet();
+  await write(
+    guideRoot,
+    "questions/core.md",
+    "# Core prompts\n\n이 질문은 aggregate discovery 대상이다.\n",
+  );
+
+  await assert.rejects(runValidator(guideRoot), (error) => {
+    assert.match(error.stderr, /questions\/core\.md: contains Korean prose/);
     return true;
   });
 });

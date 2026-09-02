@@ -1,3 +1,6 @@
 {
-  "legacyKoreanSha256": {}
+  "legacyKoreanSha256": {},
+  "readerQuestionIntakeSha256": {
+    "questions-b4179ee/questions.md": "b04868a723bfa938aa51ee35d81bc6e7e469c9654817803f5ccac6998375ce15"
+  }
 }

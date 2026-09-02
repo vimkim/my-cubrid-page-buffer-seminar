@@ -6,13 +6,20 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { validateQuestionBank } from "./question-bank-contract.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDir, "..");
 const defaultMarkdownChecker =
   "/home/vimkim/.agents/skills/markdown-write/scripts/check_copyparty_markdown.py";
 const guideEntry = "page-buffer-teaching-material.md";
-const readingModeDirectories = ["learning", "playbooks", "advanced", "reference"];
+const readingModeDirectories = [
+  "learning",
+  "playbooks",
+  "advanced",
+  "reference",
+  "questions",
+];
 const hangulPattern = /[\uac00-\ud7a3]/u;
 const validationConfigName = "maintainer-guide-validation.json";
 
@@ -386,10 +393,12 @@ function loadValidationConfig(root, failures) {
     const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
     return {
       legacyKoreanSha256: config.legacyKoreanSha256 ?? {},
+      readerQuestionIntakeSha256:
+        config.readerQuestionIntakeSha256 ?? {},
     };
   } catch (error) {
     failures.push(`${validationConfigName}: invalid JSON: ${error.message}`);
-    return { legacyKoreanSha256: {} };
+    return { legacyKoreanSha256: {}, readerQuestionIntakeSha256: {} };
   }
 }
 
@@ -610,6 +619,8 @@ async function main() {
   const pageMarkdown = new Map(
     pages.map((page) => [page, fs.readFileSync(page, "utf8")]),
   );
+
+  validateQuestionBank(options.root, pageMarkdown, config, failures);
 
   const markdownFailureStart = failures.length;
   validateMarkdownSource(pages, options.markdownChecker, failures);

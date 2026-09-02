@@ -14,7 +14,7 @@ This directory owns the English internal documentation set for senior engineers 
 
 - Write a readable internal maintainer guide, not slides, speaker notes, or a timed course.
 - Use English explanatory prose and canonical English source identifiers.
-- Serve four reading modes: the ordered `learning/` path builds Core maintainer capability; `advanced/` extends it; `playbooks/` supports change, diagnosis, and verification work; `reference/` routes source and invariant lookup.
+- Serve five reading modes: the ordered `learning/` path builds Core maintainer capability; `advanced/` extends it; `playbooks/` supports change, diagnosis, and verification work; `reference/` routes source and invariant lookup; `questions/` provides optional retrieval, scenario, and Applied exercise routes with separate answers.
 - Keep `page-buffer-teaching-material.md` as the Guide entry that routes readers without duplicating the Learning path.
 - Give each concept one canonical explanation. Other pages link to that explanation instead of copying it.
 - Lead with maintainer tasks: locate, reason about invariants, change safely, debug, and verify.
@@ -35,7 +35,7 @@ This directory owns the English internal documentation set for senior engineers 
 - Run `node scripts/check-maintainer-guide.mjs` from this directory for the aggregate source checks.
 - With this directory mounted at the Copyparty URL root, run `node scripts/check-maintainer-guide.mjs --copyparty-url <base-url>` to add HTTP and available live-DOM checks. An `UNAVAILABLE` gate is a disclosure, not a pass.
 - When changing validation code, run `node --test scripts/check-maintainer-guide.test.mjs`.
-- Use one aggregate validation entry point that discovers every guide page: the Guide entry plus `learning/`, `playbooks/`, `advanced/`, and `reference/` Markdown.
+- Use one aggregate validation entry point that discovers every guide page: the Guide entry plus `learning/`, `playbooks/`, `advanced/`, `reference/`, and `questions/` Markdown.
 - Run the Copyparty Markdown source checker on every discovered page and resolve every relative link, including links to external Evidence references.
 - Require every displayed SVG to resolve inside `assets/`, exist, contain a `viewBox`, and contain no active content; reject unused SVGs.
 - Check authored Markdown and SVG text for unintended Korean prose.
