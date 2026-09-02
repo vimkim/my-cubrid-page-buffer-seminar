@@ -22,6 +22,27 @@
       <h2>Domain과 search policy</h2>
       <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="private/shared LRU domain과 zone, search order">
     </article>
+    <article class="reference-card">
+      <h2>수량</h2>
+      <ul>
+        <li><code>N</code>개 BCB/frame pair, startup invalid count = N</li>
+        <li><code>L = S + P</code>개의 persistent LRU object</li>
+        <li>Private Q: LRU1 5%, LRU2 5%</li>
+        <li>Shared target: 기본 LRU1 40%, LRU2 5%</li>
+        <li>Private Q 하나 ≤ min(5,000, N/2)</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>비용</h2>
+      <ul>
+        <li>invalid head: O(1)</li>
+        <li>known LRU link edit: O(1) + demotion</li>
+        <li>private assignment: O(P)</li>
+        <li>quota pass: O(S + P + demotion)</li>
+        <li>victim scan 1회: LRU3 BCB 최대 1,000개</li>
+        <li>cross-private discovery: all-P scan 없음</li>
+      </ul>
+    </article>
     <article class="reference-card full">
       <h2>free BCB가 없을 때의 흐름</h2>
       <img class="diagram" src="../../assets/allocation-progress.svg" alt="allocation progress loop와 terminal exit">
@@ -70,6 +91,8 @@
         <tbody>
           <tr><td>allocation loop</td><td><code>page_buffer.c:8181–8403</code></td></tr>
           <tr><td>victim search order</td><td><code>page_buffer.c:9067–9265</code></td></tr>
+          <tr><td>LRU quantity, quota, assignment</td><td><code>page_buffer.c:5744–5800,14252–14650</code></td></tr>
+          <tr><td>Repeated-read movement와 statistic</td><td><code>page_buffer.c:6730–7038,16313–16610</code></td></tr>
           <tr><td>direct assignment</td><td><code>page_buffer.c:15420–15627</code></td></tr>
           <tr><td>flush/post-flush handoff</td><td><code>page_buffer.c:10925–10952,15489–15556</code></td></tr>
           <tr><td>daemon loop</td><td><code>page_buffer.c:16972–17298</code></td></tr>
@@ -78,7 +101,7 @@
     </article>
   </section>
 
-  <footer class="footer">Canonical explanation: <a href="../../advanced/replacement-progress.md">Replacement Policy and Background Progress</a>. exit가 bounded라고 retry 횟수도 bounded인 것은 아니다.</footer>
+  <footer class="footer">Canonical explanation: <a href="../../advanced/replacement-progress.md">Replacement Policy and Background Progress</a>. Primary-source derivation: <a href="../../reference/replacement-policy-quantities-and-costs.md">quantity와 cost note</a>.</footer>
 </main>
 </body>
 </html>

@@ -12,10 +12,10 @@
 <main class="course-shell">
   <div class="topline"><span>CUBRID page buffer · lesson 0012</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced 역량 · replacement progress</div>
-    <h1>fairness를 약속하지 않고 모든 exit를 trace한다</h1>
-    <p>이 lesson을 마치면 free BCB가 없을 때 allocator가 무엇을 하는지, direct victim을 왜 revoke할 수 있는지, source evidence가 liveness theorem에 미치지 못하는 경계를 설명할 수 있다.</p>
-    <div class="pills"><span class="pill">Invalid list</span><span class="pill">LRU search</span><span class="pill">Quota</span><span class="pill">Direct victim</span><span class="pill">Revocation</span><span class="pill">Bounded exit</span></div>
+    <div class="eyebrow">Advanced 역량 · replacement policy와 비용</div>
+    <h1>progress를 증명하기 전에 list, 수량, 실제 작업을 눈으로 본다</h1>
+    <p>이 lesson을 마치면 시작 직후와 pressure 상황의 pool을 직접 그리고, zone target을 계산하며, 같은 page를 두 번째 읽을 때 무엇이 달라지는지와 각 구조 연산의 비용 및 allocator의 모든 exit를 설명할 수 있다.</p>
+    <div class="pills"><span class="pill">Initial state</span><span class="pill">Exact quotas</span><span class="pill">Three LRU zones</span><span class="pill">Second read</span><span class="pill">Cost model</span><span class="pill">Bounded exit</span></div>
   </header>
 
   <div class="lesson-grid">
@@ -27,8 +27,42 @@
         <p class="big-claim">빠른 candidate hint와 direct reservation은 search 결과이지 frame rebind 허가가 아니다.</p>
       </section>
 
+      <section class="section" id="objects">
+        <div class="eyebrow">02 · Object와 lifetime</div>
+        <h2>LRU는 pool 초기화 때 만들고, transaction은 private-list assignment만 빌린다</h2>
+        <img class="diagram" src="../../assets/replacement-lifecycle-quantities.svg" alt="초기화, 첫 사용, 지속적인 pressure 시점의 BCB와 LRU object">
+        <p class="caption"><code>N</code>개의 BCB/frame slot과 <code>S + P</code>개의 LRU object는 pool lifetime을 갖는다. Resident BCB는 첫 zero-crossing unfix 후에야 정확히 한 doubly-linked LRU에 연결된다.</p>
+        <ol>
+          <li><strong>Startup:</strong> <code>pgbuf_initialize_bcb_table()</code>이 <code>N = num_buffers</code>개 BCB를 <code>next_BCB</code>로 연결한다. <code>invalid_top</code>은 BCB 0을 가리키고 <code>invalid_cnt = N</code>이다. Shared/private LRU object도 이미 존재하지만 top/bottom/boundary는 null이고 모든 count는 0이다.</li>
+          <li><strong>첫 miss:</strong> allocation이 invalid head를 O(1)에 pop하고 그 BCB/frame slot에 page를 읽은 뒤, fix된 동안은 VOID에 둔다. BCB와 frame은 pool lifetime 동안 같은 array-index pair다. 합법적으로 victimize된 뒤 그 pair 안의 page identity가 바뀐다.</li>
+          <li><strong>첫 unfix-to-zero:</strong> pinned default AOUT-disabled path에서 private domain page는 그 private LRU1 top에, private domain이 없는 page는 shared LRU2 middle에 들어간다.</li>
+          <li><strong>Heavy pressure:</strong> invalid list가 0이 될 수 있다. Resident BCB는 LRU zone에 분포하고, dirty LRU3 page는 flush progress를 필요로 하며, clean eligible LRU3 page는 candidate로 advertise된다. Allocator는 search하거나 기다린다. 숨겨진 두 번째 BCB/frame 예비 pool은 없다.</li>
+        </ol>
+        <div class="callout"><strong>서로 다른 세 lifetime:</strong> LRU array는 page-buffer 초기화부터 finalization까지 산다. Context-to-private-LRU assignment는 assign부터 release까지이며 여러 context가 한 list를 공유할 수 있다. BCB의 list membership은 placement, boost, demotion, removal, reuse 때 바뀐다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> BCB chain <code>page_buffer.c:5590–5650</code>, invalid-list initialization/pop <code>5907–5920,8923–8950</code>, LRU array initialization <code>5744–5800</code>, placement <code>6636–7040</code>.</p>
+      </section>
+
+      <section class="section" id="quantities">
+        <div class="eyebrow">03 · Count, quota, threshold</div>
+        <h2>“Quota”는 placement와 search를 위한 움직이는 target이지 예약된 memory가 아니다</h2>
+        <table>
+          <thead><tr><th>수량</th><th>Pinned revision의 정확한 rule</th><th>의미하지 않는 것</th></tr></thead>
+          <tbody>
+            <tr><td><code>S</code>: shared list</td><td><code>num_LRU_chains = 0</code>이면 <code>S = max(4, min(MAX_NTRANS, floor(N/1000)))</code>이다. 명시값 상한은 1,000이다.</td><td>Active transaction마다 shared list 하나가 있다는 뜻이 아니다.</td></tr>
+            <tr><td><code>P</code>: private list</td><td>Server default <code>num_private_chains = -1</code>은 <code>MAX_NTRANS + VACUUM_MAX_WORKER_COUNT</code>가 된다. 0은 private quota disable, 1–3은 4가 된다. Stand-alone은 0이다.</td><td>Transaction마다 영구 독점 list가 있다는 뜻이 아니다. Assignment는 idle/least-active list를 골라 session count를 증가시킨다.</td></tr>
+            <tr><td>Pool 전체 private target</td><td><code>(N − invalid_cnt) × private_pages_ratio</code>. Ratio는 private/shared LRU hit에서 구하고 1%–99.8%로 clamp하며 10초에 걸쳐 smoothing한다.</td><td>Hard capacity가 아니다. Resident count가 초과할 수 있다.</td></tr>
+            <tr><td>Private quota <code>Q</code> 하나</td><td>Private target × 해당 list의 activity share이며 5,000과 <code>N/2</code> 중 작은 값으로 cap한다.</td><td>Assigned context를 위해 미리 잡아 둔 memory가 아니다.</td></tr>
+            <tr><td>Private zone threshold</td><td><code>LRU1 = floor(0.05Q)</code>, <code>LRU2 = floor(0.05Q)</code>. 오래된 초과분은 LRU3로 내려간다.</td><td><code>Q = N</code>이 아닌 한 physical pool 전체의 5%/5%가 아니다.</td></tr>
+            <tr><td>Shared zone threshold</td><td>Shared target은 <code>max((N − all_private_quota)/S, 50)</code>이고 기본 LRU1/LRU2 비율은 40%/5%다. 나머지는 LRU3가 된다.</td><td>개별 page에 대한 protection 보장이 아니다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>Private-list 계산 예:</strong> quota adjustment가 한 private list에 <code>Q = 1,000</code>을 주면 LRU1 threshold는 50, LRU2 threshold도 50이다. 현재 resident BCB가 1,000개라면 adjustment 뒤 대략 900개 위치가 LRU3에 남는다. 현재 1,150개라 해도 quota가 150개를 거절하지 않는다. 다만 over quota가 되어 더 이른 victim source가 된다.</div>
+        <p>Quota adjustment는 충분한 activity/time이 누적되지 않으면 일찍 return한다. 실제 실행되면 <code>L = S + P</code>개의 LRU descriptor를 모두 순회하고, 현재 LRU1/LRU2 초과분을 demote할 수 있다. 따라서 구조적 비용은 O(1)이 아니라 O(L + D)다. 여기서 D는 그 adjustment가 demote한 node 수다.</p>
+        <p class="source-note"><strong>Pinned policy:</strong> count와 initialization <code>page_buffer.c:1071–1120,5744–5800,13942–14030</code>, adjustment <code>14252–14511</code>, parameter default <code>system_parameter.c:1794–1829,3754–3777,4171–4182</code>.</p>
+      </section>
+
       <section class="section" id="domains">
-        <div class="eyebrow">02 · Pinned search policy</div>
+        <div class="eyebrow">04 · Pinned search policy</div>
         <h2>domain에는 list가, list에는 세 zone이 있다</h2>
         <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private/shared LRU domain 안의 LRU1, LRU2, LRU3 zone과 victim search order">
         <p class="caption">LRU3은 victimization zone이다. victim hint는 scan을 빠르게 할 뿐 현재 ownership을 증명하지 않는다.</p>
@@ -45,7 +79,7 @@
       </section>
 
       <section class="section" id="cross-private-search">
-        <div class="eyebrow">02A · Other-private discovery와 zone movement</div>
+        <div class="eyebrow">05 · Other-private discovery</div>
         <h2>Transaction을 나열하지 않고 list index를 consume합니다</h2>
         <img class="diagram" src="../../assets/lru-cross-search-and-aging.svg" alt="다른 private LRU를 lock-free로 찾는 방법과 LRU1, LRU2, LRU3 movement rule">
         <p class="caption">Candidate producer가 integer LRU index를 advertise합니다. Victimizer는 선택한 list 하나만 lock하고 bounded LRU3 state를 scan하며 BCB try-lock을 사용합니다.</p>
@@ -55,7 +89,7 @@
           <li><code>pgbuf_get_victim_from_lru_list()</code>는 해당 LRU mutex 하나를 lock하고 LRU3 entry를 최대 1,000개 scan하며 최종 safety recheck 전에 각 BCB를 try-lock합니다.</li>
           <li>Candidate와 quota가 다음 search를 정당화하면 index를 requeue합니다. 아니면 enlistment flag를 clear하여 이후 candidate가 다시 advertise할 수 있게 합니다.</li>
         </ol>
-        <div class="callout warn"><strong>Contention 판단:</strong> 여러 victimizer, unfix/boost, quota adjustment가 한 hot LRU mutex에서 contend할 수 있습니다. 하지만 모든 private list를 lock하는 sweep은 아닙니다. Queue operation은 lock-free이고 선택한 list mutex 하나만 hold하며 scan depth는 bounded이고 BCB lock은 nonblocking입니다. 집중된 pressure에서 심한 bottleneck이 생길 가능성은 있지만 structure만으로 입증되지는 않습니다.</div>
+        <div class="callout warn"><strong>2,000개 transaction에 대한 답:</strong> victim search는 2,000개 transaction entry나 2,000개 private-LRU descriptor를 검사하지 않는다. O(1) lock-free queue operation으로 advertise된 integer index 하나를 consume하고, 그 list 하나를 lock한 뒤 그 LRU3의 <em>BCB node</em>를 최대 1,000개 걷는다. Hot selected-list mutex, 반복된 try-lock 실패, 여러 차례의 1,000-node attempt는 CPU 비용이 될 수 있지만 open transaction 수에 비례하는 scan은 아니다. 이와 별개로 context에 private LRU를 배정하는 드문 <code>pgbuf_assign_private_lru()</code>는 P개 private-list descriptor를 선형 검사한다. 한 attempt는 O(P)이고 assignment race 뒤 최대 다섯 번 retry한다.</div>
         <table>
           <thead><tr><th>BCB state/event</th><th>Pinned placement 또는 movement</th><th>Quota 관계</th></tr></thead>
           <tbody>
@@ -70,8 +104,49 @@
         <p class="source-note"><strong>Verified mechanism과 pinned policy:</strong> queue advertisement/consumption은 <code>page_buffer.c:15674–15728,16370–16506</code>, bounded list scan은 <code>9330–9538</code>, placement/aging은 <code>6636–7040,9695–10353</code>, quota는 <code>14251–14511</code>에 있습니다.</p>
       </section>
 
+      <section class="section" id="second-read">
+        <div class="eyebrow">06 · 같은 page를 두 번 읽기</div>
+        <h2>Reuse는 조건에 따라 zone/position을 바꾸지만 “frequency = 2”를 저장하지 않는다</h2>
+        <img class="diagram" src="../../assets/repeated-read-lru-effects.svg" alt="같은 BCB를 다시 읽고 unfix할 때 현재 zone에 따라 달라지는 결과">
+        <p class="caption">중요한 event는 BCB fix count를 다시 0으로 만드는 ordinary unfix다. 현재 zone과 age가 movement를 결정한다.</p>
+        <p><code>pgbuf_bcb_register_hit_for_lru()</code>는 <code>quota.adjust_age</code>마다 containing LRU에 hit 하나를 기록할 수 있다. <code>bcb-&gt;hit_age</code>가 더 오래됐으면 <code>monitor.lru_hits[lru_idx]</code>를 증가시키고 그 BCB의 hit age를 현재 값으로 옮긴다. Quota adjustment가 이 per-list hit를 소비해 activity를 추정한다. 이 값은 계속 증가하는 per-BCB read-frequency score가 아니며 victim을 frequency 순으로 sort하지 않는다.</p>
+        <p>두 번째 독립 signal은 <code>count_fix_and_avoid_dealloc</code>의 상위 절반이다. General fix path가 이 approximate hotness counter를 64까지 증가시키지만 overlapping-reader fast path는 registration을 건너뛴다. 따라서 정확한 successful-read count가 아니다. 64 도달은 old private-to-shared migration rule에만 참여하며 LRU3 victim scan이 비교하는 score가 아니다. BCB가 invalid list로 돌아가면 reset된다.</p>
+        <table>
+          <thead><tr><th>두 번째 unfix 시 BCB 위치</th><th>Movement</th><th>Victim 효과</th></tr></thead>
+          <tbody>
+            <tr><td>LRU1</td><td>현재 position을 유지하고 조건이 맞으면 list activity를 기록한다.</td><td>이미 victim zone 밖이므로 추가 boost가 필요 없다.</td></tr>
+            <tr><td>LRU2, 너무 young</td><td>LRU2에 남는다. “Old enough”는 list tick 차이가 현재 LRU2 count 절반 이상이라는 뜻이다.</td><td>즉시 다시 읽었다고 자동으로 LRU1 protection을 받지는 않는다.</td></tr>
+            <tr><td>LRU2, old enough</td><td>Remove한 뒤 LRU1 top에 add한다.</td><td>다시 zone을 거쳐 age해야 하므로 선택 가능성이 낮아진다.</td></tr>
+            <tr><td>LRU3, ordinary path</td><td>LRU1 top으로 boost한다.</td><td>유일한 ordinary victim-scan zone을 벗어난다.</td></tr>
+          </tbody>
+        </table>
+        <p>짧게 답하면 <strong>경우에 따라 그렇다</strong>. 이후 read는 position/zone을 통해 page를 덜 victimizable하게 만들 수 있고, hit는 containing private LRU의 미래 quota에도 영향을 줄 수 있다. 그러나 young LRU2 page를 빠르게 두 번 읽으면 placement가 그대로일 수 있다. AOUT은 ghost-history behavior를 추가할 수 있지만 분석한 default는 ratio를 0으로 강제한다.</p>
+        <p class="source-note"><strong>Verified mechanism과 pinned policy:</strong> fix registration/fast path <code>page_buffer.c:2408–2489,7724–7787</code>, zero-crossing case <code>6730–7005</code>, old-enough formula <code>1053–1061</code>, hotness counter/migration <code>16313–16367,6996–7038</code>, boost <code>10210–10360</code>, hit registration <code>16595–16610</code>, quota use <code>14337–14467</code>.</p>
+      </section>
+
+      <section class="section" id="costs">
+        <div class="eyebrow">07 · Structural cost model</div>
+        <h2>Array scan, list walk, pointer edit, I/O를 구분한다</h2>
+        <table>
+          <thead><tr><th>Operation</th><th>실제로 건드리는 structure</th><th>시간</th></tr></thead>
+          <tbody>
+            <tr><td>Pool initialization</td><td>BCB/frame array와 <code>L = S + P</code> LRU descriptor</td><td>O(N + L)</td></tr>
+            <tr><td>Invalid-list pop/push</td><td>한 mutex 아래 singly linked head</td><td>O(1)</td></tr>
+            <tr><td>Private-LRU assignment</td><td>P개 private descriptor array와 optional retry</td><td>Attempt당 O(P), 이 loop의 총 attempt는 최대 6회</td></tr>
+            <tr><td>Known BCB의 LRU add/remove/boost</td><td>Doubly linked neighbor와 boundary/count field</td><td>Zone adjustment를 빼면 O(1)</td></tr>
+            <tr><td>Zone adjustment</td><td>Oldest LRU1/LRU2 node를 하나씩 demote</td><td>D개 demotion에 O(D)</td></tr>
+            <tr><td>LRU index advertise/consume</td><td>Bounded lock-free circular queue</td><td>P/S traversal은 없지만 CAS retry 때문에 wall-clock cost는 contention-dependent</td></tr>
+            <tr><td>List 하나의 victim attempt</td><td>선택된 doubly linked LRU3를 뒤에서 앞으로 walk</td><td>O(min(Z3, 1,000)); BCB lock은 try-lock</td></tr>
+            <tr><td>실행된 quota adjustment</td><td>모든 L descriptor와 demote되는 node</td><td>O(L + D)</td></tr>
+            <tr><td>Flush 또는 page load</td><td>Metadata 외에 storage/log/DWB path</td><td>Latency-bound I/O이므로 O(1)이라 부르지 않는다</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Space:</strong> pool 소유 BCB와 frame은 O(N), LRU descriptor와 hit/activity array 및 victim-index queue는 O(L), private session counter는 O(P)다. List node는 BCB 자체이므로 LRU membership을 위해 별도 O(N) node array를 할당하지 않는다.</p>
+        <p class="source-note"><strong>Verified structure에서 유도한 complexity:</strong> <code>page_buffer.c:499–773,5590–5920,9330–9538,9695–10415,14252–14650,16370–16567</code>. 별도 표시가 없으면 Big-O는 mutex contention과 I/O latency를 제외한다.</p>
+      </section>
+
       <section class="section" id="loop">
-        <div class="eyebrow">03 · free BCB가 없을 때</div>
+        <div class="eyebrow">08 · free BCB가 없을 때</div>
         <h2>allocator는 exit가 명확한 progress loop에 들어간다</h2>
         <img class="diagram" src="../../assets/allocation-progress.svg" alt="invalid list에서 victim search, direct wait, revalidation, retry, error exit로 이어지는 allocation progress loop">
         <ol>
@@ -86,7 +161,7 @@
       </section>
 
       <section class="section" id="reservation">
-        <div class="eyebrow">04 · revoke 가능한 direct victim</div>
+        <div class="eyebrow">09 · revoke 가능한 direct victim</div>
         <h2>새 ownership이 생기면 reservation은 물러난다</h2>
         <p>producer는 기다리는 allocator를 위해 eligible BCB를 reserve할 수 있다. assignment와 consumption 사이에 다른 active worker가 resident page를 fix할 수 있으며, 이 새 ownership은 reservation을 무효로 만든다.</p>
         <table>
@@ -101,7 +176,7 @@
       </section>
 
       <section class="section" id="generation">
-        <div class="eyebrow">05 · Flush coordination</div>
+        <div class="eyebrow">10 · Flush coordination</div>
         <h2>old-generation completion은 G+1을 victim으로 만들 수 없다</h2>
         <p>pressure 상황에서 victim flush는 copy된 generation G를 전파하고 BCB를 post-flush assignment로 넘길 수 있다. Post-flush는 resident page가 여전히 clean, unfixed, victim zone, policy-eligible 상태인지 다시 확인해야 한다.</p>
         <p>G가 in flight인 동안 writer가 DIRTY generation G+1을 만들었다면 direct-victim handoff는 실패해야 한다. 과거 byte를 완료했다고 더 새로운 resident byte를 버릴 권한이 생기지는 않는다.</p>
@@ -109,7 +184,7 @@
       </section>
 
       <section class="section" id="limits">
-        <div class="eyebrow">06 · Evidence 경계</div>
+        <div class="eyebrow">11 · Evidence 경계</div>
         <h2>bounded exit가 곧 starvation freedom은 아니다</h2>
         <table>
           <thead><tr><th>Source가 뒷받침하는 것</th><th>Source/runtime이 입증하지 못한 것</th></tr></thead>
@@ -124,7 +199,7 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval 연습</div>
+        <div class="eyebrow">12 · Retrieval 연습</div>
         <h2>revoke된 assignment가 도달할 수 있는 legal exit를 trace한다</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="invalid list가 빈 under-quota allocator는 pinned LRU search policy를 따르지만 모든 resident candidate는 여전히 hard eligibility gate가 필요하다 -> server mode에서 candidate가 없으면 direct-victim wait queue에 들어가 flush daemon을 깨울 수 있다 -> producer의 assignment는 이전 시점의 eligibility를 바탕으로 한 reservation일 뿐이다 -> consumption 전에 다른 worker가 BCB를 fix하면 protected revalidation이 assignment를 revoke하고 allocator는 보통 high priority로 다른 candidate를 요청한다 -> 다음 wait가 timeout이면 error와 함께 frame/page pointer 없이 종료한다 -> 이 branch는 verified mechanism이고 domain/quota/search priority와 daemon cadence는 implementation policy다 -> retry와 timeout exit는 starvation freedom을 증명하지 않으며 기존 runtime evidence는 eviction을 유발하지 못했다." data-concepts='[{"label":"policy는 eligibility를 우회하지 않음","terms":["policy","eligibility","hard","recheck"]},{"label":"빈 free list는 direct wait로 진입","terms":["invalid","empty","direct victim","queue","daemon"]},{"label":"assignment는 revoke 가능한 reservation","terms":["reservation","fixed","revoke","revalidate"]},{"label":"timeout은 frame 없이 반환","terms":["timeout","error","no frame","no pointer"]},{"label":"mechanism과 policy 구분","terms":["verified mechanism","implementation policy","quota","cadence"]},{"label":"fairness나 eviction 증명 없음","terms":["starvation","fairness","no eviction","runtime"]}]'>
           <h3>문제</h3>
@@ -150,13 +225,17 @@
     <nav class="lesson-nav" aria-label="Lesson 목차">
       <strong>Lesson map</strong>
       <a href="#boundary">1. Policy 경계</a>
-      <a href="#domains">2. Domain과 zone</a>
-      <a href="#cross-private-search">2A. Other-private search</a>
-      <a href="#loop">3. Allocation loop</a>
-      <a href="#reservation">4. revoke 가능한 victim</a>
-      <a href="#generation">5. G+1 coordination</a>
-      <a href="#limits">6. Liveness 한계</a>
-      <a href="#retrieval">7. 직접 trace하기</a>
+      <a href="#objects">2. Object와 lifetime</a>
+      <a href="#quantities">3. 정확한 수량</a>
+      <a href="#domains">4. Domain과 zone</a>
+      <a href="#cross-private-search">5. Other-private search</a>
+      <a href="#second-read">6. 두 번째 read</a>
+      <a href="#costs">7. Cost model</a>
+      <a href="#loop">8. Allocation loop</a>
+      <a href="#reservation">9. revoke 가능한 victim</a>
+      <a href="#generation">10. G+1 coordination</a>
+      <a href="#limits">11. Liveness 한계</a>
+      <a href="#retrieval">12. 직접 trace하기</a>
       <a href="#primary-reading">핵심 읽을거리</a>
       <hr>
       <a href="../reference/replacement-progress-card.html">Replacement-progress card</a>

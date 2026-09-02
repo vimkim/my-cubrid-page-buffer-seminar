@@ -22,7 +22,7 @@ test("direct and background progress retain generation and timing boundaries", a
   assert.match(m, /victim flush.*post-flush/is);
   assert.match(m, /newer dirty generation|G\+1/i);
   assert.match(m, /daemon.*version-sensitive/is);
-  for (const anchor of ["src/storage/page_buffer.c:9293-9538", "src/storage/page_buffer.c:15420-15627", "src/storage/page_buffer.c:16972-17298"]) assert.ok(m.includes(`\`${anchor}\``), anchor);
+  for (const anchor of ["src/storage/page_buffer.c:9330-9538", "src/storage/page_buffer.c:15420-15627", "src/storage/page_buffer.c:16972-17255"]) assert.ok(m.includes(`\`${anchor}\``), anchor);
 });
 
 test("the no-free-BCB allocation loop is visual, bounded, and routed to its questions", async () => {
@@ -64,10 +64,37 @@ test("the LRU domain and zone visual precedes the allocation loop and states the
   assert.ok(bAt > vAt, "visual sits before the next section");
   assert.match(m, /!\[Private and shared LRU domains, three zones per list, and the victim search order\]\(\.\.\/assets\/lru-domains-zones\.svg\)/);
   assert.match(m, /when quota is disabled, only the shared lists are searched/i);
-  assert.match(m, /may not raid other lists/i);
+  assert.match(m, /under-quota own list is searched only as a last resort/i);
   assert.match(svg, /<svg[^>]+viewBox=/);
   assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
   assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
   assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
   for (const label of ["PRIVATE LRU LISTS", "SHARED LRU LISTS", "LRU1 hot", "LRU2 buffer", "LRU3 victim", "VICTIM SEARCH ORDER", "Own private, even under quota", "core eligibility gate"]) assert.ok(svg.includes(label), label);
+});
+
+test("replacement quantities, lifecycle, repeated reads, and costs are concrete", async () => {
+  const m = await readFile(page, "utf8");
+  const lifecycle = await readFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/replacement-lifecycle-quantities.svg"), "utf8");
+  const reread = await readFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/repeated-read-lru-effects.svg"), "utf8");
+  for (const term of [
+    "invalid_top = BCB[0]",
+    "invalid_cnt = N",
+    "`L = S + P`",
+    "O(P)",
+    "O(L + D)",
+    "at most 1,000 BCB nodes",
+    "count_fix_and_avoid_dealloc",
+    "per quota-adjustment age",
+  ]) assert.ok(m.includes(term), term);
+  assert.ok(m.includes("](../assets/replacement-lifecycle-quantities.svg)"));
+  assert.ok(m.includes("](../assets/repeated-read-lru-effects.svg)"));
+  assert.ok(m.includes("](../reference/replacement-policy-quantities-and-costs.md)"));
+  for (const svg of [lifecycle, reread]) {
+    assert.match(svg, /<svg[^>]+viewBox=/);
+    assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
+    assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
+    assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
+  }
+  for (const label of ["invalid_top", "invalid list", "scan its LRU3"]) assert.ok(lifecycle.includes(label), label);
+  for (const label of ["quota.adjust_age", "young in LRU2", "boost to LRU1 top", "frequency rank"]) assert.ok(reread.includes(label), label);
 });

@@ -109,3 +109,25 @@ The authoring notes' asset contract no longer gates Advanced visuals on a prior 
 Validation was extended: the shared roster and its count moved from 14 to 21, and each Advanced page test asserts the visual's placement between its neighbouring headings, its alt text, its lead-in prose, and its key labels.
 
 Results after the pass: `node --test scripts/*.test.mjs` 118/118; `node scripts/check-maintainer-guide.mjs` PASS with 27 pages and 21 displayed SVGs, 0 orphaned; Copyparty HTTP PASS for 48 resources; Live DOM UNAVAILABLE because Playwright is not installed in this repository; `git diff --check` clean.
+
+## Quantitative replacement follow-up
+
+The replacement lesson was expanded after a reader could not turn its policy
+terms into concrete quantities or costs. Two source-verified visuals now show
+the empty initial pool, first placement, sustained pressure, and the
+zone-dependent result of reading the same BCB again. The canonical Advanced
+page and paired English/Korean Lesson 0012 now distinguish LRU-object,
+context-assignment, and BCB-membership lifetimes; give the exact shared/private
+count and quota formulas; work a `Q = 1,000` example; separate the O(P)
+private-LRU assignment scan from queue-directed cross-private victimization;
+and provide a structural time/space ledger. The primary-source derivation is
+kept in `reference/replacement-policy-quantities-and-costs.md`.
+
+The crucial performance boundary is explicit: an ordinary cross-private victim
+request does not enumerate open transactions or all private lists. It consumes
+one advertised list index and scans at most 1,000 BCB nodes in that selected
+LRU3. The new material labels contention and wall-clock behavior as unmeasured,
+and explains that repeated reads combine current fix protection, a saturating
+but approximate 64-fix migration heuristic, zone/age movement, and one
+containing-LRU activity sample per adjustment epoch—there is no exact
+per-page read-frequency victim score.

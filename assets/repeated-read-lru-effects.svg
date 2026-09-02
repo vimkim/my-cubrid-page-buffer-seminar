@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="610" viewBox="0 0 1280 610" role="img" aria-labelledby="title desc">
+  <title id="title">How a second read changes replacement state</title>
+  <desc id="desc">A zero-crossing unfix records at most one hit per quota adjustment age for the containing LRU. An LRU1 page stays where it is, a young LRU2 page stays, an old LRU2 page moves to LRU1 top, and an ordinary LRU3 page moves to LRU1 top. The hit is a list activity sample rather than a per-page frequency score.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#435d69"/></marker>
+    <style>.panel{fill:#fff;stroke:#c5d2d8;stroke-width:2}.hot{fill:#fde9e5;stroke:#b74b3c;stroke-width:2}.buffer{fill:#fff6e8;stroke:#b86b22;stroke-width:2}.victim{fill:#e9f4f3;stroke:#16847d;stroke-width:2}.stat{fill:#eef0ff;stroke:#5968bd;stroke-width:2}.t{font:700 26px Inter,Arial,sans-serif;fill:#173443}.h{font:700 18px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#435d69;stroke-width:2.5;marker-end:url(#arrow)}</style>
+  </defs>
+  <text x="640" y="40" text-anchor="middle" class="t">A second read has a zone-dependent effect</text>
+  <rect x="35" y="72" rx="18" width="1210" height="105" class="stat"/>
+  <text x="640" y="108" text-anchor="middle" class="h">Every ordinary zero-crossing unfix calls the LRU hit registrar</text>
+  <text x="640" y="139" text-anchor="middle" class="s">If BCB.hit_age &lt; quota.adjust_age: increment monitor.lru_hits[this LRU] once, then set hit_age = adjust_age</text>
+  <text x="640" y="163" text-anchor="middle" class="tiny">This feeds list activity and quota calculation; it is not a cumulative per-BCB frequency rank.</text>
+
+  <rect x="35" y="220" rx="16" width="275" height="205" class="hot"/>
+  <text x="172" y="258" text-anchor="middle" class="h">Page is already in LRU1</text>
+  <text x="172" y="297" text-anchor="middle" class="s">read → unfix</text>
+  <text x="172" y="333" text-anchor="middle" class="h">keep position</text>
+  <text x="172" y="365" text-anchor="middle" class="s">already hot and outside LRU3</text>
+  <text x="172" y="397" text-anchor="middle" class="tiny">hit sample may be recorded</text>
+
+  <rect x="345" y="220" rx="16" width="275" height="205" class="buffer"/>
+  <text x="482" y="258" text-anchor="middle" class="h">Page is young in LRU2</text>
+  <text x="482" y="297" text-anchor="middle" class="s">age &lt; count_lru2 / 2</text>
+  <text x="482" y="333" text-anchor="middle" class="h">keep in LRU2</text>
+  <text x="482" y="365" text-anchor="middle" class="s">one quick reread is not enough</text>
+  <text x="482" y="397" text-anchor="middle" class="tiny">hit sample may be recorded</text>
+
+  <rect x="655" y="220" rx="16" width="275" height="205" class="buffer"/>
+  <text x="792" y="258" text-anchor="middle" class="h">Page is old in LRU2</text>
+  <text x="792" y="297" text-anchor="middle" class="s">age ≥ count_lru2 / 2</text>
+  <text x="792" y="333" text-anchor="middle" class="h">boost to LRU1 top</text>
+  <text x="792" y="365" text-anchor="middle" class="s">becomes hotter by position</text>
+  <text x="792" y="397" text-anchor="middle" class="tiny">hit sample may be recorded</text>
+
+  <rect x="965" y="220" rx="16" width="280" height="205" class="victim"/>
+  <text x="1105" y="258" text-anchor="middle" class="h">Page is in LRU3</text>
+  <text x="1105" y="297" text-anchor="middle" class="s">ordinary read → unfix</text>
+  <text x="1105" y="333" text-anchor="middle" class="h">boost to LRU1 top</text>
+  <text x="1105" y="365" text-anchor="middle" class="s">leaves victim-search zone</text>
+  <text x="1105" y="397" text-anchor="middle" class="tiny">explicit paths have exceptions</text>
+
+  <path d="M482 425 C482 500 792 500 792 433" class="line"/>
+  <path d="M1105 425 C1105 545 172 545 172 433" class="line"/>
+  <rect x="190" y="540" rx="12" width="900" height="45" class="panel"/>
+  <text x="640" y="569" text-anchor="middle" class="h">Less victimized because of zone/position, not because “read count = 2” is stored as a page score</text>
+</svg>

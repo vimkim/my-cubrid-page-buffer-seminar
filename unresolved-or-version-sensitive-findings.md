@@ -41,6 +41,7 @@ These are source-visible candidates, not observed production failures.
 | `VS-16` | **Open diagnostic anomaly** | `pgbuf_rv_dealloc_undo_compensate()` has a debug-only diagnostic that appears to read a locally declared VPID without visible initialization. | Affects diagnostic reliability, not the type/flag restoration taught in the course. | Compile/run the diagnostic branch or trace macro expansion. `src/storage/page_buffer.c:15314-15335`. |
 | `VS-17` | **Candidate** | `pgbuf_unlatch_thrd_holder()` reports a missing caller holder, but ordinary release `pgbuf_unfix()` does not fail closed before BCB accounting: the lock-free READ path does not consume `holder_status`, and the protected path decrements global `fcnt` before checking it. | An extra or wrong-thread unfix may consume another owner's fix debt; after a final valid unfix, the stale `PAGE_PTR` may also observe a reused BCB. The holder is therefore not a reliable release-build double-unfix guard. | Add targeted release-build tests for an immediate double unfix, wrong-thread unfix while another owner remains, READ fast-path conditions, and reuse between calls. Inspect holder lists, global `fcnt`, latch mode, errors, waiter handoff, and subsequent victim/fix behavior. `src/storage/page_buffer.c:3062-3201,6128-6184,6636-6703,7807-7835`. |
 | `VS-18` | **Candidate** | In `pgbuf_latch_bcb_upon_fix()`, a thread that already owns every READ fix and requests another fix with WRITE takes the immediate upgrade branch. That branch sets the BCB tuple's `fcnt` to `1`; the common success path then increments the existing holder's `fix_count`. Starting from nested count 2 therefore appears to produce global `fcnt=1` and holder `fix_count=3`. | The two ownership ledgers no longer appear to match, so later unfix accounting and waiter handoff need runtime validation. This is separate from `pgbuf_promote_read_latch()`, whose documented purpose is a same-debt transformation. | Add a focused debug and release test: fix one BCB READ twice in one thread, call ordinary `pgbuf_fix(..., WRITE, ...)`, inspect global/thread counts and latch mode after every operation, then unfix all three times with and without a waiter. Recheck intended semantics with maintainers. `src/storage/page_buffer.c:6403-6437,6494-6537`. |
+| `VS-19` | **Open source anomaly** | Repository-wide inspection at the pinned revision found allocation and consumption/requeue of `big_private_lrus_with_victims`, but no source path that produces its first index; the visible `produce` call only re-enqueues an index already consumed from that queue. | When an own private list is materially over quota, `pgbuf_get_victim()` restricts other-private discovery to the big-private queue. If the queue cannot receive its first entry, that step can return empty and proceed to shared search even when other large private lists have candidates. This is a static control-flow candidate, not a demonstrated bottleneck or correctness defect. | Instrument all big-private queue produce/consume sites under a workload with multiple private lists above `max(100, 2 × quota)`. Verify whether another generated/template path supplies initial indices and measure the effect on victim search. `src/storage/page_buffer.c:1864-1883,9148-9172,16424-16471`. |
 
 ## C. Policy and timing that must not be taught as contract
 
@@ -88,12 +89,13 @@ Sources:
 ## F. Questions deliberately left open
 
 1. Are `VS-10`, `VS-11`, `VS-12`, `VS-17`, and `VS-18` reachable under supported configurations, and what exact state survives each injected failure?
-2. Which of the historical replacement findings still exist on the branch used by new developers today?
-3. What fairness claim, if any, is intended for page-latch promotion and direct-victim assignment?
-4. Should `pgbuf_fix_without_validation_release` be implemented, removed, or hidden from release headers?
-5. Should the copy-area helpers be repaired, documented as specialized, or replaced with a narrower interface?
-6. Which page-buffer metrics are stable operational contracts versus implementation-local diagnostics?
-7. Which source revision should be used for the next delivery of this course? Line references must be regenerated if it is not `f799e05`.
+2. Does any supported path initially populate the `VS-19` big-private queue, and if not, how often does restricted other-private discovery lose a useful victim source?
+3. Which of the historical replacement findings still exist on the branch used by new developers today?
+4. What fairness claim, if any, is intended for page-latch promotion and direct-victim assignment?
+5. Should `pgbuf_fix_without_validation_release` be implemented, removed, or hidden from release headers?
+6. Should the copy-area helpers be repaired, documented as specialized, or replaced with a narrower interface?
+7. Which page-buffer metrics are stable operational contracts versus implementation-local diagnostics?
+8. Which source revision should be used for the next delivery of this course? Line references must be regenerated if it is not `f799e05`.
 
 ## G. Maintenance rule
 

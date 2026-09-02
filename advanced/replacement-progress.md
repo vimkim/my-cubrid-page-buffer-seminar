@@ -42,7 +42,69 @@ A BCB's **membership lifetime** is shorter again. It has only one `prev_BCB`/`ne
 
 Source: structures at `src/storage/page_buffer.c:499-623`; array initialization at `src/storage/page_buffer.c:5744-5800`; finalization at `src/storage/page_buffer.c:1921-1985`; add/remove/move at `src/storage/page_buffer.c:9695-9879,10200-10415`; encoded zone/index update at `src/storage/page_buffer.c:15900-16030`; private assignment/release at `src/storage/page_buffer.c:14513-14650`.
 
+### Concrete pool shape: empty startup, first use, and pressure
+
+![BCBs and LRU objects at initialization, first use, and sustained pressure](../assets/replacement-lifecycle-quantities.svg)
+
+Let `N` be `num_buffers`, `S` the shared-list count, and `P` the private-list
+count. Initialization allocates the fixed BCB/frame arrays and `S + P` empty LRU
+objects. It chains all `N` BCBs through `next_BCB` into the singly linked invalid
+list, with `invalid_top = BCB[0]` and `invalid_cnt = N`. Thus the initial resident
+population is zero: the LRU descriptors exist, but their top, bottom, boundaries,
+and zone counts are empty.
+
+A cold miss pops the invalid head in O(1), loads the requested identity into that
+fixed BCB/frame slot, and keeps it in VOID while it is fixed. On the first
+zero-crossing unfix, the analyzed AOUT-disabled path links it into exactly one
+doubly linked LRU: private LRU1 top when the context has a private domain, or
+shared LRU2 middle otherwise. The BCB and frame remain a fixed array-index pair
+for the pool lifetime; legal replacement changes the page identity resident in
+that pair.
+
+Under sustained pressure, the invalid list may be empty and all frames resident.
+Quota/zone adjustment distributes those BCBs across LRU1, LRU2, and LRU3; dirty
+LRU3 pages need flush progress, while clean eligible LRU3 pages contribute to
+candidate counts and advertise their list indices. There is no extra pool of
+unattached frames behind this path.
+
+Source: `src/storage/page_buffer.c:5590-5650,5744-5800,5907-5920,6636-7040,8923-8950`.
+
 First unfix is also policy-visible. With the analyzed default AOUT-disabled path, a newly materialized BCB enters the top of its assigned private list when it has a private domain; otherwise it enters the middle of a shared list. On later zero-crossing unfixes, LRU1 remains hot without being boosted, LRU2 is boosted only after it is old enough, and ordinary reuse boosts an LRU3 page. Zone adjustment ages pages from LRU1 through LRU2 into LRU3.
+
+### What a second read records and changes
+
+![Zone-dependent effects of reading and unfixing the same BCB again](../assets/repeated-read-lru-effects.svg)
+
+There is no exact per-BCB successful-read counter that turns from one to two and
+directly ranks victims. On an ordinary zero-crossing unfix,
+`pgbuf_bcb_register_hit_for_lru()` may record
+one hit for the containing LRU per quota-adjustment age. It increments
+`monitor.lru_hits[lru_idx]` only when the BCB's `hit_age` is older than
+`quota.adjust_age`, then advances `hit_age`. Quota adjustment consumes the
+per-list hit counters to estimate activity and distribute private quotas.
+
+The immediate per-page effect depends on the current zone:
+
+- LRU1 keeps its position because it is already hot and outside the victim zone.
+- A young LRU2 BCB stays in LRU2. “Old enough” means its list-tick distance is at
+  least half the current LRU2 count, so a rapid second read does not necessarily
+  earn a boost.
+- An old-enough LRU2 BCB and an ordinarily reused LRU3 BCB move to LRU1 top.
+  They become less likely to be victimized because they must age through the
+  zones again, not because a frequency-two score won a comparison.
+
+Thus a second read can protect a page through zone/position and can influence the
+containing list's later quota, but it is not guaranteed to change placement.
+AOUT could add ghost-history behavior, but the analyzed default disables it.
+
+A separate BCB-lifetime hotness heuristic exists in the high 16 bits of
+`count_fix_and_avoid_dealloc`. The general fix path increments it up to 64, but
+the overlapping-reader fast path bypasses that registration, so it is not an
+exact count of successful reads. Reaching 64 participates in an old
+private-to-shared migration condition; the LRU3 victim scan does not rank BCBs
+by this counter. It resets when the BCB returns to the invalid list.
+
+Source: `src/storage/page_buffer.c:1053-1061,2408-2489,6730-7038,7724-7787,10210-10360,14337-14467,16313-16367,16595-16610`.
 
 ### How the victim search assigns priority
 
@@ -69,7 +131,40 @@ The current transaction does not enumerate other transactions, discover their se
 
 This design can still contend: several victimizers, unfix/boost operations, and quota adjustment can meet on the same hot list mutex. But the cost is not “lock all other transactions' LRUs.” Queue selection is lock-free, one LRU mutex is held at a time, scan depth is bounded, and BCB locks are tried rather than waited for under the LRU mutex. A bottleneck claim is therefore plausible under concentrated pressure on a small number of advertised lists, but it requires mutex-wait/CPU evidence; the structure alone does not prove severe contention.
 
+For 2,000 open transactions, the victim path does **not** walk 2,000 transaction
+objects or private-LRU descriptors. It consumes one advertised integer index and
+scans at most 1,000 BCB nodes in that one LRU3. A different operation,
+`pgbuf_assign_private_lru()`, does inspect all `P` private descriptors to choose an
+idle least-populated list or the least-active fallback. That assignment is O(P)
+per attempt and may retry five times after a race; do not attribute its cost to
+every victim search.
+
 Source: queue allocation at `src/storage/page_buffer.c:1825-1898`; candidate advertisement at `src/storage/page_buffer.c:15674-15728,16370-16414`; other-private consumption/requeue at `src/storage/page_buffer.c:16417-16506`; bounded per-list locking and scan at `src/storage/page_buffer.c:9330-9538`; quota republishing at `src/storage/page_buffer.c:14380-14511`.
+
+### Structural cost and space ledger
+
+Let `L = S + P`, `Z3` be the selected list's LRU3 length, and `D` the number of
+nodes demoted during one zone adjustment.
+
+| Operation | Structure touched | Derived time |
+|---|---|---|
+| Pool initialization | BCB/frame arrays and all LRU descriptors | O(N + L) |
+| Invalid-list pop/push | Singly linked head under one mutex | O(1) |
+| Private-LRU assignment | Array of all P private descriptors | O(P) per attempt; at most six attempts in that loop |
+| Add/remove/boost a known BCB | Doubly linked neighbors plus boundaries/counts | O(1), excluding adjustment it triggers |
+| Zone adjustment | Oldest LRU1/LRU2 nodes, one by one | O(D) |
+| Advertise/consume an LRU index | Bounded lock-free circular queue | No P/S traversal; CAS retry makes wall-clock cost contention-dependent |
+| Victim attempt on one selected list | Backward walk in its LRU3 | O(min(Z3, 1,000)); BCB mutex acquisition is nonblocking |
+| Quota adjustment when it runs | All L descriptors plus demotions | O(L + D) |
+| Page load or flush | Storage/log/DWB path | Latency-bound I/O; not meaningfully described as O(1) |
+
+Space is O(N) for pool-owned BCBs and frames, O(L) for LRU descriptors,
+hit/activity arrays, and victim-index queues, and O(P) for private session
+counters. The BCB itself supplies the list links, so LRU membership does not
+allocate a second O(N) node set. Big-O here describes structure traversal and
+excludes mutex contention and I/O latency unless the row says otherwise.
+
+Primary-source derivation and caveats: [Replacement quantities and cost](../reference/replacement-policy-quantities-and-costs.md).
 
 ### Promotion and demotion rules in one table
 

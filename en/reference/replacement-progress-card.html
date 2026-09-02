@@ -22,6 +22,27 @@
       <h2>Domains and search policy</h2>
       <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private/shared LRU domains, zones, and search order">
     </article>
+    <article class="reference-card">
+      <h2>Quantities</h2>
+      <ul>
+        <li><code>N</code> BCB/frame pairs; startup invalid count = N</li>
+        <li><code>L = S + P</code> persistent LRU objects</li>
+        <li>Private Q: LRU1 5%, LRU2 5%</li>
+        <li>Shared target: LRU1 40%, LRU2 5% by default</li>
+        <li>One private Q ≤ min(5,000, N/2)</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Costs</h2>
+      <ul>
+        <li>invalid head: O(1)</li>
+        <li>known LRU link edit: O(1) + demotions</li>
+        <li>private assignment: O(P)</li>
+        <li>quota pass: O(S + P + demotions)</li>
+        <li>one victim scan: ≤ 1,000 LRU3 BCBs</li>
+        <li>cross-private discovery: no all-P scan</li>
+      </ul>
+    </article>
     <article class="reference-card full">
       <h2>No-free-BCB route</h2>
       <img class="diagram" src="../../assets/allocation-progress.svg" alt="Allocation progress loop and terminal exits">
@@ -70,6 +91,8 @@
         <tbody>
           <tr><td>Allocation loop</td><td><code>page_buffer.c:8181–8403</code></td></tr>
           <tr><td>Victim search order</td><td><code>page_buffer.c:9067–9265</code></td></tr>
+          <tr><td>LRU quantities, quotas, and assignment</td><td><code>page_buffer.c:5744–5800,14252–14650</code></td></tr>
+          <tr><td>Repeated-read movement and statistics</td><td><code>page_buffer.c:6730–7038,16313–16610</code></td></tr>
           <tr><td>Direct assignment</td><td><code>page_buffer.c:15420–15627</code></td></tr>
           <tr><td>Flush/post-flush handoff</td><td><code>page_buffer.c:10925–10952,15489–15556</code></td></tr>
           <tr><td>Daemon loops</td><td><code>page_buffer.c:16972–17298</code></td></tr>
@@ -78,7 +101,7 @@
     </article>
   </section>
 
-  <footer class="footer">Canonical explanation: <a href="../../advanced/replacement-progress.md">Replacement Policy and Background Progress</a>. Bounded exits do not imply bounded retries.</footer>
+  <footer class="footer">Canonical explanation: <a href="../../advanced/replacement-progress.md">Replacement Policy and Background Progress</a>. Primary-source derivation: <a href="../../reference/replacement-policy-quantities-and-costs.md">quantities and cost note</a>.</footer>
 </main>
 </body>
 </html>

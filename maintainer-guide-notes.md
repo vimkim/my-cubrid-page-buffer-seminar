@@ -60,7 +60,7 @@ Every SVG displayed anywhere in the document set is owned by [`assets/`](./asset
 - Reused visuals are copied into this directory so the guide remains self-contained.
 - Keep only visuals the document set actually displays.
 - If a source visual changes, update the local copy intentionally and review its wording against the current evidence boundary.
-- Visuals show object relationships, independent axes, converging flows, dual ledgers, durability timing, eligibility gates, protection-gap timelines, load-handoff timelines, layered caller ownership with its exits, wait queues, or progress loops; prose and source exercises own line anchors and catalogs.
+- Visuals show object relationships, independent axes, converging flows, dual ledgers, durability timing, eligibility gates, protection-gap timelines, load-handoff timelines, layered caller ownership with its exits, wait queues, progress loops, replacement lifetimes/quantities, or zone-dependent reuse; prose and source exercises own line anchors and catalogs.
 - Advanced pages display a visual when a mechanism's state transitions or ownership relationships are materially harder to follow in prose, whether a reader question exposed that or an authoring pass did; the visual still belongs to the root asset seam and to exactly one owning page.
 
 ## Writing rules
@@ -168,6 +168,6 @@ The stable entry was cut over only after each former section had a complete cano
 | Deep references | Flat list replaced by intent routes and the source map |
 | Symptom-to-source index | Owned by the symptom playbook and source map |
 | Before you close an issue | Owned by the change and verification playbooks plus the capstone rubric |
-| Legacy pool, latch, and WAL-flush visuals | Useful relationships absorbed by the canonical English visuals (six at cutover; three more added from Reader question intake; five more added by the Learning-path visual pass; seven more added by the Advanced visual pass); obsolete files and language exemptions removed |
+| Legacy pool, latch, and WAL-flush visuals | Useful relationships absorbed by the canonical English visuals (six at cutover; three more added from Reader question intake; five more added by the Learning-path visual pass; seven more added by the Advanced visual pass; two replacement-quantity/reuse visuals added from the quantitative reader follow-up); obsolete files and language exemptions removed |
 
 Exhaustive catalogs, raw receipts, historical question banks, and full comparison material remain linked evidence. No parallel legacy monolith is maintained.
