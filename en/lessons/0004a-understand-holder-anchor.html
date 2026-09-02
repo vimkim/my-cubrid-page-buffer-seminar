@@ -90,9 +90,29 @@
 
       <section class="section" id="unfix-cost">
         <div class="eyebrow">06 · Unfix and cost</div>
-        <h2>Release finds the same entry by another linear scan</h2>
-        <p><code>pgbuf_unlatch_thrd_holder()</code> calls the same lookup, decrements the matching entry, and removes it at zero. Removal of a non-head entry must find its predecessor in the singly linked active list, so a final unfix can traverse the list again.</p>
-        <div class="callout warn"><strong>Performance inference:</strong> one thread holding many distinct BCBs can pay linear lookup costs, and an unfavorable series of removals can accumulate quadratic list work. Repeated fixes of one BCB reuse one entry and do not lengthen the list. Many threads fixing one BCB create a different hypothesis: contention on that BCB's shared atomic latch. Measure these separately before calling either one the bottleneck.</div>
+        <h2>Can this become very slow? Yes, when one thread holds many distinct pages</h2>
+        <p>Let <code>H</code> be the number of distinct BCBs currently held by this thread—not the buffer-pool size, lifetime fix count, or sum of nested debts. Because the active list has no BCB-to-holder index, position determines the work:</p>
+        <table>
+          <thead><tr><th>Operation</th><th>Holder-list cost</th><th>Reason</th></tr></thead>
+          <tbody>
+            <tr><td>First fix of a new distinct BCB</td><td>Up to <code>O(H)</code></td><td>The lookup must reach <code>NULL</code> to prove there is no existing entry, then allocation prepends one.</td></tr>
+            <tr><td>Repeated fix of an already held BCB</td><td>Between <code>O(1)</code> and <code>O(H)</code></td><td>The entry is reused, but it still has to be found. Only a head entry is immediately cheap.</td></tr>
+            <tr><td>Unfix with debt remaining</td><td>Up to <code>O(H)</code></td><td>The same linear lookup finds the entry before decrementing it.</td></tr>
+            <tr><td>Final unfix of a non-head entry</td><td>Up to two scans</td><td>Lookup finds the entry; removal may start at the head again to find its predecessor.</td></tr>
+          </tbody>
+        </table>
+        <h3>Worst-case accumulation</h3>
+        <p>Fixing distinct pages A, B, C, …, N without releasing earlier pages performs 0, 1, 2, …, N−1 failed comparisons before each new entry is created. The total is <code>N(N−1)/2</code>, therefore <code>O(N²)</code>. This acquisition cost exists even if the pages are later released in favorable LIFO order.</p>
+        <p>Order still changes release cost because each new entry is prepended. LIFO release repeatedly removes the head and is favorable. Releasing the oldest entries first, or repeatedly accessing an older entry while newer entries remain, repeatedly crosses a long list and can add another quadratic pattern.</p>
+        <h3>Why this is not automatically the production bottleneck</h3>
+        <ul>
+          <li>The list is thread-local, so its traversal is CPU/cache work rather than cross-thread list-lock contention.</li>
+          <li>When <code>H</code> is small, a linear scan is short. The seven reserved entries per thread are consistent with an expected common shape of few simultaneous distinct holds, but they are not a hard limit or performance proof; extension sets provide more entries.</li>
+          <li>Nested fix of one head BCB does not grow the list and is <code>O(1)</code>. The same BCB can become expensive to find only after newer distinct entries are prepended before it.</li>
+          <li>I/O, BCB atomic-latch contention, BCB mutex waits, wakeups, LRU work, and flush may dominate elapsed time.</li>
+        </ul>
+        <div class="callout warn"><strong>Performance verdict:</strong> this is a source-proven linear-search hot-path shape and a mechanically valid scalability risk. It becomes a measured bottleneck only when a profile shows large per-thread <code>H</code>, unfavorable ordering, and substantial samples in <code>pgbuf_find_thrd_holder()</code> or <code>pgbuf_remove_thrd_holder()</code>. Many threads fixing one BCB instead create a different hypothesis: contention on that BCB's shared atomic latch.</div>
+        <p class="source-note"><strong>Verified mechanism, inferred cost:</strong> find/decrement/remove are at <code>page_buffer.c:6090–6275</code>; normal fix calls find and takes the match-or-allocate branches at <code>6319,6494–6531</code>. The complexity follows from that singly linked control flow. This document has no Runtime observation proving it dominates a production workload.</p>
       </section>
 
       <section class="section" id="retrieval">

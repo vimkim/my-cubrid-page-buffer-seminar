@@ -90,9 +90,29 @@
 
       <section class="section" id="unfix-cost">
         <div class="eyebrow">06 · Unfix와 cost</div>
-        <h2>Release도 같은 entry를 linear scan으로 찾습니다</h2>
-        <p><code>pgbuf_unlatch_thrd_holder()</code>는 같은 lookup을 호출하고, matching entry를 감소시키며, 0이면 제거합니다. Head가 아닌 entry를 제거하려면 singly linked active list에서 predecessor를 찾아야 하므로 마지막 unfix는 list를 다시 순회할 수 있습니다.</p>
-        <div class="callout warn"><strong>Performance inference:</strong> 한 thread가 서로 다른 BCB를 많이 hold하면 linear lookup 비용이 들고, 불리한 제거 순서는 quadratic list work를 누적할 수 있습니다. 한 BCB를 반복 fix하면 entry 하나를 재사용하므로 list는 길어지지 않습니다. 여러 thread가 한 BCB를 fix하는 경우에는 그 BCB의 shared atomic latch contention이라는 다른 가설이 생깁니다. 어느 쪽이 bottleneck이라고 말하기 전에 둘을 분리해 측정해야 합니다.</div>
+        <h2>아주 느려질 수 있나요? 한 thread가 서로 다른 page를 많이 hold하면 그렇습니다</h2>
+        <p><code>H</code>를 이 thread가 현재 hold 중인 서로 다른 BCB 수라고 하겠습니다. Buffer-pool size, lifetime fix count, nested debt의 합이 아닙니다. Active list에는 BCB-to-holder index가 없으므로 entry position이 작업량을 결정합니다.</p>
+        <table>
+          <thead><tr><th>Operation</th><th>Holder-list cost</th><th>이유</th></tr></thead>
+          <tbody>
+            <tr><td>새로운 distinct BCB의 첫 fix</td><td>최대 <code>O(H)</code></td><td>기존 entry가 없음을 증명하려면 lookup이 <code>NULL</code>까지 가야 하며, 그다음 allocation이 새 entry를 prepend합니다.</td></tr>
+            <tr><td>이미 hold한 BCB의 반복 fix</td><td><code>O(1)</code>에서 <code>O(H)</code> 사이</td><td>Entry는 재사용하지만 먼저 찾아야 합니다. Head entry일 때만 즉시 저렴합니다.</td></tr>
+            <tr><td>Debt가 남는 unfix</td><td>최대 <code>O(H)</code></td><td>같은 linear lookup으로 entry를 찾은 뒤 count를 줄입니다.</td></tr>
+            <tr><td>Head가 아닌 entry의 마지막 unfix</td><td>최대 두 번의 scan</td><td>Lookup이 entry를 찾고, removal이 predecessor를 찾으려고 head부터 다시 시작할 수 있습니다.</td></tr>
+          </tbody>
+        </table>
+        <h3>Worst-case 누적 비용</h3>
+        <p>이전 page를 release하지 않은 채 서로 다른 page A, B, C, …, N을 fix하면 새 entry를 만들기 전에 0, 1, 2, …, N−1번의 failed comparison이 발생합니다. 합은 <code>N(N−1)/2</code>이므로 <code>O(N²)</code>입니다. 나중에 page를 유리한 LIFO 순서로 release하더라도 이 acquisition cost는 이미 발생했습니다.</p>
+        <p>각 새 entry를 prepend하므로 release 순서도 비용을 바꿉니다. LIFO release는 head를 반복 제거하므로 유리합니다. 오래된 entry부터 release하거나, newer entry가 앞에 많이 남은 동안 older entry를 반복 접근하면 매번 긴 list를 건너 또 다른 quadratic pattern을 만들 수 있습니다.</p>
+        <h3>그렇다고 자동으로 production bottleneck은 아닙니다</h3>
+        <ul>
+          <li>List는 thread-local이므로 traversal은 cross-thread list-lock contention이 아니라 CPU/cache work입니다.</li>
+          <li><code>H</code>가 작으면 linear scan도 짧습니다. Thread마다 reserved entry가 일곱 개라는 사실은 simultaneous distinct hold가 적은 common shape를 예상한 설계와 일치하지만, hard limit나 성능 증거는 아닙니다. Extension set이 더 많은 entry를 제공합니다.</li>
+          <li>Head에 있는 한 BCB의 nested fix는 list를 늘리지 않으며 <code>O(1)</code>입니다. 이후 더 새로운 distinct entry가 앞에 prepend된 경우에만 같은 BCB를 찾는 비용이 커질 수 있습니다.</li>
+          <li>I/O, BCB atomic-latch contention, BCB mutex wait, wakeup, LRU work, flush가 elapsed time을 지배할 수도 있습니다.</li>
+        </ul>
+        <div class="callout warn"><strong>Performance 판단:</strong> source로 확인되는 linear-search hot-path이며 구조적으로 타당한 scalability risk입니다. 하지만 실제 bottleneck이라고 하려면 profile에서 큰 per-thread <code>H</code>, 불리한 ordering, <code>pgbuf_find_thrd_holder()</code> 또는 <code>pgbuf_remove_thrd_holder()</code>의 상당한 sample이 함께 보여야 합니다. 여러 thread가 BCB 하나를 fix하는 경우에는 그 BCB의 shared atomic latch contention이라는 다른 가설이 생깁니다.</div>
+        <p class="source-note"><strong>Verified mechanism, inferred cost:</strong> find/decrement/remove는 <code>page_buffer.c:6090–6275</code>, normal fix의 find와 match-or-allocate branch는 <code>6319,6494–6531</code>에 있습니다. Complexity는 이 singly linked control flow에서 도출됩니다. Production workload에서 지배적인 비용임을 증명하는 Runtime observation은 이 문서에 없습니다.</p>
       </section>
 
       <section class="section" id="retrieval">
