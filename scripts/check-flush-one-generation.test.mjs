@@ -9,6 +9,8 @@ import test from "node:test";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const page = path.join(root, "learning/04-flush-one-generation.md");
 const visual = path.join(root, "assets/durability-chain.svg");
+const lsaVisual = path.join(root, "assets/two-lsa-timeline.svg");
+const hangulPattern = /[\u3131-\u318e\u3200-\u321e\u3260-\u327f\ua960-\ua97c\uac00-\ud7a3\ud7b0-\ud7fb]/u;
 
 test("the lesson separates four durability moments and the two LSAs", async () => {
   const markdown = await readFile(page, "utf8");
@@ -66,4 +68,38 @@ test("the visual and exercise teach the same generation model", async () => {
   assert.match(markdown, /## Understanding check: build the generation timeline/);
   assert.match(markdown, /### Model answer/);
   assert.match(markdown, /supported by source.*runtime evidence/is);
+});
+
+test("the two-LSA timeline extends the worked example into generation G+1", async () => {
+  const [markdown, svg] = await Promise.all([readFile(page, "utf8"), readFile(lsaVisual, "utf8")]);
+  const lsaAt = markdown.indexOf("## Two LSAs, two questions");
+  const visualAt = markdown.indexOf("](../assets/two-lsa-timeline.svg)");
+  const timelineAt = markdown.indexOf("## One flush-generation timeline");
+  assert.ok(lsaAt > 0, "two-LSA section");
+  assert.ok(visualAt > lsaAt, "visual follows the two-LSA heading");
+  assert.ok(timelineAt > visualAt, "visual sits inside the two-LSA section");
+  assert.match(
+    markdown,
+    /!\[Page LSA and oldest_unflush_lsa across two mutations, one flush, and a concurrent re-dirty\]\(\.\.\/assets\/two-lsa-timeline\.svg\)/,
+  );
+  assert.match(markdown, /new `oldest_unflush_lsa` of 170 for generation G\+1/);
+
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]+<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]+<\/desc>/);
+  assert.doesNotMatch(svg, hangulPattern);
+  for (const label of [
+    "page LSA",
+    "oldest_unflush_lsa",
+    "Flush G starts",
+    "140 copied",
+    "as the WAL target",
+    "100 copied",
+    "checkpoint",
+    "new bound for G+1",
+    "FLUSHING + DIRTY",
+    "Completing G clears only FLUSHING",
+  ]) {
+    assert.ok(svg.includes(label), label);
+  }
 });

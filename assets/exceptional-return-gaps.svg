@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">Both capstone packets share one shape: state changes first, a callee can fail, and the visible return skips the ordinary cleanup</title>
+  <desc id="desc">Two lanes. Packet A, routed as VS-11: the atomic latch tuple is updated first, then the per-thread holder is allocated by a callee that may return NULL; on success the holder is recorded and a page pointer is returned, while the visible failure path returns ER_FAILED after an assertion with no local rollback of the grant. Packet B, routed as VS-12: FLUSHING is set and DIRTY cleared first, then TDE encryption of the copy or DWB slot reservation may fail; on success the LSAs are copied, the BCB is released, WAL is forced, and the image is submitted, and a later I/O failure reaches the ordinary rollback that restores DIRTY and the lower bound; the visible early return leaves before that rollback block. A footer states that the source establishes control flow only, that reachability, surviving state, and impact need fault injection on the target revision, and that status lives only in the uncertainty registry.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .lane{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.changed{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.fallible{fill:#fff3df;stroke:#b86b22;stroke-width:2}.ok{fill:#fff;stroke:#16847d;stroke-width:2}.early{fill:#fbe9e7;stroke:#b3452f;stroke-width:2;stroke-dasharray:8 5}.rule{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Packets A and B share one shape: changed state, a fallible callee, an early return</text>
+
+  <rect x="20" y="70" width="1160" height="205" rx="18" class="lane"/>
+  <text x="40" y="98" class="band">PACKET A · VS-11 · per-thread holder allocated after the grant</text>
+  <rect x="40" y="115" width="250" height="110" rx="14" class="changed"/>
+  <text x="54" y="139" class="h">State changed first</text>
+  <text x="54" y="163" class="s">atomic latch tuple updated</text>
+  <text x="54" y="183" class="s">by compare-exchange:</text>
+  <text x="54" y="203" class="s">mode set, global fcnt +1</text>
+  <path d="M290 170 H318" class="line"/>
+  <rect x="320" y="115" width="250" height="110" rx="14" class="fallible"/>
+  <text x="334" y="139" class="h">Fallible callee</text>
+  <text x="334" y="163" class="s">pgbuf_allocate_thrd_holder_entry()</text>
+  <text x="334" y="183" class="s">runs after the BCB mutex is</text>
+  <text x="334" y="203" class="s">released; it may return NULL</text>
+  <path d="M570 150 H598" class="line"/>
+  <path d="M570 195 H598" class="line"/>
+  <rect x="600" y="115" width="560" height="50" rx="12" class="ok"/>
+  <text x="614" y="137" class="h">Success: holder recorded, PAGE_PTR returned</text>
+  <text x="614" y="156" class="s">fix_count = 1 for a new holder, or the nested count +1 for an existing one</text>
+  <rect x="600" y="175" width="560" height="50" rx="12" class="early"/>
+  <text x="614" y="197" class="h">Visible early return: ER_FAILED after assert(false)</text>
+  <text x="614" y="216" class="s">no local rollback of the atomic grant is visible in this snippet</text>
+  <text x="40" y="256" class="tiny">Sites: normal hit, awakened waiter, lock-free READ hit. Each has its own cleanup seam, so each must be injected separately.</text>
+
+  <rect x="20" y="295" width="1160" height="225" rx="18" class="lane"/>
+  <text x="40" y="323" class="band">PACKET B · VS-12 · flush setup before the ordinary rollback</text>
+  <rect x="40" y="340" width="250" height="110" rx="14" class="changed"/>
+  <text x="54" y="364" class="h">State changed first</text>
+  <text x="54" y="388" class="s">FLUSHING set, DIRTY cleared</text>
+  <text x="54" y="408" class="s">by pgbuf_bcb_mark_is_flushing();</text>
+  <text x="54" y="428" class="s">the BCB mutex is still held</text>
+  <path d="M290 395 H318" class="line"/>
+  <rect x="320" y="340" width="250" height="110" rx="14" class="fallible"/>
+  <text x="334" y="364" class="h">Fallible callees</text>
+  <text x="334" y="388" class="s">TDE encryption of the copy;</text>
+  <text x="334" y="408" class="s">DWB slot reservation</text>
+  <text x="334" y="428" class="s">(when DWB is configured)</text>
+  <path d="M570 372 H598" class="line"/>
+  <path d="M570 446 H598" class="line"/>
+  <rect x="600" y="340" width="560" height="64" rx="12" class="ok"/>
+  <text x="614" y="362" class="h">Success: copy LSAs, release the BCB, force WAL, submit</text>
+  <text x="614" y="381" class="s">a later I/O failure reaches the ordinary rollback, which restores</text>
+  <text x="614" y="397" class="s">DIRTY and the copied lower bound, then wakes flush waiters</text>
+  <rect x="600" y="414" width="560" height="64" rx="12" class="early"/>
+  <text x="614" y="436" class="h">Visible early return: the callee's error is returned</text>
+  <text x="614" y="455" class="s">before that rollback block; no restoration of DIRTY or</text>
+  <text x="614" y="471" class="s">oldest_unflush_lsa is visible on the local path</text>
+  <text x="40" y="503" class="tiny">A concurrent re-dirty during the window is a separate schedule to test; it is not covered by the single-thread injection.</text>
+
+  <rect x="40" y="540" width="1120" height="62" rx="14" class="rule"/>
+  <text x="56" y="564" class="h">What the source establishes, and what it does not</text>
+  <text x="56" y="586" class="s">Source shows the control flow. Reachability, surviving state, and impact need fault injection on the target revision. Status lives only in the uncertainty registry.</text>
+</svg>

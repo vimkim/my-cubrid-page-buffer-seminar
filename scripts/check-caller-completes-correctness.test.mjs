@@ -12,6 +12,9 @@ const pagePath = path.join(
   guideRoot,
   "learning/03-caller-completes-correctness.md",
 );
+const latchVersusLockPath = path.join(guideRoot, "assets/latch-versus-lock.svg");
+const mutationSpinePath = path.join(guideRoot, "assets/mutation-ownership-spine.svg");
+const hangulPattern = /[\u3131-\u318e\u3200-\u321e\u3260-\u327f\ua960-\ua97c\uac00-\ud7a3\ud7b0-\ud7fb]/u;
 
 test("the heap insert trace covers the entire caller-completed mutation", async () => {
   const markdown = await readFile(pagePath, "utf8");
@@ -102,5 +105,80 @@ test("the exercise audits every successful and failing ownership exit", async ()
     "../advanced/recovery-and-lifecycle.md",
   ]) {
     assert.ok(markdown.includes(`](${target})`), target);
+  }
+});
+
+test("the contract ledger shows the page latch and the transaction lock as different protections", async () => {
+  const [markdown, svg] = await Promise.all([
+    readFile(pagePath, "utf8"),
+    readFile(latchVersusLockPath, "utf8"),
+  ]);
+
+  const ledgerAt = markdown.indexOf("## Contract ledger: acquisition is necessary, not sufficient");
+  const visualAt = markdown.indexOf("](../assets/latch-versus-lock.svg)");
+  const traceAt = markdown.indexOf("## One complete caller trace");
+  assert.ok(ledgerAt > 0, "contract ledger");
+  assert.ok(visualAt > ledgerAt, "visual follows the ledger heading");
+  assert.ok(traceAt > visualAt, "visual sits inside the contract ledger");
+  assert.match(
+    markdown,
+    /!\[Page latch and transaction lock protect different objects for different lifetimes\]\(\.\.\/assets\/latch-versus-lock\.svg\)/,
+  );
+  assert.match(markdown, /neither column is a stronger form of the other/i);
+
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]+<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]+<\/desc>/);
+  assert.doesNotMatch(svg, hangulPattern);
+  for (const label of [
+    "PAGE LATCH",
+    "TRANSACTION LOCK",
+    "resident bytes",
+    "logical object",
+    "at the matching unfix",
+    "under the transaction protocol",
+    "heap_insert_logical() holds both",
+    "Holding either does not imply holding the other",
+  ]) {
+    assert.ok(svg.includes(label), label);
+  }
+});
+
+test("the caller trace opens with the ownership spine and its exit column", async () => {
+  const [markdown, svg] = await Promise.all([
+    readFile(pagePath, "utf8"),
+    readFile(mutationSpinePath, "utf8"),
+  ]);
+
+  const traceAt = markdown.indexOf("## One complete caller trace");
+  const visualAt = markdown.indexOf("](../assets/mutation-ownership-spine.svg)");
+  const stepOneAt = markdown.indexOf("### 1. Prepare and take the transaction lock");
+  assert.ok(traceAt > 0, "caller trace");
+  assert.ok(visualAt > traceAt, "visual follows the trace heading");
+  assert.ok(stepOneAt > visualAt, "step one follows the visual");
+  assert.match(
+    markdown,
+    /!\[Six heap insert steps, the layer that owns each correctness condition, and what each exit leaves\]\(\.\.\/assets\/mutation-ownership-spine\.svg\)/,
+  );
+  assert.match(markdown, /shape of the exit ledger/i);
+
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]+<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]+<\/desc>/);
+  assert.doesNotMatch(svg, hangulPattern);
+  for (const label of [
+    "SUCCESS SPINE",
+    "WHO OWNS THE CONDITION",
+    "WHAT AN EXIT HERE LEAVES",
+    "Class lock fails: direct return",
+    "helper cleanup",
+    "goto error",
+    "heap_unfix_watchers()",
+    "DONT_FREE",
+    "advancing the LSA does not itself set DIRTY",
+    "Success: debt transferred or consumed",
+    "not by the spelling of return or goto error",
+  ]) {
+    assert.ok(svg.includes(label), label);
   }
 });

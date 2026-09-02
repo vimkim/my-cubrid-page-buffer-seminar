@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="530" viewBox="0 0 1160 530" role="img" aria-labelledby="title desc">
+  <title id="title">Page latch and transaction lock protect different objects for different lifetimes</title>
+  <desc id="desc">Two side-by-side panels. The page latch, owned by the page buffer, protects the resident bytes of one BCB and frame, has READ and WRITE modes, is granted by pgbuf_fix or a watcher, ends at the matching unfix, and never gives row or class ownership or transaction isolation. The transaction lock, owned by the lock manager, protects a logical object such as a class or row OID, uses modes such as IX_LOCK, is acquired through lock_object, ends under the transaction protocol rather than at unfix, and never gives safe access to page bytes. A bottom box shows that heap insert holds both on different objects, and the footer states that holding either does not imply holding the other.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .latch{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.lock{fill:#fff3df;stroke:#b86b22;stroke-width:2;stroke-dasharray:8 5}.both{fill:#173f57;stroke:#173f57;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.k{font:700 14px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.w{fill:#fff}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="580" y="44" text-anchor="middle" class="t">Two protections, two objects, two lifetimes</text>
+  <text x="580" y="70" text-anchor="middle" class="s">One heap insert needs both. Solid border: page buffer. Dashed border: lock manager.</text>
+
+  <rect x="40" y="95" width="520" height="290" rx="16" class="latch"/>
+  <text x="60" y="125" class="band">PAGE LATCH · page buffer</text>
+  <text x="60" y="162" class="k">Protects</text><text x="200" y="162" class="s">the resident bytes of one BCB and its frame</text>
+  <text x="60" y="197" class="k">Modes</text><text x="200" y="197" class="s">READ shares with readers; WRITE excludes everyone</text>
+  <text x="60" y="232" class="k">Granted by</text><text x="200" y="232" class="s">pgbuf_fix(), or a PGBUF_WATCHER wrapped around it</text>
+  <text x="60" y="267" class="k">Ends</text><text x="200" y="267" class="s">at the matching unfix: one fix debt, page-scoped</text>
+  <text x="60" y="302" class="k">Never gives</text><text x="200" y="302" class="s">row or class ownership, or transaction isolation</text>
+  <text x="60" y="350" class="s">Question it answers: who may read or change these bytes right now?</text>
+
+  <rect x="600" y="95" width="520" height="290" rx="16" class="lock"/>
+  <text x="620" y="125" class="band">TRANSACTION LOCK · lock manager</text>
+  <text x="620" y="162" class="k">Protects</text><text x="760" y="162" class="s">a logical object: the class or the row OID</text>
+  <text x="620" y="197" class="k">Modes</text><text x="760" y="197" class="s">for example IX_LOCK on the class; the row-lock protocol</text>
+  <text x="620" y="232" class="k">Acquired by</text><text x="760" y="232" class="s">lock_object() and heap's own lock helpers</text>
+  <text x="620" y="267" class="k">Ends</text><text x="760" y="267" class="s">under the transaction protocol, not at unfix</text>
+  <text x="620" y="302" class="k">Never gives</text><text x="760" y="302" class="s">safe access to page bytes</text>
+  <text x="620" y="350" class="s">Question it answers: which transaction may own or see this object?</text>
+
+  <path d="M400 415 V387" class="line"/>
+  <path d="M760 415 V387" class="line"/>
+  <rect x="180" y="416" width="800" height="76" rx="14" class="both"/>
+  <text x="580" y="442" text-anchor="middle" class="h w">heap_insert_logical() holds both, on different objects</text>
+  <text x="580" y="464" text-anchor="middle" class="s w">class IX_LOCK and the row-lock protocol come from the lock manager;</text>
+  <text x="580" y="482" text-anchor="middle" class="s w">the WRITE latch and its fix debt come from the home-page watcher</text>
+
+  <text x="580" y="518" text-anchor="middle" class="h">Holding either does not imply holding the other.</text>
+</svg>

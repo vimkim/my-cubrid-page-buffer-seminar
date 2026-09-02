@@ -8,12 +8,17 @@
 export const canonicalVisualOwners = Object.freeze({
   "allocation-progress.svg": "advanced/replacement-progress.md",
   "durability-chain.svg": "learning/04-flush-one-generation.md",
+  "exceptional-return-gaps.svg": "learning/06-maintainer-capstone.md",
   "fix-contract.svg": "learning/02-fix-hold-release.md",
   "identity-check-timeline.svg": "learning/02-fix-hold-release.md",
+  "latch-versus-lock.svg": "learning/03-caller-completes-correctness.md",
   "latch-wait-queue.svg": "advanced/acquisition-concurrency.md",
+  "load-owner-waiter.svg": "learning/02-fix-hold-release.md",
+  "mutation-ownership-spine.svg": "learning/03-caller-completes-correctness.md",
   "object-ownership-map.svg": "learning/01-contract-and-objects.md",
   "ownership-ledgers.svg": "learning/02-fix-hold-release.md",
   "state-axes.svg": "learning/01-contract-and-objects.md",
+  "two-lsa-timeline.svg": "learning/04-flush-one-generation.md",
   "victim-eligibility.svg": "learning/05-replace-one-frame.md",
 });
 

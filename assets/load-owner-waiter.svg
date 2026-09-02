@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="730" viewBox="0 0 1320 730" role="img" aria-labelledby="title desc">
+  <title id="title">One cold miss, two threads: the VPID load owner and a load waiter</title>
+  <desc id="desc">Three swimlanes share one time axis. Thread A misses on a VPID, finds no lock record in the hash anchor's buffer-lock chain, registers its own record, and becomes the load owner. Thread B misses on the same VPID, finds A's record, links itself as a waiter, and sleeps without a timeout of its own. A takes a provisional BCB from the invalid list or a victim, assigns the VPID, and leaves it unpublished; reads the bytes from the DWB image or the data volume, or initializes a NEW_PAGE frame; passes identity recheck 2 and records its fix debt; then publishes the BCB into the hash chain, releases the load lock, and wakes every waiter. B wakes, re-runs the lookup, and takes a normal resident hit with its own grant and its own debt. The hash anchor lane shows the lock record present from t1 to t6 and the BCB absent from the resident chain until t6. Numbered markers name the moment that changes each chain.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .lane{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.owner{fill:#e8f5f3;stroke:#16847d;stroke-width:2}.waiter{fill:#fff3df;stroke:#b86b22;stroke-width:2}.prov{fill:#edf0ff;stroke:#5968bd;stroke-width:2;stroke-dasharray:8 5}.record{fill:#fff3df;stroke:#b86b22;stroke-width:2}.absent{fill:#f6f7f8;stroke:#6b7780;stroke-width:2;stroke-dasharray:8 5}.published{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.mark{fill:#173f57;stroke:#fff;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.num{font:700 12px Inter,Arial,sans-serif;fill:#fff}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}.sleep{fill:none;stroke:#b86b22;stroke-width:2;stroke-dasharray:6 6}.axis{fill:none;stroke:#48626f;stroke-width:3;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">One cold miss, two threads: load owner and load waiter</text>
+
+  <rect x="20" y="70" width="1280" height="190" rx="18" class="lane"/>
+  <text x="40" y="100" class="band">THREAD A</text>
+  <text x="40" y="122" class="h">load owner</text>
+  <text x="40" y="142" class="tiny">registered first</text>
+
+  <rect x="190" y="90" width="185" height="150" rx="14" class="owner"/>
+  <text x="202" y="114" class="h">t1 · Miss: no record</text>
+  <text x="202" y="138" class="s">lock the hash anchor;</text>
+  <text x="202" y="158" class="s">no BCB, no lock record;</text>
+  <text x="202" y="178" class="s">register own lock record</text>
+  <text x="202" y="198" class="s">and become load owner;</text>
+  <text x="202" y="218" class="s">unlock the anchor</text>
+
+  <rect x="385" y="90" width="185" height="150" rx="14" class="prov"/>
+  <text x="397" y="114" class="h">t3 · Provisional BCB</text>
+  <text x="397" y="138" class="s">from the invalid list,</text>
+  <text x="397" y="158" class="s">else a victim; assign the</text>
+  <text x="397" y="178" class="s">VPID; idle latch; not in</text>
+  <text x="397" y="198" class="s">any hash chain, so only</text>
+  <text x="397" y="218" class="s">A can reach it</text>
+
+  <rect x="580" y="90" width="185" height="150" rx="14" class="owner"/>
+  <text x="592" y="114" class="h">t4 · Read the bytes</text>
+  <text x="592" y="138" class="s">OLD_PAGE: DWB image,</text>
+  <text x="592" y="158" class="s">else the data volume;</text>
+  <text x="592" y="178" class="s">NEW_PAGE: initialize</text>
+  <text x="592" y="198" class="s">the frame instead;</text>
+  <text x="592" y="218" class="s">decrypt if TDE applies</text>
+
+  <rect x="775" y="90" width="185" height="150" rx="14" class="owner"/>
+  <text x="787" y="114" class="h">t5 · Confirm, grant</text>
+  <text x="787" y="138" class="s">identity recheck 2:</text>
+  <text x="787" y="158" class="s">BCB vpid = page header;</text>
+  <text x="787" y="178" class="s">latch granted; fix debt</text>
+  <text x="787" y="198" class="s">recorded in global fcnt</text>
+  <text x="787" y="218" class="s">and A's holder</text>
+
+  <rect x="970" y="90" width="185" height="150" rx="14" class="published"/>
+  <text x="982" y="114" class="h">t6 · Publish, wake</text>
+  <text x="982" y="138" class="s">insert the BCB into the</text>
+  <text x="982" y="158" class="s">hash chain; release the</text>
+  <text x="982" y="178" class="s">load lock, which wakes</text>
+  <text x="982" y="198" class="s">every waiter; return</text>
+  <text x="982" y="218" class="s">the borrowed PAGE_PTR</text>
+
+  <rect x="20" y="280" width="1280" height="180" rx="18" class="lane"/>
+  <text x="40" y="310" class="band">HASH ANCHOR</text>
+  <text x="40" y="332" class="h">for this VPID</text>
+  <text x="40" y="352" class="tiny">one mutex protects</text>
+  <text x="40" y="368" class="tiny">both chains</text>
+  <text x="40" y="404" class="tiny">numbered markers:</text>
+  <text x="40" y="420" class="tiny">the moment that</text>
+  <text x="40" y="436" class="tiny">changes a chain</text>
+
+  <rect x="190" y="300" width="850" height="50" rx="10" class="record"/>
+  <text x="205" y="321" class="h">Buffer-lock chain: A's lock record for this VPID</text>
+  <text x="205" y="341" class="s">present from t1 to t6; its waiter list gains B at t2; at t6 the record is removed and every waiter is woken</text>
+  <circle cx="282" cy="300" r="11" class="mark"/><text x="282" y="304" text-anchor="middle" class="num">t1</text>
+  <circle cx="382" cy="300" r="11" class="mark"/><text x="382" y="304" text-anchor="middle" class="num">t2</text>
+  <circle cx="1025" cy="300" r="11" class="mark"/><text x="1025" y="304" text-anchor="middle" class="num">t6</text>
+
+  <rect x="190" y="385" width="770" height="50" rx="10" class="absent"/>
+  <text x="205" y="406" class="h">Resident BCB chain: no BCB for this VPID yet</text>
+  <text x="205" y="426" class="s">a lookup by any thread misses here; the provisional BCB is unpublished and reachable only through A</text>
+  <rect x="970" y="385" width="210" height="50" rx="10" class="published"/>
+  <text x="985" y="406" class="h">BCB published</text>
+  <text x="985" y="426" class="s">later lookups hit it</text>
+  <circle cx="1062" cy="385" r="11" class="mark"/><text x="1062" y="389" text-anchor="middle" class="num">t6</text>
+
+  <rect x="20" y="480" width="1280" height="190" rx="18" class="lane"/>
+  <text x="40" y="510" class="band">THREAD B</text>
+  <text x="40" y="532" class="h">load waiter</text>
+  <text x="40" y="552" class="tiny">searched too, but</text>
+  <text x="40" y="568" class="tiny">registered second</text>
+
+  <rect x="290" y="500" width="185" height="150" rx="14" class="waiter"/>
+  <text x="302" y="524" class="h">t2 · Same VPID misses</text>
+  <text x="302" y="548" class="s">lock the hash anchor;</text>
+  <text x="302" y="568" class="s">find A's record; link</text>
+  <text x="302" y="588" class="s">self as a waiter; sleep</text>
+  <text x="302" y="608" class="s">with no timeout of its</text>
+  <text x="302" y="628" class="s">own; wakeup or interrupt</text>
+
+  <path d="M475 575 H1108" class="sleep"/>
+  <text x="790" y="565" text-anchor="middle" class="tiny">sleeping: the waiter never receives A's provisional BCB</text>
+
+  <path d="M1155 165 H1230 V498" class="line"/>
+  <text x="1242" y="380" class="tiny">wake</text>
+
+  <rect x="1110" y="500" width="185" height="150" rx="14" class="waiter"/>
+  <text x="1122" y="524" class="h">t7 · Wake and retry</text>
+  <text x="1122" y="548" class="s">re-run the lookup: now a</text>
+  <text x="1122" y="568" class="s">resident hit; identity</text>
+  <text x="1122" y="588" class="s">rechecks 1 and 2; own</text>
+  <text x="1122" y="608" class="s">latch grant; own fix</text>
+  <text x="1122" y="628" class="s">debt in B's holder</text>
+
+  <path d="M190 690 H1295" class="axis"/>
+  <text x="1205" y="682" class="tiny">time</text>
+  <text x="40" y="718" class="s">Ownership comes from registering the lock record first, not from having searched. The waiter finds the BCB only after publication, by looking it up again.</text>
+</svg>

@@ -44,9 +44,15 @@ Trace the selected packet's cited source ranges in the pinned revision. Mark the
 
 Defend which of the five proof levels the available source reaches: source-visible control flow, reachability, surviving state, production impact, and current-branch status. Then name the highest test seam that could close the next level. Compare your artifact with the packet-specific model answer immediately below it.
 
+## The shape both packets share
+
+![Shared shape of the two capstone packets: state changed, fallible callee, early return before ordinary cleanup](../assets/exceptional-return-gaps.svg)
+
+Each packet begins with state that has already changed, continues into a callee that can fail, and shows a return that leaves before the ordinary cleanup block. The visual marks what the source establishes and stops there: it is a map of where to look, not a defect claim. Reachability, surviving state, and impact are the proof obligations each packet asks you to name, and their current status lives only in the [uncertainty registry](../unresolved-or-version-sensitive-findings.md).
+
 ## Packet A: `VS-11` holder allocation after grant
 
-The [uncertainty registry](../unresolved-or-version-sensitive-findings.md) alone owns `VS-11` status. The source-visible concern is that several acquisition paths update the atomic latch/fix tuple, then allocate a per-thread holder. If holder-set allocation fails, the visible local path returns failure without an obvious rollback of the earlier grant.
+The [uncertainty registry](../unresolved-or-version-sensitive-findings.md) alone owns `VS-11` status. The source-visible concern is that several acquisition paths update the atomic latch/fix tuple, then allocate a per-thread holder. If holder-set allocation fails, the visible local path asserts in a debug build and returns failure without an obvious rollback of the earlier grant.
 
 **Available source evidence:** holder allocation can return `NULL` at `src/storage/page_buffer.c:6000-6055`. Normal atomic-latch paths allocate after a grant at `src/storage/page_buffer.c:6457-6522`; the awakened-waiter path does so at `src/storage/page_buffer.c:6595-6617`; the lock-free READ hit increments `fcnt` before allocation at `src/storage/page_buffer.c:7738-7773`.
 

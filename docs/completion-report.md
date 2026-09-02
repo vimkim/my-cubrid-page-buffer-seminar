@@ -74,3 +74,19 @@ Results after the second pass: `node --test scripts/*.test.mjs` 106/106; `node s
 - The browser live-DOM gate was not run at the original completion because Playwright is not installed in this repository; it was run once during the second reader pass with a temporary scratch install. Repeating it requires providing Playwright again.
 - The guide remains pinned to `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`. Applying implementation claims to another revision still requires the update procedure in the authoring notes.
 - Core source exercises are self-checkable, but an applied change-impact plan still requires a controlled caller regression or narrow runtime probe on the target revision and another maintainer's review.
+
+## Learning-path visual pass
+
+After the second reader pass, a pass over the six Core pages looked for relationships and state transitions that prose alone made hard to follow, and added five visuals. Each is owned by exactly one page, lives in the root asset seam, carries a `viewBox`, `role="img"`, a title, and a description, and states its meaning in text rather than color:
+
+- `load-owner-waiter.svg` on Core page 2, between the trace vocabulary and the six steps: the VPID load owner and a load waiter on one time axis, with the hash anchor's two chains showing when the lock record exists and when the BCB is published. Its `t1`–`t7` markers are labelled as ordering the visual only, so they do not collide with the page's six steps.
+- `latch-versus-lock.svg` on Core page 3, inside the contract ledger: the page latch and the transaction lock as protections over different objects with different lifetimes, both held by one heap insert.
+- `mutation-ownership-spine.svg` on Core page 3, opening the caller trace: the six steps of `heap_insert_logical()`, the layer that owns each condition, and what each exit leaves, as the shape of the exit ledger the Understanding check asks for.
+- `two-lsa-timeline.svg` on Core page 4, inside the two-LSA section: page LSA and `oldest_unflush_lsa` across two mutations, one flush, and a concurrent re-dirty, extending the worked example into generation G+1.
+- `exceptional-return-gaps.svg` on Core page 6, in a new "The shape both packets share" section before Packet A: the common shape of the `VS-11` and `VS-12` packets, labelled as a map of where to look and not a defect claim, with status routed to the uncertainty registry. Packet A's prose now notes that the visible failure path asserts in a debug build before returning.
+
+Every label was checked against the pinned source before drawing: `src/storage/page_buffer.c:2442-2546` (convergence, grant, publication, load-lock release), `7981-8178` (load owner and waiter), `4983-5055` (`oldest_unflush_lsa` initialization), `6440-6525` (grant before holder allocation), `10780-10930` (flush setup, early returns, rollback), and `src/storage/heap_file.c:23205-23324` (the insert spine and its exits). Each SVG was rasterized locally to confirm that no label overflows its box.
+
+Validation was extended rather than relaxed: the shared roster in `scripts/canonical-visuals.mjs` and the roster count moved from 9 to 14; page tests for Core pages 2, 3, 4, and 6 assert each visual's placement between its neighbouring headings, its alt text, and its key labels; the authoring notes' asset contract and migration audit record the new visual kinds and the count.
+
+Results after the pass: `node --test scripts/*.test.mjs` 111/111; `node scripts/check-maintainer-guide.mjs` PASS with 27 pages and 14 displayed SVGs, 0 orphaned; Copyparty HTTP PASS for 41 resources; Live DOM UNAVAILABLE because Playwright is not installed in this repository; `git diff --check` clean.

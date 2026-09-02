@@ -29,9 +29,17 @@ The practical review question is therefore not “did fix succeed?” but:
 
 **Implementation policy:** heap insert deliberately composes both mechanisms: class/row locking belongs to heap and lock management, while a page watcher carries the page-buffer latch and fix debt. Review them as two ledgers, not as interchangeable “locks.”
 
+![Page latch and transaction lock protect different objects for different lifetimes](../assets/latch-versus-lock.svg)
+
+The visual keeps the two protections side by side because the same heap insert needs both. The latch belongs to one resident frame and ends at unfix; the lock belongs to a class or row identity and follows the transaction protocol. Neither column is a stronger form of the other, so a review that finds one must still look for the other.
+
 ## One complete caller trace: `heap_insert_logical()`
 
 The representative path is `heap_insert_logical()` at `src/storage/heap_file.c:23120-23324`. It is large enough to expose the real ownership boundary but still has a recognizable success spine.
+
+![Six heap insert steps, the layer that owns each correctness condition, and what each exit leaves](../assets/mutation-ownership-spine.svg)
+
+Use the spine as the reading order for the six steps below, and the right-hand column as the shape of the exit ledger that the Understanding check asks for. Two exits deserve attention before the details: the class-lock failure returns before any home-page watcher exists but can follow overflow storage that was already created, and every later failure converges on the `error:` label.
 
 ### 1. Prepare and take the transaction lock
 

@@ -31,6 +31,10 @@ Suppose clean page P starts at page LSA 80. Mutation A appends log 100; P become
 
 A flush snapshots bytes containing A+B, copies page LSA 140 as its WAL target, and carries 100 as the dirty generation’s checkpoint lower bound. The values differ because “latest change in this image” and “oldest change not yet propagated” are different questions.
 
+![Page LSA and oldest_unflush_lsa across two mutations, one flush, and a concurrent re-dirty](../assets/two-lsa-timeline.svg)
+
+The timeline extends the worked example by one event: log 170 arrives while G is in flight. Because the flush cleared the resident lower-bound field, that mutation initializes a new `oldest_unflush_lsa` of 170 for generation G+1, and completing G clears only `FLUSHING`. The Understanding check below asks you to predict exactly these values before reading the source.
+
 Source: page-LSA/lower-bound coupling at `src/storage/page_buffer.c:4983-5055`; flush consumption at `src/storage/page_buffer.c:10723-10962`.
 
 ## One flush-generation timeline

@@ -5,6 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 const page = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../learning/06-maintainer-capstone.md");
+const visual = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/exceptional-return-gaps.svg");
+const hangulPattern = /[\u3131-\u318e\u3200-\u321e\u3260-\u327f\ua960-\ua97c\uac00-\ud7a3\ud7b0-\ud7fb]/u;
 
 test("the capstone supplies the complete change-impact template", async () => {
   const m = await readFile(page, "utf8");
@@ -33,4 +35,39 @@ test("completion, applied handoff, and peer review gates are explicit", async ()
   assert.match(m, /another maintainer.*review/is);
   assert.match(m, /### Model answer A/);
   assert.match(m, /### Model answer B/);
+});
+
+test("the shared packet shape is shown before the packets and stays a map, not a defect claim", async () => {
+  const [m, svg] = await Promise.all([readFile(page, "utf8"), readFile(visual, "utf8")]);
+  const shapeAt = m.indexOf("## The shape both packets share");
+  const visualAt = m.indexOf("](../assets/exceptional-return-gaps.svg)");
+  const packetAAt = m.indexOf("## Packet A: `VS-11`");
+  assert.ok(shapeAt > 0, "shared shape section");
+  assert.ok(visualAt > shapeAt, "visual follows the shape heading");
+  assert.ok(packetAAt > visualAt, "packet A follows the visual");
+  assert.match(
+    m,
+    /!\[Shared shape of the two capstone packets: state changed, fallible callee, early return before ordinary cleanup\]\(\.\.\/assets\/exceptional-return-gaps\.svg\)/,
+  );
+  assert.match(m, /not a defect claim/i);
+  assert.match(m, /asserts in a debug build/i);
+
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]+<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]+<\/desc>/);
+  assert.doesNotMatch(svg, hangulPattern);
+  assert.doesNotMatch(svg, /defect|Candidate/i);
+  for (const label of [
+    "PACKET A",
+    "VS-11",
+    "PACKET B",
+    "VS-12",
+    "State changed first",
+    "Fallible callee",
+    "Visible early return",
+    "fault injection",
+    "uncertainty registry",
+  ]) {
+    assert.ok(svg.includes(label), label);
+  }
 });

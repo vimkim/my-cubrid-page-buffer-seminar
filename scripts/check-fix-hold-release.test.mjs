@@ -12,6 +12,7 @@ const pagePath = path.join(guideRoot, "learning/02-fix-hold-release.md");
 const fixContractPath = path.join(guideRoot, "assets/fix-contract.svg");
 const ownershipLedgersPath = path.join(guideRoot, "assets/ownership-ledgers.svg");
 const identityTimelinePath = path.join(guideRoot, "assets/identity-check-timeline.svg");
+const loadOwnerWaiterPath = path.join(guideRoot, "assets/load-owner-waiter.svg");
 const hangulPattern = /[\u3131-\u318e\u3200-\u321e\u3260-\u327f\ua960-\ua97c\uac00-\ud7a3\ud7b0-\ud7fb]/u;
 
 test("the acquisition lesson separates fetch intent, latch mode, and wait condition", async () => {
@@ -300,5 +301,45 @@ test("the understanding check yields an annotated call path and balanced debt le
     "../advanced/acquisition-concurrency.md",
   ]) {
     assert.ok(markdown.includes(`](${target})`), target);
+  }
+});
+
+test("the lesson shows the load owner and load waiter on one time axis between the vocabulary and the six steps", async () => {
+  const [markdown, svg] = await Promise.all([
+    readFile(pagePath, "utf8"),
+    readFile(loadOwnerWaiterPath, "utf8"),
+  ]);
+
+  const vocabularyAt = markdown.indexOf("### Vocabulary the trace depends on");
+  const visualAt = markdown.indexOf("](../assets/load-owner-waiter.svg)");
+  const stepsAt = markdown.indexOf("### The six steps");
+  assert.ok(vocabularyAt > 0, "vocabulary section");
+  assert.ok(visualAt > vocabularyAt, "visual follows the vocabulary");
+  assert.ok(stepsAt > visualAt, "six steps follow the visual");
+  assert.match(
+    markdown,
+    /!\[VPID load owner and load waiter on one cold miss\]\(\.\.\/assets\/load-owner-waiter\.svg\)/,
+  );
+  assert.match(markdown, /registers the lock record first and becomes load owner/i);
+  assert.match(markdown, /re-runs the lookup as a normal resident hit/i);
+  assert.match(markdown, /not the six steps below/i);
+
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]+<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]+<\/desc>/);
+  assert.doesNotMatch(svg, hangulPattern);
+  assert.doesNotMatch(svg, /lock-free|commit debt/i);
+  for (const label of [
+    "load owner",
+    "load waiter",
+    "Provisional BCB",
+    "Buffer-lock chain",
+    "Resident BCB chain",
+    "BCB published",
+    "Publish, wake",
+    "Wake and retry",
+    "registering the lock record first",
+  ]) {
+    assert.ok(svg.includes(label), label);
   }
 });

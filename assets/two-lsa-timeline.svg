@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">Page LSA and oldest_unflush_lsa across two mutations, one flush, and a concurrent re-dirty</title>
+  <desc id="desc">Six events run left to right: a clean page at LSA 80, log record 100 from mutation A, log record 140 from mutation B, the start of flush G, log record 170 arriving while G is in flight, and the completion of G. Three tracks show the values at each event. The page LSA rises 80, 100, 140, is copied as 140 into the snapshot as the WAL target, then rises to 170. The oldest unflushed LSA is unset, becomes 100 when the first change is logged, stays 100 through the second change, is copied as 100 into the snapshot as the checkpoint lower bound while the resident field is cleared, and is initialized again to 170 for generation G plus one. The flags move from clean to DIRTY, to FLUSHING with DIRTY cleared, to FLUSHING plus DIRTY, and finally to DIRTY alone because completing G clears only FLUSHING.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .lane{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.event{fill:#fff;stroke:#7895a2;stroke-width:2}.flushcol{fill:#edf1fb;stroke:#536eaf;stroke-width:2;stroke-dasharray:8 5}.chip{fill:#fff;stroke:#718791;stroke-width:1.5}.chipdirty{fill:#fff0f0;stroke:#c54b4b;stroke-width:2}.chipflush{fill:#edf1fb;stroke:#536eaf;stroke-width:2}.chipclean{fill:#e6f5f1;stroke:#168d86;stroke-width:2}.rule{fill:#eef0ff;stroke:#5968bd;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.v{font:700 16px Inter,Arial,sans-serif;fill:#173443}.v2{font:700 14px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.axis{fill:none;stroke:#48626f;stroke-width:3;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Two LSAs, two questions</text>
+  <text x="40" y="70" class="s">page LSA: which logged change does this image include?   oldest_unflush_lsa: what is the oldest logged change not yet propagated?</text>
+
+  <rect x="690" y="86" width="160" height="404" rx="14" class="flushcol"/>
+
+  <rect x="215" y="95" width="150" height="56" rx="10" class="event"/><text x="290" y="118" text-anchor="middle" class="h">Clean page</text><text x="290" y="138" text-anchor="middle" class="s">starting point</text>
+  <rect x="375" y="95" width="150" height="56" rx="10" class="event"/><text x="450" y="118" text-anchor="middle" class="h">Log 100</text><text x="450" y="138" text-anchor="middle" class="s">mutation A</text>
+  <rect x="535" y="95" width="150" height="56" rx="10" class="event"/><text x="610" y="118" text-anchor="middle" class="h">Log 140</text><text x="610" y="138" text-anchor="middle" class="s">mutation B</text>
+  <rect x="695" y="95" width="150" height="56" rx="10" class="event"/><text x="770" y="118" text-anchor="middle" class="h">Flush G starts</text><text x="770" y="138" text-anchor="middle" class="s">snapshot of A+B</text>
+  <rect x="855" y="95" width="150" height="56" rx="10" class="event"/><text x="930" y="118" text-anchor="middle" class="h">Log 170</text><text x="930" y="138" text-anchor="middle" class="s">re-dirty: G+1</text>
+  <rect x="1015" y="95" width="150" height="56" rx="10" class="event"/><text x="1090" y="118" text-anchor="middle" class="h">G completes</text><text x="1090" y="138" text-anchor="middle" class="s">FLUSHING cleared</text>
+
+  <rect x="20" y="165" width="1160" height="90" rx="14" class="lane"/>
+  <text x="40" y="197" class="band">page LSA</text>
+  <text x="40" y="217" class="tiny">latest change included</text>
+  <text x="40" y="233" class="tiny">in this image</text>
+  <rect x="215" y="182" width="150" height="56" rx="10" class="chip"/><text x="290" y="216" text-anchor="middle" class="v">80</text>
+  <rect x="375" y="182" width="150" height="56" rx="10" class="chip"/><text x="450" y="216" text-anchor="middle" class="v">100</text>
+  <rect x="535" y="182" width="150" height="56" rx="10" class="chip"/><text x="610" y="216" text-anchor="middle" class="v">140</text>
+  <rect x="695" y="182" width="150" height="56" rx="10" class="chipflush"/><text x="770" y="205" text-anchor="middle" class="v">140 copied</text><text x="770" y="226" text-anchor="middle" class="s">as the WAL target</text>
+  <rect x="855" y="182" width="150" height="56" rx="10" class="chip"/><text x="930" y="216" text-anchor="middle" class="v">170</text>
+  <rect x="1015" y="182" width="150" height="56" rx="10" class="chip"/><text x="1090" y="216" text-anchor="middle" class="v">170</text>
+
+  <rect x="20" y="280" width="1160" height="90" rx="14" class="lane"/>
+  <text x="40" y="312" class="band">oldest_unflush_lsa</text>
+  <text x="40" y="332" class="tiny">oldest change not yet</text>
+  <text x="40" y="348" class="tiny">propagated</text>
+  <rect x="215" y="297" width="150" height="56" rx="10" class="chip"/><text x="290" y="331" text-anchor="middle" class="v">unset</text>
+  <rect x="375" y="297" width="150" height="56" rx="10" class="chip"/><text x="450" y="320" text-anchor="middle" class="v">100</text><text x="450" y="341" text-anchor="middle" class="s">initialized</text>
+  <rect x="535" y="297" width="150" height="56" rx="10" class="chip"/><text x="610" y="320" text-anchor="middle" class="v">100</text><text x="610" y="341" text-anchor="middle" class="s">unchanged</text>
+  <rect x="695" y="297" width="150" height="56" rx="10" class="chipflush"/><text x="770" y="318" text-anchor="middle" class="v">100 copied</text><text x="770" y="334" text-anchor="middle" class="tiny">as checkpoint bound;</text><text x="770" y="348" text-anchor="middle" class="tiny">resident field cleared</text>
+  <rect x="855" y="297" width="150" height="56" rx="10" class="chip"/><text x="930" y="320" text-anchor="middle" class="v">170</text><text x="930" y="341" text-anchor="middle" class="s">new bound for G+1</text>
+  <rect x="1015" y="297" width="150" height="56" rx="10" class="chip"/><text x="1090" y="320" text-anchor="middle" class="v">170</text><text x="1090" y="341" text-anchor="middle" class="s">G+1 still owes it</text>
+
+  <rect x="20" y="395" width="1160" height="90" rx="14" class="lane"/>
+  <text x="40" y="427" class="band">flags</text>
+  <text x="40" y="447" class="tiny">DIRTY and FLUSHING are</text>
+  <text x="40" y="463" class="tiny">separate bits</text>
+  <rect x="215" y="412" width="150" height="56" rx="10" class="chipclean"/><text x="290" y="446" text-anchor="middle" class="v">clean</text>
+  <rect x="375" y="412" width="150" height="56" rx="10" class="chipdirty"/><text x="450" y="446" text-anchor="middle" class="v">DIRTY</text>
+  <rect x="535" y="412" width="150" height="56" rx="10" class="chipdirty"/><text x="610" y="446" text-anchor="middle" class="v">DIRTY</text>
+  <rect x="695" y="412" width="150" height="56" rx="10" class="chipflush"/><text x="770" y="435" text-anchor="middle" class="v">FLUSHING</text><text x="770" y="456" text-anchor="middle" class="s">DIRTY cleared</text>
+  <rect x="855" y="412" width="150" height="56" rx="10" class="chipdirty"/><text x="930" y="435" text-anchor="middle" class="v2">FLUSHING + DIRTY</text><text x="930" y="456" text-anchor="middle" class="s">two generations</text>
+  <rect x="1015" y="412" width="150" height="56" rx="10" class="chipdirty"/><text x="1090" y="435" text-anchor="middle" class="v">DIRTY</text><text x="1090" y="456" text-anchor="middle" class="s">G+1 remains</text>
+
+  <path d="M215 500 H1175" class="axis"/>
+  <text x="1095" y="492" class="tiny">time</text>
+
+  <rect x="40" y="515" width="1120" height="88" rx="14" class="rule"/>
+  <text x="56" y="540" class="h">The snapshot of G carries page LSA 140 as its WAL target and 100 as its checkpoint lower bound: one image, two answers.</text>
+  <text x="56" y="562" class="s">Log 170 after the snapshot is generation G+1: it sets DIRTY again and initializes a new lower bound of 170, because flush cleared the resident field.</text>
+  <text x="56" y="582" class="s">Completing G clears only FLUSHING; G+1 stays DIRTY and still owes a later flush.</text>
+</svg>

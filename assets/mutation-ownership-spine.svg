@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="740" viewBox="0 0 1200 740" role="img" aria-labelledby="title desc">
+  <title id="title">Six steps of heap_insert_logical, the layer that owns each correctness condition, and what each exit leaves behind</title>
+  <desc id="desc">A vertical success spine lists the six steps of heap insert: take the class lock, acquire and validate the destination, mutate the page, append recovery logging and advance the page LSA, mark the generation dirty, and transfer or release every watcher. A middle column names the owner of each correctness condition: heap and the lock manager; heap deciding while a page-buffer watcher carries the latch and fix debt; heap and the slotted page; the caller choosing recovery meaning while the log manager advances the LSA; the page buffer publishing dirty state while the caller still owes release; and the heap watcher protocol. A right column records what an exit at each step leaves: the class-lock direct return has no home-page watcher but may follow overflow storage that transaction recovery owns; a location failure is cleaned up by the helper itself; later failures converge on the error label and heap_unfix_watchers; success transfers or consumes the watcher debt.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.heap{fill:#fff3df;stroke:#b86b22;stroke-width:2}.pgbuf{fill:#e8f5f3;stroke:#16847d;stroke-width:2}.log{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.exit{fill:#fbe9e7;stroke:#b3452f;stroke-width:2;stroke-dasharray:8 5}.ok{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.none{fill:#f6f7f8;stroke:#6b7780;stroke-width:2;stroke-dasharray:8 5}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Fix success is access evidence; every later condition has its own owner and its own exit</text>
+
+  <text x="40" y="82" class="band">SUCCESS SPINE: heap_insert_logical()</text>
+  <text x="400" y="82" class="band">WHO OWNS THE CONDITION</text>
+  <text x="760" y="82" class="band">WHAT AN EXIT HERE LEAVES</text>
+
+  <rect x="40" y="96" width="330" height="80" rx="12" class="heap"/>
+  <text x="54" y="120" class="h">1. Prepare; take the class lock</text>
+  <text x="54" y="142" class="s">lock_object(IX_LOCK); a large record first</text>
+  <text x="54" y="160" class="s">goes through heap_ovf_insert()</text>
+  <rect x="400" y="96" width="330" height="80" rx="12" class="heap"/>
+  <text x="414" y="120" class="h">Heap + lock manager</text>
+  <text x="414" y="142" class="s">logical concurrency policy;</text>
+  <text x="414" y="160" class="s">not a page-buffer service</text>
+  <rect x="760" y="96" width="400" height="80" rx="12" class="exit"/>
+  <text x="774" y="120" class="h">Class lock fails: direct return</text>
+  <text x="774" y="142" class="s">no home-page watcher yet, so no new fix debt;</text>
+  <text x="774" y="160" class="s">overflow storage may already exist: recovery owns it</text>
+  <path d="M205 176 V194" class="line"/>
+
+  <rect x="40" y="196" width="330" height="80" rx="12" class="heap"/>
+  <text x="54" y="220" class="h">2. Acquire, validate destination</text>
+  <text x="54" y="242" class="s">heap_get_insert_location_with_lock():</text>
+  <text x="54" y="260" class="s">PGBUF_WATCHER, space, slot, row lock</text>
+  <rect x="400" y="196" width="330" height="80" rx="12" class="pgbuf"/>
+  <text x="414" y="220" class="h">Heap decides; page buffer carries</text>
+  <text x="414" y="242" class="s">the watcher holds the page latch and</text>
+  <text x="414" y="260" class="s">the fix debt for heap's decision</text>
+  <rect x="760" y="196" width="400" height="80" rx="12" class="exit"/>
+  <text x="774" y="220" class="h">Location or lock failure: helper cleanup</text>
+  <text x="774" y="242" class="s">the helper clears the result OID and releases</text>
+  <text x="774" y="260" class="s">its own watcher before returning ER_FAILED</text>
+  <path d="M205 276 V294" class="line"/>
+
+  <rect x="40" y="296" width="330" height="80" rx="12" class="heap"/>
+  <text x="54" y="320" class="h">3. Mutate the page</text>
+  <text x="54" y="342" class="s">heap_insert_physical() → spage_insert_at()</text>
+  <text x="54" y="360" class="s">under the watcher's WRITE latch</text>
+  <rect x="400" y="296" width="330" height="80" rx="12" class="heap"/>
+  <text x="414" y="320" class="h">Heap + slotted page</text>
+  <text x="414" y="342" class="s">slot validity, record validity, page format;</text>
+  <text x="414" y="360" class="s">residency proves none of these</text>
+  <rect x="760" y="296" width="400" height="80" rx="12" class="exit"/>
+  <text x="774" y="320" class="h">Failure: goto error</text>
+  <text x="774" y="342" class="s">this and every later failure converge on the</text>
+  <text x="774" y="360" class="s">error label, which calls heap_unfix_watchers()</text>
+  <path d="M205 376 V394" class="line"/>
+
+  <rect x="40" y="396" width="330" height="80" rx="12" class="log"/>
+  <text x="54" y="420" class="h">4. Log; advance the page LSA</text>
+  <text x="54" y="442" class="s">heap_log_insert_physical() → log manager</text>
+  <text x="54" y="460" class="s">→ pgbuf_set_lsa() when the index needs it</text>
+  <rect x="400" y="396" width="330" height="80" rx="12" class="log"/>
+  <text x="414" y="420" class="h">Caller chooses recovery meaning</text>
+  <text x="414" y="442" class="s">the log manager advances the page LSA</text>
+  <text x="414" y="460" class="s">through the page-buffer interface</text>
+  <rect x="760" y="396" width="400" height="80" rx="12" class="none"/>
+  <text x="774" y="420" class="h">No local exit here</text>
+  <text x="774" y="442" class="s">logging is adjacent to dirtying, not the same:</text>
+  <text x="774" y="460" class="s">advancing the LSA does not itself set DIRTY</text>
+  <path d="M205 476 V494" class="line"/>
+
+  <rect x="40" y="496" width="330" height="80" rx="12" class="pgbuf"/>
+  <text x="54" y="520" class="h">5. Mark the generation dirty</text>
+  <text x="54" y="542" class="s">pgbuf_set_dirty(..., DONT_FREE)</text>
+  <text x="54" y="560" class="s">the page stays fixed for step 6</text>
+  <rect x="400" y="496" width="330" height="80" rx="12" class="pgbuf"/>
+  <text x="414" y="520" class="h">Page buffer publishes; caller owes</text>
+  <text x="414" y="542" class="s">DIRTY says the generation needs propagation;</text>
+  <text x="414" y="560" class="s">the release debt is untouched</text>
+  <rect x="760" y="496" width="400" height="80" rx="12" class="none"/>
+  <text x="774" y="520" class="h">No local exit; DONT_FREE keeps the debt</text>
+  <text x="774" y="542" class="s">the caller must still transfer or release</text>
+  <text x="774" y="560" class="s">the watcher it holds</text>
+  <path d="M205 576 V594" class="line"/>
+
+  <rect x="40" y="596" width="330" height="80" rx="12" class="heap"/>
+  <text x="54" y="620" class="h">6. Transfer or release watchers</text>
+  <text x="54" y="642" class="s">pgbuf_replace_watcher() into the scan cache</text>
+  <text x="54" y="660" class="s">or pgbuf_ordered_unfix(); heap_unfix_watchers()</text>
+  <rect x="400" y="596" width="330" height="80" rx="12" class="heap"/>
+  <text x="414" y="620" class="h">Heap watcher protocol</text>
+  <text x="414" y="642" class="s">success and the error label both end in</text>
+  <text x="414" y="660" class="s">heap_unfix_watchers()</text>
+  <rect x="760" y="596" width="400" height="80" rx="12" class="ok"/>
+  <text x="774" y="620" class="h">Success: debt transferred or consumed</text>
+  <text x="774" y="642" class="s">the scan cache now owns the home watcher, or</text>
+  <text x="774" y="660" class="s">ordered unfix consumed its debt; others unfixed</text>
+
+  <text x="40" y="715" class="s">Read each exit by the state accumulated at that point, not by the spelling of return or goto error. The exit ledger, not one common label, is the proof artifact.</text>
+</svg>

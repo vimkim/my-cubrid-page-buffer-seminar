@@ -44,6 +44,12 @@ The visual deliberately follows the normal mutex-protected path. It shows where 
 | **Fix debt** | The obligation, created by one successful fix, to call unfix exactly once. This guide does not say "commit debt": that wording suggests transaction commit, which the page buffer never performs. |
 | **Stale-observation boundary** | The point after which an observation about a hit candidate can be trusted: the protected identity recheck. Anything observed before it—`vpid`, flags, frame association—may describe a BCB that has since been rebound to another page. |
 
+The vocabulary above meets on a cold miss when two threads want the same absent page. Only one of them may load it, and the other must neither load a duplicate nor touch an unpublished BCB:
+
+![VPID load owner and load waiter on one cold miss](../assets/load-owner-waiter.svg)
+
+Read the three lanes against one time axis. Thread A registers the lock record first and becomes load owner; thread B finds that record, links itself as a waiter, and sleeps. The provisional BCB never appears in the hash anchor's resident chain until A publishes it at `t6`, so B cannot find it early; when A publishes the BCB and releases the load lock, B wakes and simply re-runs the lookup as a normal resident hit with its own grant and its own debt. The `t1`–`t7` markers order the visual only; they are not the six steps below.
+
 ### The six steps
 
 1. **Locate.** A resident hit finds a BCB whose current `vpid` initially matches the request. A cold miss enters the VPID-keyed buffer-lock protocol. One thread becomes the load owner; a waiter sleeps, wakes, and retries lookup instead of receiving the owner's provisional BCB. The searcher and the load owner are decided by different mechanisms: search is an unprotected chain walk, while load ownership is a lock record registered under the hash-anchor mutex.
