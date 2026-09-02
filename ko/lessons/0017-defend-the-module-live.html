@@ -12,7 +12,7 @@
 <main class="course-shell">
   <div class="topline"><span>CUBRID page buffer · 학습 0017</span><a href="../index.html">학습 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">Mission 역량 · team presentation</div>
+    <div class="eyebrow">Mission 역량 · technical defense</div>
     <h1>어려운 질문도 page journey로 되돌린다</h1>
     <p>이 학습을 마치면 Module을 일관된 흐름으로 설명하고, 현장에서 guide를 탐색하며, 근거 없는 확신을 만들지 않고 반론에 답할 수 있다.</p>
     <div class="pills"><span class="pill">하나의 spine</span><span class="pill">Owner와 guard</span><span class="pill">Counterexample</span><span class="pill">Evidence label</span><span class="pill">Live route</span></div>
@@ -21,7 +21,7 @@
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="job">
-        <div class="eyebrow">01 · Presenter의 역할</div>
+        <div class="eyebrow">01 · maintainer의 역할</div>
         <h2>Model을 가르치고 catalog는 길을 안내한다</h2>
         <p class="lede">팀에 필요한 것은 모든 function의 암기가 아니다. 동작을 예측하는 model, 강한 주장을 검증하는 source route, evidence가 끝나는 지점을 솔직하게 밝히는 태도다.</p>
         <p class="big-claim">하나의 page journey를 설명하고, document set으로 확장·진단·변경·검증하거나 주장 범위를 한정한다.</p>
@@ -32,7 +32,7 @@
         <div class="eyebrow">02 · 여섯 단계</div>
         <h2>언제나 같은 causal story로 설명한다</h2>
         <table>
-          <thead><tr><th>단계</th><th>전달할 핵심</th><th>답할 질문</th></tr></thead>
+          <thead><tr><th>단계</th><th>입증할 claim</th><th>답할 질문</th></tr></thead>
           <tbody>
             <tr><td>1 · Object와 boundary</td><td><code>VPID → BCB ↔ frame → PAGE_PTR</code>. Pointer는 잠시 빌린 view다.</td><td>“Fix가 정확히 무엇을 반환했나?”</td></tr>
             <tr><td>2 · Acquire와 release</td><td>Hit와 miss는 latch grant, global/per-thread fix debt로 합류하며 성공 한 번에는 release 한 번이 필요하다.</td><td>“Hit인데 왜 기다릴 수 있고 reuse는 무엇이 막나?”</td></tr>
@@ -42,11 +42,11 @@
             <tr><td>6 · Evidence에 근거한 변경</td><td>Owner, state, guard, invariant, negative path, caller impact, risk-matched proof level을 밝힌다.</td><td>“이 source 우려는 검증된 defect인가?”</td></tr>
           </tbody>
         </table>
-        <p><a href="../reference/presentation-spine.html">인쇄용 page-journey spine으로 연습하기 →</a></p>
+        <p><a href="../reference/presentation-spine.html">인쇄용 page-journey map으로 review 준비하기 →</a></p>
       </section>
 
       <section class="section" id="route">
-        <div class="eyebrow">03 · Live document 탐색</div>
+        <div class="eyebrow">03 · review 중 document 탐색</div>
         <h2>File 이름이 아니라 의도에 따라 안내한다</h2>
         <table>
           <thead><tr><th>팀의 의도</th><th>먼저 열 문서</th><th>그다음 확인할 evidence</th></tr></thead>
@@ -58,7 +58,7 @@
             <tr><td>Model 연습 또는 반박</td><td>Question-bank route selector</td><td>Retrieval 뒤에만 companion answer 확인</td></tr>
           </tbody>
         </table>
-        <div class="callout"><strong>Navigation 시연:</strong> page 이름만 말하지 마세요. 왜 그 page가 concept를 소유하는지, 변경 가능한 evidence status가 어디에 있는지 설명합니다.</div>
+        <div class="callout"><strong>Navigation 확인:</strong> page 이름만 말하지 마세요. 왜 그 page가 concept를 소유하는지, 변경 가능한 evidence status가 어디에 있는지 설명합니다.</div>
       </section>
 
       <section class="section" id="answer">
@@ -91,55 +91,55 @@
       </section>
 
       <section class="section" id="rehearsal">
-        <div class="eyebrow">06 · Rehearsal loop</div>
+        <div class="eyebrow">06 · review 준비 loop</div>
         <h2>설명, 탐색, 반론 대응 순으로 연습한다</h2>
         <ol>
-          <li>자료를 보지 않고 여섯 단계를 설명한다. 중간에 고치지 말고 녹음하거나 받아 적는다.</li>
+          <li>자료를 보지 않고 여섯 단계를 다시 구성한다. 중간에 고치지 말고 trace를 적는다.</li>
           <li>빠진 transition, 정의하지 않은 term, 근거 없는 claim, 끊긴 route를 모두 표시한다.</li>
           <li>Guide를 펼쳐 두고 다시 설명하며 claim 하나를 owner page와 pinned source까지 찾아간다.</li>
           <li>Core spine은 바꾸지 않은 채 섞인 counterexample 네 개에 답한다.</li>
-          <li>Storage, logging/recovery, access-method teammate 한 명과 연습하고 그 질문과 수정한 답을 기록한다.</li>
+          <li>Storage, logging/recovery, access-method teammate 한 명과 review하고 그 질문과 수정한 답을 기록한다.</li>
         </ol>
-        <p>실제 발표 시간과 audience 구성이 정해지면 각 단계 안의 detail을 줄이되 causal spine 순서는 바꾸지 않는다.</p>
+        <p>실제 review나 incident에서는 현재 질문에 맞춰 각 단계의 detail을 줄이되 causal spine 순서는 바꾸지 않는다.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Presentation gate</div>
-        <h2>Opening을 설명하고 반론 하나에 답한다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="Opening: page buffer는 logical VPID와 access intent를 page latch가 grant되고 fix debt가 기록된 잠시 빌린 resident byte로 바꾼다. Logical correctness는 여전히 caller가 소유한다 -> object: VPID는 current BCB identity 하나에 mapping되고 BCB가 frame을 소유하며 fix된 동안 PAGE_PTR을 제공한다 -> acquisition: hit와 miss는 같은 global fcnt 및 per-thread holder debt로 합류하고 unfix로 갚는다 -> caller: lock, validate, mutate, log, page LSA 전진, dirty, cleanup을 수행한다 -> flush: G를 copy하고 G+1을 보존하며 WAL을 force하고 DWB 또는 direct I/O로 propagate하며 failure를 retry 가능하게 둔다 -> replacement: protection 아래에서 identity와 hard eligibility를 검증한 뒤 policy와 순차 BCB reuse를 적용한다 -> evidence: claim에 label을 붙이고 Canonical page, source, registry, risk-matched test로 안내한다 -> 반론 답변: 직접적인 문장, owner/state/guard, invariant/consequence, evidence level, route." data-concepts='[{"label":"도입부의 Module boundary","terms":["vpid","borrow","latch","debt","caller"]},{"label":"object와 acquisition chain","terms":["bcb","frame","page_ptr","fcnt","holder"]},{"label":"caller가 correctness 완성","terms":["lock","validate","log","lsa","dirty"]},{"label":"G와 G+1 propagation","terms":["g+1","wal","dwb","retry"]},{"label":"순차 reuse 전 eligibility","terms":["eligible","identity","protect","reuse","policy"]},{"label":"evidence와 document route","terms":["evidence","canonical","source","registry","test"]},{"label":"다섯 단계 반론 답변","terms":["short answer","owner","guard","invariant","route"]}]'>
+        <div class="eyebrow">07 · Technical-defense gate</div>
+        <h2>반론 하나를 상대로 model을 방어한다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="Boundary: page buffer는 logical VPID와 access intent를 page latch가 grant되고 fix debt가 기록된 잠시 빌린 resident byte로 바꾼다. Logical correctness는 여전히 caller가 소유한다 -> object: VPID는 current BCB identity 하나에 mapping되고 BCB가 frame을 소유하며 fix된 동안 PAGE_PTR을 제공한다 -> acquisition: hit와 miss는 같은 global fcnt 및 per-thread holder debt로 합류하고 unfix로 갚는다 -> caller: lock, validate, mutate, log, page LSA 전진, dirty, cleanup을 수행한다 -> flush: G를 copy하고 G+1을 보존하며 WAL을 force하고 DWB 또는 direct I/O로 propagate하며 failure를 retry 가능하게 둔다 -> replacement: protection 아래에서 identity와 hard eligibility를 검증한 뒤 policy와 순차 BCB reuse를 적용한다 -> evidence: claim에 label을 붙이고 Canonical page, source, registry, risk-matched test로 안내한다 -> 반론 답변: 직접적인 문장, owner/state/guard, invariant/consequence, evidence level, route." data-concepts='[{"label":"Module boundary","terms":["vpid","borrow","latch","debt","caller"]},{"label":"object와 acquisition chain","terms":["bcb","frame","page_ptr","fcnt","holder"]},{"label":"caller가 correctness 완성","terms":["lock","validate","log","lsa","dirty"]},{"label":"G와 G+1 propagation","terms":["g+1","wal","dwb","retry"]},{"label":"순차 reuse 전 eligibility","terms":["eligible","identity","protect","reuse","policy"]},{"label":"evidence와 document route","terms":["evidence","canonical","source","registry","test"]},{"label":"다섯 단계 반론 답변","terms":["short answer","owner","guard","invariant","route"]}]'>
           <h3>문제</h3>
-          <p>자료를 보지 않고 opening부터 여섯 단계까지 설명하세요. 그런 다음 resident hit가 block됨, DIRTY와 FLUSHING 동시 설정, 나중에 달라진 BCB의 VPID, 0인 statistic, 사실처럼 보이는 <code>VS-*</code> row 중 하나의 반론에 답합니다.</p>
+          <p>guide 없이 여섯 단계를 모두 다시 구성하세요. 그런 다음 resident hit가 block됨, DIRTY와 FLUSHING 동시 설정, 나중에 달라진 BCB의 VPID, 0인 statistic, 사실처럼 보이는 <code>VS-*</code> row 중 하나의 반론에 답합니다.</p>
           <p><strong>할 일:</strong> 하나의 causal narrative를 유지하고 짧은 답 → owner/state/guard → invariant/consequence → evidence level → route 순서로 답하라.</p>
-          <textarea aria-label="Page-buffer presentation 연습 답안" placeholder="Opening 여섯 단계와 반론 하나에 대한 답, document/source route를 적으세요."></textarea>
-          <button type="button" data-check>Presentation 범위 확인</button>
+          <textarea aria-label="page-buffer technical defense 답안" placeholder="여섯 단계 설명과 반론 하나에 대한 답, document/source route를 적으세요."></textarea>
+          <button type="button" data-check>defense 범위 확인</button>
           <button type="button" class="secondary" data-reveal>Model spine 보기</button>
           <div class="feedback" aria-live="polite"></div>
         </div>
-        <p>Transcript를 chat에 붙여 넣으세요. 실제로 보여 준 설명만 평가하고 가장 좁은 gap을 보완하며, 가장 좋은 표현은 다음 rehearsal에 남기겠습니다.</p>
+        <p>답을 chat에 붙여 넣으세요. 실제로 보여 준 reasoning만 평가하고 가장 좁은 gap을 보완하며, 가장 정확한 표현은 다음 review에도 활용합니다.</p>
       </section>
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">필수 읽기</div>
-        <h2>Guide entry를 현장 routing surface로 사용한다</h2>
-        <p><a href="../reference/presentation-spine.html">page-journey presentation spine</a>으로 연습한 뒤, 검색에 기대지 않고 <a href="../../page-buffer-teaching-material.md">Maintainer Guide entry</a>에서 Canonical page 하나와 source range, evidence owner까지 찾아가세요.</p>
-        <p><a href="../reference/presentation-rehearsal-card.html">인쇄용 rehearsal scorecard 열기 →</a></p>
+        <h2>Guide entry를 routing surface로 사용한다</h2>
+        <p><a href="../reference/presentation-spine.html">page-journey map</a>으로 model을 review한 뒤, 검색에 기대지 않고 <a href="../../page-buffer-teaching-material.md">Maintainer Guide entry</a>에서 Canonical page 하나와 source range, evidence owner까지 찾아가세요.</p>
+        <p><a href="../reference/presentation-rehearsal-card.html">인쇄용 technical-defense scorecard 열기 →</a></p>
         <p><a href="0016-close-a-failure-proof.html">← 학습 0016으로 돌아가기</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="학습 목차">
       <strong>학습 지도</strong>
-      <a href="#job">1. Presenter 역할</a>
+      <a href="#job">1. Maintainer 역할</a>
       <a href="#spine">2. 여섯 단계</a>
       <a href="#route">3. Live navigation</a>
       <a href="#answer">4. 어려운 질문</a>
       <a href="#unknown">5. 솔직한 uncertainty</a>
-      <a href="#rehearsal">6. Rehearsal loop</a>
-      <a href="#retrieval">7. Presentation gate</a>
+      <a href="#rehearsal">6. Review 준비</a>
+      <a href="#retrieval">7. Defense gate</a>
       <a href="#primary-reading">필수 읽기</a>
       <hr>
-      <a href="../reference/presentation-spine.html">Presentation spine</a>
-      <a href="../reference/presentation-rehearsal-card.html">Rehearsal scorecard</a>
+      <a href="../reference/presentation-spine.html">Page-journey map</a>
+      <a href="../reference/presentation-rehearsal-card.html">Technical-defense scorecard</a>
       <a href="../../page-buffer-teaching-material.md">Maintainer Guide entry</a>
       <a href="../index.html">학습 홈</a>
     </nav>

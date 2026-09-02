@@ -13,14 +13,14 @@
   <header class="hero">
     <div class="eyebrow">Stateful learning path</div>
     <h1>dependency 순서로 배우고 retrieval로 진도를 판단하세요</h1>
-    <p>Core에서는 page journey와 change-review 역량을 만들고, Advanced에서는 module 전체의 mechanism을 완성합니다. rehearsal에서는 이해한 내용을 팀 앞에서 방어할 수 있는 presentation으로 바꿉니다.</p>
-    <div class="pills"><span class="pill">Orient</span><span class="pill">Core</span><span class="pill">Advanced</span><span class="pill">Rehearse</span><span class="pill">Present</span></div>
+    <p>Core에서는 page journey와 change-review 역량을 만들고, Advanced에서는 module 전체의 mechanism을 완성합니다. live defense 연습에서는 이해한 내용을 review에 바로 쓸 수 있는 maintainer reasoning으로 바꿉니다.</p>
+    <div class="pills"><span class="pill">Orient</span><span class="pill">Core</span><span class="pill">Advanced</span><span class="pill">Practice</span><span class="pill">Defend</span></div>
   </header>
 
   <section class="section">
     <div class="eyebrow">지금 할 일</div>
     <h2>Lesson 10을 읽기 전에 Lessons 1–9를 하나로 종합하세요</h2>
-    <p>Lessons 1–9를 읽었다면 페이지를 다시 열지 말고 통합된 Core teach-back을 chat에서 진행하세요. 실제로 설명해 낸 concept만 기록하고, 부족한 부분만 좁게 보완한 뒤 Lesson 10으로 안내합니다.</p>
+    <p>Lessons 1–9를 읽었다면 페이지를 다시 열지 말고 통합된 Core teach-back을 chat에 제출하세요. 실제로 설명해 낸 concept만 기록하고, 부족한 부분만 좁게 보완한 뒤 Lesson 10으로 안내합니다.</p>
     <p><strong>필수 spine:</strong> Module boundary와 six-move journey → object/state axis와 fix debt → caller mutation → DIRTY/FLUSHING이 있는 G/G+1 → victim eligibility와 재사용 가능한 BCB identity → evidence-bounded VS candidate → queued latch ownership과 granted latch ownership.</p>
     <p><a href="core-synthesis-studio.html">closed-book Core synthesis 실습실 열기 →</a></p>
   </section>
@@ -29,7 +29,7 @@
     <div class="eyebrow">필수 Core route</div>
     <h2>safe change review로 이어지는 하나의 dependency chain</h2>
     <div class="course-list">
-      <article class="course-item"><span class="step">1</span><div><h3>Page journey 발표하기</h3><p>Module boundary, six-move narrative, document route, evidence grammar.</p></div><a href="../lessons/0001-present-the-page-journey.html">열기 →</a></article>
+      <article class="course-item"><span class="step">1</span><div><h3>Page journey 설명하기</h3><p>Module boundary, six-move narrative, document route, evidence grammar.</p></div><a href="../lessons/0001-present-the-page-journey.html">열기 →</a></article>
       <article class="course-item"><span class="step">2</span><div><h3>Object와 state 분리하기</h3><p>VPID, BCB, frame, PAGE_PTR, holder/watcher, lifetime, 네 가지 state axis.</p></div><a href="../lessons/0002-separate-objects-from-state.html">열기 →</a></article>
       <article class="course-item"><span class="step">3</span><div><h3>Fix convergence 추적하기</h3><p>hit, cold miss, load ownership, waiter retry, 공통 success postcondition.</p></div><a href="../lessons/0003-trace-fix-convergence.html">열기 →</a></article>
       <article class="course-item"><span class="step">4</span><div><h3>Fix debt 갚기</h3><p>global <code>fcnt</code>, per-thread holder, nested ownership, 짝이 맞는 release.</p></div><a href="../lessons/0004-repay-fix-debt.html">열기 →</a></article>
@@ -81,17 +81,17 @@
   </section>
 
   <section class="section">
-    <div class="eyebrow">Presentation gate</div>
-    <h2>이해는 필요조건이고, rehearsal은 전달 능력을 증명합니다</h2>
+    <div class="eyebrow">Maintainer readiness gate</div>
+    <h2>이해는 필요조건이고, live defense는 review readiness를 증명합니다</h2>
     <ol>
-      <li>note 없이 six-move page journey를 발표합니다.</li>
+      <li>guide를 다시 열지 않고 six-move page journey를 재구성합니다.</li>
       <li>claim에서 canonical page와 pinned source range까지 바로 찾아갑니다.</li>
       <li>identity, ownership, dirty generation, replacement axis를 넘나드는 counterexample에 답합니다.</li>
       <li>contract, verified mechanism, policy, inference, runtime observation, historical evidence를 구분합니다.</li>
-      <li>날카로운 질문을 받으며 change-impact case 하나를 방어하고 teammate feedback을 기록합니다.</li>
+      <li>counterexample에 맞서 change-impact case 하나를 방어하고 maintainer feedback을 기록합니다.</li>
     </ol>
-    <p><a href="../lessons/0017-defend-the-module-live.html">Lesson 17: presentation rehearsal 열기 →</a></p>
-    <p><a href="presentation-spine.html">presentation spine 열기 →</a> · <a href="presentation-rehearsal-card.html">rehearsal scorecard 열기 →</a></p>
+    <p><a href="../lessons/0017-defend-the-module-live.html">Lesson 17: live module defense 열기 →</a></p>
+    <p><a href="presentation-spine.html">explanation spine 열기 →</a> · <a href="presentation-rehearsal-card.html">readiness scorecard 열기 →</a></p>
   </section>
 
   <footer class="footer">페이지가 익숙하다는 이유로 진도를 나가지 마세요. 보지 않고 owner, transition, invariant, consequence, evidence boundary를 재구성할 수 있을 때 다음으로 넘어갑니다.</footer>

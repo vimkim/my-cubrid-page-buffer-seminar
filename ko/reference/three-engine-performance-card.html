@@ -56,7 +56,7 @@
   </section>
 
   <section class="section">
-    <h2>30초 답변</h2>
+    <h2>Maintainer용 요약</h2>
     <p>CUBRID의 두드러진 seam은 normal fix가 residency protection, per-thread holder, 요청한 page latch를 하나로 결합한다는 점입니다. PostgreSQL은 pin과 content lock을 독립적으로 다루며, 첫 shared contribution 이후 반복되는 pin은 backend local에 유지합니다. InnoDB는 fix count와 latch state를 분리하되 그 lifetime은 MTR memo에 기록합니다. CUBRID에서 가장 먼저 검증할 performance 가설은 held-set depth가 늘어날 때 linear holder lookup 비용이 어떻게 증가하는지입니다. Shared atomic traffic이 지배적인 비용으로 확인된 뒤에만 nested-fix aggregation을 고려해야 합니다.</p>
     <p><a href="../lessons/0018-compare-three-buffer-pools.html">Lesson 18로 돌아가기 →</a></p>
   </section>

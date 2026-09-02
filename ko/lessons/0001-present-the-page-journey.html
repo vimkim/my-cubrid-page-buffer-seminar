@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0001 — page의 여정을 설명하기</title>
+  <title>Lesson 0001 — page 여정 설명하기</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <script defer src="../../assets/teach-retrieval.js"></script>
 </head>
@@ -12,9 +12,9 @@
 <main class="course-shell">
   <div class="topline"><span>CUBRID page buffer · lesson 0001</span><a href="../index.html">강의 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">첫 발표에서 바로 써먹기</div>
+    <div class="eyebrow">maintainer의 첫 전체 지도</div>
     <h1>Module 전체를 하나의 page 여정으로 설명하기</h1>
-    <p>이 lesson을 마치면 팀 발표의 첫 90초를 일관된 지도로 구성하고, 더 깊은 설명이 어느 canonical page에 있는지도 정확히 안내할 수 있습니다.</p>
+    <p>이 lesson을 마치면 Module 전체를 일관된 지도로 설명하고, 더 깊은 설명을 담당하는 canonical page도 정확히 찾을 수 있습니다.</p>
     <div class="pills"><span class="pill">Boundary</span><span class="pill">Ownership</span><span class="pill">Caller</span><span class="pill">Durability</span><span class="pill">Replacement</span><span class="pill">Evidence</span></div>
   </header>
 
@@ -25,7 +25,7 @@
         <h2>Module이 caller에게 무엇을 제공하는지 먼저 말합니다</h2>
         <p class="lede">page-buffer Module은 logical page identity와 access intent를 받아 resident bytes에 대한 임시 latched access를 제공합니다. 강력한 contract이지만, 이것만으로 caller의 logical operation이 끝나는 것은 아닙니다.</p>
         <p class="big-claim">정상 fix가 성공하면 <code>VPID</code>가 resident BCB/frame에 연결되고, 요청한 page latch가 grant되며, ownership debt 하나가 기록됩니다. 그리고 matching unfix 전까지 <code>PAGE_PTR</code>를 빌려줍니다.</p>
-        <div class="callout warn"><strong>발표할 때 주의할 표현:</strong> “memory에서 page를 가져온다”라고만 말하지 마세요. 그렇게 줄이면 identity validation, miss materialization, latch grant, fix accounting, pointer lifetime, 그리고 caller가 여전히 책임져야 할 작업이 모두 가려집니다.</div>
+        <div class="callout warn"><strong>reasoning guardrail:</strong> contract를 “memory에서 page를 가져온다”라고만 줄이지 마세요. 그렇게 말하면 identity validation, miss materialization, latch grant, fix accounting, pointer lifetime, 그리고 caller가 여전히 책임져야 할 작업이 모두 가려집니다.</div>
         <p class="source-note">Canonical 설명: <a href="../../learning/01-contract-and-objects.md">Contract and Objects</a>. Pinned source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2260-L2685"><code>page_buffer.c:2260–2685</code></a>, <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>6277–6634</code></a>, <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3062-L3201"><code>3062–3201</code></a>.</p>
       </section>
 
@@ -52,10 +52,10 @@
       </section>
 
       <section class="section" id="documents">
-        <div class="eyebrow">04 · 문서 세트를 안내하기</div>
-        <h2>세부 사항을 쏟아내지 말고 독자가 갈 길을 연결합니다</h2>
+        <div class="eyebrow">04 · 문서 세트에서 길 찾기</div>
+        <h2>세부 설명을 중복하지 말고 maintainer가 갈 문서를 연결합니다</h2>
         <table>
-          <thead><tr><th>청중의 질문</th><th>찾아갈 문서</th><th>이어 말할 문장</th></tr></thead>
+          <thead><tr><th>maintainer의 질문</th><th>찾아갈 문서</th><th>이 경로를 택하는 이유</th></tr></thead>
           <tbody>
             <tr><td>“Module은 어떻게 동작하나요?”</td><td>순서가 정해진 <a href="../../page-buffer-teaching-material.md">Guide entry</a>와 Core path</td><td>“page 하나가 contract와 invariant를 거치는 과정을 따라가 보겠습니다.”</td></tr>
             <tr><td>“어떻게 변경하거나 debug하나요?”</td><td><a href="../../playbooks/change-safely.md">Change</a>, <a href="../../playbooks/debug-by-symptom.md">diagnosis</a>, <a href="../../playbooks/verify-a-change.md">verification</a> playbook</td><td>“task에서 출발한 뒤 canonical 설명으로 되돌아가겠습니다.”</td></tr>
@@ -76,14 +76,14 @@
 
       <section class="section" id="retrieval">
         <div class="eyebrow">06 · Retrieval practice</div>
-        <h2>90초 오프닝을 기억만으로 말해 봅니다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-concepts='[{"label":"Module boundary와 successful-fix contract","terms":["boundary","contract","vpid","temporary"]},{"label":"여섯 객체와 독립적인 state axis","terms":["bcb","frame","page_ptr","fcnt","holder","axis"]},{"label":"fix debt와 matching release","terms":["fix","unfix","release","debt"]},{"label":"caller가 완성하는 correctness","terms":["caller","lock","log","lsa","dirty"]},{"label":"flush generation과 replacement eligibility","terms":["generation","wal","flush","eligibility","victim"]},{"label":"evidence를 구분하는 문서 경로","terms":["evidence","verified","policy","playbook","advanced","question"]}]'>
+        <h2>page 여정을 기억만으로 다시 구성합니다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-concepts='[{"label":"Module boundary와 successful-fix contract","terms":["boundary","contract","vpid","temporary"]},{"label":"여섯 객체와 독립적인 state axis","terms":["bcb","frame","page_ptr","fcnt","holder","axis"]},{"label":"fix debt와 matching release","terms":["fix","unfix","release","debt"]},{"label":"caller가 완성하는 correctness","terms":["caller","lock","log","lsa","dirty"]},{"label":"flush generation과 replacement eligibility","terms":["generation","wal","flush","eligibility","victim"]},{"label":"evidence를 구분하는 문서 경로","terms":["evidence","verified","policy","playbook","advanced","question"]}]'>
           <h3>문제</h3>
-          <p>“CUBRID의 page-buffer Module은 무엇을 하며, 이 발표에서는 어떤 여정을 따라가고, 발표 후 팀은 이 문서들을 어떻게 활용해야 하나요?”</p>
+          <p>“CUBRID의 page-buffer Module은 무엇을 하며, maintainer는 어떤 여정을 따라가고, 이후 실제 작업에서 팀은 이 문서들을 어떻게 활용해야 하나요?”</p>
           <p><strong>권장 답변 구조:</strong> boundary → 객체와 독립적인 axis → fix/release ownership → caller가 correctness 완성 → flush generation → policy보다 먼저 replacement eligibility → task와 evidence 경로.</p>
           <p><strong>할 일:</strong> 위 model을 그대로 베끼지 마세요. 두 axis를 혼동했을 때 생기는 결과 하나를 설명하고, claim 하나 이상에 evidence level을 붙이세요.</p>
-          <textarea aria-label="90초 발표 오프닝 답안" placeholder="guide를 닫고 기억만으로 오프닝을 작성하세요."></textarea>
-          <button type="button" data-check>발표 내용 확인</button>
+          <textarea aria-label="page-buffer 여정 설명 답안" placeholder="guide를 닫고 기억만으로 여정을 다시 구성하세요."></textarea>
+          <button type="button" data-check>concept 포함 여부 확인</button>
           <button type="button" class="secondary" data-reveal>model spine 보기</button>
           <div class="feedback" aria-live="polite"></div>
         </div>
@@ -94,7 +94,7 @@
         <div class="eyebrow">필수 읽기</div>
         <h2>route selector를 읽고 Core page 1까지만 봅니다</h2>
         <p>먼저 문서 구조를 파악하려고 <a href="../../page-buffer-teaching-material.md">Guide entry</a>를 한 번 읽은 뒤 <a href="../../learning/01-contract-and-objects.md">Contract and Objects</a>를 학습하세요. 오늘 primary source에서는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a>의 public choice만 확인합니다. 세부 latch CAS와 miss cleanup은 이번 lesson의 working-memory 범위를 벗어납니다.</p>
-        <p><a href="../reference/presentation-spine.html">인쇄용 presentation-spine card 열기 →</a></p>
+        <p><a href="../reference/presentation-spine.html">인쇄용 page-journey map 열기 →</a></p>
         <p><a href="0002-separate-objects-from-state.html">teach-back 후 Lesson 0002로 계속 →</a></p>
       </section>
     </article>
@@ -109,7 +109,7 @@
       <a href="#retrieval">6. teach-back</a>
       <a href="#primary-reading">필수 읽기</a>
       <hr>
-      <a href="../reference/presentation-spine.html">Presentation-spine 카드</a>
+      <a href="../reference/presentation-spine.html">Page-journey map</a>
       <a href="0002-separate-objects-from-state.html">다음 lesson</a>
       <a href="../../questions/README.md">문제 모음</a>
       <a href="../index.html">강의 홈</a>

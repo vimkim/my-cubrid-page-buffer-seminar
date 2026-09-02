@@ -260,7 +260,7 @@ function normalizedText (value)
   return value.replace (/\s+/g, " ").trim ();
 }
 
-function startTags (html)
+function startTagMatches (html)
 {
   const tags = [];
   for (let start = 0; start < html.length; start++)
@@ -286,13 +286,18 @@ function startTags (html)
             }
           else if (character === ">")
             {
-              tags.push (html.slice (start, end + 1));
+              tags.push ({ value: html.slice (start, end + 1), start, end: end + 1 });
               start = end;
               break;
             }
         }
     }
   return tags;
+}
+
+function startTags (html)
+{
+  return startTagMatches (html).map ((match) => match.value);
 }
 
 function elementContents (html, names)
@@ -550,9 +555,16 @@ function normalizeTagForReview (tag)
 
 function reviewFingerprint (html)
 {
-  const projection = html
-    .replace (/<!--[\s\S]*?-->/g, "")
-    .replace (/<[^>]+>/g, normalizeTagForReview)
+  const withoutComments = html.replace (/<!--[\s\S]*?-->/g, "");
+  const pieces = [];
+  let cursor = 0;
+  for (const match of startTagMatches (withoutComments))
+    {
+      pieces.push (withoutComments.slice (cursor, match.start), normalizeTagForReview (match.value));
+      cursor = match.end;
+    }
+  pieces.push (withoutComments.slice (cursor));
+  const projection = pieces.join ("")
     .replace (/\s+/g, " ")
     .replace (/\s*(<[^>]+>)\s*/g, "$1")
     .trim ();
@@ -614,6 +626,186 @@ function elementsWithMarker (html, marker)
   return result;
 }
 
+function datasetFromTag (tag)
+{
+  const dataset = {};
+  for (const match of tag.matchAll (/\bdata-([a-z0-9_-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi))
+    {
+      const name = match[1].toLowerCase ().replace (/-([a-z0-9])/g, (_whole, character) => character.toUpperCase ());
+      dataset[name] = match[2] ?? match[3] ?? match[4];
+    }
+  return dataset;
+}
+
+class HarnessElement
+{
+  constructor (dataset = {})
+  {
+    this.dataset = dataset;
+    this.value = "";
+    this.innerHTML = "";
+    this.textContent = "";
+    this.children = [];
+    this.listeners = new Map ();
+    this.single = new Map ();
+    this.many = new Map ();
+  }
+
+  addEventListener (type, callback)
+  {
+    const listeners = this.listeners.get (type) ?? [];
+    listeners.push (callback);
+    this.listeners.set (type, listeners);
+  }
+
+  querySelector (selector)
+  {
+    return this.single.get (selector) ?? null;
+  }
+
+  querySelectorAll (selector)
+  {
+    return this.many.get (selector) ?? [];
+  }
+
+  appendChild (child)
+  {
+    this.children.push (child);
+    return child;
+  }
+
+  click ()
+  {
+    const listeners = this.listeners.get ("click") ?? [];
+    if (listeners.length === 0)
+      {
+        throw new Error ("interactive control has no click handler");
+      }
+    for (const listener of listeners)
+      {
+        listener ({ currentTarget: this, target: this });
+      }
+  }
+}
+
+function buildInteractionHarness (html)
+{
+  const retrievals = elementsWithMarker (html, "data-retrieval").map ((opening) =>
+  {
+    const root = new HarnessElement (datasetFromTag (opening));
+    root.single.set ("textarea", new HarnessElement ());
+    root.single.set (".feedback", new HarnessElement ());
+    root.single.set ("[data-check]", new HarnessElement ());
+    root.single.set ("[data-reveal]", new HarnessElement ());
+    return root;
+  });
+  const ledgers = elementsWithMarker (html, "data-ledger").map ((opening) =>
+  {
+    const root = new HarnessElement (datasetFromTag (opening));
+    for (const selector of ["[data-global]", "[data-holder-a]", "[data-holder-b]", "[data-ledger-feedback]", "[data-ledger-log]"])
+      {
+        root.single.set (selector, new HarnessElement ());
+      }
+    const buttons = ["a-fix", "b-fix", "a-unfix", "b-unfix", "reset"]
+      .map ((action) => new HarnessElement ({ ledgerAction: action }));
+    root.many.set ("[data-ledger-action]", buttons);
+    return root;
+  });
+  const readyCallbacks = [];
+  return {
+    retrievals,
+    ledgers,
+    document: {
+      addEventListener (type, callback)
+      {
+        if (type === "DOMContentLoaded")
+          {
+            readyCallbacks.push (callback);
+          }
+      },
+      querySelectorAll (selector)
+      {
+        if (selector === "[data-retrieval]") return retrievals;
+        if (selector === "[data-ledger]") return ledgers;
+        return [];
+      },
+      createElement ()
+      {
+        return new HarnessElement ();
+      }
+    },
+    readyCallbacks
+  };
+}
+
+function exerciseInteractions (harness)
+{
+  for (const retrieval of harness.retrievals)
+    {
+      const concepts = JSON.parse (retrieval.dataset.concepts);
+      const answer = retrieval.querySelector ("textarea");
+      const feedback = retrieval.querySelector (".feedback");
+      answer.value = concepts.map ((concept) => concept.terms[0]).join (" ");
+      retrieval.querySelector ("[data-check]").click ();
+      const coverage = retrieval.dataset.coverageTemplate
+        .replace ("{found}", String (concepts.length)).replace ("{total}", String (concepts.length));
+      if (!feedback.innerHTML.includes (coverage) || !feedback.innerHTML.includes (retrieval.dataset.completeMessage))
+        {
+          throw new Error ("retrieval check did not render its localized complete output");
+        }
+      retrieval.querySelector ("[data-reveal]").click ();
+      if (!feedback.innerHTML.includes (retrieval.dataset.modelLabel))
+        {
+          throw new Error ("retrieval reveal did not render its localized model label");
+        }
+    }
+
+  for (const ledger of harness.ledgers)
+    {
+      const buttons = new Map (ledger.querySelectorAll ("[data-ledger-action]")
+        .map ((button) => [button.dataset.ledgerAction, button]));
+      for (const action of ["a-fix", "b-fix", "a-unfix", "b-unfix"])
+        {
+          buttons.get (action).click ();
+          if (ledger.querySelector ("[data-ledger-feedback]").textContent !== ledger.dataset.invariantMessage)
+            {
+              throw new Error (`ledger ${action} did not render its localized invariant output`);
+            }
+        }
+      buttons.get ("a-unfix").click ();
+      if (ledger.querySelector ("[data-ledger-feedback]").textContent !== ledger.dataset.rejectedMessage)
+        {
+          throw new Error ("ledger rejection did not render its localized output");
+        }
+      buttons.get ("reset").click ();
+      if (ledger.querySelector ("[data-ledger-feedback]").textContent !== ledger.dataset.resetMessage)
+        {
+          throw new Error ("ledger reset did not render its localized output");
+        }
+    }
+}
+
+async function executePageScripts (root, pagePath, html)
+{
+  const harness = buildInteractionHarness (html);
+  const context = { document: harness.document };
+  context.window = context;
+  context.globalThis = context;
+
+  for (const match of html.matchAll (/<script\b([^>]*)>([\s\S]*?)<\/script>/gi))
+    {
+      const source = htmlAttribute (match[1], "src");
+      const scriptPath = source ? path.resolve (root, path.posix.dirname (pagePath), source) : `${pagePath}:inline`;
+      const code = source ? await readFile (scriptPath, "utf8") : match[2];
+      new Script (code, { filename: String (scriptPath) }).runInNewContext (context, { timeout: 1000 });
+    }
+  for (const callback of harness.readyCallbacks)
+    {
+      callback ();
+    }
+  exerciseInteractions (harness);
+}
+
 async function validateStaticBehavior (root)
 {
   const failures = [];
@@ -626,7 +818,6 @@ async function validateStaticBehavior (root)
     {
       return { count: 0, failures: [`teaching-pages.json: ${error.message}`] };
     }
-  const checkedScripts = new Set ();
   const retrievalMessages = ["data-coverage-template", "data-complete-message", "data-revisit-label", "data-model-label"];
   const ledgerMessages = [
     "data-removed-label", "data-reset-message", "data-a-fix-label", "data-b-fix-label",
@@ -680,24 +871,13 @@ async function validateStaticBehavior (root)
                 }
             }
 
-          for (const match of html.matchAll (/<script\b([^>]*)>([\s\S]*?)<\/script>/gi))
+          try
             {
-              const source = htmlAttribute (match[1], "src");
-              const scriptPath = source ? path.resolve (root, path.posix.dirname (pagePath), source) : `${pagePath}:inline`;
-              if (checkedScripts.has (scriptPath))
-                {
-                  continue;
-                }
-              checkedScripts.add (scriptPath);
-              try
-                {
-                  const code = source ? await readFile (scriptPath, "utf8") : match[2];
-                  new Script (code, { filename: String (scriptPath) });
-                }
-              catch (error)
-                {
-                  failures.push (`${pagePath}: script does not parse: ${error.message}`);
-                }
+              await executePageScripts (root, pagePath, html);
+            }
+          catch (error)
+            {
+              failures.push (`${pagePath}: script execution failed: ${error.message}`);
             }
         }
     }
@@ -758,6 +938,112 @@ async function validateServedHttp (root, baseUrl)
         }
     }
   return { status: "PASS", count: paths.size, failures };
+}
+
+async function validateLiveDom (root, baseUrl)
+{
+  if (!baseUrl)
+    {
+      return { status: "UNAVAILABLE", reason: "provide --copyparty-url", count: 0, failures: [] };
+    }
+
+  let playwright;
+  try
+    {
+      playwright = await import ("playwright");
+    }
+  catch (error)
+    {
+      if (error.code === "ERR_MODULE_NOT_FOUND")
+        {
+          return { status: "UNAVAILABLE", reason: "Playwright is not installed", count: 0, failures: [] };
+        }
+      throw error;
+    }
+
+  let browser;
+  try
+    {
+      browser = await playwright.chromium.launch ({ headless: true });
+    }
+  catch (error)
+    {
+      return { status: "UNAVAILABLE", reason: `Playwright browser is unavailable: ${error.message}`, count: 0, failures: [] };
+    }
+
+  const failures = [];
+  const manifest = await readManifest (root);
+  const pagePaths = ["index.html", ...(manifest.pages ?? []).flatMap ((page) => [page.en, page.ko])];
+  const base = new URL (baseUrl.endsWith ("/") ? baseUrl : `${baseUrl}/`);
+  try
+    {
+      for (const pagePath of pagePaths)
+        {
+          const page = await browser.newPage ();
+          const runtimeErrors = [];
+          page.on ("pageerror", (error) => runtimeErrors.push (error.message));
+          page.on ("console", (message) =>
+          {
+            if (message.type () === "error") runtimeErrors.push (message.text ());
+          });
+          try
+            {
+              const response = await page.goto (new URL (pagePath.split ("/").map (encodeURIComponent).join ("/"), base).href,
+                { waitUntil: "domcontentloaded" });
+              if (!response?.ok ())
+                {
+                  failures.push (`${pagePath}: live navigation returned HTTP ${response?.status () ?? "unknown"}`);
+                  continue;
+                }
+              const smoke = await page.evaluate (() =>
+              {
+                const errors = [];
+                for (const image of document.images)
+                  {
+                    if (!image.complete || image.naturalWidth === 0 || image.naturalHeight === 0)
+                      errors.push (`image did not render: ${image.getAttribute ("src")}`);
+                  }
+                for (const quiz of document.querySelectorAll ("[data-retrieval]"))
+                  {
+                    const concepts = JSON.parse (quiz.dataset.concepts);
+                    const answer = quiz.querySelector ("textarea");
+                    answer.value = concepts.map ((concept) => concept.terms[0]).join (" ");
+                    quiz.querySelector ("[data-check]").click ();
+                    if (!quiz.querySelector (".feedback").textContent.trim ())
+                      errors.push ("retrieval check produced no feedback");
+                    quiz.querySelector ("[data-reveal]").click ();
+                    if (!quiz.querySelector (".feedback").textContent.trim ())
+                      errors.push ("retrieval reveal produced no feedback");
+                  }
+                for (const ledger of document.querySelectorAll ("[data-ledger]"))
+                  {
+                    for (const action of ["a-fix", "a-unfix", "reset"])
+                      ledger.querySelector (`[data-ledger-action="${action}"]`).click ();
+                    if (!ledger.querySelector ("[data-ledger-feedback]").textContent.trim ())
+                      errors.push ("ledger controls produced no feedback");
+                  }
+                return errors;
+              });
+              for (const error of [...runtimeErrors, ...smoke])
+                {
+                  failures.push (`${pagePath}: ${error}`);
+                }
+            }
+          catch (error)
+            {
+              failures.push (`${pagePath}: live DOM check failed: ${error.message}`);
+            }
+          finally
+            {
+              await page.close ();
+            }
+        }
+    }
+  finally
+    {
+      await browser.close ();
+    }
+  return { status: "PASS", count: pagePaths.length, failures };
 }
 
 function hasCurrentLanguage (html, language)
@@ -845,9 +1131,9 @@ function manifestPaths (manifest, failures)
     {
       failures.push ("teaching-pages.json: version must be 1");
     }
-  if (!Number.isInteger (manifest.expectedPageCount) || manifest.expectedPageCount < 1)
+  if (manifest.expectedPageCount !== 41)
     {
-      failures.push ("teaching-pages.json: expectedPageCount must be a positive integer");
+      failures.push ("teaching-pages.json: expectedPageCount must be exactly 41");
     }
   if (!Array.isArray (manifest.pages))
     {
@@ -978,12 +1264,7 @@ async function main ()
   if (options.gate === "all" || options.gate === "served")
     {
       results.push (["Served HTTP behavior", await validateServedHttp (root, options.copypartyUrl)]);
-      results.push (["Live DOM behavior", {
-        status: "UNAVAILABLE",
-        reason: "browser automation is not configured",
-        count: 0,
-        failures: []
-      }]);
+      results.push (["Live DOM behavior", await validateLiveDom (root, options.copypartyUrl)]);
     }
   const failures = results.flatMap (([, result]) => result.failures);
   if (failures.length > 0)
