@@ -116,3 +116,35 @@ test("Advanced retrieval has twenty-five paired questions in mechanism order", a
     assert.ok(prompts.includes(`../advanced/${page}`), page);
   }
 });
+
+test("Maintenance scenarios pair fifteen task packets with status-safe answers", async () => {
+  const [prompts, answers] = await Promise.all([
+    readFile(path.join(root, "questions/maintenance-scenarios.md"), "utf8"),
+    readFile(
+      path.join(root, "questions/maintenance-scenarios-answers.md"),
+      "utf8",
+    ),
+  ]);
+  const expected = Array.from(
+    { length: 15 },
+    (_, index) => `PGBUF-QB-${String(index + 56).padStart(3, "0")}`,
+  );
+
+  assert.deepEqual(ids(prompts), expected);
+  assert.deepEqual(ids(answers), expected);
+  for (const heading of [
+    "Change safely",
+    "Diagnose by symptom",
+    "Verify at the risk boundary",
+  ]) {
+    assert.match(prompts, new RegExp(`^## ${heading}$`, "m"), heading);
+    assert.match(answers, new RegExp(`^## ${heading}$`, "m"), heading);
+  }
+  for (let number = 10; number <= 16; number += 1) {
+    assert.match(prompts, new RegExp(`VS-${number}`), `VS-${number}`);
+  }
+  assert.match(
+    answers,
+    /The registry owns current status|status remains in the registry/,
+  );
+});

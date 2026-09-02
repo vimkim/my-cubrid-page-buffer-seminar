@@ -159,6 +159,18 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `HIST` | `HIST-22` | Deallocation without immediate invalidation | Rewritten | PGBUF-QB-047 | Current cross-module source anchors replace the historical claim. |
 | `HIST` | `HIST-23` | AOUT behavior | Rewritten | PGBUF-QB-043 | Explicitly distinguishes compiled support from default policy. |
 | `HIST` | `HIST-24` | Historical defect candidates | Rewritten | PGBUF-QB-055 | Preserved only as Historical evidence requiring current-source and runtime promotion. |
+| `GRILL` | `GRILL-01` | Successful fix guarantees and limits | Merged | PGBUF-QB-005, PGBUF-QB-020 | Split module postcondition from caller-owned correctness. |
+| `GRILL` | `GRILL-02` | Same-VPID cold-miss coordination | Merged | PGBUF-QB-008, PGBUF-QB-032 | Core owns serialization; Advanced owns publication timing. |
+| `GRILL` | `GRILL-03` | Zero-fcnt non-victim counterexamples | Merged | PGBUF-QB-029, PGBUF-QB-068 | Eligibility recall becomes a pressure diagnosis artifact. |
+| `GRILL` | `GRILL-04` | Hit-ratio semantic loss | Rewritten | PGBUF-QB-064, PGBUF-QB-065 | Split observation limits from increment-site definition. |
+| `GRILL` | `GRILL-05` | Dirty BCB with clean holder | Merged | PGBUF-QB-018, PGBUF-QB-028 | Covered by release debt and independent dirty generations. |
+| `GRILL` | `GRILL-06` | Page latch versus transaction lock failure | Merged | PGBUF-QB-013, PGBUF-QB-062 | The concept feeds the wait-owner diagnostic. |
+| `GRILL` | `GRILL-07` | Conditional child retry revalidation | Rewritten | PGBUF-QB-034, PGBUF-QB-069 | Split promotion/restart from stale-observation audit. |
+| `GRILL` | `GRILL-08` | Zero WAL-force count | Merged | PGBUF-QB-027 | Core explains when no additional force is required. |
+| `GRILL` | `GRILL-09` | Iowrite multiplicity under DWB | Rewritten | PGBUF-QB-065 | Increment-site card owns multiplicity limits. |
+| `GRILL` | `GRILL-10` | Successful copy with dirty resident | Merged | PGBUF-QB-028, PGBUF-QB-041 | G/G+1 reasoning owns the interleaving and victim consequence. |
+| `GRILL` | `GRILL-11` | Covered/non-covered plan drift | Rewritten | PGBUF-QB-070 | Becomes an evidence-validity and representative-caller decision. |
+| `GRILL` | `GRILL-12` | Safe replacement observation | Rewritten | PGBUF-QB-068, PGBUF-QB-070 | Split pressure diagnosis from risk-matched verification. |
 
 ## Authoring navigation
 
