@@ -81,6 +81,18 @@ button.secondary { border: 1px solid rgba(255, 255, 255, 0.42); color: white; ba
 .reference-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
 .reference-card { padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: white; }
 .reference-card.full { grid-column: 1 / -1; }
+.question-stack { display: grid; gap: 16px; }
+.question-card { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: white; }
+.question-card:target { border-color: var(--teal); box-shadow: 0 0 0 4px var(--teal-soft); }
+.question-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.question-meta span { padding: 3px 9px; border-radius: 999px; color: var(--navy); background: var(--teal-soft); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.question-card details { margin-top: 16px; border-top: 1px solid var(--line); }
+.question-card summary { padding: 15px 0 5px; color: var(--teal); font-weight: 800; cursor: pointer; }
+.question-card summary:hover { color: var(--navy); }
+.model-answer { margin-top: 12px; padding: 18px; border-left: 4px solid var(--teal); border-radius: 12px; background: var(--teal-soft); }
+.model-answer p:first-child { margin-top: 0; }
+.model-answer p:last-child { margin-bottom: 0; }
+.answer-route { color: var(--muted); font-size: 0.86rem; }
 .status { display: inline-block; margin-bottom: 10px; padding: 4px 10px; border-radius: 999px; color: var(--navy); background: var(--teal-soft); font-size: 0.76rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
 .status.waiting { color: #74400f; background: var(--amber-soft); }
 .status.planned { color: var(--muted); background: var(--code); }
