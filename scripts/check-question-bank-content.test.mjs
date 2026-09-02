@@ -148,3 +148,33 @@ test("Maintenance scenarios pair fifteen task packets with status-safe answers",
     /The registry owns current status|status remains in the registry/,
   );
 });
+
+test("Applied route pairs four cards with exact retained evidence artifacts", async () => {
+  const [prompts, answers] = await Promise.all([
+    readFile(path.join(root, "questions/applied-exercises.md"), "utf8"),
+    readFile(
+      path.join(root, "questions/applied-exercises-answers.md"),
+      "utf8",
+    ),
+  ]);
+  const expected = [
+    "PGBUF-QB-071",
+    "PGBUF-QB-072",
+    "PGBUF-QB-073",
+    "PGBUF-QB-074",
+  ];
+
+  assert.deepEqual(ids(prompts), expected);
+  assert.deepEqual(ids(answers), expected);
+  for (let number = 1; number <= 4; number += 1) {
+    const rootPath = `f799e05_codex/quiz/quiz-${number}/`;
+    for (const artifact of ["quiz.md", "answer.md", "quiz.sql", "quiz.json"]) {
+      assert.ok(answers.includes(`${rootPath}${artifact}`), `${number}/${artifact}`);
+    }
+    assert.ok(
+      answers.includes(`evidence/runs/rebind-quiz${number}/meta.json`),
+      `rebind-quiz${number}`,
+    );
+  }
+  assert.doesNotMatch(`${prompts}\n${answers}`, /run-one\.sh|\/home\//);
+});

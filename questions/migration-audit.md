@@ -171,6 +171,50 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `GRILL` | `GRILL-10` | Successful copy with dirty resident | Merged | PGBUF-QB-028, PGBUF-QB-041 | G/G+1 reasoning owns the interleaving and victim consequence. |
 | `GRILL` | `GRILL-11` | Covered/non-covered plan drift | Rewritten | PGBUF-QB-070 | Becomes an evidence-validity and representative-caller decision. |
 | `GRILL` | `GRILL-12` | Safe replacement observation | Rewritten | PGBUF-QB-068, PGBUF-QB-070 | Split pressure diagnosis from risk-matched verification. |
+| `PLAN` | `PLAN-01` | Predict cold/warm counters and checksum | Superseded | PGBUF-QB-071 | Executed Quiz 1 is the stronger descendant. |
+| `PLAN` | `PLAN-02` | Interpret miss hit and successful-fix counters | Superseded | PGBUF-QB-071 | Recast as a bounded evidence card over executed artifacts. |
+| `PLAN` | `PLAN-03` | Explain page versus row read counts | Superseded | PGBUF-QB-071 | Preserved in the cold/warm evidence limits. |
+| `PLAN` | `PLAN-04` | Distinguish DWB and volume reads | Superseded | PGBUF-QB-071 | The executed observation explicitly leaves this source open. |
+| `PLAN` | `PLAN-05` | Design same-VPID miss protocol | Merged | PGBUF-QB-008, PGBUF-QB-032, PGBUF-QB-071 | Mechanism is Canonical; the exercise labels it unexecuted. |
+| `PLAN` | `PLAN-06` | OS cache versus page-buffer miss | Superseded | PGBUF-QB-071 | Preserved as an unsupported physical-device conclusion. |
+| `PLAN` | `PLAN-07` | Predict read and insert unfix tuples | Superseded | PGBUF-QB-072 | Executed Quiz 2 is the stronger descendant. |
+| `PLAN` | `PLAN-08` | Promotion counts versus contention | Superseded | PGBUF-QB-072 | Preserved as a histogram limitation. |
+| `PLAN` | `PLAN-09` | Nested holder/global unfix calculation | Superseded | PGBUF-QB-016, PGBUF-QB-072 | Core owns the invariant; Applied uses the executed family. |
+| `PLAN` | `PLAN-10` | Conditional failure cleanup | Merged | PGBUF-QB-014, PGBUF-QB-072 | No-debt failure remains source-derived. |
+| `PLAN` | `PLAN-11` | Competing promotion risk | Merged | PGBUF-QB-034 | Advanced promotion/restart owns the scenario. |
+| `PLAN` | `PLAN-12` | Transaction lock versus latch | Merged | PGBUF-QB-013, PGBUF-QB-072 | Concept and executed-family limits stay distinct. |
+| `PLAN` | `PLAN-13` | Covered versus non-covered prediction | Superseded | PGBUF-QB-073 | Executed Quiz 3 is the stronger descendant. |
+| `PLAN` | `PLAN-14` | Caller-chain trace from plan and counters | Superseded | PGBUF-QB-073 | Reframed to forbid runtime-only call-stack claims. |
+| `PLAN` | `PLAN-15` | Update all-exit cleanup table | Superseded | PGBUF-QB-073 | Retained as the exercise’s source-tracing artifact. |
+| `PLAN` | `PLAN-16` | Parent-child conditional retry | Merged | PGBUF-QB-034, PGBUF-QB-069 | Promotion and stale-observation routes own the risk. |
+| `PLAN` | `PLAN-17` | Watcher ordering state | Merged | PGBUF-QB-022, PGBUF-QB-073 | Core owns the watcher model; exercise applies it. |
+| `PLAN` | `PLAN-18` | Redesign raw page handles | Excluded | — | Interface redesign speculation is outside the evidence-bound migration. |
+| `PLAN` | `PLAN-19` | Counter cannot prove exact call stack | Superseded | PGBUF-QB-073 | Preserved as an explicit receipt boundary. |
+| `PLAN` | `PLAN-20` | Predict dirty log and write counters | Superseded | PGBUF-QB-074 | Executed Quiz 4 is the stronger descendant. |
+| `PLAN` | `PLAN-21` | Iowrites with zero flushed counter | Superseded | PGBUF-QB-065, PGBUF-QB-074 | Counter semantics and exercise limits share ownership. |
+| `PLAN` | `PLAN-22` | Complete dirty-to-write ordering | Superseded | PGBUF-QB-074 | Preserved as a source-derived chain. |
+| `PLAN` | `PLAN-23` | Concurrent re-dirty interleaving | Superseded | PGBUF-QB-028, PGBUF-QB-074 | Core owns G/G+1; exercise applies it. |
+| `PLAN` | `PLAN-24` | Victim restrictions diagram | Superseded | PGBUF-QB-029, PGBUF-QB-074 | Eligibility remains source-derived and unexecuted. |
+| `PLAN` | `PLAN-25` | Flush-failure dirty restoration | Merged | PGBUF-QB-055, PGBUF-QB-067 | Candidate status belongs to the registry and scenario route. |
+| `PLAN` | `PLAN-26` | Cross-database durability comparison | Excluded | — | Cross-database Canonical questions are outside the confirmed scope. |
+| `PLAN` | `PLAN-27` | Clean restart proof limit | Superseded | PGBUF-QB-070, PGBUF-QB-074 | Preserved as a boundary and risk-matched verification decision. |
+| `EXEC` | `EXEC-01` | Predict cold/warm direction | Retained | PGBUF-QB-071 | Executed Quiz 1 prompt is consolidated into one evidence card. |
+| `EXEC` | `EXEC-02` | Explain row versus ioread count | Merged | PGBUF-QB-071 | Same executed family and evidence boundary. |
+| `EXEC` | `EXEC-03` | Same-VPID publication protocol | Merged | PGBUF-QB-032, PGBUF-QB-071 | Publication is source-derived, not executed by the quiz. |
+| `EXEC` | `EXEC-04` | OS cache versus CUBRID miss | Merged | PGBUF-QB-071 | Kept as an unsupported-conclusion check. |
+| `EXEC` | `EXEC-05` | Read versus insert signature | Retained | PGBUF-QB-072 | Executed Quiz 2 prompt is consolidated into one evidence card. |
+| `EXEC` | `EXEC-06` | Holder/global unfix ledger | Merged | PGBUF-QB-016, PGBUF-QB-072 | Runtime category and source-derived ledger are distinguished. |
+| `EXEC` | `EXEC-07` | Conditional-failure debt | Merged | PGBUF-QB-014, PGBUF-QB-072 | Remains an Interface contract, not a runtime observation. |
+| `EXEC` | `EXEC-08` | Transaction lock versus latch | Merged | PGBUF-QB-013, PGBUF-QB-072 | Applied card preserves the instrumentation limit. |
+| `EXEC` | `EXEC-09` | Covered versus non-covered | Retained | PGBUF-QB-073 | Executed Quiz 3 prompt is consolidated into one evidence card. |
+| `EXEC` | `EXEC-10` | Parent child heap cleanup | Merged | PGBUF-QB-073 | Retained as source-tracing work not executed proof. |
+| `EXEC` | `EXEC-11` | Ordered-refix revalidation | Merged | PGBUF-QB-069, PGBUF-QB-073 | Scenario owns diagnosis; exercise owns application. |
+| `EXEC` | `EXEC-12` | Recovery page-LSA gate | Merged | PGBUF-QB-046, PGBUF-QB-073 | Advanced owns mechanism; exercise labels it unexecuted. |
+| `EXEC` | `EXEC-13` | Dirty and LSA roles | Retained | PGBUF-QB-074 | Executed Quiz 4 prompt is consolidated into one evidence card. |
+| `EXEC` | `EXEC-14` | WAL and DWB/direct sequence | Merged | PGBUF-QB-027, PGBUF-QB-074 | Core owns ordering; exercise bounds the receipt. |
+| `EXEC` | `EXEC-15` | Re-dirty after successful copy | Merged | PGBUF-QB-028, PGBUF-QB-074 | G/G+1 remains source-derived. |
+| `EXEC` | `EXEC-16` | Zero-fcnt victim counterexamples | Merged | PGBUF-QB-029, PGBUF-QB-074 | Actual eviction was not executed. |
+| `EXEC` | `EXEC-17` | Cross-database mechanism comparison | Excluded | — | Cross-database Canonical questions are outside the confirmed scope. |
 
 ## Authoring navigation
 
