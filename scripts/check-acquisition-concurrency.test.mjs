@@ -49,3 +49,45 @@ test("ordered watchers cover ranking, refix, failure, and revalidation", async (
   assert.match(m, /`src\/storage\/heap_file\.c:20493-20664`/);
   assert.ok(m.includes("](../learning/02-fix-hold-release.md)"));
 });
+
+const assetDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets");
+
+test("the promotion outcomes are visual and the blocking path is labelled as an unfixed window", async () => {
+  const m = await readFile(page, "utf8");
+  const svg = await readFile(path.join(assetDir, "promotion-outcomes.svg"), "utf8");
+  const aAt = m.indexOf('## Blocking promotion releases observations');
+  const vAt = m.indexOf('](../assets/promotion-outcomes.svg)');
+  const bAt = m.indexOf('## Ordered watchers');
+  assert.ok(aAt > 0, '## Blocking promotion releases observations');
+  assert.ok(vAt > aAt, "visual follows its section heading");
+  assert.ok(bAt > vAt, "visual sits before the next section");
+  assert.match(m, /!\[Four promotion outcomes and the unfixed window of the blocking path\]\(\.\.\/assets\/promotion-outcomes\.svg\)/);
+  assert.match(m, /`PGBUF_PROMOTE_ONLY_READER`/);
+  assert.match(m, /saved fix count travels with the request/i);
+  assert.match(m, /no second debt is created/i);
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
+  assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
+  for (const label of ["In-place promotion", "Conditional failure: ER_PAGE_LATCH_PROMOTE_FAIL", "Blocking promotion", "Woken with WRITE", "Error or interrupt", "Unfixed window", "no second debt"]) assert.ok(svg.includes(label), label);
+});
+
+test("the ordered-fix visual shows the canonical order, the release rule, and the refix", async () => {
+  const m = await readFile(page, "utf8");
+  const svg = await readFile(path.join(assetDir, "ordered-watcher-refix.svg"), "utf8");
+  const aAt = m.indexOf('## Ordered watchers: multi-page access as an owner protocol');
+  const vAt = m.indexOf('](../assets/ordered-watcher-refix.svg)');
+  const bAt = m.indexOf('## Review checklist');
+  assert.ok(aAt > 0, '## Ordered watchers: multi-page access as an owner protocol');
+  assert.ok(vAt > aAt, "visual follows its section heading");
+  assert.ok(bAt > vAt, "visual sits before the next section");
+  assert.match(m, /!\[Ordered fix: conditional attempt, release of pages that sort after the request, refix in canonical order\]\(\.\.\/assets\/ordered-watcher-refix\.svg\)/);
+  assert.match(m, /`PGBUF_ORDERED_HEAP_HDR` before `PGBUF_ORDERED_HEAP_NORMAL` before `PGBUF_ORDERED_HEAP_OVERFLOW`/);
+  assert.match(m, /sorts after the request is fully unfixed with avoid-deallocation registered/i);
+  assert.match(m, /Only those released pages come back with `page_was_unfixed` set/);
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
+  assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
+  for (const label of ["CANONICAL ORDER", "Conditional fix of R", "keep it fixed", "page_was_unfixed", "Fix R unconditionally", "Refix released pages in order", "Partial failure", "HEAP_HDR"]) assert.ok(svg.includes(label), label);
+});

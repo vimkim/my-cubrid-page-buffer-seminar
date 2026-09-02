@@ -20,6 +20,10 @@ The heap scan-copy handle caches a caller-owned snapshot of page bytes for repea
 
 Source: opaque scan-copy state at `src/storage/page_buffer.c:910-981`; heap ownership paths at `src/storage/heap_file.c:6439-6465,6787-6829,7556-7645,7923-7984`.
 
+![Normal fix, simple fix, and scan-copy compared against the page-buffer objects each touches](../assets/access-forms-compared.svg)
+
+The matrix is the reason these two protocols sit on an Advanced page: a simple fix records ownership in `fcnt` alone, so holder diagnostics and request-end cleanup never see it, and a scan-copy pointer satisfies the page-pointer casts while pointing outside the pool, so it must never be passed to `pgbuf_unfix()`. Neither is a lighter form of the general Interface.
+
 ## Area-copy helpers: existing owner only
 
 `VS-02` routes the `pgbuf_copy_to_area()` documentation/executable drift. In the normal build, a miss with `do_fetch=false` can return the caller area without filling it because the direct-I/O branch is dormant; the executable fetch path uses the opposite condition from prose. Source: `src/storage/page_buffer.c:4701-4817`.

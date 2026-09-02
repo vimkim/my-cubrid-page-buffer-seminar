@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
+  <title id="title">Promotion has four outcomes, and only the blocking one releases ownership</title>
+  <desc id="desc">A holder with a READ latch calls pgbuf_promote_read_latch. If the holder's own fix count equals the BCB's global fix count, it is the only fixer: unless the first waiter is already a promoter, the latch mode becomes WRITE in place with nothing released. Otherwise, if the caller asked for ONLY_READER or the first waiter is already a promoter, the call fails conditionally with ER_PAGE_LATCH_PROMOTE_FAIL and the READ ownership is unchanged. Otherwise the blocking path subtracts the caller's fixes from the global count, removes its holder, sets the waiter-exists bit, queues the request at the head as the promoter, and sleeps; the saved fix count travels with the request. It wakes with a WRITE latch and a new holder carrying the same fix count, or ends in an error or interrupt with a null page pointer and no debt. During the wait the page is not fixed by this thread, so every page-local observation is stale until revalidated.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .start{fill:#173f57;stroke:#173f57;stroke-width:2}.step{fill:#fff;stroke:#cbd7dc;stroke-width:2}.ok{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.warn{fill:#fff3df;stroke:#b86b22;stroke-width:2}.block{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.none{fill:#f6f7f8;stroke:#6b7780;stroke-width:2;stroke-dasharray:8 5}.gap{fill:#fbe9e7;stroke:#b3452f;stroke-width:2;stroke-dasharray:8 5}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.w{fill:#fff}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Promotion has four outcomes; only the blocking one releases ownership</text>
+
+  <rect x="40" y="95" width="300" height="80" rx="14" class="start"/>
+  <text x="56" y="121" class="h w">Holder with a READ latch</text>
+  <text x="56" y="143" class="s w">calls pgbuf_promote_read_latch()</text>
+  <text x="56" y="163" class="tiny w">with ONLY_READER or SHARED_READER</text>
+
+  <path d="M340 135 H378" class="line"/>
+  <rect x="380" y="90" width="260" height="90" rx="14" class="step"/>
+  <text x="394" y="116" class="h">Am I the only fixer?</text>
+  <text x="394" y="140" class="s">holder fix_count == global fcnt</text>
+  <text x="394" y="160" class="tiny">every fix on this BCB is mine</text>
+
+  <path d="M640 135 H698" class="line"/>
+  <text x="656" y="128" class="tiny">yes</text>
+  <rect x="700" y="90" width="220" height="90" rx="14" class="step"/>
+  <text x="714" y="116" class="h">Is the first waiter</text>
+  <text x="714" y="136" class="h">already a promoter?</text>
+  <text x="714" y="160" class="tiny">at most one promoter per BCB</text>
+
+  <path d="M920 135 H958" class="line"/>
+  <text x="932" y="128" class="tiny">no</text>
+  <rect x="960" y="90" width="200" height="90" rx="14" class="ok"/>
+  <text x="974" y="116" class="h">In-place promotion</text>
+  <text x="974" y="140" class="s">latch mode becomes WRITE;</text>
+  <text x="974" y="160" class="s">nothing is released</text>
+
+  <path d="M510 180 V238" class="line"/>
+  <text x="520" y="214" class="tiny">no: other readers hold it</text>
+  <rect x="380" y="240" width="260" height="100" rx="14" class="step"/>
+  <text x="394" y="266" class="h">Refuse to wait?</text>
+  <text x="394" y="290" class="s">ONLY_READER was requested, or</text>
+  <text x="394" y="310" class="s">the first waiter is a promoter</text>
+
+  <path d="M640 290 H698" class="line"/>
+  <text x="656" y="283" class="tiny">yes</text>
+  <path d="M810 180 V238" class="line"/>
+  <text x="820" y="214" class="tiny">yes</text>
+  <rect x="700" y="240" width="460" height="100" rx="14" class="warn"/>
+  <text x="714" y="266" class="h">Conditional failure: ER_PAGE_LATCH_PROMOTE_FAIL</text>
+  <text x="714" y="290" class="s">READ ownership and its debt are unchanged; the caller</text>
+  <text x="714" y="310" class="s">decides whether to restart with a WRITE traversal</text>
+
+  <path d="M510 340 V398" class="line"/>
+  <text x="520" y="374" class="tiny">no: wait for WRITE</text>
+  <rect x="380" y="400" width="520" height="132" rx="14" class="block"/>
+  <text x="394" y="426" class="h">Blocking promotion (SHARED_READER, other readers present)</text>
+  <text x="394" y="450" class="s">subtract my fixes from global fcnt, remove my holder,</text>
+  <text x="394" y="470" class="s">set waiter_exists, queue at the head as the promoter,</text>
+  <text x="394" y="490" class="s">then sleep with the latch timeout</text>
+  <text x="394" y="514" class="tiny">the saved fix count travels with the request; no second debt is created</text>
+
+  <path d="M900 431 H938" class="line"/>
+  <rect x="940" y="400" width="220" height="62" rx="12" class="ok"/>
+  <text x="954" y="422" class="h">Woken with WRITE</text>
+  <text x="954" y="440" class="tiny">new holder, same fix count;</text>
+  <text x="954" y="455" class="tiny">revalidate preconditions</text>
+
+  <path d="M900 501 H938" class="line"/>
+  <rect x="940" y="470" width="220" height="62" rx="12" class="none"/>
+  <text x="954" y="492" class="h">Error or interrupt</text>
+  <text x="954" y="510" class="tiny">*pgptr = NULL: no latch,</text>
+  <text x="954" y="525" class="tiny">no debt; audit the caller</text>
+
+  <rect x="380" y="542" width="520" height="52" rx="12" class="gap"/>
+  <text x="394" y="564" class="s">Unfixed window: this thread holds no fix on the page while it waits;</text>
+  <text x="394" y="584" class="s">every page-local observation is stale until revalidated after the WRITE grant</text>
+
+  <text x="40" y="622" class="s">Restart is access-method policy: B-tree unfixes, switches to WRITE traversal, and retries. Promotion never creates a second debt; the saved fix count moves to the new holder.</text>
+</svg>

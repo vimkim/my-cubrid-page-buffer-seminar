@@ -29,6 +29,10 @@ The generic synchronous path preserves this sequence:
 
 This page-LSA gate is the idempotence argument: reprocessing an already represented log record does not apply its page change twice. It is not a general promise that arbitrary recovery callbacks are side-effect free.
 
+![Redo page-LSA gate with a worked example from page LSA 140](../assets/redo-lsa-gate.svg)
+
+The comparison direction matters: a record whose LSA is less than or equal to the page LSA is treated as already applied, so a record equal to the page LSA is skipped, not reapplied. A page that no longer exists because it was deallocated after the record was written is also skipped, and that skip creates no fix debt.
+
 Source: gate at `src/transaction/log_recovery.c:497-536`; fetch semantics at `src/transaction/log_recovery.c:6407-6431`; apply/LSA/cleanup at `src/transaction/log_recovery_redo.hpp:587-668`.
 
 ## Allocation and special fetch modes stay with their owners
@@ -50,6 +54,10 @@ Raw/bypass writes require coherence: cached pages must not silently survive an e
 ## Lifecycle dependency order
 
 The pinned dependency chain is initialization → daemon gating → recovery → shutdown → log finalization → page-buffer finalization.
+
+![Startup and shutdown order around the page-buffer pool](../assets/lifecycle-order.svg)
+
+The two chains are mirror images around the pool: the pool is created right after the lock manager and torn down right before file management, daemons are created gated and destroyed before log finalization, and `log_final()` runs while the pool is still alive because finishing the log can still propagate pages.
 
 ### Initialization and recovery
 

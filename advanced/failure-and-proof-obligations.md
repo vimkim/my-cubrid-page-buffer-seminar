@@ -20,6 +20,10 @@ For every exceptional path, keep these conclusions separate:
 
 A proof may stop at any level. Absence of observed failure is not proof of safety, and visible control flow is not proof of reachability or impact.
 
+![Five claim levels as a staircase, each with the evidence that closes it](../assets/claim-levels-ladder.svg)
+
+Read the staircase left to right and stop where the evidence stops. Source reading closes only the first step; fault injection or a controlled schedule is the earliest seam that can reach the second; both ledgers must be asserted for the third; and the fifth is re-established on the revision being changed, with its status prose kept in the uncertainty registry.
+
 ## Route every current `VS-*` entry
 
 Use the registry row for current wording, status, and exact evidence.

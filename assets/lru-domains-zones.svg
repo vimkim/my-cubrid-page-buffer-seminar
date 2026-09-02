@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
+  <title id="title">Private and shared LRU domains, three zones in every list, and the victim search order</title>
+  <desc id="desc">Two panels show the two LRU domains. Private lists belong to one active transaction context each and carry a quota; shared lists hold pages fixed by several transactions. Every list has three zones from hot to cold: LRU1 is the hot zone where most fixes and unfixes land and nothing is victimized; LRU2 is a buffer zone where a BCB that fell from LRU1 can be boosted back and still nothing is victimized; LRU3 is the victimization zone where the scan starts and a victim hint skips known-ineligible BCBs. Below, the victim search order of pgbuf_get_victim: first the thread's own private list only if it is over quota, then other private lists, then the shared lists, and as a last resort the own private list even under quota; if nothing is found the allocation loop's wait or flush path takes over. Every candidate still passes the core eligibility gate under the BCB mutex, and when quota is disabled only shared lists are searched.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .panel{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.z1{fill:#e8f5f3;stroke:#16847d;stroke-width:2}.z2{fill:#fff3df;stroke:#b86b22;stroke-width:2}.z3{fill:#fbe9e7;stroke:#b3452f;stroke-width:2}.step{fill:#fff;stroke:#7895a2;stroke-width:2}.rule{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.k{font:700 14px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}.thin{fill:none;stroke:#48626f;stroke-width:1.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Two LRU domains, three zones per list, one victim search order</text>
+
+  <rect x="40" y="70" width="560" height="250" rx="16" class="panel"/>
+  <text x="56" y="97" class="band">PRIVATE LRU LISTS</text>
+  <text x="56" y="117" class="tiny">one per active transaction context; a quota per list redistributes pressure</text>
+  <text x="56" y="164" class="k">T1 private</text>
+  <rect x="170" y="140" width="130" height="44" rx="10" class="z1"/><text x="235" y="167" text-anchor="middle" class="h">LRU1 hot</text>
+  <rect x="310" y="140" width="130" height="44" rx="10" class="z2"/><text x="375" y="167" text-anchor="middle" class="h">LRU2 buffer</text>
+  <rect x="450" y="140" width="130" height="44" rx="10" class="z3"/><text x="515" y="167" text-anchor="middle" class="h">LRU3 victim</text>
+  <text x="170" y="204" class="tiny">over quota: must find its own victims first, and may not search other lists</text>
+  <text x="56" y="254" class="k">T2 private</text>
+  <rect x="170" y="230" width="130" height="44" rx="10" class="z1"/><text x="235" y="257" text-anchor="middle" class="h">LRU1 hot</text>
+  <rect x="310" y="230" width="130" height="44" rx="10" class="z2"/><text x="375" y="257" text-anchor="middle" class="h">LRU2 buffer</text>
+  <rect x="450" y="230" width="130" height="44" rx="10" class="z3"/><text x="515" y="257" text-anchor="middle" class="h">LRU3 victim</text>
+  <text x="170" y="294" class="tiny">under quota: protected from other threads; its owner searches it last, as a fallback</text>
+
+  <rect x="620" y="70" width="540" height="250" rx="16" class="panel"/>
+  <text x="636" y="97" class="band">SHARED LRU LISTS</text>
+  <text x="636" y="117" class="tiny">pages fixed by several transactions; zones run hot (left) to cold (right)</text>
+  <text x="636" y="164" class="k">shared 0</text>
+  <rect x="740" y="140" width="130" height="44" rx="10" class="z1"/><text x="805" y="167" text-anchor="middle" class="h">LRU1 hot</text>
+  <rect x="880" y="140" width="130" height="44" rx="10" class="z2"/><text x="945" y="167" text-anchor="middle" class="h">LRU2 buffer</text>
+  <rect x="1020" y="140" width="130" height="44" rx="10" class="z3"/><text x="1085" y="167" text-anchor="middle" class="h">LRU3 victim</text>
+  <text x="636" y="254" class="k">shared 1</text>
+  <rect x="740" y="230" width="130" height="44" rx="10" class="z1"/><text x="805" y="257" text-anchor="middle" class="h">LRU1 hot</text>
+  <rect x="880" y="230" width="130" height="44" rx="10" class="z2"/><text x="945" y="257" text-anchor="middle" class="h">LRU2 buffer</text>
+  <rect x="1020" y="230" width="130" height="44" rx="10" class="z3"/><text x="1085" y="257" text-anchor="middle" class="h">LRU3 victim</text>
+  <text x="740" y="294" class="tiny">searched after the private lists; the only lists searched when quota is disabled</text>
+
+
+  <rect x="40" y="340" width="360" height="62" rx="12" class="z1"/>
+  <text x="54" y="362" class="h">LRU1 · hot zone</text>
+  <text x="54" y="382" class="tiny">most fixes and unfixes land here; no boost work; never victimized</text>
+  <rect x="420" y="340" width="360" height="62" rx="12" class="z2"/>
+  <text x="434" y="362" class="h">LRU2 · buffer zone</text>
+  <text x="434" y="382" class="tiny">a BCB that fell from LRU1 can be boosted back; never victimized</text>
+  <rect x="800" y="340" width="360" height="62" rx="12" class="z3"/>
+  <text x="814" y="362" class="h">LRU3 · victimization zone</text>
+  <text x="814" y="382" class="tiny">the scan starts here; victim_hint skips known-ineligible BCBs</text>
+
+  <text x="40" y="440" class="band">VICTIM SEARCH ORDER · pgbuf_get_victim()</text>
+  <rect x="40" y="456" width="250" height="96" rx="12" class="step"/>
+  <text x="54" y="480" class="h">1. Own private list</text>
+  <text x="54" y="502" class="s">only if it is over quota (or over</text>
+  <text x="54" y="520" class="s">quota with candidates); a list</text>
+  <text x="54" y="538" class="s">under quota is skipped here</text>
+  <path d="M290 504 H318" class="line"/>
+  <rect x="320" y="456" width="250" height="96" rx="12" class="step"/>
+  <text x="334" y="480" class="h">2. Other private lists</text>
+  <text x="334" y="502" class="s">from the queue of private lists</text>
+  <text x="334" y="520" class="s">with victims; only big lists if I</text>
+  <text x="334" y="538" class="s">am just slightly over quota</text>
+  <path d="M570 504 H598" class="line"/>
+  <rect x="600" y="456" width="250" height="96" rx="12" class="step"/>
+  <text x="614" y="480" class="h">3. Shared lists</text>
+  <text x="614" y="502" class="s">loop while there is no flush</text>
+  <text x="614" y="520" class="s">thread and the shared-victims</text>
+  <text x="614" y="538" class="s">queue is not empty; bounded</text>
+  <path d="M850 504 H878" class="line"/>
+  <rect x="880" y="456" width="280" height="96" rx="12" class="step"/>
+  <text x="894" y="480" class="h">4. Own private, even under quota</text>
+  <text x="894" y="502" class="s">last resort; if this fails too, the</text>
+  <text x="894" y="520" class="s">allocation loop's wait or flush</text>
+  <text x="894" y="538" class="s">path takes over</text>
+
+  <rect x="40" y="568" width="1120" height="52" rx="12" class="rule"/>
+  <text x="54" y="590" class="h">Every candidate found still passes the core eligibility gate under the BCB mutex.</text>
+  <text x="54" y="610" class="s">Zones, quota, hints, and this order are Implementation policy of the pinned revision; the gate is not.</text>
+</svg>

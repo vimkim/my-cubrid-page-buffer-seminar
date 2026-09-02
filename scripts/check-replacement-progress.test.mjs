@@ -52,3 +52,22 @@ test("AOUT and runtime evidence are bounded", async () => {
   assert.ok(m.includes("](../../../pgbuf-analysis/research/cubrid-lru-victim.md)"));
   assert.match(m, /Historical evidence.*`5cd4f860e`/is);
 });
+
+test("the LRU domain and zone visual precedes the allocation loop and states the search order", async () => {
+  const m = await readFile(page, "utf8");
+  const svg = await readFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/lru-domains-zones.svg"), "utf8");
+  const aAt = m.indexOf('## Pinned implementation policy: domains, zones, and hints');
+  const vAt = m.indexOf('](../assets/lru-domains-zones.svg)');
+  const bAt = m.indexOf('## No free BCB: the allocation progress loop');
+  assert.ok(aAt > 0, '## Pinned implementation policy: domains, zones, and hints');
+  assert.ok(vAt > aAt, "visual follows its section heading");
+  assert.ok(bAt > vAt, "visual sits before the next section");
+  assert.match(m, /!\[Private and shared LRU domains, three zones per list, and the victim search order\]\(\.\.\/assets\/lru-domains-zones\.svg\)/);
+  assert.match(m, /when quota is disabled, only the shared lists are searched/i);
+  assert.match(m, /may not raid other lists/i);
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
+  assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
+  for (const label of ["PRIVATE LRU LISTS", "SHARED LRU LISTS", "LRU1 hot", "LRU2 buffer", "LRU3 victim", "VICTIM SEARCH ORDER", "Own private, even under quota", "core eligibility gate"]) assert.ok(svg.includes(label), label);
+});

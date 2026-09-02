@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="660" viewBox="0 0 1200 660" role="img" aria-labelledby="title desc">
+  <title id="title">Ordered fix: try conditionally, release what sorts after the request, refix in canonical order</title>
+  <desc id="desc">A thread that already holds watched pages requests page R through a watcher. It first tries a conditional fix; if granted, nothing is released. If the conditional fix fails, every held watched page H is compared with R in the canonical order of group, rank, and VPID. A page that sorts before R stays fixed. A page that sorts after R, or any held page when R's group is still unknown, is fully unfixed with avoid-deallocation registered on its BCB, its watcher cleared, and page_was_unfixed set. R is then fixed unconditionally and the released pages are refixed in sorted order. On success every page is held again in canonical order and page-local observations behind a page_was_unfixed watcher must be re-read; on partial failure the protocol preserves which watchers refixed and which did not. A worked example with header page 0|90, normal page 0|120, and a request for normal page 0|100 in the same group shows the header staying fixed, 0|120 released and refixed, and 0|100 fixed in between.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .start{fill:#173f57;stroke:#173f57;stroke-width:2}.step{fill:#fff;stroke:#7895a2;stroke-width:2}.ok{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.release{fill:#fbe9e7;stroke:#b3452f;stroke-width:2;stroke-dasharray:8 5}.rule{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.lane{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.w{fill:#fff}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Ordered fix: try conditionally, release what sorts after the request, refix in order</text>
+
+  <rect x="40" y="66" width="1120" height="58" rx="12" class="rule"/>
+  <text x="54" y="88" class="h">CANONICAL ORDER: group (heap header VPID) → rank: HEAP_HDR before HEAP_NORMAL before HEAP_OVERFLOW → page VPID</text>
+  <text x="54" y="110" class="s">Pages with no group sort last. Requesting the group's own header page takes rank HEAP_HDR; every watcher on one page must carry the same rank.</text>
+
+  <rect x="40" y="145" width="250" height="90" rx="14" class="start"/>
+  <text x="54" y="171" class="h w">Thread holds watched pages</text>
+  <text x="54" y="195" class="s w">and requests page R through</text>
+  <text x="54" y="215" class="s w">watcher W (rank, group)</text>
+  <path d="M290 190 H318" class="line"/>
+  <rect x="320" y="145" width="220" height="90" rx="14" class="step"/>
+  <text x="334" y="171" class="h">Conditional fix of R</text>
+  <text x="334" y="195" class="s">only when other pages are held;</text>
+  <text x="334" y="215" class="s">otherwise fix unconditionally</text>
+  <path d="M540 190 H568" class="line"/>
+  <rect x="570" y="145" width="250" height="90" rx="14" class="ok"/>
+  <text x="584" y="171" class="h">Granted: nothing released</text>
+  <text x="584" y="195" class="s">the held set and its order are</text>
+  <text x="584" y="215" class="s">untouched; W records its rank</text>
+
+  <path d="M430 235 V263" class="line"/>
+  <rect x="320" y="265" width="250" height="110" rx="14" class="step"/>
+  <text x="334" y="289" class="h">Conditional fix failed</text>
+  <text x="334" y="311" class="s">compare each held watched page</text>
+  <text x="334" y="329" class="s">H with R in canonical order;</text>
+  <text x="334" y="347" class="s">the comparison decides what</text>
+  <text x="334" y="365" class="s">must be released</text>
+  <path d="M570 300 H598" class="line"/>
+  <rect x="600" y="265" width="250" height="52" rx="12" class="ok"/>
+  <text x="614" y="287" class="h">H sorts before R: keep it fixed</text>
+  <text x="614" y="306" class="tiny">no release, no stale flag</text>
+  <path d="M570 345 H598" class="line"/>
+  <rect x="600" y="325" width="560" height="62" rx="12" class="release"/>
+  <text x="614" y="347" class="h">H sorts after R, or R's group is still unknown: release H</text>
+  <text x="614" y="366" class="s">unfix every fix on H, register avoid-deallocation on its BCB,</text>
+  <text x="614" y="382" class="s">clear its watcher, set page_was_unfixed = true</text>
+
+  <path d="M445 375 V403" class="line"/>
+  <rect x="320" y="405" width="250" height="64" rx="12" class="step"/>
+  <text x="334" y="427" class="h">Fix R unconditionally</text>
+  <text x="334" y="446" class="s">now the request can wait safely:</text>
+  <text x="334" y="462" class="s">nothing that sorts after it is held</text>
+  <path d="M570 437 H598" class="line"/>
+  <rect x="600" y="405" width="250" height="64" rx="12" class="step"/>
+  <text x="614" y="427" class="h">Refix released pages in order</text>
+  <text x="614" y="446" class="s">sorted by group, rank, VPID;</text>
+  <text x="614" y="462" class="s">unconditional; watchers restored</text>
+  <path d="M850 425 H878" class="line"/>
+  <rect x="880" y="405" width="280" height="60" rx="12" class="ok"/>
+  <text x="894" y="427" class="h">Held again in canonical order</text>
+  <text x="894" y="445" class="tiny">re-read every page-local observation</text>
+  <text x="894" y="460" class="tiny">behind a page_was_unfixed watcher</text>
+  <path d="M725 469 V505 H878" class="line"/>
+  <rect x="880" y="475" width="280" height="60" rx="12" class="release"/>
+  <text x="894" y="497" class="h">Partial failure during refix</text>
+  <text x="894" y="515" class="tiny">which watchers refixed and which did</text>
+  <text x="894" y="530" class="tiny">not is preserved; the caller unwinds</text>
+
+  <rect x="20" y="555" width="1160" height="72" rx="14" class="lane"/>
+  <text x="40" y="578" class="band">EXAMPLE · one heap group whose header page is 0|90</text>
+  <text x="40" y="600" class="s">held: header 0|90 (rank HEAP_HDR) and normal page 0|120; request: normal page 0|100 in the same group. Canonical order: 0|90 &lt; 0|100 &lt; 0|120.</text>
+  <text x="40" y="618" class="s">So the header stays fixed, 0|120 is released, 0|100 is fixed, then 0|120 is refixed with page_was_unfixed set: its slots and free space must be re-read.</text>
+
+  <text x="40" y="650" class="s">Order comes from the access method's rank and group; the page buffer only enforces it. Restoring a pointer is not revalidation.</text>
+</svg>

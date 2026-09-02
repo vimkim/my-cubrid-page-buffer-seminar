@@ -12,6 +12,10 @@ Eligibility comes before every mechanism on this page. A policy may decide where
 
 The pinned revision distributes resident frames across private LRU domains assigned to active contexts and shared LRU domains. Each list uses three zones: LRU1 is the hot zone, LRU2 is a buffer zone in which a fallen BCB can be boosted back, and LRU3 is the victimization zone, so "victim zone" in this guide always means LRU3. The victim scan starts in LRU3 and may use a victim hint (`victim_hint`) to avoid rescanning known-ineligible candidates.
 
+![Private and shared LRU domains, three zones per list, and the victim search order](../assets/lru-domains-zones.svg)
+
+Read the two panels as domains and the three chips in every list as zones. A private list belongs to one active transaction context and carries a quota; a thread over its quota must find victims in its own list and may not raid other lists, while a thread under quota is protected from other threads and searches its own list only as a last resort. The bottom row is the search order of `pgbuf_get_victim()`; when quota is disabled, only the shared lists are searched.
+
 Quota policy adjusts private-list targets from activity and redistributes pressure toward shared lists. Each candidate queue, count, and hint accelerates search; none is an ownership proof. The scan still rejects flags/fix ownership and performs a final BCB-protected eligibility check before removal.
 
 Source: zone semantics at `src/storage/page_buffer.c:185-200`; structures and list state at `src/storage/page_buffer.c:560-773`; initialization at `src/storage/page_buffer.c:5744-5903`; ordinary selection at `src/storage/page_buffer.c:9293-9538`; quota policy at `src/storage/page_buffer.c:13942-14440`. Detailed routing: [CUBRID LRU/victim fact sheet](../../../pgbuf-analysis/research/cubrid-lru-victim.md).

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" role="img" aria-labelledby="title desc">
+  <title id="title">Five claim levels: each needs its own evidence, and none implies the next</title>
+  <desc id="desc">A rising staircase of five steps. Level one, source-visible control flow, is closed by reading the pinned text for a branch, an ordering, or missing local cleanup; it does not show that the branch can run. Level two, reachability, is closed when a supported build, configuration, and workload execute that branch through fault injection or a controlled schedule; it does not show what state remains. Level three, surviving state, is closed by asserting both ledgers after callees, scope cleanup, wakeups, and retry complete; it does not show that anyone observes harm. Level four, production impact, is closed by demonstrating caller-visible incorrectness, corruption, leak, hang, or progress loss; it does not show that the current branch has it. Level five, current-branch status, is closed by re-establishing the same path and effect on the revision being changed; its status prose lives only in the uncertainty registry. A footer states that a proof may stop at any level and must say so, that absence of observed failure is not proof of safety, and that visible control flow is not proof of reachability or impact.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .l1{fill:#f6f7f8;stroke:#6b7780;stroke-width:2}.l2{fill:#fff3df;stroke:#b86b22;stroke-width:2}.l3{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.l4{fill:#fbe9e7;stroke:#b3452f;stroke-width:2}.l5{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.rule{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.num{font:700 26px Inter,Arial,sans-serif;fill:#173443}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.k{font:700 12px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Five claim levels: each needs its own evidence, and none implies the next</text>
+
+  <rect x="40" y="300" width="210" height="180" rx="12" class="l1"/>
+  <text x="54" y="330" class="num">1</text>
+  <text x="54" y="354" class="h">Source-visible</text>
+  <text x="54" y="372" class="h">control flow</text>
+  <text x="54" y="396" class="k">CLOSED BY</text>
+  <text x="54" y="414" class="s">reading the pinned text: a</text>
+  <text x="54" y="430" class="s">branch, an ordering, missing</text>
+  <text x="54" y="446" class="s">local cleanup</text>
+  <text x="54" y="468" class="tiny">does not show the branch can run</text>
+
+  <path d="M250 320 H266" class="line"/>
+  <rect x="268" y="250" width="210" height="230" rx="12" class="l2"/>
+  <text x="282" y="280" class="num">2</text>
+  <text x="282" y="304" class="h">Reachability</text>
+  <text x="282" y="334" class="k">CLOSED BY</text>
+  <text x="282" y="352" class="s">a supported build, configuration,</text>
+  <text x="282" y="368" class="s">and workload executing exactly</text>
+  <text x="282" y="384" class="s">that branch: fault injection at</text>
+  <text x="282" y="400" class="s">the fallible dependency, or a</text>
+  <text x="282" y="416" class="s">controlled schedule</text>
+  <text x="282" y="444" class="tiny">does not show what state remains</text>
+  <text x="282" y="460" class="tiny">after cleanup, wakeups, and retry</text>
+
+  <path d="M478 270 H494" class="line"/>
+  <rect x="496" y="200" width="210" height="280" rx="12" class="l3"/>
+  <text x="510" y="230" class="num">3</text>
+  <text x="510" y="254" class="h">Surviving state</text>
+  <text x="510" y="284" class="k">CLOSED BY</text>
+  <text x="510" y="302" class="s">asserting both ledgers after</text>
+  <text x="510" y="318" class="s">callees, scope cleanup, wakeups,</text>
+  <text x="510" y="334" class="s">and retry complete: fcnt, latch,</text>
+  <text x="510" y="350" class="s">holder, waiters, identity, or</text>
+  <text x="510" y="366" class="s">DIRTY, FLUSHING, lower bound,</text>
+  <text x="510" y="382" class="s">copied generation</text>
+  <text x="510" y="410" class="tiny">does not show that anyone</text>
+  <text x="510" y="426" class="tiny">observes harm</text>
+
+  <path d="M706 220 H722" class="line"/>
+  <rect x="724" y="150" width="210" height="330" rx="12" class="l4"/>
+  <text x="738" y="180" class="num">4</text>
+  <text x="738" y="204" class="h">Production impact</text>
+  <text x="738" y="234" class="k">CLOSED BY</text>
+  <text x="738" y="252" class="s">demonstrating a caller-visible</text>
+  <text x="738" y="268" class="s">consequence: incorrectness,</text>
+  <text x="738" y="284" class="s">corruption, leak, hang, or</text>
+  <text x="738" y="300" class="s">unacceptable progress</text>
+  <text x="738" y="328" class="tiny">does not show that the revision</text>
+  <text x="738" y="344" class="tiny">being changed has the same path</text>
+
+  <path d="M934 170 H950" class="line"/>
+  <rect x="952" y="100" width="210" height="380" rx="12" class="l5"/>
+  <text x="966" y="130" class="num">5</text>
+  <text x="966" y="154" class="h">Current-branch status</text>
+  <text x="966" y="184" class="k">CLOSED BY</text>
+  <text x="966" y="202" class="s">re-establishing the same path</text>
+  <text x="966" y="218" class="s">and the same effect on the</text>
+  <text x="966" y="234" class="s">revision being changed</text>
+  <text x="966" y="262" class="tiny">status prose lives only in the</text>
+  <text x="966" y="278" class="tiny">uncertainty registry; guide</text>
+  <text x="966" y="294" class="tiny">pages route by VS-* ID</text>
+
+  <rect x="40" y="500" width="1122" height="80" rx="12" class="rule"/>
+  <text x="54" y="524" class="h">A proof may stop at any level, and must say which one it reached</text>
+  <text x="54" y="546" class="s">Absence of observed failure is not proof of safety. Visible control flow is not proof of reachability or impact.</text>
+  <text x="54" y="566" class="s">A strong level-1 argument earns investigation at level 2; by itself it establishes nothing beyond level 1.</text>
+</svg>

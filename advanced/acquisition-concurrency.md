@@ -60,6 +60,10 @@ Source: grant/wait decision at `src/storage/page_buffer.c:6278-6634`; queue appe
 
 Promotion is easy only when the caller is the eligible reader. In a blocking path, the implementation can release the current READ ownership, enqueue/wait for WRITE, and later return with different protection. Every observation derived from the old page bytes, latch tuple, waiter set, or related page set becomes stale across that release.
 
+![Four promotion outcomes and the unfixed window of the blocking path](../assets/promotion-outcomes.svg)
+
+The decision is source-visible: a caller whose own fix count equals the BCB's global count is the only fixer and is promoted in place, unless the first waiter is already a promoter. Any other reader either fails conditionally, when `PGBUF_PROMOTE_ONLY_READER` was requested or a promoter is already queued, or takes the blocking path: its fixes are subtracted from `fcnt`, its holder is removed, and it queues at the head of the wait list as the promoter. The saved fix count travels with the request and returns in a new holder, so no second debt is created; what is lost is every observation made while the page was held.
+
 A promotion caller must therefore distinguish:
 
 - conditional promotion failure, where the algorithm chooses whether to restart;
@@ -80,6 +84,10 @@ The ordered protocol can:
 3. release eligible watched pages, sort the requested/held set, and refix it in order;
 4. transfer watcher ownership as callers reorganize their context;
 5. unwind a partial failure, preserving which watchers refixed and which did not.
+
+![Ordered fix: conditional attempt, release of pages that sort after the request, refix in canonical order](../assets/ordered-watcher-refix.svg)
+
+The canonical order is the access method's, not the page buffer's: pages sort by group (the heap header `VPID`), then by rank (`PGBUF_ORDERED_HEAP_HDR` before `PGBUF_ORDERED_HEAP_NORMAL` before `PGBUF_ORDERED_HEAP_OVERFLOW`), then by `VPID`, and pages without a group sort last. When a conditional fix of the new page fails, every held watched page that sorts after the request is fully unfixed with avoid-deallocation registered on its BCB, the request is fixed unconditionally, and the released pages are refixed in sorted order. Only those released pages come back with `page_was_unfixed` set.
 
 When a watcher reports `page_was_unfixed`, page-local observations—including record pointers, slots, free-space decisions, and headers—may be stale. The access method must reconstruct and revalidate them after refix; restoring the pointer is not enough.
 

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">Normal fix, simple fix, and scan-copy compared against the page-buffer objects each one touches</title>
+  <desc id="desc">A matrix with three columns and six rows. A normal pgbuf_fix grants a READ or WRITE latch on the bytes, adds one to the BCB's global fix count, records a per-thread holder, returns a borrowed pointer into the resident frame, is released by exactly one pgbuf_unfix, and is the general Interface for any caller. A simple fix is latchless, adds one to the fix count on a hit or after loading, records no holder and is invisible to holder diagnostics, returns a borrowed pointer into the resident frame, is released by pgbuf_simple_unfix which only decrements the count, and belongs to the temporary-file read-only protocol that must never be mixed with latched fixes. A scan-copy handle takes no latch and copies from a page the caller already fixed, leaves the fix count untouched after the copy, records no holder, returns a pointer into a private dummy BCB and page copy outside the pool, is freed with pgbuf_copy_buffer_free and never passed to pgbuf_unfix, and belongs to heap scan state.</desc>
+  <defs>
+    <style>
+      .head{fill:#173f57;stroke:#173f57;stroke-width:2}.label{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.normal{fill:#e8f5f3;stroke:#16847d;stroke-width:2}.simple{fill:#fff3df;stroke:#b86b22;stroke-width:2}.copy{fill:#edf0ff;stroke:#5968bd;stroke-width:2;stroke-dasharray:8 5}.rule{fill:#f6f7f8;stroke:#6b7780;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.k{font:700 14px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.w{fill:#fff}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Three ways to reach page bytes, and which objects each one touches</text>
+
+  <rect x="280" y="72" width="280" height="44" rx="10" class="head"/><text x="420" y="100" text-anchor="middle" class="h w">Normal pgbuf_fix()</text>
+  <rect x="580" y="72" width="280" height="44" rx="10" class="head"/><text x="720" y="100" text-anchor="middle" class="h w">Simple fix</text>
+  <rect x="880" y="72" width="280" height="44" rx="10" class="head"/><text x="1020" y="100" text-anchor="middle" class="h w">Scan-copy handle</text>
+
+  <rect x="40" y="130" width="220" height="58" rx="10" class="label"/><text x="54" y="164" class="k">Page latch on the bytes</text>
+  <rect x="280" y="130" width="280" height="58" rx="10" class="normal"/><text x="294" y="153" class="s">READ or WRITE granted;</text><text x="294" y="173" class="s">waiters and conflicts apply</text>
+  <rect x="580" y="130" width="280" height="58" rx="10" class="simple"/><text x="594" y="153" class="s">none: latchless by design;</text><text x="594" y="173" class="s">a writer would corrupt the read</text>
+  <rect x="880" y="130" width="280" height="58" rx="10" class="copy"/><text x="894" y="153" class="s">none: copies from a page the</text><text x="894" y="173" class="s">caller already fixed</text>
+
+  <rect x="40" y="198" width="220" height="58" rx="10" class="label"/><text x="54" y="232" class="k">Global fcnt on the BCB</text>
+  <rect x="280" y="198" width="280" height="58" rx="10" class="normal"/><text x="294" y="221" class="s">+1 on grant, −1 on unfix;</text><text x="294" y="241" class="s">positive excludes reuse</text>
+  <rect x="580" y="198" width="280" height="58" rx="10" class="simple"/><text x="594" y="221" class="s">+1 on a hit or after loading;</text><text x="594" y="241" class="s">the only ownership it records</text>
+  <rect x="880" y="198" width="280" height="58" rx="10" class="copy"/><text x="894" y="221" class="s">untouched after the copy;</text><text x="894" y="241" class="s">the source page may be unfixed</text>
+
+  <rect x="40" y="266" width="220" height="58" rx="10" class="label"/><text x="54" y="300" class="k">Per-thread holder</text>
+  <rect x="280" y="266" width="280" height="58" rx="10" class="normal"/><text x="294" y="289" class="s">recorded, with a nested count;</text><text x="294" y="309" class="s">visible to holder diagnostics</text>
+  <rect x="580" y="266" width="280" height="58" rx="10" class="simple"/><text x="594" y="289" class="s">none: invisible to holder</text><text x="594" y="309" class="s">diagnostics and request-end cleanup</text>
+  <rect x="880" y="266" width="280" height="58" rx="10" class="copy"/><text x="894" y="289" class="s">none</text>
+
+  <rect x="40" y="334" width="220" height="58" rx="10" class="label"/><text x="54" y="368" class="k">What the pointer is</text>
+  <rect x="280" y="334" width="280" height="58" rx="10" class="normal"/><text x="294" y="357" class="s">borrowed view into the</text><text x="294" y="377" class="s">resident frame</text>
+  <rect x="580" y="334" width="280" height="58" rx="10" class="simple"/><text x="594" y="357" class="s">borrowed view into the</text><text x="594" y="377" class="s">resident frame</text>
+  <rect x="880" y="334" width="280" height="58" rx="10" class="copy"/><text x="894" y="357" class="s">pointer into a private dummy BCB</text><text x="894" y="377" class="s">and page copy, outside the pool</text>
+
+  <rect x="40" y="402" width="220" height="58" rx="10" class="label"/><text x="54" y="436" class="k">Paired release</text>
+  <rect x="280" y="402" width="280" height="58" rx="10" class="normal"/><text x="294" y="425" class="s">pgbuf_unfix() exactly once</text><text x="294" y="445" class="s">per successful fix</text>
+  <rect x="580" y="402" width="280" height="58" rx="10" class="simple"/><text x="594" y="425" class="s">pgbuf_simple_unfix():</text><text x="594" y="445" class="s">fcnt −1 and nothing else</text>
+  <rect x="880" y="402" width="280" height="58" rx="10" class="copy"/><text x="894" y="425" class="s">pgbuf_copy_buffer_free();</text><text x="894" y="445" class="s">never pgbuf_unfix()</text>
+
+  <rect x="40" y="470" width="220" height="58" rx="10" class="label"/><text x="54" y="504" class="k">Allowed owner</text>
+  <rect x="280" y="470" width="280" height="58" rx="10" class="normal"/><text x="294" y="493" class="s">any caller that follows the</text><text x="294" y="513" class="s">fix, hold, and release contract</text>
+  <rect x="580" y="470" width="280" height="58" rx="10" class="simple"/><text x="594" y="493" class="s">temporary-file read-only protocol;</text><text x="594" y="513" class="s">never mixed with latched fixes</text>
+  <rect x="880" y="470" width="280" height="58" rx="10" class="copy"/><text x="894" y="493" class="s">heap scan state owns its</text><text x="894" y="513" class="s">lifetime and invalidation</text>
+
+  <text x="40" y="550" class="s">Only the first column is the general Interface. The other two are owner protocols, routed here so nobody mistakes them for a faster or lighter fix.</text>
+</svg>

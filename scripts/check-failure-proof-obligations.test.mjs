@@ -32,3 +32,22 @@ test("status and history remain external and revision bound", async () => {
   assert.match(m, /historical.*revision-bound/is);
   assert.match(m, /does not create.*current ticket/is);
 });
+
+test("the five claim levels are drawn as a staircase that stops where the evidence stops", async () => {
+  const m = await readFile(page, "utf8");
+  const svg = await readFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/claim-levels-ladder.svg"), "utf8");
+  const aAt = m.indexOf('## Five claim levels');
+  const vAt = m.indexOf('](../assets/claim-levels-ladder.svg)');
+  const bAt = m.indexOf('## Route every current `VS-*` entry');
+  assert.ok(aAt > 0, '## Five claim levels');
+  assert.ok(vAt > aAt, "visual follows its section heading");
+  assert.ok(bAt > vAt, "visual sits before the next section");
+  assert.match(m, /!\[Five claim levels as a staircase, each with the evidence that closes it\]\(\.\.\/assets\/claim-levels-ladder\.svg\)/);
+  assert.match(m, /stop where the evidence stops/i);
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
+  assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
+  assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
+  assert.doesNotMatch(svg, /defect|Candidate/i);
+  for (const label of ["Source-visible", "Reachability", "Surviving state", "Production impact", "Current-branch status", "CLOSED BY", "A proof may stop at any level", "Absence of observed failure is not proof of safety"]) assert.ok(svg.includes(label), label);
+});

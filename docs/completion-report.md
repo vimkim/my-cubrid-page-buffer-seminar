@@ -90,3 +90,21 @@ Every label was checked against the pinned source before drawing: `src/storage/p
 Validation was extended rather than relaxed: the shared roster in `scripts/canonical-visuals.mjs` and the roster count moved from 9 to 14; page tests for Core pages 2, 3, 4, and 6 assert each visual's placement between its neighbouring headings, its alt text, and its key labels; the authoring notes' asset contract and migration audit record the new visual kinds and the count.
 
 Results after the pass: `node --test scripts/*.test.mjs` 111/111; `node scripts/check-maintainer-guide.mjs` PASS with 27 pages and 14 displayed SVGs, 0 orphaned; Copyparty HTTP PASS for 41 resources; Live DOM UNAVAILABLE because Playwright is not installed in this repository; `git diff --check` clean.
+
+## Advanced visual pass
+
+The five Advanced pages carried two visuals between them and three pages had none. This pass added seven, each owned by one page, kept in the root asset seam, and checked against the pinned source before drawing:
+
+- `promotion-outcomes.svg` on the acquisition page, inside "Blocking promotion releases observations": the four outcomes of `pgbuf_promote_read_latch()`, with the blocking path's unfixed window marked (`src/storage/page_buffer.c:2842-3050`).
+- `ordered-watcher-refix.svg` on the acquisition page, inside "Ordered watchers": the conditional attempt, the canonical order of group, rank, and `VPID`, the release of held pages that sort after the request, and the refix with `page_was_unfixed` (`src/storage/page_buffer.c:12193-12240,12268-13531`, `src/storage/page_buffer.h:224-243`).
+- `lru-domains-zones.svg` on the replacement page, inside the pinned-policy section: private and shared domains, the three zones of every list, and the search order of `pgbuf_get_victim()` (`src/storage/page_buffer.c:185-200,9067-9265`).
+- `redo-lsa-gate.svg` on the recovery page, inside the redo section: the page-LSA comparison with a worked example from page LSA 140 (`src/transaction/log_recovery.c:497-536`, `src/transaction/log_recovery_redo.hpp:587-668`).
+- `lifecycle-order.svg` on the recovery page, inside "Lifecycle dependency order": startup and shutdown chains mirrored around the pool (`src/transaction/log_tran_table.c:468-512,580-594`, `src/transaction/boot_sr.c:3055-3113`).
+- `access-forms-compared.svg` on the specialized-interfaces page, after the scan-copy section: normal fix, simple fix, and scan-copy against the objects each touches (`src/storage/page_buffer.c:910-981,2688-2811`).
+- `claim-levels-ladder.svg` on the failure page, inside "Five claim levels": the staircase of claim levels with the evidence that closes each; it avoids the word "defect" and routes status to the registry.
+
+The authoring notes' asset contract no longer gates Advanced visuals on a prior reader question; a visual is added when state transitions or ownership relationships are materially harder in prose, whichever pass exposes that. The migration audit records the count. Each SVG was rasterized locally to check for overflow; one label collision and one wording slip were fixed before validation.
+
+Validation was extended: the shared roster and its count moved from 14 to 21, and each Advanced page test asserts the visual's placement between its neighbouring headings, its alt text, its lead-in prose, and its key labels.
+
+Results after the pass: `node --test scripts/*.test.mjs` 118/118; `node scripts/check-maintainer-guide.mjs` PASS with 27 pages and 21 displayed SVGs, 0 orphaned; Copyparty HTTP PASS for 48 resources; Live DOM UNAVAILABLE because Playwright is not installed in this repository; `git diff --check` clean.

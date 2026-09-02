@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="540" viewBox="0 0 1200 540" role="img" aria-labelledby="title desc">
+  <title id="title">Redo applies a log record only when the page does not already include it</title>
+  <desc id="desc">A redo record with start LSA r for page P is processed by fixing P with RECOVERY_PAGE, WRITE, and an unconditional wait. If the page no longer exists because it was deallocated in the meantime, redo is skipped with no fix debt. Otherwise the gate compares r with the page LSA: when r is less than or equal to the page LSA the change is already applied, so the page is unfixed and skipped; when r is greater, the redo function runs under the WRITE latch, the page LSA is set to r, the callback marks the page dirty, and a scope exit unfixes on every path. A worked example starts from page LSA 140: records 100 and 140 are skipped, 170 is applied and moves the page LSA to 170, a reprocessed 170 is skipped, and 190 is applied. The gate makes reprocessing a represented record a no-op on the page; it does not make arbitrary callbacks side-effect free.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .start{fill:#173f57;stroke:#173f57;stroke-width:2}.step{fill:#fff;stroke:#7895a2;stroke-width:2}.gate{fill:#fff3df;stroke:#b86b22;stroke-width:3}.skip{fill:#f6f7f8;stroke:#6b7780;stroke-width:2;stroke-dasharray:8 5}.apply{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.lane{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.chip{fill:#fff;stroke:#718791;stroke-width:1.5}.chipskip{fill:#f6f7f8;stroke:#6b7780;stroke-width:2;stroke-dasharray:6 4}.chipapply{fill:#e8f5f3;stroke:#16847d;stroke-width:2}.rule{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.w{fill:#fff}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Redo applies a record only if the page does not already include it</text>
+
+  <rect x="40" y="90" width="200" height="90" rx="14" class="start"/>
+  <text x="54" y="116" class="h w">Redo record</text>
+  <text x="54" y="140" class="s w">start LSA r, for page P</text>
+  <text x="54" y="160" class="tiny w">processed in log order</text>
+  <path d="M240 135 H268" class="line"/>
+
+  <rect x="270" y="90" width="230" height="90" rx="14" class="step"/>
+  <text x="284" y="116" class="h">Fix P for recovery</text>
+  <text x="284" y="140" class="s">RECOVERY_PAGE, WRITE,</text>
+  <text x="284" y="160" class="s">unconditional wait</text>
+  <path d="M500 135 H528" class="line"/>
+  <path d="M385 180 V208" class="line"/>
+  <rect x="270" y="210" width="230" height="52" rx="12" class="skip"/>
+  <text x="284" y="232" class="h">Page gone: skip</text>
+  <text x="284" y="250" class="tiny">deallocated meanwhile; no fix debt</text>
+
+  <rect x="530" y="90" width="230" height="90" rx="14" class="gate"/>
+  <text x="544" y="116" class="h">Gate: r ≤ page LSA?</text>
+  <text x="544" y="140" class="s">compare the record LSA with</text>
+  <text x="544" y="160" class="s">the LSA in the page header</text>
+
+  <path d="M760 115 H788" class="line"/>
+  <rect x="790" y="90" width="370" height="50" rx="12" class="skip"/>
+  <text x="804" y="112" class="h">yes: already applied</text>
+  <text x="804" y="130" class="tiny">unfix P and skip; the page is not touched</text>
+
+  <path d="M760 160 H788" class="line"/>
+  <rect x="790" y="150" width="370" height="50" rx="12" class="apply"/>
+  <text x="804" y="172" class="h">no: apply the redo function</text>
+  <text x="804" y="190" class="tiny">under the WRITE latch, with the record's redo data</text>
+  <path d="M975 200 V218" class="line"/>
+  <rect x="790" y="220" width="370" height="62" rx="12" class="apply"/>
+  <text x="804" y="242" class="h">Then set page LSA = r</text>
+  <text x="804" y="260" class="tiny">the callback marks the page dirty as its protocol requires;</text>
+  <text x="804" y="275" class="tiny">a scope exit unfixes P on every path out</text>
+
+  <rect x="20" y="305" width="1160" height="140" rx="16" class="lane"/>
+  <text x="40" y="331" class="band">WORKED EXAMPLE · page LSA is 140 when recovery reaches P</text>
+  <rect x="40" y="348" width="210" height="80" rx="12" class="chipskip"/>
+  <text x="54" y="372" class="h">r = 100</text>
+  <text x="54" y="392" class="s">100 ≤ 140: skip</text>
+  <text x="54" y="410" class="tiny">page LSA stays 140</text>
+  <rect x="270" y="348" width="210" height="80" rx="12" class="chipskip"/>
+  <text x="284" y="372" class="h">r = 140</text>
+  <text x="284" y="392" class="s">140 ≤ 140: skip</text>
+  <text x="284" y="410" class="tiny">equal counts as already applied</text>
+  <rect x="500" y="348" width="210" height="80" rx="12" class="chipapply"/>
+  <text x="514" y="372" class="h">r = 170</text>
+  <text x="514" y="392" class="s">170 &gt; 140: apply</text>
+  <text x="514" y="410" class="tiny">page LSA becomes 170</text>
+  <rect x="730" y="348" width="210" height="80" rx="12" class="chipskip"/>
+  <text x="744" y="372" class="h">r = 170 again</text>
+  <text x="744" y="392" class="s">170 ≤ 170: skip</text>
+  <text x="744" y="410" class="tiny">reprocessing is a no-op on P</text>
+  <rect x="960" y="348" width="200" height="80" rx="12" class="chipapply"/>
+  <text x="974" y="372" class="h">r = 190</text>
+  <text x="974" y="392" class="s">190 &gt; 170: apply</text>
+  <text x="974" y="410" class="tiny">page LSA becomes 190</text>
+
+  <rect x="40" y="462" width="1120" height="58" rx="12" class="rule"/>
+  <text x="54" y="486" class="h">The gate is the idempotence argument for the page image, not for the callback</text>
+  <text x="54" y="506" class="s">Reprocessing a record the page already represents changes nothing on P. It does not promise that arbitrary recovery callbacks are side-effect free.</text>
+</svg>

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="540" viewBox="0 0 1200 540" role="img" aria-labelledby="title desc">
+  <title id="title">Lifecycle order: the page buffer outlives every daemon and every log flush</title>
+  <desc id="desc">Two ordered chains. Startup: the lock manager is initialized, then pgbuf_initialize creates the pool, then file management; during restart DWB recovery and module metadata become ready and the page-buffer daemons are created but their tasks stay gated; log recovery runs; only then are the flush daemons enabled. Shutdown: vacuum workers and the vacuum master stop, pgbuf_daemons_destroy runs so no daemon can touch the pool afterwards, log_final runs while the pool is still alive so pages can still be propagated, DWB is destroyed after all pages were flushed, and transaction-table teardown later calls pgbuf_finalize before file_manager_final. Two structural rules follow: no daemon may touch a pool after pool finalization, and log finalization that propagates pages needs the page buffer alive.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .lane{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.pool{fill:#e8f5f3;stroke:#16847d;stroke-width:3}.daemon{fill:#fff3df;stroke:#b86b22;stroke-width:2}.log{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.other{fill:#fff;stroke:#7895a2;stroke-width:2}.rule{fill:#fbe9e7;stroke:#b3452f;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Lifecycle order: the pool outlives every daemon and every log flush</text>
+
+  <rect x="20" y="70" width="1160" height="170" rx="16" class="lane"/>
+  <text x="40" y="96" class="band">STARTUP · initialization, daemon gating, recovery</text>
+  <rect x="40" y="112" width="170" height="110" rx="12" class="other"/>
+  <text x="52" y="136" class="h">1. lock_initialize()</text>
+  <text x="52" y="158" class="s">lock manager first</text>
+  <path d="M210 167 H228" class="line"/>
+  <rect x="230" y="112" width="170" height="110" rx="12" class="pool"/>
+  <text x="242" y="136" class="h">2. pgbuf_initialize()</text>
+  <text x="242" y="158" class="s">pool, hash table, lists,</text>
+  <text x="242" y="176" class="s">holder anchors</text>
+  <path d="M400 167 H418" class="line"/>
+  <rect x="420" y="112" width="170" height="110" rx="12" class="other"/>
+  <text x="432" y="136" class="h">3. file_manager_init()</text>
+  <text x="432" y="158" class="s">file management after</text>
+  <text x="432" y="176" class="s">the pool exists</text>
+  <path d="M590 167 H608" class="line"/>
+  <rect x="610" y="112" width="170" height="110" rx="12" class="daemon"/>
+  <text x="622" y="136" class="h">4. Daemons created</text>
+  <text x="622" y="158" class="s">after DWB recovery and</text>
+  <text x="622" y="176" class="s">metadata; their tasks</text>
+  <text x="622" y="194" class="s">stay gated</text>
+  <path d="M780 167 H798" class="line"/>
+  <rect x="800" y="112" width="170" height="110" rx="12" class="log"/>
+  <text x="812" y="136" class="h">5. Log recovery</text>
+  <text x="812" y="158" class="s">redo and undo fix pages</text>
+  <text x="812" y="176" class="s">through the live pool;</text>
+  <text x="812" y="194" class="s">no flush daemon yet</text>
+  <path d="M970 167 H988" class="line"/>
+  <rect x="990" y="112" width="170" height="110" rx="12" class="daemon"/>
+  <text x="1002" y="136" class="h">6. Flush daemons on</text>
+  <text x="1002" y="158" class="s">enabled only after</text>
+  <text x="1002" y="176" class="s">recovery completes</text>
+
+  <rect x="20" y="260" width="1160" height="170" rx="16" class="lane"/>
+  <text x="40" y="286" class="band">SHUTDOWN · stop work, destroy daemons, finalize log, then the pool</text>
+  <rect x="40" y="302" width="170" height="110" rx="12" class="other"/>
+  <text x="52" y="326" class="h">1. Stop vacuum</text>
+  <text x="52" y="348" class="s">workers, then the</text>
+  <text x="52" y="366" class="s">vacuum master</text>
+  <path d="M210 357 H228" class="line"/>
+  <rect x="230" y="302" width="170" height="110" rx="12" class="daemon"/>
+  <text x="242" y="326" class="h">2. Destroy daemons</text>
+  <text x="242" y="348" class="s">pgbuf_daemons_destroy();</text>
+  <text x="242" y="366" class="s">no daemon may touch</text>
+  <text x="242" y="384" class="s">the pool after this</text>
+  <path d="M400 357 H418" class="line"/>
+  <rect x="420" y="302" width="170" height="110" rx="12" class="log"/>
+  <text x="432" y="326" class="h">3. log_final()</text>
+  <text x="432" y="348" class="s">the pool is still alive,</text>
+  <text x="432" y="366" class="s">so pages can still be</text>
+  <text x="432" y="384" class="s">propagated</text>
+  <path d="M590 357 H608" class="line"/>
+  <rect x="610" y="302" width="170" height="110" rx="12" class="other"/>
+  <text x="622" y="326" class="h">4. dwb_destroy()</text>
+  <text x="622" y="348" class="s">only after all pages</text>
+  <text x="622" y="366" class="s">were flushed</text>
+  <path d="M780 357 H798" class="line"/>
+  <rect x="800" y="302" width="170" height="110" rx="12" class="pool"/>
+  <text x="812" y="326" class="h">5. pgbuf_finalize()</text>
+  <text x="812" y="348" class="s">in transaction-table</text>
+  <text x="812" y="366" class="s">teardown, after</text>
+  <text x="812" y="384" class="s">lock_finalize()</text>
+  <path d="M970 357 H988" class="line"/>
+  <rect x="990" y="302" width="170" height="110" rx="12" class="other"/>
+  <text x="1002" y="326" class="h">6. file_manager_final()</text>
+  <text x="1002" y="348" class="s">file management</text>
+  <text x="1002" y="366" class="s">after the pool</text>
+
+  <rect x="40" y="450" width="1120" height="70" rx="12" class="rule"/>
+  <text x="54" y="474" class="h">Two structural rules, not timing policy</text>
+  <text x="54" y="494" class="s">No daemon may touch a pool after pool finalization. Log finalization that propagates pages needs the page buffer alive.</text>
+  <text x="54" y="512" class="tiny">Restart-error cleanup follows the same shape: disable work, destroy daemon and DWB owners, then finalize logging.</text>
+</svg>
