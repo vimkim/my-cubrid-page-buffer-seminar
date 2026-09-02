@@ -18,3 +18,4 @@
 - `reference/course-coverage-matrix.html` audits every Core, Advanced, playbook, evidence, and rehearsal capability against its teaching route and required learner artifact. It must continue to distinguish prepared material from demonstrated capability.
 - For every teaching question, show the model answer with the prompt so the learner can compare immediately.
 - Ask multiple questions in each batch rather than advancing one question per chat turn. Still request answers in the learner's own words so recognition is not treated as demonstrated retrieval.
+- The learner requested an explicit PostgreSQL/InnoDB comparison and probable performance-improvement analysis. Keep this as an optional late lens after the CUBRID mechanism: compare responsibilities rather than API names, and label holder lookup or nested-atomic ideas as hypotheses until a release-build benchmark isolates them.
