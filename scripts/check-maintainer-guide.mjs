@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { normalizeHeadingSlug } from "./markdown-heading-slug.mjs";
 import { validateQuestionBank } from "./question-bank-contract.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -216,13 +217,7 @@ function headingSlugs(markdown) {
       continue;
     }
 
-    const base = match[1]
-      .replace(/<[^>]*>/g, "")
-      .replace(/[`*_~]/g, "")
-      .toLowerCase()
-      .replace(/[^\p{Letter}\p{Number}\s_-]/gu, "")
-      .trim()
-      .replace(/\s+/g, "-");
+    const base = normalizeHeadingSlug(match[1]);
     const duplicateIndex = counts.get(base) ?? 0;
     counts.set(base, duplicateIndex + 1);
     slugs.add(duplicateIndex === 0 ? base : `${base}-${duplicateIndex}`);

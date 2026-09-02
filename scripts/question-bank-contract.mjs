@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { normalizeHeadingSlug } from "./markdown-heading-slug.mjs";
 
 export const questionPagePaths = [
   "questions/README.md",
@@ -76,16 +77,6 @@ const dispositions = new Set([
 
 function slash(relativePath) {
   return relativePath.split(path.sep).join("/");
-}
-
-function headingSlug(text) {
-  return text
-    .replace(/<[^>]*>/g, "")
-    .replace(/[`*_~]/g, "")
-    .toLowerCase()
-    .replace(/[^\p{Letter}\p{Number}\s_-]/gu, "")
-    .trim()
-    .replace(/\s+/g, "-");
 }
 
 function sections(markdown) {
@@ -279,7 +270,7 @@ export function validateQuestionBank(root, pageMarkdown, config, failures) {
         failures.push(`${promptPath}: ${id} prompt/answer titles differ`);
       } else if (
         !field(answerMap.get(id).body, "Prompt")?.includes(
-          `./${path.basename(promptPath)}#${headingSlug(`${id} — ${item.title}`)}`,
+          `./${path.basename(promptPath)}#${normalizeHeadingSlug(`${id} — ${item.title}`)}`,
         )
       ) {
         failures.push(`${answerPath}: ${id} does not link its exact prompt anchor`);
