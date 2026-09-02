@@ -77,6 +77,7 @@ Before review, answer:
 
 ## Related routes
 
+- [Practice contract-versus-policy review](../questions/maintenance-scenarios.md#pgbuf-qb-056-is-the-proposed-change-a-contract-change-or-a-policy-change)
 - [Caller Completes Correctness](../learning/03-caller-completes-correctness.md)
 - [Flush One Generation](../learning/04-flush-one-generation.md)
 - [Maintainer Invariant Index](../reference/invariant-index.md)

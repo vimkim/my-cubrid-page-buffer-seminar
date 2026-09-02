@@ -21,6 +21,7 @@ All source claims are pinned to CUBRID commit `f799e05d77d5300c6ea5753b4a6cc7cae
 | Locate the owning implementation or caller | [Find the source](./reference/source-map.md) | Compact source and caller map |
 | Check provenance or current claim status | [Check evidence and uncertainty](./source-inventory.md) | [Source inventory](./source-inventory.md) plus the sole mutable [Evidence and uncertainty registry](./unresolved-or-version-sensitive-findings.md) |
 | Extend Core reasoning | [Continue to Advanced work](./advanced/acquisition-concurrency.md) | Concurrency, progress, recovery, specialized interfaces, and proof obligations |
+| Rehearse or test your model | [Use the Question bank](./questions/README.md) | Core retrieval, optional Advanced questions, maintenance scenarios, and evidence-bounded exercises |
 
 ## Core completion outcomes
 

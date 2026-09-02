@@ -519,3 +519,13 @@ and comparator internals—belongs in reference appendices.
   later interface deck. Approval does not automatically transfer across scope.
 - Preserve the user's existing live course modifications. The source inventory
   is read-only with respect to both input trees.
+
+## Canonical Question-bank routing
+
+The complete disposition of the progressive, adversarial, historical, planned,
+executed, live-grill, and Reader-intake populations is owned by the
+[Question-bank migration audit](./questions/migration-audit.md). The reader-facing
+[Question-bank entry](./questions/README.md) routes to paired Core, Advanced,
+Maintenance-scenario, and Applied-exercise prompt/answer pages. Legacy banks and
+executed evidence trees remain unchanged at their original paths; Canonical items
+link them instead of copying provenance, runners, or receipts.

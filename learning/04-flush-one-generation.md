@@ -114,6 +114,7 @@ On an ordinary post-submission failure, the code restores G’s dirty bit if it 
 
 ## Related routes
 
+- [Practice mutation versus durability](../questions/core.md#pgbuf-qb-025-why-is-a-write-latch-not-durability)
 - [Verify at the Risk Boundary](../playbooks/verify-a-change.md)
 - [Evidence and uncertainty registry](../unresolved-or-version-sensitive-findings.md)
 - [Maintainer Invariant Index](../reference/invariant-index.md)

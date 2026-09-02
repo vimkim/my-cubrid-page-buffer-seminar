@@ -53,6 +53,7 @@ Source: `src/storage/page_buffer.h:320-326`; status and evidence remain in the [
 
 ## Related routes
 
+- Practice: [simple-fix ownership](../questions/advanced.md#pgbuf-qb-049-why-is-simple-fix-not-a-faster-ordinary-fix)
 - Core prerequisite: [Contract and Objects](../learning/01-contract-and-objects.md)
 - Core prerequisite: [Fix, Hold, and Release](../learning/02-fix-hold-release.md)
 - Investigate a symptom: [Diagnose Page-buffer Symptoms](../playbooks/debug-by-symptom.md)

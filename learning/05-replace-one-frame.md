@@ -83,6 +83,7 @@ The latch waiter fails a hard ownership/wait-state gate even though `fcnt` was o
 
 ## Related routes
 
+- [Practice victim eligibility](../questions/core.md#pgbuf-qb-029-what-makes-a-frame-safe-to-victimize)
 - [Diagnose Page-buffer Symptoms](../playbooks/debug-by-symptom.md)
 - [Maintainer Invariant Index](../reference/invariant-index.md)
 - [Replacement Policy and Background Progress](../advanced/replacement-progress.md)

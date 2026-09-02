@@ -69,6 +69,8 @@ Every SVG displayed anywhere in the document set is owned by [`assets/`](./asset
 - Prefer continuous prose, compact tables, and task-oriented checklists.
 - Use a visual only when relationships or state transitions are materially harder to understand in prose.
 - Keep exhaustive API inventories and experiment logs in linked Evidence references. Maintain the selected Canonical Question bank under `questions/`; keep historical banks as linked migration evidence.
+- Treat `questions/README.md` as the sole Question-bank route selector. Core is the expected retrieval route; Advanced, Maintenance scenarios, and Applied exercises are optional and task-selected.
+- Keep prompts and answers on companion pages joined by immutable `PGBUF-QB-*` IDs. Migration provenance belongs only in `questions/migration-audit.md`.
 - Use `Module`, `Interface`, `Implementation`, and `seam` consistently with `CONTEXT.md`.
 - Use one Predict–Locate–Explain Understanding check and an adjacent evidence-aware model answer on each Learning page.
 - Remove presentation timing, speaker notes, slide language, audience-performance prompts, and day-by-day calendar framing. Retain the confirmed guide-entry duration expectations.
@@ -102,6 +104,8 @@ The aggregate validation must:
 6. request every page and displayed SVG through the local Copyparty server;
 7. when browser automation is available, require nonzero image natural dimensions and no relevant render error;
 8. report live-DOM validation as unavailable when browser automation cannot run.
+
+Question-bank validation additionally enforces the approved ten-page topology, prompt/answer schemas and pairing, globally unique Canonical IDs, complete source-population dispositions, preserved Reader-intake digest, and contextual route links from every Learning, Advanced, and playbook page.
 
 ## Retired presentation material
 

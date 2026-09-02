@@ -81,6 +81,7 @@ Source: ordered helpers and callbacks at `src/storage/page_buffer.c:12268-13531`
 
 ## Related routes
 
+- Practice: [lock-free READ-hit proof](../questions/advanced.md#pgbuf-qb-031-what-closes-the-lock-free-read-hit-proof)
 - Core prerequisite: [Fix, Hold, and Release](../learning/02-fix-hold-release.md)
 - Caller boundary: [Caller Completes Correctness](../learning/03-caller-completes-correctness.md)
 - Plan a modification: [Change the Module Safely](../playbooks/change-safely.md)

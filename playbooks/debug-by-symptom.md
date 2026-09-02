@@ -76,6 +76,7 @@ The uncertainty registry is the sole status owner for every `VS-*` item. IDs her
 
 ## Related routes
 
+- [Practice wait-owner diagnosis](../questions/maintenance-scenarios.md#pgbuf-qb-062-is-the-symptom-fix-debt-a-latch-wait-or-a-transaction-lock)
 - [Fix, Hold, and Release](../learning/02-fix-hold-release.md)
 - [Source and Caller Map](../reference/source-map.md)
 - [Verify at the Risk Boundary](./verify-a-change.md)

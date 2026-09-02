@@ -93,6 +93,7 @@ Historical findings are revision-bound to their recorded source/experiment. A hi
 
 ## Related routes
 
+- Practice: [interface availability](../questions/advanced.md#pgbuf-qb-053-when-is-an-exported-name-not-an-available-interface)
 - Complete the core learning path: [Maintainer Capstone](../learning/06-maintainer-capstone.md)
 - Select advanced context: [Acquisition](./acquisition-concurrency.md), [replacement](./replacement-progress.md), [recovery and lifecycle](./recovery-and-lifecycle.md), or [specialized interfaces](./specialized-interfaces.md)
 - Design the proof: [Verify at the Risk Boundary](../playbooks/verify-a-change.md)

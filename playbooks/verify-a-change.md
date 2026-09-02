@@ -57,6 +57,7 @@ The [source inventory](../source-inventory.md) owns existing receipts and reconc
 
 ## Related routes
 
+- [Practice risk-to-test selection](../questions/maintenance-scenarios.md#pgbuf-qb-070-which-verification-seam-crosses-the-actual-risk)
 - [Change the Module Safely](./change-safely.md)
 - [Flush One Generation](../learning/04-flush-one-generation.md)
 - [Replace One Frame](../learning/05-replace-one-frame.md)

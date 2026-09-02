@@ -154,6 +154,7 @@ After the matching unfix, this call's debt and borrowed-pointer lifetime end. Th
 
 ## Related routes
 
+- [Practice the Module boundary](../questions/core.md#pgbuf-qb-001-what-does-the-page-buffer-module-own)
 - [Change the Module Safely](../playbooks/change-safely.md)
 - [Source and Caller Map](../reference/source-map.md)
 - [Maintainer Invariant Index](../reference/invariant-index.md)

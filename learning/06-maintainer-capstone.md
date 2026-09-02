@@ -92,6 +92,7 @@ If this becomes a real change-impact plan, another maintainer must review the ow
 
 ## Related routes
 
+- [Practice the change-impact packet](../questions/core.md#pgbuf-qb-030-what-belongs-in-a-page-buffer-change-impact-plan)
 - [Verify at the Risk Boundary](../playbooks/verify-a-change.md)
 - [Source inventory](../source-inventory.md)
 - [Maintainer Invariant Index](../reference/invariant-index.md)

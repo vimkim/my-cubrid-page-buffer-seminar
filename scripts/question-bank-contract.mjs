@@ -137,7 +137,11 @@ function validateAudit(markdown, canonicalIds, failures) {
 
   const rows = markdown
     .split(/\r?\n/)
-    .filter((line) => /^\|\s*`(?:TEACH|ADV|HIST|PLAN|EXEC|GRILL|READER|NEW)`\s*\|/.test(line))
+    .filter((line) =>
+      /^\|\s*`(?:TEACH|ADV|HIST|PLAN|EXEC|GRILL|READER|NEW)`\s*\|\s*`[^`]+`\s*\|/.test(
+        line,
+      ),
+    )
     .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim().replace(/^`|`$/g, "")));
   const seenLegacy = new Set();
   const counts = new Map();

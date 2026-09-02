@@ -126,6 +126,7 @@ The success path transfers or ordered-unfixes the home watcher and cleans the re
 
 ## Related routes
 
+- [Practice the caller-obligation ledger](../questions/core.md#pgbuf-qb-020-what-correctness-remains-with-a-mutating-caller)
 - [Change the Module Safely](../playbooks/change-safely.md)
 - [Source and Caller Map](../reference/source-map.md)
 - [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md)

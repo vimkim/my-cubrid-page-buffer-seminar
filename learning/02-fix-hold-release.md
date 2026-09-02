@@ -156,6 +156,7 @@ Thus the global `fcnt` values rise through 1, 2, and 3 while the thread ledgers 
 
 ## Related routes
 
+- [Practice latch and lock ownership](../questions/core.md#pgbuf-qb-013-how-does-a-page-latch-differ-from-a-transaction-lock)
 - [Change the Module Safely](../playbooks/change-safely.md)
 - [Source and Caller Map](../reference/source-map.md)
 - [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md)

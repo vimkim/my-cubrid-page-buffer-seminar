@@ -6,7 +6,7 @@
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`, with older material explicitly revision-bound
 **Evidence used:** Verified mechanism, Runtime observation, and Historical evidence from the [source inventory](../source-inventory.md) and linked source banks
 
-**Migration status:** In progress
+**Migration status:** Complete
 
 This audit owns migration provenance; reader-facing prompts and answers do not repeat it. A Retained, Merged, or Rewritten item maps to a Canonical question. Superseded identifies a stronger descendant. Excluded requires a scope, duplication, or evidence rationale.
 
@@ -84,7 +84,7 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `ADV` | `ADV-02` | Page object identity | Merged | PGBUF-QB-003 | The Canonical object map owns this distinction. |
 | `ADV` | `ADV-03` | Choosing acquisition families | Rewritten | PGBUF-QB-006, PGBUF-QB-044, PGBUF-QB-049 | Split ordinary policy choice from recovery and specialized interfaces. |
 | `ADV` | `ADV-04` | Expected NULL | Merged | PGBUF-QB-017 | Core owns expected absence versus failure. |
-| `ADV` | `ADV-05` | NEW_PAGE allocation boundary | Rewritten | PGBUF-QB-044 | Kept as a special-fetch caller obligation without claiming allocation. |
+| `ADV` | `ADV-05` | NEW_PAGE allocation boundary | Rewritten | PGBUF-QB-021, PGBUF-QB-044 | Core rejects implied allocation; Advanced assigns special-fetch caller ownership. |
 | `ADV` | `ADV-06` | Resident versus disk validity | Merged | PGBUF-QB-006, PGBUF-QB-047 | Separated acquisition knowledge from deallocation state. |
 | `ADV` | `ADV-07` | Raw volume I/O bypass | Rewritten | PGBUF-QB-047 | Scoped to the verified deallocation and raw-overwrite call paths. |
 | `ADV` | `ADV-08` | Multiple release debts | Merged | PGBUF-QB-016 | The Core two-ledger exercise owns nested fixes. |
@@ -98,7 +98,7 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `ADV` | `ADV-16` | Promotion invalidates observations | Rewritten | PGBUF-QB-034 | Advanced restart reasoning owns the stale-observation consequence. |
 | `ADV` | `ADV-17` | Single leading promoter | Merged | PGBUF-QB-034 | Kept within the promotion protocol rather than as an isolated fact. |
 | `ADV` | `ADV-18` | Fix-with-retry semantics | Merged | PGBUF-QB-034 | Retry and restart are one maintainer decision. |
-| `ADV` | `ADV-19` | Lock ownership and rechecks | Rewritten | PGBUF-QB-009, PGBUF-QB-031, PGBUF-QB-054 | Split identity, lock-free proof, and exceptional ownership audit. |
+| `ADV` | `ADV-19` | Lock ownership and rechecks | Rewritten | PGBUF-QB-009, PGBUF-QB-031, PGBUF-QB-054, PGBUF-QB-066 | Split identity, lock-free proof, exceptional ownership audit, and identity diagnosis. |
 | `ADV` | `ADV-20` | Ordered total order | Merged | PGBUF-QB-022, PGBUF-QB-035 | Core introduces the order; Advanced explains release-before-refix. |
 | `ADV` | `ADV-21` | page_was_unfixed staleness | Merged | PGBUF-QB-022, PGBUF-QB-035 | The same temporary-release contract owns the stale state. |
 | `ADV` | `ADV-22` | Ordered-fix partial failure | Rewritten | PGBUF-QB-035, PGBUF-QB-054 | Reframed as an ownership audit across a non-atomic protocol. |
@@ -110,12 +110,12 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `ADV` | `ADV-28` | WAL and DWB | Merged | PGBUF-QB-027 | Core owns their distinct failure boundaries. |
 | `ADV` | `ADV-29` | Safe-flush outcomes | Merged | PGBUF-QB-027, PGBUF-QB-028, PGBUF-QB-055 | Normal ordering and generation behavior stay separate from failure proof. |
 | `ADV` | `ADV-30` | Checkpoint selection | Rewritten | PGBUF-QB-045 | Dedicated Advanced recovery question owns the selection boundary. |
-| `ADV` | `ADV-31` | Flush failure restoration | Rewritten | PGBUF-QB-055 | Kept as an exceptional-path candidate requiring evidence promotion. |
+| `ADV` | `ADV-31` | Flush failure restoration | Rewritten | PGBUF-QB-055, PGBUF-QB-059 | Kept as an exceptional-path candidate and a status-safe review packet. |
 | `ADV` | `ADV-32` | Victim eligibility | Merged | PGBUF-QB-029 | Core owns the hard predicate. |
 | `ADV` | `ADV-33` | LRU zones and AOUT | Rewritten | PGBUF-QB-037, PGBUF-QB-043 | Split active zone policy from disabled-by-default AOUT support. |
-| `ADV` | `ADV-34` | Private and shared LRU correctness | Rewritten | PGBUF-QB-038 | Quota policy is bounded away from correctness state. |
+| `ADV` | `ADV-34` | Private and shared LRU correctness | Rewritten | PGBUF-QB-038, PGBUF-QB-056 | Quota policy is bounded away from correctness state and feeds contract-versus-policy review. |
 | `ADV` | `ADV-35` | Progress after victim-search failure | Rewritten | PGBUF-QB-039, PGBUF-QB-040 | Split direct reservation from broader allocation progress. |
-| `ADV` | `ADV-36` | Daemon and synchronous progress | Rewritten | PGBUF-QB-042 | Dedicated daemon ownership question preserves fallback limits. |
+| `ADV` | `ADV-36` | Daemon and synchronous progress | Rewritten | PGBUF-QB-042, PGBUF-QB-048 | Daemon ownership feeds both progress and lifecycle dependency reasoning. |
 | `ADV` | `ADV-37` | Release flush invalidate deallocate victimize | Merged | PGBUF-QB-004, PGBUF-QB-047 | Core state distinctions and Advanced storage transitions share ownership. |
 | `ADV` | `ADV-38` | Invalidate-all residency | Merged | PGBUF-QB-047 | Covered by the invalidation and deallocation boundary. |
 | `ADV` | `ADV-39` | Deferred permanent deallocation | Merged | PGBUF-QB-047 | Covered without treating invalidation as file allocation. |
@@ -126,11 +126,11 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `ADV` | `ADV-44` | Area-copy do_fetch | Rewritten | PGBUF-QB-051 | Dedicated hazardous-convenience question. |
 | `ADV` | `ADV-45` | Metadata mutation | Merged | PGBUF-QB-025, PGBUF-QB-046 | Mutation and recovery effects belong to their normal contracts. |
 | `ADV` | `ADV-46` | Metric definitions | Rewritten | PGBUF-QB-052, PGBUF-QB-065 | Split approximate authorization from counter-definition tracing. |
-| `ADV` | `ADV-47` | Cold-miss DWB read failure | Merged | PGBUF-QB-054, PGBUF-QB-055 | Treated as ownership audit plus evidence-promotion case. |
-| `ADV` | `ADV-48` | Holder allocation after grant | Rewritten | PGBUF-QB-054 | Dedicated post-grant ownership audit. |
-| `ADV` | `ADV-49` | Lock-free reuse race | Rewritten | PGBUF-QB-031 | Dedicated proof-obligation question. |
+| `ADV` | `ADV-47` | Cold-miss DWB read failure | Merged | PGBUF-QB-054, PGBUF-QB-055, PGBUF-QB-058 | Treated as ownership audit, evidence-promotion case, and fault packet. |
+| `ADV` | `ADV-48` | Holder allocation after grant | Rewritten | PGBUF-QB-054, PGBUF-QB-057, PGBUF-QB-058 | Feeds the post-grant audit, generic exit table, and targeted fault packet. |
+| `ADV` | `ADV-49` | Lock-free reuse race | Rewritten | PGBUF-QB-031, PGBUF-QB-060 | Split mechanism proof from the maintenance verification packet. |
 | `ADV` | `ADV-50` | Dead exported interface | Rewritten | PGBUF-QB-053 | Dedicated availability question. |
-| `ADV` | `ADV-51` | Deallocation diagnostic identity | Merged | PGBUF-QB-055 | Kept revision-bound until stronger evidence exists. |
+| `ADV` | `ADV-51` | Deallocation diagnostic identity | Merged | PGBUF-QB-055, PGBUF-QB-061 | Kept revision-bound and routed to anomaly-promotion review. |
 | `ADV` | `ADV-52` | Cross-database ownership analogue | Excluded | — | Cross-database Canonical questions are outside the confirmed scope. |
 | `ADV` | `ADV-53` | In-progress miss publication | Rewritten | PGBUF-QB-032 | Retained as a CUBRID-only publication-boundary trace. |
 | `ADV` | `ADV-54` | Cross-database replacement analogy | Excluded | — | Analogy would require separately pinned comparator baselines. |

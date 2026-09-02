@@ -62,6 +62,7 @@ Existing cold/warm and pressure-adjacent observations are no-eviction evidence: 
 
 ## Related routes
 
+- Practice: [LRU domains and zones](../questions/advanced.md#pgbuf-qb-037-what-do-lru-domains-and-zones-decide)
 - Core prerequisite: [Flush One Generation](../learning/04-flush-one-generation.md)
 - Core prerequisite: [Replace One Frame](../learning/05-replace-one-frame.md)
 - Investigate a symptom: [Diagnose Page-buffer Symptoms](../playbooks/debug-by-symptom.md)
