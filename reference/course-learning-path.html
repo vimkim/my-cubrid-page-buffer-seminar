@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID page-buffer course learning path</title>
+  <link rel="stylesheet" href="../assets/teach-course.css">
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · course route</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Stateful learning path</div>
+    <h1>Learn in dependency order. Advance by retrieval.</h1>
+    <p>Core builds the page journey and change-review capability; Advanced closes the full-module mechanisms; rehearsal turns understanding into a defensible team presentation.</p>
+    <div class="pills"><span class="pill">Orient</span><span class="pill">Core</span><span class="pill">Advanced</span><span class="pill">Rehearse</span><span class="pill">Present</span></div>
+  </header>
+
+  <section class="section">
+    <div class="eyebrow">Your current action</div>
+    <h2>Synthesize Lessons 1–9 before reading Lesson 10</h2>
+    <p>You reported reading Lessons 1–9. Deliver the integrated Core teach-back in chat without reopening them. I will record only demonstrated concepts, repair the narrow gaps, and then route you to Lesson 10.</p>
+    <p><strong>Required spine:</strong> Module boundary and six-move journey → object/state axes and fix debt → caller mutation → G/G+1 with DIRTY/FLUSHING → victim eligibility and reusable BCB identity → evidence-bounded VS candidate → queued versus granted latch ownership.</p>
+    <p><a href="core-synthesis-studio.html">Open the closed-book Core synthesis studio →</a></p>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Required Core route</div>
+    <h2>One dependency chain through safe change review</h2>
+    <div class="course-list">
+      <article class="course-item"><span class="step">1</span><div><h3>Present the page journey</h3><p>Module boundary, six-move narrative, document routes, evidence grammar.</p></div><a href="../lessons/0001-present-the-page-journey.html">Open →</a></article>
+      <article class="course-item"><span class="step">2</span><div><h3>Separate objects from state</h3><p>VPID, BCB, frame, PAGE_PTR, holder/watcher, lifetimes, four state axes.</p></div><a href="../lessons/0002-separate-objects-from-state.html">Open →</a></article>
+      <article class="course-item"><span class="step">3</span><div><h3>Trace fix convergence</h3><p>Hit, cold miss, load ownership, waiter retry, common success postcondition.</p></div><a href="../lessons/0003-trace-fix-convergence.html">Open →</a></article>
+      <article class="course-item"><span class="step">4</span><div><h3>Repay fix debt</h3><p>Global <code>fcnt</code>, per-thread holders, nested ownership, matching release.</p></div><a href="../lessons/0004-repay-fix-debt.html">Open →</a></article>
+      <article class="course-item"><span class="step">5</span><div><h3>Audit a logged mutation</h3><p>Logical lock, WRITE latch, validation, log/page LSA, DIRTY, all-exit cleanup.</p></div><a href="../lessons/0005-audit-a-logged-mutation.html">Open →</a></article>
+      <article class="course-item"><span class="step">6</span><div><h3>Flush one generation</h3><p>G/G+1, DIRTY/FLUSHING, two LSAs, WAL gate, re-dirty, retryable failure.</p></div><a href="../lessons/0006-flush-one-generation.html">Open →</a></article>
+      <article class="course-item"><span class="step">7</span><div><h3>Replace one frame</h3><p>Stable BCB slot/current VPID, hard eligibility, protected handoff, policy boundary.</p></div><a href="../lessons/0007-replace-one-frame.html">Open →</a></article>
+      <article class="course-item"><span class="step">8</span><div><h3>Defend a safe change</h3><p>VS registry, case packets, proof ladder, fault seam, evidence-bounded conclusion.</p></div><a href="../lessons/0008-defend-a-safe-change.html">Open →</a></article>
+    </div>
+    <div class="callout"><strong>Core completion:</strong> demonstrated retrieval for the page journey plus a reviewable change-impact defense. Reading all eight pages is not completion evidence.</div>
+    <p><a href="core-synthesis-studio.html">Attempt the integrated Core checkpoint →</a></p>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Advanced route</div>
+    <h2>Complete these before claiming whole-module mastery</h2>
+    <div class="course-list">
+      <article class="course-item"><span class="step">9</span><div><span class="status">Ready</span><h3>Classify a latch wait</h3><p>Queue membership, zero-crossing handoff, timeout cleanup, fairness boundary.</p></div><a href="../lessons/0009-classify-latch-wait.html">Open →</a></article>
+      <article class="course-item"><span class="step">10</span><div><span class="status">Ready</span><h3>Revalidate after promotion</h3><p>Four outcomes, unfixed window, debt conservation, access-method restart.</p></div><a href="../lessons/0010-revalidate-after-promotion.html">Open →</a></article>
+      <article class="course-item"><span class="step">11</span><div><span class="status">Ready</span><h3>Ordered multi-page refix</h3><p>Caller-supplied order, watcher transfer, partial unwind, stale observation repair.</p></div><a href="../lessons/0011-rebuild-after-ordered-refix.html">Open →</a></article>
+      <article class="course-item"><span class="step">12</span><div><span class="status">Ready</span><h3>Replacement progress</h3><p>LRU/quota selection, daemons, direct victims, progress and fairness limits.</p></div><a href="../lessons/0012-prove-replacement-progress.html">Open →</a></article>
+      <article class="course-item"><span class="step">13</span><div><span class="status">Ready</span><h3>Recovery redo and checkpoint</h3><p>Selective checkpoint ownership, special fetch modes, page-LSA idempotence, and crash evidence.</p></div><a href="../lessons/0013-gate-redo-by-page-lsa.html">Open →</a></article>
+      <article class="course-item"><span class="step">14</span><div><span class="status">Ready</span><h3>Lifecycle dependency order</h3><p>Initialization, daemon gating, recovery, shutdown, log finalization, and pool finalization.</p></div><a href="../lessons/0014-preserve-lifecycle-order.html">Open →</a></article>
+      <article class="course-item"><span class="step">15</span><div><span class="status">Ready</span><h3>Specialized interfaces</h3><p>Pointer location, owner protocols, paired cleanup, approximate diagnostics, and API caveats.</p></div><a href="../lessons/0015-route-a-specialized-interface.html">Open →</a></article>
+      <article class="course-item"><span class="step">16</span><div><span class="status">Ready</span><h3>Failure and proof obligations</h3><p>Exceptional exits, risk-matched injection, settled ownership/generation ledgers, impact, and current status.</p></div><a href="../lessons/0016-close-a-failure-proof.html">Open →</a></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">The lesson loop</div>
+    <h2>Use the same five moves every time</h2>
+    <div class="journey">
+      <article><span class="step">1</span><h3>Acquire</h3><p>Read the short lesson and inspect its one primary diagram.</p></article>
+      <article><span class="step">2</span><h3>Close</h3><p>Hide the page before attempting the retrieval prompt.</p></article>
+      <article><span class="step">3</span><h3>Retrieve</h3><p>Predict state and consequences from memory; do not reveal first.</p></article>
+      <article><span class="step">4</span><h3>Submit</h3><p>Paste the answer into chat for source- and invariant-level feedback.</p></article>
+      <article><span class="step">5</span><h3>Record</h3><p>Create a learning record only after demonstrated understanding, then interleave it later.</p></article>
+    </div>
+    <p>Use printable reference cards after learning, not as a substitute for retrieval. Use canonical Markdown when tracing source or preparing team questions.</p>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Presentation gate</div>
+    <h2>Understanding is necessary; rehearsal proves delivery</h2>
+    <ol>
+      <li>Deliver the six-move page journey without notes.</li>
+      <li>Navigate from a claim to its canonical page and pinned source range.</li>
+      <li>Answer counterexamples across identity, ownership, dirty generation, and replacement axes.</li>
+      <li>Distinguish contract, verified mechanism, policy, inference, runtime observation, and historical evidence.</li>
+      <li>Defend one change-impact case under adversarial questions and record teammate feedback.</li>
+    </ol>
+    <p><a href="../lessons/0017-defend-the-module-live.html">Open Lesson 17: presentation rehearsal →</a></p>
+    <p><a href="presentation-spine.html">Open the presentation spine →</a> · <a href="presentation-rehearsal-card.html">Open the rehearsal scorecard →</a></p>
+  </section>
+
+  <footer class="footer">Do not advance because a page feels familiar. Advance when you can reconstruct the owner, transition, invariant, consequence, and evidence boundary without looking.</footer>
+  <p class="footer"><a href="course-coverage-matrix.html">Audit canonical coverage and current learner evidence →</a></p>
+</main>
+</body>
+</html>

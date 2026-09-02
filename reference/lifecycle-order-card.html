@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID lifecycle-order reference card</title>
+  <link rel="stylesheet" href="../assets/teach-course.css">
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print for lifecycle review</div>
+    <h1>Page-buffer lifecycle card</h1>
+    <p>Create dependencies before enabling work; stop every consumer before destroying its service.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Last use</span><span class="pill">Consumer before resource</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Startup and shutdown order</h2>
+      <img class="diagram" src="../assets/lifecycle-order.svg" alt="Page-buffer pool dependency order across startup, recovery, and shutdown">
+    </article>
+    <article class="reference-card">
+      <h2>Structural invariants</h2>
+      <ul>
+        <li>No daemon touches the pool after daemon destruction/pool finalization.</li>
+        <li><code>log_final()</code> runs while page propagation remains available.</li>
+        <li>DWB survives until its final page-write dependency finishes.</li>
+        <li>File management survives until page-buffer finalization completes.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Identity owner boundary</h2>
+      <ul>
+        <li>File/disk/recovery decides logical allocation.</li>
+        <li>Caller chooses special fetch semantics.</li>
+        <li>Page buffer enforces resident coherence.</li>
+        <li>Raw overwrite requires flush/invalidation first.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Startup shorthand</h2>
+      <ol>
+        <li>Lock manager</li>
+        <li>Page-buffer pool</li>
+        <li>File manager</li>
+        <li>DWB/metadata ready</li>
+        <li>Daemons created but gated</li>
+        <li>Log recovery</li>
+        <li>Flush work enabled</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Shutdown shorthand</h2>
+      <ol>
+        <li>Stop vacuum/background work</li>
+        <li>Destroy page-buffer daemons</li>
+        <li><code>log_final()</code> with pool alive</li>
+        <li>Destroy DWB after page propagation</li>
+        <li><code>pgbuf_finalize()</code></li>
+        <li>File-manager finalization</li>
+      </ol>
+    </article>
+    <article class="reference-card full">
+      <h2>Source route</h2>
+      <table>
+        <thead><tr><th>Responsibility</th><th>Pinned range</th></tr></thead>
+        <tbody>
+          <tr><td>Transaction-table initialization</td><td><code>log_tran_table.c:468–512</code></td></tr>
+          <tr><td>Boot, recovery, restart cleanup</td><td><code>boot_sr.c:1974–2801</code></td></tr>
+          <tr><td>Normal shutdown</td><td><code>boot_sr.c:3055–3113</code></td></tr>
+          <tr><td>Daemon gating/destruction</td><td><code>page_buffer.c:16996–17136,17244–17255</code></td></tr>
+          <tr><td>Transaction-table teardown</td><td><code>log_tran_table.c:580–594</code></td></tr>
+          <tr><td>Raw/bypass coherence</td><td><code>disk_manager.c:721–811</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../advanced/recovery-and-lifecycle.md">Recovery, Allocation State, and Module Lifecycle</a>. Review last use before changing finalizer order.</footer>
+</main>
+</body>
+</html>

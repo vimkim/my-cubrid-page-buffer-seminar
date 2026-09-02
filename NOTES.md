@@ -1,0 +1,20 @@
+# Teaching notes
+
+- The outcome is whole-module maintainer understanding plus a defensible team presentation, not passive familiarity with the source.
+- Author teaching material in English and use the canonical vocabulary from `CONTEXT.md`.
+- Teach problem -> contract -> state owner and guard -> bounded source path. Never teach `page_buffer.c` in file order.
+- Build storage strength through retrieval, spacing, and later interleaving of caller, flush, and replacement scenarios.
+- Keep model answers available, but ask the learner to explain consequences and counterexamples rather than copy wording.
+- Do not create a learning record for exposure. Record only demonstrated understanding, prior knowledge, corrected misconceptions, or a confirmed mission change.
+- Another AI agent is improving this workspace concurrently. Re-check `git status` before every patch; do not edit canonical guide Markdown, validation code, or pre-existing/concurrently created SVGs during this teaching flow.
+- The first lesson is both an orientation win and a diagnostic: the learner's 90-second teach-back will establish the next lesson's difficulty.
+- The workspace is a browserless remote Linux server reached over SSH. Never use `xdg-open`; serve lessons on loopback and give the learner an SSH port-forward command plus an exact browser URL.
+- Introduce conceptual notation in plain language before symbolic timelines. In particular, define G/G+1 as reasoning labels—not stored counters—and teach the DIRTY/FLUSHING truth table before introducing LSAs.
+- Define documentation-only labels before using them: `VS-*` is an uncertainty-registry ID and a case packet is a bounded review exercise. Distinguish a stable reusable BCB slot from its one current VPID, many compatible holders from many identities, and movement between LRUs from simultaneous membership.
+- Keep the next required action explicit. Later lessons may be previewed, but direct the learner through Core in dependency order and advance only after retrieval feedback; reference cards support later lookup rather than replacing the lesson loop.
+- On 2026-09-02 the learner reported reading Lessons 1–9. Treat this as exposure, not mastery. The next checkpoint is one integrated Core synthesis; record demonstrated concepts and assign a narrow repair or Lesson 10 from that evidence.
+- The complete teaching route is prepared through Lesson 16 plus Lesson 17 rehearsal. Do not bypass the current Core synthesis checkpoint; later readiness still requires closed-book delivery, live document navigation, adversarial questions, and teammate feedback.
+- The current checkpoint has a dedicated `reference/core-synthesis-studio.html`. Its automatic detector is coverage-only; learning evidence still comes from the learner's pasted explanation and teacher feedback.
+- `reference/course-coverage-matrix.html` audits every Core, Advanced, playbook, evidence, and rehearsal capability against its teaching route and required learner artifact. It must continue to distinguish prepared material from demonstrated capability.
+- For every teaching question, show the model answer with the prompt so the learner can compare immediately.
+- Ask multiple questions in each batch rather than advancing one question per chat turn. Still request answers in the learner's own words so recognition is not treated as demonstrated retrieval.

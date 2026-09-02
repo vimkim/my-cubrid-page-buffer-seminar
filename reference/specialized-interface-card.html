@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID specialized-interface reference card</title>
+  <link rel="stylesheet" href="../assets/teach-course.css">
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print for interface review</div>
+    <h1>Specialized-interface card</h1>
+    <p>A familiar return type does not transfer a different protocol's ownership, guards, permissions, or cleanup.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Owner</span><span class="pill">Location</span><span class="pill">Guard</span><span class="pill">Accounting</span><span class="pill">Cleanup</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Three access forms</h2>
+      <img class="diagram" src="../assets/access-forms-compared.svg" alt="Normal fix, simple fix, and heap scan-copy compared by ownership and synchronization">
+    </article>
+    <article class="reference-card">
+      <h2>Substitution gate</h2>
+      <ol>
+        <li>Name the authorized owner.</li>
+        <li>Locate the returned bytes.</li>
+        <li>Name the change-prevention guard.</li>
+        <li>Account for <code>fcnt</code> and holder state.</li>
+        <li>Name the exact paired cleanup.</li>
+        <li>List permitted operations.</li>
+        <li>Label the evidence and revision.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Permission shorthand</h2>
+      <table>
+        <thead><tr><th>Value</th><th>Correct treatment</th></tr></thead>
+        <tbody>
+          <tr><td>Normal fixed <code>PAGE_PTR</code></td><td>Use within granted latch/fix lifetime; ordinary unfix repays it.</td></tr>
+          <tr><td>Simple-fixed <code>PAGE_PTR</code></td><td>Temporary read-only owner only; simple unfix; no writer.</td></tr>
+          <tr><td>Scan-copy <code>PAGE_PTR</code> shape</td><td>Private snapshot; free handle; never dirty, flush, or unfix.</td></tr>
+          <tr><td>Approximate metric</td><td>Form a hypothesis; re-enter a protected path before action.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card full">
+      <h2>Pinned uncertainty router</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Pinned status</th><th>Maintainer treatment</th></tr></thead>
+        <tbody>
+          <tr><td><code>VS-01</code></td><td>Declared/macro-mapped; no definition or caller located.</td><td>Unavailable, not an optimization choice.</td></tr>
+          <tr><td><code>VS-02</code></td><td><code>copy_to_area</code> prose/executable <code>do_fetch</code> drift.</td><td>Existing owner only; false-on-miss may return unchanged area.</td></tr>
+          <tr><td><code>VS-03</code></td><td><code>copy_from_area</code> normal path ignores <code>do_fetch</code>.</td><td>Not a WAL-aware general page writer.</td></tr>
+          <tr><td><code>VS-04</code></td><td><code>pgbuf_peek_stats</code> prototype-name drift.</td><td>Map outputs from executable semantics, not names alone.</td></tr>
+          <tr><td><code>VS-05</code></td><td>Some diagnostic values are approximate snapshots.</td><td>Never use them as mutation/deallocation authorization.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Owner-family route</h2>
+      <ul>
+        <li>Recovery: allocation knowledge and LSA gate.</li>
+        <li>Invalidation: logical state versus residency coherence.</li>
+        <li>Daemon: lifecycle gate versus timing policy.</li>
+        <li>Diagnostic: increment site and synchronization.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Source route</h2>
+      <ul>
+        <li>Simple fix: <code>page_buffer.c:2688–2811</code></li>
+        <li>Scan-copy: <code>page_buffer.c:908–981</code></li>
+        <li>Area-copy: <code>page_buffer.c:4701–4912</code></li>
+        <li>Approximate stats: <code>page_buffer.c:14748–14847</code></li>
+        <li>SHOW snapshot: <code>page_buffer.c:17323–17530</code></li>
+        <li>Dead declaration: <code>page_buffer.h:320–326</code></li>
+      </ul>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../advanced/specialized-interfaces.md">Specialized Interfaces and Approximate Observability</a>. Recheck every <code>VS-*</code> status on another revision.</footer>
+</main>
+</body>
+</html>

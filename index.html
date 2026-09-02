@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID Page-buffer Maintainer Course</title>
+  <link rel="stylesheet" href="assets/teach-course.css">
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · stateful course</span><span>Pinned source · f799e05</span></div>
+  <header class="hero">
+    <div class="eyebrow">Mission</div>
+    <h1>Understand the Module. Defend the design.</h1>
+    <p>Build a source-level mental model of <code>page_buffer.c/.h</code>, present the maintainer-guide documents coherently, and answer difficult team questions with an explicit evidence boundary.</p>
+    <div class="pills"><span class="pill">Knowledge</span><span class="pill">Source tracing</span><span class="pill">Retrieval</span><span class="pill">Presentation</span><span class="pill">Rehearsal</span></div>
+  </header>
+
+  <section class="section">
+    <div class="eyebrow">Current checkpoint</div>
+    <h2>Lessons 1–9 read: deliver one Core synthesis</h2>
+    <div class="reference-grid">
+      <article class="reference-card">
+        <span class="status">Ready now</span>
+        <h3>Core synthesis teach-back</h3>
+        <p>Without notes, present the Module boundary and page journey, then connect ownership, logged mutation, flush generations, victim eligibility, evidence discipline, and one latch-wait outcome.</p>
+        <p><strong>Reply in chat first.</strong> The studio gathers the eight prompts and checks coverage without claiming correctness.</p>
+        <p><a href="reference/core-synthesis-studio.html">Open Core synthesis studio →</a></p>
+      </article>
+      <article class="reference-card">
+        <span class="status waiting">Awaiting evidence</span>
+        <h3>Mastery record</h3>
+        <p>You reported reading Lessons 1–9. No learning record exists yet because exposure alone is not evidence of retrieval.</p>
+        <p>After the synthesis, demonstrated concepts will be recorded; gaps will receive a narrow repair before Lesson 10.</p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Read reported</span>
+        <h3>Lesson 2 · Separate objects from state</h3>
+        <p>This is ready, but take it after Lesson 1 feedback. It teaches the six-object map, three lifetimes, four state axes, and the “resident + unfixed + dirty” counterexample.</p>
+        <p><a href="lessons/0002-separate-objects-from-state.html">Preview Lesson 2 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Read reported</span>
+        <h3>Lesson 3 · Trace fix convergence</h3>
+        <p>Take this after the object-and-state teach-back. It separates caller intent, resident-hit preparation, cold-miss load ownership, identity checks, and the shared success contract.</p>
+        <p><a href="lessons/0003-trace-fix-convergence.html">Preview Lesson 3 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Read reported</span>
+        <h3>Lesson 4 · Repay fix debt</h3>
+        <p>Take this after fix convergence. Predict and simulate nested fixes across two threads, then explain why equal pointers do not merge release obligations.</p>
+        <p><a href="lessons/0004-repay-fix-debt.html">Preview Lesson 4 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Read reported</span>
+        <h3>Lesson 5 · Audit a logged mutation</h3>
+        <p>Take this after ownership accounting. Trace one heap insert through logical locking, destination validation, physical mutation, recovery logging, page LSA, dirtying, and all-exit watcher cleanup.</p>
+        <p><a href="lessons/0005-audit-a-logged-mutation.html">Preview Lesson 5 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Read reported</span>
+        <h3>Lesson 6 · Flush one generation</h3>
+        <p>Take this after the caller contract. Track a copied generation through its WAL gate and DWB/direct-write boundary while a writer creates a newer resident DIRTY generation.</p>
+        <p><a href="lessons/0006-flush-one-generation.html">Preview Lesson 6 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Read reported</span>
+        <h3>Lesson 7 · Replace one frame</h3>
+        <p>Take this after flush generations. Prove hard victim eligibility under protection before discussing LRU, quota, or allocation-progress policy.</p>
+        <p><a href="lessons/0007-replace-one-frame.html">Preview Lesson 7 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Read reported</span>
+        <h3>Lesson 8 · Defend a safe change</h3>
+        <p>Integrate the Core into a nine-field change-impact plan, separate five proof levels, and turn a source-visible concern into a risk-matched investigation.</p>
+        <p><a href="lessons/0008-defend-a-safe-change.html">Preview Lesson 8 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Read reported</span>
+        <h3>Lesson 9 · Classify a latch wait</h3>
+        <p>Trace immediate, conditional, queued, timeout, interrupt, and granted outcomes through the BCB queue without confusing a pending request with ownership or policy with fairness.</p>
+        <p><a href="lessons/0009-classify-latch-wait.html">Preview Lesson 9 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Prepared Advanced</span>
+        <h3>Lesson 10 · Revalidate after promotion</h3>
+        <p>Distinguish in-place, conditional, blocking, and failed READ→WRITE promotion; conserve nested debt while discarding observations across an unfixed window.</p>
+        <p><a href="lessons/0010-revalidate-after-promotion.html">Preview Lesson 10 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Prepared Advanced</span>
+        <h3>Lesson 11 · Rebuild after ordered refix</h3>
+        <p>Follow group-rank-VPID ordering, selective watcher release, sorted refix, stale-observation repair, and partial-failure debt.</p>
+        <p><a href="lessons/0011-rebuild-after-ordered-refix.html">Preview Lesson 11 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Prepared Advanced</span>
+        <h3>Lesson 12 · Prove replacement progress</h3>
+        <p>Trace the no-free-BCB loop through policy search, direct reservation, protected revocation, generation-aware post-flush, and bounded exits without claiming fairness.</p>
+        <p><a href="lessons/0012-prove-replacement-progress.html">Preview Lesson 12 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Prepared Advanced</span>
+        <h3>Lesson 13 · Gate redo by page LSA</h3>
+        <p>Separate selective checkpoint ownership, recovery-specific fetch semantics, page-LSA skip/apply idempotence, dirty publication, and crash-evidence limits.</p>
+        <p><a href="lessons/0013-gate-redo-by-page-lsa.html">Preview Lesson 13 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Prepared Advanced</span>
+        <h3>Lesson 14 · Preserve lifecycle order</h3>
+        <p>Review allocation/invalidation ownership, gated recovery startup, daemon shutdown, log finalization with a live pool, and failure cleanup by last-use dependencies.</p>
+        <p><a href="lessons/0014-preserve-lifecycle-order.html">Preview Lesson 14 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Prepared Advanced</span>
+        <h3>Lesson 15 · Route a specialized interface</h3>
+        <p>Classify normal fix, simple fix, scan-copy, area-copy, and approximate diagnostics by owner, byte location, guard, accounting, permissions, and paired cleanup.</p>
+        <p><a href="lessons/0015-route-a-specialized-interface.html">Preview Lesson 15 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Prepared Advanced</span>
+        <h3>Lesson 16 · Close a failure proof</h3>
+        <p>Choose the correct proof level and risk boundary, then inspect acquisition or flush-generation debt after the complete unwind, retry, and consumer consequence.</p>
+        <p><a href="lessons/0016-close-a-failure-proof.html">Preview Lesson 16 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Prepared rehearsal</span>
+        <h3>Lesson 17 · Defend the module live</h3>
+        <p>Deliver one six-move page journey, navigate the guide by intent, answer adversarial counterexamples, and turn unknowns into bounded evidence work.</p>
+        <p><a href="lessons/0017-defend-the-module-live.html">Preview Lesson 17 →</a></p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Learning path</div>
+    <h2>One page journey, then task-selected depth</h2>
+    <div class="course-list">
+      <article class="course-item"><span class="step">1</span><div><span class="status">Ready</span><h3>Presentation map</h3><p>Module boundary, six Core moves, document routes, and evidence grammar.</p></div><a href="lessons/0001-present-the-page-journey.html">Open →</a></article>
+      <article class="course-item"><span class="step">2</span><div><span class="status">Ready</span><h3>Objects and state axes</h3><p><code>VPID → BCB ↔ frame → PAGE_PTR</code>, ownership ledgers, lifetimes, and counterexamples.</p></div><a href="lessons/0002-separate-objects-from-state.html">Open →</a></article>
+      <article class="course-item"><span class="step">3</span><div><span class="status">Ready</span><h3>Fix convergence</h3><p>Caller intent, protected hit, serialized cold miss, identity checks, and the shared ownership postcondition.</p></div><a href="lessons/0003-trace-fix-convergence.html">Open →</a></article>
+      <article class="course-item"><span class="step">4</span><div><span class="status">Ready</span><h3>Ownership debt</h3><p>Global <code>fcnt</code>, per-thread nested holders, one debt per successful call, and matching release.</p></div><a href="lessons/0004-repay-fix-debt.html">Open →</a></article>
+      <article class="course-item"><span class="step">5</span><div><span class="status">Ready</span><h3>Caller completes correctness</h3><p>Logical lock, validation, mutation, recovery logging, page LSA, dirty transition, and all-exit cleanup.</p></div><a href="lessons/0005-audit-a-logged-mutation.html">Open →</a></article>
+      <article class="course-item"><span class="step">6</span><div><span class="status">Ready</span><h3>Flush one generation</h3><p>Copied generation, WAL gate, DWB/direct-write boundary, two LSAs, retryable failure, and concurrent re-dirty.</p></div><a href="lessons/0006-flush-one-generation.html">Open →</a></article>
+      <article class="course-item"><span class="step">7</span><div><span class="status">Ready</span><h3>Replace one frame</h3><p>Hard safety predicates before LRU selection and allocation-progress policy.</p></div><a href="lessons/0007-replace-one-frame.html">Open →</a></article>
+      <article class="course-item"><span class="step">8</span><div><span class="status">Ready</span><h3>Defend a safe change</h3><p>Interface family, owner, invariant, failure unwind, caller impact, and risk-matched verification.</p></div><a href="lessons/0008-defend-a-safe-change.html">Open →</a></article>
+      <article class="course-item"><span class="step">9</span><div><span class="status">First lesson ready</span><h3>Advanced mechanisms</h3><p>Concurrency, ordered access, replacement progress, recovery, lifecycle, specialized interfaces, and proof obligations.</p></div><a href="lessons/0009-classify-latch-wait.html">Open →</a></article>
+      <article class="course-item"><span class="step">10</span><div><span class="status">Final gate ready</span><h3>Presentation rehearsal</h3><p>Deliver the narrative, navigate evidence live, answer adversarial questions, and record teammate feedback.</p></div><a href="lessons/0017-defend-the-module-live.html">Open →</a></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Mastery protocol</div>
+    <h2>Every lesson closes with evidence</h2>
+    <div class="journey">
+      <article><span class="step">P</span><h3>Predict</h3><p>Commit to an expected transition before reading the model.</p></article>
+      <article><span class="step">L</span><h3>Locate</h3><p>Find the bounded source region that owns the transition.</p></article>
+      <article><span class="step">E</span><h3>Explain</h3><p>Name the owner, guard, invariant, and evidence level.</p></article>
+      <article><span class="step">T</span><h3>Teach back</h3><p>Reconstruct the idea without reading and answer one counterexample.</p></article>
+    </div>
+    <div class="callout"><strong>Storage strength rule:</strong> a lesson becomes a learning record only after demonstrated retrieval. Later lessons will interleave earlier ownership, caller, flush, and replacement decisions.</div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Quick access</div>
+    <h2>References and canonical documents</h2>
+    <div class="reference-grid">
+      <article class="reference-card"><h3>Course learning path</h3><p>Required Core order, Advanced completion route, five-move lesson loop, and presentation gate.</p><a href="reference/course-learning-path.html">Open learning path →</a></article>
+      <article class="reference-card"><h3>Core synthesis studio</h3><p>The current closed-book Lessons 1–9 checkpoint, coverage-only feedback, and chat handoff.</p><a href="reference/core-synthesis-studio.html">Open checkpoint →</a></article>
+      <article class="reference-card"><h3>Course coverage matrix</h3><p>Canonical capability coverage, required learner artifacts, current evidence state, and mission completion gates.</p><a href="reference/course-coverage-matrix.html">Open coverage audit →</a></article>
+      <article class="reference-card"><h3>Presentation spine</h3><p>The six-part narrative and document routing card.</p><a href="reference/presentation-spine.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Object and state map</h3><p>Six objects, three lifetimes, four-coordinate worksheet, and source anchors.</p><a href="reference/object-and-state-map.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Fix convergence map</h3><p>Caller choices, hit/miss preparation, load owner/waiter, three identity checks, and the common postcondition.</p><a href="reference/fix-convergence-map.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Ownership debt card</h3><p>Global and per-thread ledgers, nested-fix example, release rules, and source anchors.</p><a href="reference/ownership-debt-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Caller mutation card</h3><p>Page latch versus logical lock, mutation ordering, layer ownership, and exit-ledger prompts.</p><a href="reference/caller-mutation-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Flush-generation card</h3><p>Two LSAs, copied-versus-resident generations, flag algebra, WAL gate, failure unwind, and evidence boundaries.</p><a href="reference/flush-generation-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Replacement-safety card</h3><p>Hard victim predicates, policy boundary, lifecycle verbs, protected handoff, and review worksheet.</p><a href="reference/replacement-safety-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Change-defense card</h3><p>Five proof levels, nine change-impact fields, exceptional-return probes, and evidence-safe review language.</p><a href="reference/change-defense-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Latch-queue card</h3><p>Request outcomes, zero-crossing handoff, two-sided grant completion, timeout cleanup, and fairness limits.</p><a href="reference/latch-queue-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Promotion-restart card</h3><p>Four promotion outcomes, nested debt conservation, stale-observation checklist, and caller restart sources.</p><a href="reference/promotion-restart-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Ordered-watcher card</h3><p>Group-rank-VPID order, selective release, page_was_unfixed rebuild, partial-failure ledger, and sources.</p><a href="reference/ordered-watcher-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Replacement-progress card</h3><p>LRU policy, allocation exits, direct-victim revocation, G+1 handoff, liveness limits, and source route.</p><a href="reference/replacement-progress-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Redo-recovery card</h3><p>Selective checkpoint boundary, recovery fetch ownership, record/page-LSA gate, skip/apply table, and source route.</p><a href="reference/redo-recovery-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Lifecycle-order card</h3><p>Identity owner boundary, startup/recovery gates, shutdown order, structural invariants, and source route.</p><a href="reference/lifecycle-order-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Specialized-interface card</h3><p>Owner protocols, pointer location, paired cleanup, approximate diagnostics, and VS-01–VS-05 routing.</p><a href="reference/specialized-interface-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Failure-proof ledger</h3><p>Claim levels, acquisition and generation ledgers, highest verification seam, and receipt fields.</p><a href="reference/failure-proof-ledger-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Presentation rehearsal card</h3><p>Six-move rubric, challenge deck, live routes, honest-unknown response, and teammate feedback receipt.</p><a href="reference/presentation-rehearsal-card.html">Open reference →</a></article>
+      <article class="reference-card"><h3>Maintainer Guide</h3><p>The canonical route selector for Core, Advanced, playbooks, references, and questions.</p><a href="page-buffer-teaching-material.md">Open Markdown →</a></article>
+      <article class="reference-card"><h3>Evidence sources</h3><p>Source routing, invariant lookup, provenance, and mutable uncertainty.</p><a href="reference/source-map.md">Open source map →</a></article>
+    </div>
+  </section>
+
+  <footer class="footer">The teaching agent sets the next difficulty from your retrieval evidence. Ask questions whenever a transition, invariant, or source claim is unclear.</footer>
+</main>
+</body>
+</html>

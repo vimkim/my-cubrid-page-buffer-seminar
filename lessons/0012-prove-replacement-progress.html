@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0012 — Prove replacement progress</title>
+  <link rel="stylesheet" href="../assets/teach-course.css">
+  <script defer src="../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0012</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced capability · replacement progress</div>
+    <h1>Trace every exit without promising fairness</h1>
+    <p>By the end, you can explain what an allocator does when no free BCB exists, why a direct victim is revocable, and where the source stops short of a liveness theorem.</p>
+    <div class="pills"><span class="pill">Invalid list</span><span class="pill">LRU search</span><span class="pill">Quota</span><span class="pill">Direct victim</span><span class="pill">Revocation</span><span class="pill">Bounded exit</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="boundary">
+        <div class="eyebrow">01 · Keep the layers</div>
+        <h2>Policy finds candidates; eligibility authorizes reuse</h2>
+        <p>Replacement progress decides where to search, who should flush, whether an allocator waits, and how a candidate reaches it. None of those choices weakens Lesson 7’s hard gate: stable identity, no owner/waiter conflict, no DIRTY/FLUSHING debt, and protected final revalidation.</p>
+        <p class="big-claim">A fast candidate hint and a direct reservation are search results—not permission to rebind a frame.</p>
+      </section>
+
+      <section class="section" id="domains">
+        <div class="eyebrow">02 · Pinned search policy</div>
+        <h2>Domains contain lists; lists contain three zones</h2>
+        <img class="diagram" src="../assets/lru-domains-zones.svg" alt="Private and shared LRU domains with LRU1, LRU2, and LRU3 zones and victim search order">
+        <p class="caption">LRU3 is the victimization zone. A victim hint accelerates scanning but proves nothing about current ownership.</p>
+        <table>
+          <thead><tr><th>Mechanism</th><th>Pinned meaning</th><th>Evidence label</th></tr></thead>
+          <tbody>
+            <tr><td>Private versus shared LRU</td><td>Alternative resident domains; private lists carry context quota policy.</td><td>Implementation policy.</td></tr>
+            <tr><td>LRU1 / LRU2 / LRU3</td><td>Hot, buffer/boost, and victim-search zones in this revision.</td><td>Implementation policy.</td></tr>
+            <tr><td>Quota and search order</td><td>Over-quota context searches its own list early; under-quota ownership receives protection until later fallback.</td><td>Implementation policy.</td></tr>
+            <tr><td>Victim hint/count/queue</td><td>Reduce scan work or route candidates.</td><td>Verified mechanism, never eligibility proof.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Pinned sources:</strong> zone semantics <code>page_buffer.c:185–200</code>; structures <code>560–773</code>; ordinary selection <code>9293–9538</code>; quota policy <code>13942–14440</code>.</p>
+      </section>
+
+      <section class="section" id="loop">
+        <div class="eyebrow">03 · No free BCB</div>
+        <h2>The allocator enters a progress loop with explicit exits</h2>
+        <img class="diagram" src="../assets/allocation-progress.svg" alt="Allocation progress loop from invalid list through victim search, direct wait, revalidation, retry, and error exits">
+        <ol>
+          <li><strong>Take invalid/free BCB:</strong> immediate reusable storage; no resident mapping needs flush or victim proof.</li>
+          <li><strong>Search LRUs:</strong> follow pinned private/shared/quota order; every chosen resident candidate still passes protected eligibility.</li>
+          <li><strong>Wait for direct victim:</strong> in server mode with a flush daemon, enqueue the allocator, wake the producer, and sleep with a bounded/interrupt-aware wait.</li>
+          <li><strong>Revalidate assignment:</strong> lock the assigned BCB. If a worker fixed it again, revoke the reservation and retry—normally with elevated priority.</li>
+          <li><strong>No daemon:</strong> during stand-alone/recovery conditions, flush synchronously and search again.</li>
+          <li><strong>Terminate:</strong> return a frame, retry, report interrupt/timeout, or emit explicit no-buffer error. Failure returns no page pointer.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> allocation loop <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403"><code>page_buffer.c:8181–8403</code></a>; victim search order <code>9067–9265</code>; direct-victim consumption/revocation <code>15592–15660</code>.</p>
+      </section>
+
+      <section class="section" id="reservation">
+        <div class="eyebrow">04 · Revocable direct victim</div>
+        <h2>Reservation loses to newly acquired ownership</h2>
+        <p>A producer can reserve an eligible BCB for a waiting allocator. Between assignment and consumption, another active worker may fix the resident page. That new ownership invalidates the reservation.</p>
+        <table>
+          <thead><tr><th>Moment</th><th>What is true</th><th>What the allocator may do</th></tr></thead>
+          <tbody>
+            <tr><td>Producer assigns</td><td>Candidate was eligible at producer’s protected check.</td><td>Wake waiter with a reservation.</td></tr>
+            <tr><td>Worker fixes before consumption</td><td>Candidate now has ownership and is unsafe to reuse.</td><td>Mark/revoke direct assignment.</td></tr>
+            <tr><td>Allocator consumes</td><td>Protected revalidation detects invalid assignment.</td><td>Release reservation state and request another candidate.</td></tr>
+          </tbody>
+        </table>
+        <p>Forcing reuse would violate the fix contract. Retrying is not wasted correctness; it is the mechanism honoring a newer, stronger fact.</p>
+      </section>
+
+      <section class="section" id="generation">
+        <div class="eyebrow">05 · Flush coordination</div>
+        <h2>Old-generation completion cannot victimize G+1</h2>
+        <p>Under pressure, victim flush can propagate copied generation G and hand the BCB toward post-flush assignment. Post-flush must recheck that the resident page is still clean, unfixed, in the victim zone, and policy-eligible.</p>
+        <p>If a writer created DIRTY generation G+1 while G was in flight, the direct-victim handoff must fail. Completing old bytes does not authorize discarding newer resident bytes.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> flush handoff <code>page_buffer.c:10925–10952</code>; post-flush assignment <code>15489–15556</code>.</p>
+      </section>
+
+      <section class="section" id="limits">
+        <div class="eyebrow">06 · Evidence boundary</div>
+        <h2>Bounded exits are not starvation freedom</h2>
+        <table>
+          <thead><tr><th>Source supports</th><th>Source/runtime does not establish</th></tr></thead>
+          <tbody>
+            <tr><td>Concrete search, wait, retry, timeout, interrupt, and error branches.</td><td>A bound on how many revocations/retries precede success.</td></tr>
+            <tr><td>Maintenance, page-flush, post-flush, and flush-control daemon ownership at the pinned revision.</td><td>Stable cadence, priority, batch size, or target-branch formula.</td></tr>
+            <tr><td>AOUT structures and code exist.</td><td>That current/default operation uses 2Q; pinned analyzed default forces its ratio to zero.</td></tr>
+            <tr><td>Existing workload observed reuse/counters.</td><td>Actual eviction, victim order, direct assignment, daemon timing, or fairness—it forced no physical victim.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Liveness limit:</strong> the source acknowledges a possible forgotten waiter whose escape is timeout. Queue priority and producers make progress plausible; they do not prove starvation freedom.</div>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>Trace a revoked assignment to its legal exits</h2>
+        <div class="quiz" data-retrieval data-model="an under-quota allocator with an empty invalid list follows the pinned LRU search policy, but every resident candidate still needs the hard eligibility gate -> when no candidate is available in server mode, it may enter the direct-victim wait queue and wake the flush daemon -> a producer's assignment is only a reservation based on eligibility at that earlier instant -> if another worker fixes the BCB before consumption, protected revalidation revokes the assignment and the allocator requests another candidate, commonly at high priority -> if the next wait times out, it exits with an error and no frame or page pointer -> these branches are verified mechanisms, while domain/quota/search priority and daemon cadence are implementation policy -> retry and timeout exits do not prove starvation freedom, and the existing runtime evidence did not force eviction." data-concepts='[{"label":"policy never bypasses eligibility","terms":["policy","eligibility","hard","recheck"]},{"label":"empty free list enters direct wait","terms":["invalid","empty","direct victim","queue","daemon"]},{"label":"assignment is revocable reservation","terms":["reservation","fixed","revoke","revalidate"]},{"label":"timeout returns no frame","terms":["timeout","error","no frame","no pointer"]},{"label":"mechanism versus policy","terms":["verified mechanism","implementation policy","quota","cadence"]},{"label":"no fairness or eviction proof","terms":["starvation","fairness","no eviction","runtime"]}]'>
+          <h3>Prompt</h3>
+          <p>An under-quota thread needs a BCB. The invalid list is empty, all scans fail, and it waits for a direct victim. A candidate is assigned, but another worker fixes it before consumption. The next wait times out.</p>
+          <p><strong>Your task:</strong> trace every protected decision and final result; label mechanism versus policy; then state exactly why this does not prove either infinite wait or starvation freedom.</p>
+          <textarea aria-label="Your replacement progress trace" placeholder="Trace candidate, reservation, revocation, retry, timeout, and caller result."></textarea>
+          <button type="button" data-check>Check progress argument</button>
+          <button type="button" class="secondary" data-reveal>Reveal model route</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>Paste your answer into the chat. I will check eligibility/policy separation, revocation, exits, and liveness language before recording Advanced progress.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Annotate every terminal edge of allocation</h2>
+        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403"><code>page_buffer.c:8181–8403</code></a> together with direct-victim consumption at <code>15592–15660</code>. Mark success, retry, revocation, interrupt, timeout, no-daemon, and explicit-error results.</p>
+        <p><a href="../reference/replacement-progress-card.html">Open the printable replacement-progress card →</a></p>
+        <p><a href="0011-rebuild-after-ordered-refix.html">← Return to Lesson 0011</a> · <a href="0013-gate-redo-by-page-lsa.html">Continue to Lesson 0013 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#boundary">1. Policy boundary</a>
+      <a href="#domains">2. Domains and zones</a>
+      <a href="#loop">3. Allocation loop</a>
+      <a href="#reservation">4. Revocable victim</a>
+      <a href="#generation">5. G+1 coordination</a>
+      <a href="#limits">6. Liveness limits</a>
+      <a href="#retrieval">7. Trace it back</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="../reference/replacement-progress-card.html">Replacement-progress card</a>
+      <a href="../advanced/replacement-progress.md">Canonical Advanced page</a>
+      <a href="0013-gate-redo-by-page-lsa.html">Next lesson →</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Ask the teaching agent whenever victim eligibility, search policy, direct reservation, daemon ownership, or liveness language is unclear.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0008 — Defend a safe change</title>
+  <link rel="stylesheet" href="../assets/teach-course.css">
+  <script defer src="../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0008</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Core capstone · change defense</div>
+    <h1>Turn a source concern into a bounded investigation</h1>
+    <p>By the end, you can defend a change-impact plan without promoting visible control flow into an unverified defect claim.</p>
+    <div class="pills"><span class="pill">Owner</span><span class="pill">State</span><span class="pill">Guard</span><span class="pill">Invariant</span><span class="pill">Unwind</span><span class="pill">Evidence seam</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="terms">
+        <div class="eyebrow">00 · Decode the document labels</div>
+        <h2><code>VS-11</code> and <code>VS-12</code> are registry IDs, not code objects</h2>
+        <p>The guide keeps uncertain and revision-sensitive findings in one document: <a href="../unresolved-or-version-sensitive-findings.md">Unresolved or version-sensitive findings</a>. <code>VS-11</code> and <code>VS-12</code> are simply stable row identifiers in that registry. They are not CUBRID error codes, variables, page types, or runtime flags.</p>
+        <p>A <strong>case packet</strong> is the capstone's name for one self-contained review exercise: a registry entry, bounded source ranges, a prediction worksheet, proof obligations, and a model answer. It is not a network packet or a page-buffer structure.</p>
+        <table>
+          <thead><tr><th>Case packet</th><th>Verified source fact at pinned commit</th><th>Candidate consequence—not yet established</th></tr></thead>
+          <tbody>
+            <tr><td>A · <code>VS-11</code></td><td>Some paths grant latch/fix state before a holder allocation that may return <code>NULL</code>; no local rollback is visible in the cited snippets.</td><td>A grant or <code>fcnt</code> might survive while the caller receives failure.</td></tr>
+            <tr><td>B · <code>VS-12</code></td><td>Flush setup sets FLUSHING and clears old DIRTY before TDE/DWB preparation can return; ordinary rollback is later.</td><td>FLUSHING might remain or retryable dirty/LSA bookkeeping might be lost.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>Are they true statements?</strong> Each entry contains a verified Level 1 source-ordering fact and a clearly labelled Candidate consequence. The whole candidate is not yet a verified production defect. Reachability, surviving state, impact, and current-branch status still require evidence.</div>
+      </section>
+
+      <section class="section" id="ladder">
+        <div class="eyebrow">01 · Proof ladder</div>
+        <h2>A suspicious return is only the first rung</h2>
+        <table>
+          <thead><tr><th>Level</th><th>Question</th><th>Evidence that closes it</th></tr></thead>
+          <tbody>
+            <tr><td>1 · Source-visible control flow</td><td>Does the pinned path change state, call something fallible, and return before visible local cleanup?</td><td>Exact symbols, ranges, transitions, and callees.</td></tr>
+            <tr><td>2 · Reachability</td><td>Can a supported target configuration actually make that callee fail at this point?</td><td>Controlled injection or schedule on the target revision.</td></tr>
+            <tr><td>3 · Surviving state</td><td>What ownership or generation debt remains after all surrounding cleanup?</td><td>Assertions/inspection immediately after the injected return.</td></tr>
+            <tr><td>4 · Production impact</td><td>Does surviving state cause corruption, leak, hang, retry loss, or a caller-visible contract violation?</td><td>Reproduced consequence across the actual consumer path.</td></tr>
+            <tr><td>5 · Current-branch status</td><td>Does the same mechanism and consequence still exist on the branch being changed?</td><td>Re-trace and rerun against that exact commit/configuration.</td></tr>
+          </tbody>
+        </table>
+        <p class="big-claim">A strong Level 1 argument earns investigation. It does not inherit Levels 2–5.</p>
+      </section>
+
+      <section class="section" id="shape">
+        <div class="eyebrow">02 · Two bounded packets</div>
+        <h2>Two case packets: changed state → fallible callee → exceptional return</h2>
+        <img class="diagram" src="../assets/exceptional-return-gaps.svg" alt="VS-11 and VS-12 source-visible exceptional return shapes">
+        <p class="caption">The diagram stops at control flow. The uncertainty registry owns status; a test must cross the same risk boundary.</p>
+        <table>
+          <thead><tr><th>Packet</th><th>State changed first</th><th>Fallible point</th><th>Source-visible concern</th></tr></thead>
+          <tbody>
+            <tr><td><code>VS-11</code></td><td>Atomic latch/fix tuple grants ownership and increments global <code>fcnt</code>.</td><td>Per-thread holder extension allocation.</td><td>Several visible paths return failure without obvious local rollback of the earlier grant.</td></tr>
+            <tr><td><code>VS-12</code></td><td>Flush opens generation G: FLUSHING set, old DIRTY cleared.</td><td>TDE copy encryption or configured DWB-slot reservation.</td><td>Visible early returns occur before the ordinary DIRTY/lower-bound rollback.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Canonical status:</strong> both are registry candidates. Say “source-visible concern at the pinned revision,” not “CUBRID has this bug.”</div>
+      </section>
+
+      <section class="section" id="template">
+        <div class="eyebrow">03 · Change-impact defense</div>
+        <h2>Make every proposal answer nine questions</h2>
+        <ol>
+          <li><strong>Behavior:</strong> what observable behavior might change?</li>
+          <li><strong>Owners:</strong> which thread, Module, and caller own each resource or decision?</li>
+          <li><strong>State:</strong> which fields, flags, counters, pointers, queues, or LSAs transition?</li>
+          <li><strong>Guards:</strong> which BCB protection, atomic order, logical lock, or caller precondition protects each transition?</li>
+          <li><strong>Invariants:</strong> what must hold before and after the transition?</li>
+          <li><strong>Unwind:</strong> on every failure/restart, what is restored, transferred, consumed, or awakened?</li>
+          <li><strong>Caller impact:</strong> who observes the return, retained ownership, retry, timing, or contract change?</li>
+          <li><strong>Evidence seam:</strong> what does source tracing establish, and what controlled probe reaches the risk?</li>
+          <li><strong>Remaining uncertainty:</strong> what is inferred, version-sensitive, unreachable, or unobserved?</li>
+        </ol>
+        <p>This template interleaves the Core: object identity, fix debt, caller correctness, flush generations, replacement eligibility, and evidence grammar.</p>
+      </section>
+
+      <section class="section" id="packet-b">
+        <div class="eyebrow">04 · Worked defense</div>
+        <h2>Defend investigation of <code>VS-12</code> without declaring a fix</h2>
+        <table>
+          <thead><tr><th>Template field</th><th>Bounded answer</th></tr></thead>
+          <tbody>
+            <tr><td>State and guard</td><td>Under BCB protection, generation setup sets FLUSHING and clears old DIRTY before the fallible preparation calls.</td></tr>
+            <tr><td>Invariant at safe failure</td><td>The captured propagation debt remains retryable, oldest-unflush bookkeeping is not lost, and no waiter remains behind stale FLUSHING.</td></tr>
+            <tr><td>Source seam</td><td>Early returns are visible at <code>10795–10828</code>; ordinary rollback is later at <code>10908–10923</code>.</td></tr>
+            <tr><td>Not yet known</td><td>Supported reachability, callee-side cleanup, exact surviving flags/LSA, waiter effect, victim eligibility, restart behavior, and current-branch status.</td></tr>
+            <tr><td>Next evidence</td><td>Inject TDE and DWB-slot failures separately; inspect DIRTY, FLUSHING, oldest-unflush LSA, waiters, retry, victimization, and restart. Test concurrent re-dirty separately.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified Level 1 evidence:</strong> compare pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10795-L10828"><code>page_buffer.c:10795–10828</code></a> with <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>10908–10923</code></a>. Do not propose code until the injection establishes what actually survives.</p>
+      </section>
+
+      <section class="section" id="packet-a">
+        <div class="eyebrow">05 · Alternate packet</div>
+        <h2><code>VS-11</code> needs three injections, not one general claim</h2>
+        <p>Holder allocation can return <code>NULL</code> at <code>6000–6055</code>. Normal hit, lock-free READ hit, and awakened waiter grant ownership through different paths before holder recording. Each has a different scheduling and cleanup seam.</p>
+        <p>Inject holder extension allocation failure separately at all three paths. Inspect the atomic latch tuple, global <code>fcnt</code>, per-thread holder list, waiter/grant state, returned value, and ability to acquire and release afterward. A lock-free or waiter result does not automatically establish the normal-hit variant—or vice versa.</p>
+      </section>
+
+      <section class="section" id="review">
+        <div class="eyebrow">06 · Readiness gate</div>
+        <h2>A paper argument is not change readiness</h2>
+        <p>After the source packet, run at least one narrow caller regression or controlled runtime probe on the target revision. Record setup, expected transition, actual observation, unsupported conclusions, and a reproducible receipt.</p>
+        <p>Before implementation counts as ready, another maintainer should review the ownership ledger, all negative paths, the risk-matched test seam, and remaining uncertainty. This is where your team presentation becomes a working review protocol rather than a tour of documentation.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>Make the strongest defensible <code>VS-12</code> statement</h2>
+        <div class="quiz" data-retrieval data-model="at pinned f799e05, source shows FLUSHING set and old DIRTY cleared before TDE encryption or DWB-slot reservation can return, while the ordinary restoration block is later -> this establishes a source-visible control-flow concern only -> it does not establish supported reachability, surviving DIRTY FLUSHING or oldest-unflush state, production impact, or current-branch status -> inject TDE and DWB-slot failures separately and inspect flags, oldest-unflush LSA, waiter wakeup, retry, victim eligibility, and restart -> test concurrent re-dirty as a separate schedule -> keep VS-12 status in the uncertainty registry and do not propose a fix until observed postconditions identify the actual debt." data-concepts='[{"label":"pinned source-visible ordering","terms":["pinned","flushing","dirty","before","rollback"]},{"label":"candidate not verified defect","terms":["candidate","concern","not prove","not defect"]},{"label":"missing proof levels","terms":["reachability","surviving","impact","current"]},{"label":"separate fault injections","terms":["tde","dwb","inject","separate"]},{"label":"inspect retryable state","terms":["oldest","waiter","retry","victim","restart"]},{"label":"concurrent re-dirty separate","terms":["concurrent","re-dirty","schedule","separate"]}]'>
+          <h3>Prompt</h3>
+          <p>A reviewer says: “The source clearly returns early, so we should fix this flush bug now.”</p>
+          <p><strong>Your task:</strong> agree only with what Level 1 establishes; name every missing proof level; propose the smallest risk-matched probes and exact postconditions; state who owns current status.</p>
+          <textarea aria-label="Your evidence-bounded change defense" placeholder="Defend investigation without understating the source or overstating the conclusion."></textarea>
+          <button type="button" data-check>Check defense coverage</button>
+          <button type="button" class="secondary" data-reveal>Reveal model defense</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>Paste your answer into the chat. I will check ownership, transition ordering, proof-level discipline, test reach, and presentation wording before recording Core completion.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Trace, then stop at the evidence boundary</h2>
+        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10795-L10923"><code>page_buffer.c:10795–10923</code></a> beside the <a href="../unresolved-or-version-sensitive-findings.md"><code>VS-12</code> registry entry</a>. Mark generation setup, each fallible call, early exits, ordinary rollback, and every claim that still needs runtime evidence.</p>
+        <p><a href="../reference/change-defense-card.html">Open the printable change-defense card →</a></p>
+        <p><a href="0007-replace-one-frame.html">← Return to Lesson 0007</a> · <a href="0009-classify-latch-wait.html">Continue to Advanced Lesson 0009 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#terms">0. VS IDs and packets</a>
+      <a href="#ladder">1. Five proof levels</a>
+      <a href="#shape">2. Two packets</a>
+      <a href="#template">3. Impact template</a>
+      <a href="#packet-b">4. VS-12 defense</a>
+      <a href="#packet-a">5. VS-11 alternate</a>
+      <a href="#review">6. Readiness gate</a>
+      <a href="#retrieval">7. Defend it back</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="../reference/change-defense-card.html">Change-defense card</a>
+      <a href="../learning/06-maintainer-capstone.md">Canonical Core capstone</a>
+      <a href="0009-classify-latch-wait.html">Next: Advanced concurrency →</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Ask the teaching agent whenever a source claim, proof level, fault seam, or readiness conclusion is unclear.</footer>
+</main>
+</body>
+</html>

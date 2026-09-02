@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID latch-queue reference card</title>
+  <link rel="stylesheet" href="../assets/teach-course.css">
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print for latch review</div>
+    <h1>Latch wait and handoff card</h1>
+    <p>Classify pending, granted, and failed requests before reasoning about order or ownership.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Zero-crossing</span><span class="pill">One success debt</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>One hundred WRITE waiters</h2>
+      <img class="diagram" src="../assets/latch-wait-queue.svg" alt="Queued WRITE requests and zero-crossing handoff">
+    </article>
+    <article class="reference-card">
+      <h2>Outcome ledger</h2>
+      <table>
+        <thead><tr><th>Outcome</th><th>Debt?</th></tr></thead>
+        <tbody>
+          <tr><td>Immediate grant</td><td>Yes</td></tr>
+          <tr><td>Conditional rejection</td><td>No</td></tr>
+          <tr><td>Queued/sleeping</td><td>Not yet</td></tr>
+          <tr><td>Wakeup + holder recorded</td><td>Yes</td></tr>
+          <tr><td>Timeout/interrupt</td><td>No</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Zero-crossing rules</h2>
+      <ol>
+        <li>Releasing holder makes <code>fcnt=0</code>.</li>
+        <li>Scan under BCB protection.</li>
+        <li>Skip cancelled requests.</li>
+        <li>Leave FLUSH waiters.</li>
+        <li>Head WRITE: grant one.</li>
+        <li>Head READ: grant reader group.</li>
+        <li>Keep <code>waiter_exists</code> if blockers remain.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Two-sided successful handoff</h2>
+      <ol>
+        <li>Waker updates latch mode and global fix count.</li>
+        <li>Resumed waiter records per-thread holder.</li>
+        <li>Only then does caller receive ordinary successful ownership.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Fairness limits</h2>
+      <ul>
+        <li>Holder re-entry can pass waiters.</li>
+        <li>Blocking promoter inserts at head.</li>
+        <li>Readers can be grouped.</li>
+        <li>Timeout/scheduler timing is policy.</li>
+      </ul>
+      <p>Do not claim strict FIFO or starvation freedom.</p>
+    </article>
+    <article class="reference-card full">
+      <h2>Source route</h2>
+      <table>
+        <thead><tr><th>Responsibility</th><th>Pinned range</th></tr></thead>
+        <tbody>
+          <tr><td>Grant versus wait decision</td><td><code>page_buffer.c:6278–6634</code></td></tr>
+          <tr><td>Queue append and timed sleep</td><td><code>page_buffer.c:7041–7450</code></td></tr>
+          <tr><td>Zero-crossing wakeup</td><td><code>page_buffer.c:7452–7590</code></td></tr>
+          <tr><td>Timeout parameter in pinned revision</td><td><code>system_parameter.c:5308–5319</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. Queue membership is not ownership.</footer>
+</main>
+</body>
+</html>
