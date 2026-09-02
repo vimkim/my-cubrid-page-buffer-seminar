@@ -26,7 +26,7 @@ Run from `code-analysis/page-buffer-presentation/` unless stated otherwise.
 
 | Command | Result |
 |---|---|
-| `node --test scripts/*.test.mjs` | PASS — 100/100 focused, aggregate-behavior, reader-contract, migration, Question-bank, and completion tests passed |
+| `node --test scripts/*.test.mjs` | PASS — 102/102 focused, aggregate-behavior, reader-contract, migration, Question-bank, and completion tests passed |
 | `node scripts/check-maintainer-guide.mjs` | PASS — Markdown source 27 pages; relative links; 6 displayed SVGs, 0 orphaned; English prose; Question-bank topology, pairing, migration, and navigation |
 | `node scripts/check-maintainer-guide-assets.mjs page-buffer-teaching-material.md` | PASS — compatibility entry delegated to the complete aggregate document-set validator |
 | `python /home/vimkim/.agents/skills/markdown-write/scripts/check_copyparty_markdown.py page-buffer-teaching-material.md` | PASS — stable entry source is Copyparty-compatible |
@@ -41,7 +41,10 @@ Copyparty HTTP requested every discovered page with `?v` and every displayed SVG
 
 ## Question-bank review verdicts
 
-Independent Standards and Spec reviews compare the scoped guide diff against `b4179ee`. Their final verdicts and any resolved findings are recorded here after the validation run; neither axis may be replaced by the other.
+Independent Standards and Spec reviews compared the scoped guide diff against `b4179ee`; neither axis replaced the other.
+
+- **Standards: PASS — 0 hard and 0 judgment findings unresolved.** Review findings were resolved by using the aggregate page map as the lower-level discovery source, replacing placeholder answer anchors with exact ranges, and sharing one Markdown heading-slug normalizer.
+- **Spec: PASS — 0 substantive and 0 scope-creep findings unresolved.** Review findings were resolved by preserving and validating stable `PGBUF-Q001`–`PGBUF-Q055` source identities, enforcing each answer’s exact paired prompt anchor, linking comparison evidence for all eight excluded cross-database items, and adding temporary-page/metadata-setter ownership to `PGBUF-QB-044`.
 
 ## Boundaries not exercised
 

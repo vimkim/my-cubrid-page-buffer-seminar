@@ -152,6 +152,8 @@ test("the completion report records deterministic, HTTP, DOM, migration, and sco
     "b4179ee",
     "74 immutable paired Canonical IDs",
     "189 verified source items",
+    "Standards: PASS",
+    "Spec: PASS",
     "No CUBRID engine build",
   ]) {
     assert.match(report, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
