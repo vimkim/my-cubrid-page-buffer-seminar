@@ -26,8 +26,8 @@
         <tbody>
           <tr><td>여러 thread가 hold할 수 있습니까?</td><td>예. latch rule이 허용하면 같은 current page를 여러 thread가 hold할 수 있습니다.</td></tr>
           <tr><td>여러 VPID를 동시에 나타낼 수 있습니까?</td><td>아니요.</td></tr>
-          <tr><td>private LRU와 shared LRU에 동시에 속할 수 있습니까?</td><td>아니요. 둘은 서로 대안인 list home입니다.</td></tr>
-          <tr><td>왜 handoff를 protect합니까?</td><td>A에 대한 stale observation이 detach/rebind 또는 state movement 이후 적용되는 일을 막기 위해서입니다.</td></tr>
+          <tr><td>private LRU와 shared LRU에 동시에 속할 수 있습니까?</td><td>아니요. Link 한 쌍과 encoded list index 하나가 membership 하나만 나타냅니다. Move는 다른 list에 add하기 전에 VOID로 remove합니다.</td></tr>
+          <tr><td>왜 handoff를 protect합니까?</td><td>Scan은 pointer를 지목할 뿐입니다. BCB try-lock과 recheck가 현재 all-clear state를 만들고, detach가 BCB lock을 유지한 채 반환하므로 A를 보고 내린 옛 결정이 ownership/state change 또는 B로의 rebind 뒤에 작용하지 않습니다.</td></tr>
         </tbody>
       </table>
     </article>
@@ -62,7 +62,7 @@
         <li><code>fcnt == 0</code> + DIRTY → 아직 propagate하지 않은 debt</li>
         <li><code>fcnt == 0</code> + FLUSHING → in-flight identity</li>
         <li><code>fcnt == 0</code> + waiter → pending right</li>
-        <li>lock 전에 모두 clear → observation이 stale일 수 있음</li>
+        <li>BCB lock 전 모두 clear → 이전 sample일 뿐이므로 try-lock 뒤 recheck</li>
       </ul>
     </article>
     <article class="reference-card">

@@ -44,6 +44,32 @@
         <p class="source-note"><strong>Pinned source:</strong> zone semantics <code>page_buffer.c:185–200</code>, structure <code>560–773</code>, ordinary selection <code>9293–9538</code>, quota policy <code>13942–14440</code>.</p>
       </section>
 
+      <section class="section" id="cross-private-search">
+        <div class="eyebrow">02A · Other-private discovery와 zone movement</div>
+        <h2>Transaction을 나열하지 않고 list index를 consume합니다</h2>
+        <img class="diagram" src="../../assets/lru-cross-search-and-aging.svg" alt="다른 private LRU를 lock-free로 찾는 방법과 LRU1, LRU2, LRU3 movement rule">
+        <p class="caption">Candidate producer가 integer LRU index를 advertise합니다. Victimizer는 선택한 list 하나만 lock하고 bounded LRU3 state를 scan하며 BCB try-lock을 사용합니다.</p>
+        <ol>
+          <li>Eligible clean LRU3 BCB가 <code>count_vict_cand</code>를 증가시킵니다. Over-quota private list는 자신의 index를 <code>private_lrus_with_victims</code>에 atomic enlist하고, quota adjustment도 이를 다시 publish할 수 있습니다.</li>
+          <li><code>pgbuf_lfcq_get_victim_from_private_lru()</code>는 <code>big_private_lrus_with_victims</code>를 먼저 consume한 뒤 허용될 때 regular queue를 사용합니다. Integer를 곧바로 <code>buf_LRU_list[lru_idx]</code>에 mapping하므로 caller가 다른 transaction object를 순회하지 않습니다.</li>
+          <li><code>pgbuf_get_victim_from_lru_list()</code>는 해당 LRU mutex 하나를 lock하고 LRU3 entry를 최대 1,000개 scan하며 최종 safety recheck 전에 각 BCB를 try-lock합니다.</li>
+          <li>Candidate와 quota가 다음 search를 정당화하면 index를 requeue합니다. 아니면 enlistment flag를 clear하여 이후 candidate가 다시 advertise할 수 있게 합니다.</li>
+        </ol>
+        <div class="callout warn"><strong>Contention 판단:</strong> 여러 victimizer, unfix/boost, quota adjustment가 한 hot LRU mutex에서 contend할 수 있습니다. 하지만 모든 private list를 lock하는 sweep은 아닙니다. Queue operation은 lock-free이고 선택한 list mutex 하나만 hold하며 scan depth는 bounded이고 BCB lock은 nonblocking입니다. 집중된 pressure에서 심한 bottleneck이 생길 가능성은 있지만 structure만으로 입증되지는 않습니다.</div>
+        <table>
+          <thead><tr><th>BCB state/event</th><th>Pinned placement 또는 movement</th><th>Quota 관계</th></tr></thead>
+          <tbody>
+            <tr><td>New private BCB, default AOUT disabled</td><td>첫 zero-crossing unfix가 LRU1 top에 insert합니다.</td><td>Private LRU1 target은 현재 quota의 5%입니다.</td></tr>
+            <tr><td>Private domain이 없는 new BCB</td><td>Shared LRU2 middle에 insert합니다.</td><td>Shared 기본 LRU1/LRU2 target은 shared target의 40%/5%입니다.</td></tr>
+            <tr><td>LRU1 ordinary unfix</td><td>이미 hot하므로 유지하고 boost하지 않습니다.</td><td>Threshold 초과분의 가장 오래된 edge가 LRU2로 demote됩니다.</td></tr>
+            <tr><td>LRU2 ordinary unfix</td><td>충분히 old일 때만 LRU1으로 boost합니다.</td><td>Threshold 초과분의 가장 오래된 edge가 LRU3로 demote됩니다.</td></tr>
+            <tr><td>LRU3 ordinary unfix</td><td>LRU1으로 boost하며 vacuum/direct path에는 명시적 예외가 있습니다.</td><td>Clean hard-eligible entry는 victim이 될 수 있습니다.</td></tr>
+            <tr><td>다른 private context가 사용했거나 hot하고 충분히 old인 private page</td><td>VOID로 remove한 뒤 shared LRU2 middle에 add합니다.</td><td>Membership이 이동할 뿐 quota가 BCB를 복제하지 않습니다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified mechanism과 pinned policy:</strong> queue advertisement/consumption은 <code>page_buffer.c:15674–15728,16370–16506</code>, bounded list scan은 <code>9330–9538</code>, placement/aging은 <code>6636–7040,9695–10353</code>, quota는 <code>14251–14511</code>에 있습니다.</p>
+      </section>
+
       <section class="section" id="loop">
         <div class="eyebrow">03 · free BCB가 없을 때</div>
         <h2>allocator는 exit가 명확한 progress loop에 들어간다</h2>
@@ -125,6 +151,7 @@
       <strong>Lesson map</strong>
       <a href="#boundary">1. Policy 경계</a>
       <a href="#domains">2. Domain과 zone</a>
+      <a href="#cross-private-search">2A. Other-private search</a>
       <a href="#loop">3. Allocation loop</a>
       <a href="#reservation">4. revoke 가능한 victim</a>
       <a href="#generation">5. G+1 coordination</a>

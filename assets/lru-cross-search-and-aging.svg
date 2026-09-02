@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="820" viewBox="0 0 1240 820" role="img" aria-labelledby="title desc">
+  <title id="title">Cross-private victim discovery and three-zone LRU movement</title>
+  <desc id="desc">Eligible LRU3 candidates cause a private LRU index to be advertised in lock-free circular queues. A victimizer consumes one index rather than scanning transactions, locks only that selected LRU, scans at most one thousand LRU3 entries, and try-locks BCBs. The lower panel shows new private pages entering LRU1, new shared pages entering LRU2, threshold demotion from LRU1 to LRU2 to LRU3, and reuse boosts from old LRU2 or LRU3 to LRU1.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#435d69"/>
+    </marker>
+    <style>
+      .panel{fill:#fff;stroke:#c5d2d8;stroke-width:2}.private{fill:#fff6e8;stroke:#b86b22;stroke-width:2}.queue{fill:#eef0ff;stroke:#5968bd;stroke-width:2}.guard{fill:#e9f4f3;stroke:#16847d;stroke-width:2}.hot{fill:#fde9e5;stroke:#b74b3c;stroke-width:2}.buffer{fill:#fff6e8;stroke:#b86b22;stroke-width:2}.victim{fill:#e9f4f3;stroke:#16847d;stroke-width:2}.note{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.t{font:700 24px Inter,Arial,sans-serif;fill:#173443}.h{font:700 18px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#435d69;stroke-width:2.5;marker-end:url(#arrow)}.dash{fill:none;stroke:#6b7780;stroke-width:2;stroke-dasharray:7 5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="620" y="38" text-anchor="middle" class="t">Find another private LRU without scanning transactions</text>
+  <text x="620" y="65" text-anchor="middle" class="s">Advertise list indices lock-free; serialize only the selected list and try-lock each BCB.</text>
+
+  <rect x="35" y="96" rx="16" width="240" height="142" class="private"/>
+  <text x="155" y="130" text-anchor="middle" class="h">Private LRU k</text>
+  <text x="155" y="160" text-anchor="middle" class="s">LRU3 gains clean candidate</text>
+  <text x="155" y="187" text-anchor="middle" class="s">count_vict_cand &gt; 0</text>
+  <text x="155" y="214" text-anchor="middle" class="tiny">over quota → advertise index k</text>
+
+  <rect x="335" y="88" rx="16" width="285" height="158" class="queue"/>
+  <text x="477" y="122" text-anchor="middle" class="h">Lock-free index queues</text>
+  <text x="477" y="154" text-anchor="middle" class="s">big_private_lrus_with_victims</text>
+  <text x="477" y="181" text-anchor="middle" class="s">private_lrus_with_victims</text>
+  <text x="477" y="218" text-anchor="middle" class="tiny">CAS enlist flag prevents duplicate normal enlistment</text>
+
+  <rect x="680" y="96" rx="16" width="240" height="142" class="panel"/>
+  <text x="800" y="130" text-anchor="middle" class="h">Victimizer</text>
+  <text x="800" y="160" text-anchor="middle" class="s">own private first</text>
+  <text x="800" y="187" text-anchor="middle" class="s">consume one other index</text>
+  <text x="800" y="214" text-anchor="middle" class="tiny">big queue before regular queue</text>
+
+  <rect x="980" y="88" rx="16" width="225" height="158" class="guard"/>
+  <text x="1092" y="122" text-anchor="middle" class="h">Selected LRU only</text>
+  <text x="1092" y="154" text-anchor="middle" class="s">lock list mutex</text>
+  <text x="1092" y="181" text-anchor="middle" class="s">scan LRU3 ≤ 1000</text>
+  <text x="1092" y="208" text-anchor="middle" class="s">BCB try-lock + recheck</text>
+  <text x="1092" y="232" text-anchor="middle" class="tiny">return or requeue index</text>
+
+  <path d="M275 167 H327" class="line"/>
+  <path d="M620 167 H672" class="line"/>
+  <path d="M920 167 H972" class="line"/>
+
+  <rect x="125" y="282" rx="15" width="990" height="65" class="note"/>
+  <text x="620" y="310" text-anchor="middle" class="h">No transaction enumeration · no all-private-LRU lock sweep</text>
+  <text x="620" y="334" text-anchor="middle" class="s">Contention is possible on a hot selected list, but the queue narrows work and only one LRU mutex is held at a time.</text>
+
+  <text x="620" y="405" text-anchor="middle" class="t">One list, three zones: placement, demotion, and boost</text>
+
+  <rect x="83" y="445" rx="18" width="280" height="170" class="hot"/>
+  <text x="223" y="481" text-anchor="middle" class="h">LRU1 · hot, non-victim</text>
+  <text x="223" y="516" text-anchor="middle" class="s">New private BCB: top</text>
+  <text x="223" y="544" text-anchor="middle" class="s">Ordinary unfix: keep, no boost</text>
+  <text x="223" y="578" text-anchor="middle" class="tiny">over threshold → demote oldest edge</text>
+
+  <rect x="480" y="445" rx="18" width="280" height="170" class="buffer"/>
+  <text x="620" y="481" text-anchor="middle" class="h">LRU2 · buffer, non-victim</text>
+  <text x="620" y="516" text-anchor="middle" class="s">New shared BCB: middle</text>
+  <text x="620" y="544" text-anchor="middle" class="s">Old-enough hit: boost to LRU1</text>
+  <text x="620" y="578" text-anchor="middle" class="tiny">over threshold → demote oldest edge</text>
+
+  <rect x="877" y="445" rx="18" width="280" height="170" class="victim"/>
+  <text x="1017" y="481" text-anchor="middle" class="h">LRU3 · victim zone</text>
+  <text x="1017" y="516" text-anchor="middle" class="s">Ordinary hit: boost to LRU1</text>
+  <text x="1017" y="544" text-anchor="middle" class="s">Clean + eligible: victim search</text>
+  <text x="1017" y="578" text-anchor="middle" class="tiny">oldest end / victim hint first</text>
+
+  <path d="M363 530 H472" class="line"/>
+  <path d="M760 530 H869" class="line"/>
+  <path d="M1017 615 C1017 700 223 700 223 623" class="dash"/>
+  <path d="M620 445 C620 390 223 390 223 437" class="dash"/>
+
+  <rect x="175" y="730" rx="15" width="890" height="58" class="note"/>
+  <text x="620" y="755" text-anchor="middle" class="h">Private quota sets 5% / 5% LRU1–LRU2 targets; shared defaults are 40% / 5%</text>
+  <text x="620" y="778" text-anchor="middle" class="tiny">Quota and thresholds guide zone size and search. They never override hard victim eligibility.</text>
+</svg>

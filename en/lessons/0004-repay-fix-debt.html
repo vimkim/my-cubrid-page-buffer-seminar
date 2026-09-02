@@ -45,8 +45,27 @@
         <p class="source-note"><strong>Verified mechanism:</strong> holder and atomic-latch <code>fcnt</code> structures are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L488"><code>page_buffer.c:460–488</code></a>; grant updates are routed through <code>6277–6634</code>.</p>
       </section>
 
+      <section class="section" id="holder-lifecycle">
+        <div class="eyebrow">03 · Holder entry structure and lifetime</div>
+        <h2>The entry storage persists; one BCB binding does not</h2>
+        <img class="diagram" src="../../assets/holder-entry-lifetime.svg" alt="Per-thread holder entry structure and lifetime">
+        <p class="caption">Pool initialization owns the backing memory. First fix creates a logical thread–BCB binding; final unfix returns that entry to the same thread’s free list.</p>
+        <table>
+          <thead><tr><th>Object or field</th><th>Role</th><th>Lifetime</th></tr></thead>
+          <tbody>
+            <tr><td><code>PGBUF_HOLDER_ANCHOR</code></td><td>One thread’s free/hold list heads and counts; padded to one 64-byte cache line.</td><td>Allocated for every thread index at page-buffer initialization.</td></tr>
+            <tr><td><code>PGBUF_HOLDER</code></td><td><code>fix_count</code>, BCB pointer, mutually exclusive hold/free links, performance state, and watcher chain.</td><td>Backing storage survives until finalization; its logical BCB binding lasts from first fix to that thread’s final matching unfix.</td></tr>
+            <tr><td>Reserved and extension entries</td><td>Seven entries begin on each thread’s free list; exhaustion allocates a shared set of ten.</td><td>An extension entry later returns to the consuming thread’s free list; individual unfix does not free heap memory.</td></tr>
+          </tbody>
+        </table>
+        <p>A first fix calls <code>pgbuf_allocate_thrd_holder_entry()</code>, prepends an entry to <code>thrd_hold_list</code>, and binds it to one BCB. A nested fix by the same thread calls <code>pgbuf_find_thrd_holder()</code> and increments that same entry. <code>pgbuf_unlatch_thrd_holder()</code> decrements it; at zero, <code>pgbuf_remove_thrd_holder()</code> unlinks it and pushes it onto <code>thrd_free_list</code>. Watchers must already be detached.</p>
+        <div class="callout warn"><strong>Performance verdict:</strong> an unfix bottleneck is plausible, but conditional. One thread holding many distinct BCBs pays linear holder lookup, and final removal may traverse the singly linked list again; unfavorable order can accumulate quadratic work. Many threads fixing the same BCB instead contend on its shared <code>atomic_latch</code> cache line. Nested fixes of one page by one thread reuse one holder and do not lengthen the list. READ unfix avoids the BCB mutex only with no waiters and global <code>fcnt &gt; 1</code>. A profile must separate list scans from atomic contention, zero-count LRU work, wakeups, and flush.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> structures and constants are at <code>page_buffer.c:86–94,438–500</code>; initialization/growth/find/removal at <code>5922–6275</code>; grant maintenance at <code>6298–6634</code>; lock-free READ unfix at <code>7807–7835</code>. The bottleneck judgment is an <strong>Inference</strong>, not a Runtime observation.</p>
+        <p class="answer-route"><a href="../../advanced/holder-entry-lifecycle.md">Open the full holder-entry lifecycle and cost analysis →</a></p>
+      </section>
+
       <section class="section" id="predict">
-        <div class="eyebrow">03 · Predict before feedback</div>
+        <div class="eyebrow">04 · Predict before feedback</div>
         <h2>One page, three successful calls</h2>
         <p>Start at global <code>fcnt = 0</code>. Predict all six rows before using the simulator:</p>
         <ol>
@@ -61,7 +80,7 @@
       </section>
 
       <section class="section" id="simulate">
-        <div class="eyebrow">04 · Immediate feedback</div>
+        <div class="eyebrow">05 · Immediate feedback</div>
         <h2>Run the ledger after predicting it</h2>
         <div class="simulator" data-ledger data-removed-label="removed" data-reset-message="Reset. Predict the six rows before clicking the sequence." data-a-fix-label="A fix succeeds" data-b-fix-label="B fix succeeds" data-a-unfix-label="A unfixes once" data-b-unfix-label="B unfixes once" data-rejected-message="Rejected: that thread has no successful fix debt to repay." data-invariant-message="Invariant holds: global fcnt equals A debt plus B debt in this closed example." data-mismatch-message="Ledger mismatch: inspect the last event.">
           <div class="ledger-state">
@@ -86,7 +105,7 @@
       </section>
 
       <section class="section" id="pointers">
-        <div class="eyebrow">05 · Pointer equality is irrelevant</div>
+        <div class="eyebrow">06 · Pointer equality is irrelevant</div>
         <h2>Three equal addresses still represent three debts</h2>
         <p>All three successful calls may return the same address because they borrow the same resident frame. That does not collapse their call-level obligations. Count successful grants, not unique pointer values.</p>
         <p>After A's first unfix, A still has one nested debt and may continue using the resident bytes under that remaining ownership. After B's unfix, B's holder is removed and B may not use its borrowed pointer. After A's final unfix, neither thread owns access from this sequence.</p>
@@ -94,7 +113,7 @@
       </section>
 
       <section class="section" id="release">
-        <div class="eyebrow">06 · What unfix changes</div>
+        <div class="eyebrow">07 · What unfix changes</div>
         <h2>Release ownership without inventing side effects</h2>
         <p>One normal unfix decrements the calling thread's nested holder debt and the BCB global count. The holder record is removed when that thread reaches zero. When global <code>fcnt</code> reaches zero, the BCB may become latch-idle and may re-enter replacement consideration.</p>
         <p class="big-claim">Unfix is not commit, flush, eviction, invalidation, or deallocation.</p>
@@ -103,7 +122,7 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">08 · Retrieval practice</div>
         <h2>Defend the ledger without the simulator</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="each successful fix adds one to global fcnt and the caller's holder -> A fixes twice and B once gives global 3, A 2, B 1 -> each caller unfix subtracts one from its holder and global fcnt -> equal PAGE_PTR values do not merge debts -> final global zero ends these borrows but does not itself flush or evict the resident page." data-concepts='[{"label":"one debt per successful grant","terms":["successful","grant","debt","one"]},{"label":"global fcnt across threads","terms":["fcnt","global","three","3"]},{"label":"per-thread nested holder counts","terms":["holder","thread","nested","a","b"]},{"label":"matching unfix decrements both ledgers","terms":["unfix","decrement","repay","removed"]},{"label":"pointer equality does not merge calls","terms":["pointer","page_ptr","equal","address"]},{"label":"global zero does not imply eviction or flush","terms":["zero","evict","flush","resident","not sufficient"]}]'>
           <h3>Prompt</h3>

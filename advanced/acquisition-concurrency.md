@@ -77,6 +77,22 @@ Source: `src/storage/page_buffer.c:2842-3050`. Representative B-tree restart pol
 
 `PGBUF_WATCHER` adds ordering metadata and state to the normal page debt. The caller chooses a rank and group from its access method; page buffer does not invent the semantic order.
 
+### Ordered-fix input and output contract
+
+The public call is conceptually `pgbuf_ordered_fix(thread, req_vpid, fetch_mode, request_mode, req_watcher)`. It returns an error code, not a page pointer.
+
+| Direction | Value | Contract at the pinned revision |
+|---|---|---|
+| Input | `thread_p` | Selects the current thread's holder list. The caller does not pass the already-held watcher set separately; the helper discovers it through those holders. |
+| Input | `req_vpid`, `fetch_mode`, `request_mode` | Name the requested identity and its ordinary fetch/latch requirements. |
+| Input through watcher | `initial_rank`, `group_id` | `PGBUF_INIT_WATCHER()` initializes a clean watcher with the access-method rank and, when known, the heap-header `VPID` derived from `HFID`. `pgptr` must be `NULL`. |
+| Primary output | return code and `req_watcher.pgptr` | `NO_ERROR` plus a non-`NULL` `pgptr` represents the new watched fix. The watcher also records the granted latch mode, current rank, links, and resolved group when discovery was needed. |
+| Side output | existing watchers | A released/refixed watcher receives its current page pointer again and keeps `page_was_unfixed=true`. On partial failure, some existing watcher pointers may be restored while later ones remain `NULL`; callers must inspect each watcher. |
+
+The watcher is therefore not only an input option record or only an output handle. It is an in/out ownership ledger. The requested watcher must be initialized and unattached before the call; after success it is the handle used by `pgbuf_ordered_unfix()`.
+
+### What the helper does internally
+
 The ordered protocol can:
 
 1. attempt conditional acquisition in the requested order;
@@ -89,9 +105,13 @@ The ordered protocol can:
 
 The canonical order is the access method's, not the page buffer's: pages sort by group (the heap header `VPID`), then by rank (`PGBUF_ORDERED_HEAP_HDR` before `PGBUF_ORDERED_HEAP_NORMAL` before `PGBUF_ORDERED_HEAP_OVERFLOW`), then by `VPID`, and pages without a group sort last. When a conditional fix of the new page fails, every held watched page that sorts after the request is fully unfixed with avoid-deallocation registered on its BCB, the request is fixed unconditionally, and the released pages are refixed in sorted order. Only those released pages come back with `page_was_unfixed` set.
 
+More concretely, the fast case uses an unconditional fix when the thread holds no other page (or only another fix of the same page); otherwise it first tries conditionally so it never waits while holding a potentially conflicting set. A successful attempt attaches `req_watcher` and returns. After a conditional rejection, the helper validates that every reorderable fix has a watcher, saves each page's watcher count, strongest latch mode, type, group, rank, and identity, and leaves pages that already sort before the request fixed. It registers avoid-deallocation before fully unfixing only the pages that sort after the request. If the request's group was unknown, it may temporarily fix the heap page to derive the `HFID`/header VPID, then includes the request in the saved set. The set is sorted and acquired unconditionally in canonical order; old fix counts and watcher chains are rebuilt, avoid-deallocation is balanced, and every actually released watcher retains `page_was_unfixed=true`.
+
+If a refix fails, the helper removes the requested fix if it acquired one, clears outstanding avoid-deallocation registrations, and returns an error. It cannot make the output set atomic: earlier pages in sorted order may already be refixed while later watcher pointers are still `NULL`. That is why the error contract requires a watcher-by-watcher ownership audit.
+
 When a watcher reports `page_was_unfixed`, page-local observations—including record pointers, slots, free-space decisions, and headers—may be stale. The access method must reconstruct and revalidate them after refix; restoring the pointer is not enough.
 
-Source: ordered helpers and callbacks at `src/storage/page_buffer.c:12268-13531`. Heap’s destination/watcher owner protocol is visible at `src/storage/heap_file.c:20493-20664`; B-tree’s promotion/restart caller is visible at `src/storage/btree.c:28365-28393`.
+Source: watcher initialization and interface at `src/storage/page_buffer.h:90-164,205-258,282-352`; ordered comparison, fix, and cleanup at `src/storage/page_buffer.c:12186-13063`; ordered callback at `src/storage/page_buffer.c:13065-13531`. Heap’s destination/watcher owner protocol is visible at `src/storage/heap_file.c:20493-20664`; B-tree’s promotion/restart caller is visible at `src/storage/btree.c:28365-28393`.
 
 ## Review checklist
 

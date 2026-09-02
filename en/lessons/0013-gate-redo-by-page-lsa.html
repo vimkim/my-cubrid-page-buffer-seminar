@@ -78,14 +78,28 @@
         <p>The difference is who chooses meaning. Recovery selects the callback and special fetch mode from the log record; the generic page-buffer Module supplies resident identity, byte protection, LSA interface, dirty state, and release mechanics.</p>
       </section>
 
+      <section class="section" id="scope-cleanup">
+        <div class="eyebrow">06 · Scope cleanup decoded</div>
+        <h2>A stack guard unfixes the pointer when this function scope ends</h2>
+        <p>After the fix/gate says redo should continue, <code>log_rv_redo_record_sync()</code> constructs a local <code>scope_exit unfix_rcv_pgptr</code>. The guard captures <code>thread_p</code> and the stack-local <code>rcv</code> by reference. Its destructor calls <code>pgbuf_unfix_and_init_after_check(thread_p, rcv.pgptr)</code>.</p>
+        <ol>
+          <li>If <code>rcv.pgptr</code> is non-null, the helper calls <code>pgbuf_unfix()</code> exactly once and sets the pointer to null.</li>
+          <li>The destructor runs on normal fall-through and on the explicit early return after redo-data extraction fails.</li>
+          <li>The guard was declared after <code>rcv</code>, so reverse destruction order runs the cleanup while <code>rcv</code> is still alive.</li>
+          <li>If a callback leaves the pointer null, cleanup is a no-op. Paths that skip before the guard is constructed already assert a null pointer.</li>
+        </ol>
+        <div class="callout"><strong>Boundary:</strong> this is lexical C++ RAII, not a background cleanup phase, commit, or delayed release. The guard only repays the fix present at scope exit; it does not choose redo, set the page LSA, or mark the page DIRTY.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> guard use is <code>log_recovery_redo.hpp:601–668</code>, the null-safe unfix-and-clear helper is <code>page_buffer.h:64–71</code>, and the guard destructor is <code>scope_exit.hpp:28–80</code>.</p>
+      </section>
+
       <section class="section" id="evidence">
-        <div class="eyebrow">06 · Crash evidence</div>
+        <div class="eyebrow">07 · Crash evidence</div>
         <h2>Checkpoint-like success does not prove crash redo</h2>
         <p>Existing checkpoint/backup observations do not prove restart redo, per-page WAL ordering, DWB recovery, torn-page handling, or home-page persistence. Source establishes intended gates. Runtime evidence for crash safety requires controlled crash points, exact build/configuration, and post-restart state validation at the claimed boundary.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">08 · Retrieval practice</div>
         <h2>Decide skip, apply, or no-debt absence</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="checkpoint asks page buffer to flush qualifying pages and return a redo floor; it does not mean every page is flushed or that page buffer owns the whole checkpoint -> recovery fixes with RECOVERY_PAGE and WRITE because recovery owns special allocation-state knowledge -> with page LSA 140, records 120 and 140 are skipped because record LSA less than or equal to page LSA is already represented -> record 170 is applied, page LSA advances to 170, the page is marked DIRTY as required, and the fix is released -> replaying 170 then skips -> a deallocated page can be skipped without creating fix debt -> this gate proves idempotence of the page change, not arbitrary callback side effects -> existing checkpoint/backup observations do not prove crash redo or DWB recovery." data-concepts='[{"label":"checkpoint is selective coordination","terms":["selective","qualifying","redo floor","not every"]},{"label":"recovery owns special fetch","terms":["RECOVERY_PAGE","allocation","recovery","write"]},{"label":"less-than-or-equal records skip","terms":["120","140","skip","less","equal"]},{"label":"newer record applies and dirties","terms":["170","apply","page lsa","dirty","release"]},{"label":"deallocated absence creates no debt","terms":["deallocated","skip","no debt","no fix"]},{"label":"idempotence and crash evidence bounded","terms":["idempotence","callback","crash","not prove","dwb"]}]'>
           <h3>Prompt</h3>
@@ -115,8 +129,9 @@
       <a href="#example">3. LSA example</a>
       <a href="#fetch">4. Special fetch owner</a>
       <a href="#mutation">5. Apply contract</a>
-      <a href="#evidence">6. Crash evidence</a>
-      <a href="#retrieval">7. Decide it back</a>
+      <a href="#scope-cleanup">6. Scope cleanup</a>
+      <a href="#evidence">7. Crash evidence</a>
+      <a href="#retrieval">8. Decide it back</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/redo-recovery-card.html">Redo-recovery card</a>

@@ -35,6 +35,20 @@ The comparison direction matters: a record whose LSA is less than or equal to th
 
 Source: gate at `src/transaction/log_recovery.c:497-536`; fetch semantics at `src/transaction/log_recovery.c:6407-6431`; apply/LSA/cleanup at `src/transaction/log_recovery_redo.hpp:587-668`.
 
+### What “release through scope cleanup” means
+
+This is ordinary lexical C++ lifetime cleanup, not a recovery phase, background worker, commit, or later callback. In `log_rv_redo_record_sync()`, the local `LOG_RCV rcv` owns `rcv.pgptr`. After the fix/gate helper says redo work should continue, the function constructs a local `scope_exit unfix_rcv_pgptr` below `rcv`. The guard captures `thread_p` and `rcv` by reference. When execution leaves that function scope, the guard's destructor invokes:
+
+```cpp
+pgbuf_unfix_and_init_after_check (thread_p, rcv.pgptr);
+```
+
+That helper checks whether `rcv.pgptr` is non-null, calls `pgbuf_unfix()` once when it is, and then assigns `NULL`. The declaration order matters: the guard is destroyed before the earlier-declared `rcv`, so its references are still valid. The same destructor path runs after the normal fall-through and after the explicit early return caused by redo-data extraction failure. If a recovery callback deliberately leaves `rcv.pgptr == NULL`, the helper is a no-op.
+
+The guard is created only after the initial fix/gate helper returns true. Paths that return before its construction must already leave `rcv.pgptr == NULL`; the code asserts that postcondition. The guard does not mark the page dirty by itself and does not decide whether redo applies. It only guarantees the final fix-debt cleanup for the pointer value present at scope exit.
+
+Source: guard use at `src/transaction/log_recovery_redo.hpp:601-668`; null-safe unfix-and-clear macro at `src/storage/page_buffer.h:64-71`; `scope_exit` destructor and release semantics at `src/base/scope_exit.hpp:28-80`.
+
 ## Allocation and special fetch modes stay with their owners
 
 Page buffer materializes an identity supplied by a caller; it does not decide logical allocation. File/disk callers allocate or deallocate identities and choose `NEW_PAGE`, ordinary modes, or bypass-I/O coherence steps. Recovery callers choose recovery-specific modes such as `RECOVERY_PAGE`, `OLD_PAGE_DEALLOCATED`, or `OLD_PAGE_MAYBE_DEALLOCATED` because they own redo/undo knowledge.

@@ -44,6 +44,32 @@
         <p class="source-note"><strong>Pinned sources:</strong> zone semantics <code>page_buffer.c:185–200</code>; structures <code>560–773</code>; ordinary selection <code>9293–9538</code>; quota policy <code>13942–14440</code>.</p>
       </section>
 
+      <section class="section" id="cross-private-search">
+        <div class="eyebrow">02A · Other-private discovery and zone movement</div>
+        <h2>Consume a list index; do not enumerate transactions</h2>
+        <img class="diagram" src="../../assets/lru-cross-search-and-aging.svg" alt="Lock-free discovery of another private LRU and LRU1, LRU2, LRU3 movement rules">
+        <p class="caption">Candidate producers advertise integer LRU indices. A victimizer locks only the selected list, scans bounded LRU3 state, and uses BCB try-locks.</p>
+        <ol>
+          <li>An eligible clean LRU3 BCB increases <code>count_vict_cand</code>. An over-quota private list atomically enlists its index in <code>private_lrus_with_victims</code>; quota adjustment can republish it.</li>
+          <li><code>pgbuf_lfcq_get_victim_from_private_lru()</code> consumes <code>big_private_lrus_with_victims</code> first, then the regular queue when allowed. It maps the integer directly to <code>buf_LRU_list[lru_idx]</code>; the caller never walks another transaction’s object.</li>
+          <li><code>pgbuf_get_victim_from_lru_list()</code> locks that one LRU mutex, scans at most 1,000 LRU3 entries, and try-locks each BCB before the final safety recheck.</li>
+          <li>If candidates and quota still justify another search, the index is requeued. Otherwise its enlistment flag is cleared so a later candidate can advertise it again.</li>
+        </ol>
+        <div class="callout warn"><strong>Contention judgment:</strong> several victimizers, unfix/boost, and quota adjustment can contend on one hot LRU mutex. But this is not an all-private-list lock sweep: queue operations are lock-free, only one selected list mutex is held, scan depth is bounded, and BCB locks are nonblocking. Severe bottleneck is plausible under concentrated pressure, not proven by the structure alone.</div>
+        <table>
+          <thead><tr><th>BCB state/event</th><th>Pinned placement or movement</th><th>Quota relation</th></tr></thead>
+          <tbody>
+            <tr><td>New private BCB, default AOUT disabled</td><td>First zero-crossing unfix inserts at LRU1 top.</td><td>Private LRU1 target is 5% of current quota.</td></tr>
+            <tr><td>New BCB without private domain</td><td>Insert at shared LRU2 middle.</td><td>Shared default LRU1/LRU2 targets are 40%/5% of shared target.</td></tr>
+            <tr><td>LRU1 ordinary unfix</td><td>Keep; do not boost an already-hot BCB.</td><td>Over-threshold oldest edge demotes to LRU2.</td></tr>
+            <tr><td>LRU2 ordinary unfix</td><td>Boost to LRU1 only when old enough.</td><td>Over-threshold oldest edge demotes to LRU3.</td></tr>
+            <tr><td>LRU3 ordinary unfix</td><td>Boost to LRU1; vacuum/direct paths have explicit exceptions.</td><td>Clean hard-eligible entries may be victimized.</td></tr>
+            <tr><td>Private page used from another private context, or hot and old enough</td><td>Remove to VOID, then add at shared LRU2 middle.</td><td>Membership moves; quota never duplicates the BCB.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified mechanism and pinned policy:</strong> queue advertisement/consumption <code>page_buffer.c:15674–15728,16370–16506</code>; bounded list scan <code>9330–9538</code>; placement/aging <code>6636–7040,9695–10353</code>; quotas <code>14251–14511</code>.</p>
+      </section>
+
       <section class="section" id="loop">
         <div class="eyebrow">03 · No free BCB</div>
         <h2>The allocator enters a progress loop with explicit exits</h2>
@@ -125,6 +151,7 @@
       <strong>Lesson map</strong>
       <a href="#boundary">1. Policy boundary</a>
       <a href="#domains">2. Domains and zones</a>
+      <a href="#cross-private-search">2A. Other-private search</a>
       <a href="#loop">3. Allocation loop</a>
       <a href="#reservation">4. Revocable victim</a>
       <a href="#generation">5. G+1 coordination</a>

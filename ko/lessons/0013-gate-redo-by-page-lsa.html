@@ -78,14 +78,28 @@
         <p>차이는 의미를 정하는 주체다. Recovery는 log record를 보고 callback과 special fetch mode를 고른다. 일반 page-buffer Module은 resident identity, byte protection, LSA interface, dirty state, release mechanics를 제공한다.</p>
       </section>
 
+      <section class="section" id="scope-cleanup">
+        <div class="eyebrow">06 · Scope cleanup 해석</div>
+        <h2>이 function scope가 끝날 때 stack guard가 pointer를 unfix한다</h2>
+        <p>fix/gate가 redo를 계속하라고 판단한 뒤 <code>log_rv_redo_record_sync()</code>는 local <code>scope_exit unfix_rcv_pgptr</code>를 만든다. 이 guard는 <code>thread_p</code>와 stack-local <code>rcv</code>를 reference로 capture한다. Destructor는 <code>pgbuf_unfix_and_init_after_check(thread_p, rcv.pgptr)</code>를 호출한다.</p>
+        <ol>
+          <li><code>rcv.pgptr</code>가 non-null이면 helper가 <code>pgbuf_unfix()</code>를 정확히 한 번 호출하고 pointer를 null로 만든다.</li>
+          <li>Destructor는 정상적으로 function 끝에 도달할 때와 redo-data 추출 실패 뒤 명시적 early return을 할 때 모두 실행된다.</li>
+          <li>guard가 <code>rcv</code> 뒤에 선언되었으므로 역순 destruction에서 <code>rcv</code>가 살아 있는 동안 cleanup이 먼저 실행된다.</li>
+          <li>callback이 pointer를 null로 남기면 cleanup은 아무 일도 하지 않는다. guard 생성 전에 skip하는 path는 pointer가 null이라는 postcondition을 이미 assert한다.</li>
+        </ol>
+        <div class="callout"><strong>경계:</strong> 이것은 lexical C++ RAII다. background cleanup phase, commit, delayed release가 아니다. Guard는 scope exit 시점에 남아 있는 fix만 갚으며, redo 여부 결정, page LSA 설정, DIRTY 표시는 수행하지 않는다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> guard 사용은 <code>log_recovery_redo.hpp:601–668</code>, null-safe unfix-and-clear helper는 <code>page_buffer.h:64–71</code>, guard destructor는 <code>scope_exit.hpp:28–80</code>에 있다.</p>
+      </section>
+
       <section class="section" id="evidence">
-        <div class="eyebrow">06 · Crash evidence</div>
+        <div class="eyebrow">07 · Crash evidence</div>
         <h2>Checkpoint처럼 보이는 성공만으로 crash redo를 입증할 수 없다</h2>
         <p>기존 checkpoint/backup 관찰만으로 restart redo, page별 WAL ordering, DWB recovery, torn-page handling, home-page persistence를 입증할 수 없다. Source는 의도된 gate를 보여줄 뿐이다. Crash safety에 대한 runtime evidence를 얻으려면 controlled crash point, 정확한 build/configuration, 주장하는 boundary에서의 restart 이후 state validation이 필요하다.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval 연습</div>
+        <div class="eyebrow">08 · Retrieval 연습</div>
         <h2>Skip, apply, debt 없는 부재를 구분한다</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="Checkpoint는 page buffer에 조건을 만족하는 page를 flush하고 redo floor를 돌려달라고 요청한다. 모든 page를 flush하거나 page buffer가 checkpoint 전체를 소유한다는 뜻은 아니다 -> recovery는 special allocation-state 지식을 소유하므로 RECOVERY_PAGE와 WRITE로 fix한다 -> page LSA가 140이면 record LSA가 page LSA 이하인 120과 140은 이미 반영되어 있으므로 skip한다 -> record 170은 적용하고 page LSA를 170으로 전진시키며, 필요한 대로 page를 DIRTY로 표시한 뒤 fix를 release한다 -> 이후 170을 replay하면 skip한다 -> deallocate된 page는 fix debt 없이 skip할 수 있다 -> 이 gate는 page 변경의 idempotence만 입증하며 임의의 callback side effect까지 입증하지 않는다 -> 기존 checkpoint/backup 관찰은 crash redo나 DWB recovery를 입증하지 않는다." data-concepts='[{"label":"checkpoint는 선택적 coordination","terms":["selective","qualifying","redo floor","not every"]},{"label":"recovery가 special fetch를 소유","terms":["RECOVERY_PAGE","allocation","recovery","write"]},{"label":"이하인 record는 skip","terms":["120","140","skip","less","equal"]},{"label":"새 record는 apply하고 dirty","terms":["170","apply","page lsa","dirty","release"]},{"label":"deallocate된 부재는 debt 없음","terms":["deallocated","skip","no debt","no fix"]},{"label":"idempotence와 crash evidence의 한계","terms":["idempotence","callback","crash","not prove","dwb"]}]'>
           <h3>문제</h3>
@@ -115,8 +129,9 @@
       <a href="#example">3. LSA 예시</a>
       <a href="#fetch">4. Special fetch owner</a>
       <a href="#mutation">5. Apply contract</a>
-      <a href="#evidence">6. Crash evidence</a>
-      <a href="#retrieval">7. 직접 판단하기</a>
+      <a href="#scope-cleanup">6. Scope cleanup</a>
+      <a href="#evidence">7. Crash evidence</a>
+      <a href="#retrieval">8. 직접 판단하기</a>
       <a href="#primary-reading">필수 읽기</a>
       <hr>
       <a href="../reference/redo-recovery-card.html">Redo-recovery card</a>

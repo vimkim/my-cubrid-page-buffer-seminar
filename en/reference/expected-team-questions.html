@@ -11,7 +11,7 @@
 <main class="course-shell">
   <div class="topline"><span>CUBRID page buffer · maintainer challenge guide</span><a href="../index.html">Course home</a></div>
   <header class="hero">
-    <div class="eyebrow">15 expected team questions</div>
+    <div class="eyebrow">15 team challenges + 14 implementation questions</div>
     <h1>Answer the questions behind the design.</h1>
     <p>Use these questions for maintainer self-check and peer review. Form your answer before expanding the model, then defend it with an owner, state, guard, invariant, and evidence boundary.</p>
     <div class="pills"><span class="pill">Objects</span><span class="pill">Ownership</span><span class="pill">Durability</span><span class="pill">Replacement</span><span class="pill">Proof</span></div>
@@ -248,6 +248,204 @@
             <p><strong>Model answer:</strong> There is no universal test. Choose the seam that crosses the risk: a representative caller regression for an Interface change, deterministic interleaving for an ordering race, named fault injection plus state assertions for unwind, controlled pressure for replacement policy, and crash/recovery evidence for durability. Then state exactly what remained untested.</p>
             <p><strong>Defend with:</strong> More repetitions are not stronger evidence if execution never crosses the risky transition.</p>
             <p class="answer-route"><a href="../../questions/maintenance-scenarios-answers.md#pgbuf-qb-070-which-verification-seam-crosses-the-actual-risk">Canonical answer and source anchors</a> · <a href="change-defense-card.html">Change-defense card</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="reader-implementation-questions">
+    <div class="eyebrow">Reader implementation questions</div>
+    <h2>Fourteen direct answers from the pinned source</h2>
+    <div class="question-stack">
+      <article class="question-card" id="reader-q-01">
+        <div class="question-meta"><span>Lookup</span><span>Reader Q1</span><span>Lesson 3</span></div>
+        <h3>1. What hashing algorithm maps a VPID toward a BCB?</h3>
+        <details open>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> The resident lookup uses <code>bucket = (pageid ^ (reverse8(volid &amp; 0xff) &lt;&lt; 12)) &amp; 0xfffff</code>. It reverses the low eight volume-id bits into the high portion of a 20-bit value, XORs the page id, and selects one of 2^20 anchors. The bucket contains a chain, so lookup still locks a candidate and compares the complete VPID. <code>pgbuf_hash_vpid()</code> is a separate generic/AOUT hash, not this resident-table formula.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:295-300,1567-1602,5672-5699,7594-7722</code></p>
+            <p class="answer-route"><a href="../../learning/02-fix-hold-release.md#how-resident-hashing-narrows-the-lookup">Canonical hash explanation</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-02">
+        <div class="question-meta"><span>Pool lifetime</span><span>Reader Q2</span><span>Lesson 2</span></div>
+        <h3>2. Does a lookup miss create a new BCB?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> No. Startup allocates a fixed BCB array and a one-to-one frame array. <code>data_buffer_pages</code> determines <code>num_buffers</code>—32,768 by default at this baseline, subject to the page-buffer minimum—and every slot initially has no resident identity. A miss claims an invalid/free slot or reuses a victim. The code says “allocate a BCB,” but it means allocate from this existing pool; “create a new BCB” is misleading after initialization.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:1713-1721,5559-5667,8181-8403</code></p>
+            <p class="answer-route"><a href="../../learning/01-contract-and-objects.md#the-pool-is-fixed-at-startup-a-miss-reuses-a-slot">Canonical pool explanation</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-03">
+        <div class="question-meta"><span>Pressure</span><span>Reader Q3</span><span>Lessons 7 and 12</span></div>
+        <h3>3. What happens when the BCB pool is full?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> The allocator searches for a safe LRU victim. If none is immediately eligible, server mode can request flush progress and wait for a direct victim; stand-alone or recovery paths flush synchronously and retry. Assignment, retry, interrupt, timeout, and <code>ER_PB_ALL_BUFFERS_DIRTY</code> are bounded outcomes. Selection never overrides the hard gate: an unsafe fixed, dirty, flushing, waited-on, transient, or identity-changed BCB cannot be reused.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:8181-8403,9067-9538,15420-15660</code></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop">Canonical progress loop</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-04">
+        <div class="question-meta"><span>LRU policy</span><span>Reader Q4</span><span>Lesson 12</span></div>
+        <h3>4. How many private and shared LRUs exist, and what do their quotas mean?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> The counts are configuration- and mode-dependent. Auto shared count derives from <code>MAX_NTRANS</code>, targets roughly 1,000 buffers per list, and has a floor of four; explicit count is capped at 1,000. In server mode, private count <code>-1</code> derives from transaction plus vacuum capacity, <code>0</code> disables private quotas, and a positive count has a floor of four. One BCB belongs to one list. Quotas guide placement and search; they do not cap fixes or authorize reuse.</p>
+            <p><strong>Answer:</strong> Shared LRU1/LRU2 defaults are 40%/5%; private quota targets reserve 5%/5%. Activity-weighted private quotas are smoothed, capped at 5,000 pages and half the pool, while the shared remainder has a minimum target of 50 per list. All numbers are pinned policy, not Interface contract.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:1071-1118,5744-5903,13942-14624</code></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#counts-quotas-and-zone-boundaries-at-the-pinned-revision">Canonical LRU details</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-05">
+        <div class="question-meta"><span>Ownership</span><span>Reader Q5</span><span>Lessons 3 and 4</span></div>
+        <h3>5. What do fix and unfix mean?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> A successful fix makes the requested page resident, grants the requested page latch, increments global BCB fix ownership, records the current thread’s nested holder debt, and lends a <code>PAGE_PTR</code>. The matching unfix repays one debt. When the global count reaches zero it releases the latch and may place, boost, flush, or offer the BCB to replacement. Unfix is not commit, flush, eviction, or deallocation.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:2260-2685,3062-3201,6277-6883</code></p>
+            <p class="answer-route"><a href="../../learning/02-fix-hold-release.md">Canonical fix/unfix trace</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-06">
+        <div class="question-meta"><span>Background progress</span><span>Reader Q6</span><span>Lesson 12</span></div>
+        <h3>6. How many page-buffer daemons exist, and what do they do?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> Server mode nominally registers four: maintenance every 100 ms for quota/direct-victim work; page flush on demand or at the 1,000 ms default interval; post-flush with adaptive 1/10/100 ms waits; and flush control every 50 ms for I/O tokens. Recovery gating, configuration, and failed flush-control initialization qualify that count. Stand-alone mode has no page-buffer daemons and uses synchronous progress.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:16972-17255</code></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive">Canonical daemon table</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-07">
+        <div class="question-meta"><span>Structures</span><span>Reader Q7</span><span>Lesson 2</span></div>
+        <h3>7. Which supporting data structures matter besides BCBs and frames?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> The minimum working map includes resident hash anchors and their load-lock chains, per-thread holders, the invalid/free list, private/shared three-zone LRUs, victim hints and candidate storage, direct-victim waiter queues, flushed-BCB handoff, sequence-flusher state, and optional AOUT ghost history. Each structure answers a different question: identity, release debt, free capacity, preference, or progress.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:460-832,1796-1888,5701-5903</code></p>
+            <p class="answer-route"><a href="../../learning/01-contract-and-objects.md#the-pool-is-fixed-at-startup-a-miss-reuses-a-slot">Canonical structure map</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-08">
+        <div class="question-meta"><span>Safe change</span><span>Reader Q8</span><span>Playbook</span></div>
+        <h3>8. What must a maintainer preserve when changing replacement?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> Keep policy below hard eligibility; preserve exact list membership, zone counters/hints, lock order, final protected recheck, insertion and aging assumptions, direct-victim revocation, timeout/interrupt cleanup, and dirty-generation safety. Exercise private quotas on/off, server and stand-alone/recovery paths, and AOUT-disabled defaults. Prove actual eviction under controlled pressure before evaluating fairness or performance.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:8181-8403,9067-9538,15420-15660</code></p>
+            <p class="answer-route"><a href="../../playbooks/change-safely.md#replacement-policy-change-gate">Replacement change gate</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-09">
+        <div class="question-meta"><span>Victim order</span><span>Reader Q9</span><span>Lesson 12</span></div>
+        <h3>9. How is victim priority determined?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> There is no single priority number. The order is layered: domain pressure chooses own over-quota private, other private, shared, then own under-quota private; only LRU3 is scanned from its hint or oldest end for at most 1,000 candidates; then the final safety gate may reject the preferred candidate. A separate high/low queue prioritizes direct-victim waiters, not BCB eligibility.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:9067-9538,11734-11790</code></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#how-the-victim-search-assigns-priority">Canonical priority explanation</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-10">
+        <div class="question-meta"><span>Holder lifetime</span><span>Reader Q10</span><span>Lesson 4</span></div>
+        <h3>10. How does a holder entry live, and can it make unfix slow?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> Initialization reserves seven entries per thread; exhaustion grows storage in sets of ten. First fix binds one free entry to one BCB and prepends it to that thread’s hold list. Nested fixes reuse it by increasing <code>fix_count</code>. Final matching unfix removes the binding and returns the entry to that thread’s free list, but backing memory remains until page-buffer finalization.</p>
+            <p><strong>Performance judgment:</strong> a bottleneck is plausible, not automatic. Find is linear in the distinct BCBs held by that thread, and final removal may walk the singly linked list again. Small or LIFO hold sets are cheap; unfavorable order can accumulate quadratic traversal. Many threads on one BCB can instead contend on its shared atomic latch, while nested fixes of one page by one thread do not lengthen the holder list. Profile these separately from zero-count LRU work, wakeups, and flush.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:86-94,438-500,5922-6275,6298-6634,7807-7835</code></p>
+            <p class="answer-route"><a href="../../advanced/holder-entry-lifecycle.md">Canonical holder lifecycle and cost analysis</a> · <a href="../lessons/0004-repay-fix-debt.html#holder-lifecycle">Bilingual lesson section</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-11">
+        <div class="question-meta"><span>Replacement safety</span><span>Reader Q11</span><span>Lessons 7 and 12</span></div>
+        <h3>11. Why does victim selection need a protected handoff?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Handoff:</strong> the LRU scan only nominates a pointer. Its pre-lock “all clear” reads can become stale when ownership, flags, waiter state, or list state changes. BCB try-lock plus a current recheck authorizes detach; removal changes membership to <code>PGBUF_VOID_ZONE</code> and returns the BCB still locked, preventing an A-based decision from acting after rebind to B.</p>
+            <p><strong>Safety:</strong> <code>fcnt &gt; 0</code>, <code>next_wait_thrd != NULL</code>, non-idle latch/transient protocol state, DIRTY, FLUSHING, and direct-victim flags block ordinary reuse. DIRTY protects unpropagated current bytes; FLUSHING protects completion still associated with an older snapshot and identity.</p>
+            <p><strong>Pressure:</strong> a nonresident materialization first tries the invalid list and searches victims only when no free slot exists. If every BCB is fixed, none is stolen: server mode waits for a future unfix or exits by timeout/interrupt/shutdown; the no-daemon path retries synchronously and fails if no victim appears.</p>
+            <p><strong>One LRU:</strong> one BCB has one link pair and one encoded list index/zone. Private-to-shared movement removes it to VOID before adding it to the new list. LRU objects live for the pool; context assignments and BCB membership are shorter-lived.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:499-623,8181-8403,9265-9538,9695-10415,14513-14650,15900-16030</code></p>
+            <p class="answer-route"><a href="../lessons/0007-replace-one-frame.html#handoff-details">Bilingual protected-handoff explanation</a> · <a href="../../advanced/replacement-progress.md#lru-object-assignment-and-membership-lifetimes">Canonical LRU lifetime</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-12">
+        <div class="question-meta"><span>Cross-private LRU</span><span>Reader Q12</span><span>Lesson 12</span></div>
+        <h3>12. How does one transaction find victims in another private LRU?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Discovery:</strong> it does not inspect transaction objects or walk every private list. Over-quota private lists with LRU3 candidates advertise their integer indices in lock-free circular queues. The victimizer consumes the big-private queue first, then the regular queue when allowed, and maps the index directly to <code>buf_LRU_list[lru_idx]</code>.</p>
+            <p><strong>Locking:</strong> it locks only that selected list, scans at most 1,000 LRU3 entries, and try-locks BCBs. Contention on a concentrated hot list is possible, but there is no all-private-LRU mutex sweep; severe bottleneck requires measured evidence.</p>
+            <p><strong>Zones:</strong> new private BCBs normally enter LRU1 top, new shared BCBs LRU2 middle. Threshold pressure demotes LRU1→LRU2→LRU3. An old-enough LRU2 hit and an ordinary LRU3 hit boost to LRU1. Private LRU1/LRU2 targets are 5%/5% of quota; shared defaults are 40%/5% of the shared target.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.c:9330-9538,9695-10353,14251-14511,15674-15728,16370-16506</code></p>
+            <p class="answer-route"><a href="../lessons/0012-prove-replacement-progress.html#cross-private-search">Bilingual cross-private and zone visual</a> · <a href="../../advanced/replacement-progress.md#how-a-caller-finds-another-private-list">Canonical mechanism</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-13">
+        <div class="question-meta"><span>Ordered ownership</span><span>Reader Q13</span><span>Lesson 11</span></div>
+        <h3>13. What are the inputs, outputs, and internal steps of ordered fix?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Input:</strong> <code>thread_p</code>, requested VPID, fetch mode, latch mode, and a clean in/out watcher. The caller initializes the watcher with its access-method rank and optional heap group; <code>pgptr</code> must be null. Already-held watchers are not passed as a separate array—the helper discovers them through the current thread’s holder list.</p>
+            <p><strong>Output:</strong> the function returns an integer status. On success, <code>req_watcher.pgptr</code> is the requested watched fix and the watcher records latch/rank/group/link state. Existing watchers that crossed a release/refix gap regain pointers with <code>page_was_unfixed=true</code>. On partial failure, earlier watchers may be restored while later ones remain null, so inspect each watcher.</p>
+            <p><strong>Internal path:</strong> try the request conditionally while other pages are held; if it succeeds, attach the watcher and finish. If it rejects, validate the watched holders, leave pages that sort before the request fixed, register avoid-deallocation and fully unfix pages that sort after it, resolve an unknown heap group if needed, sort by group→rank→VPID, and acquire the request plus released pages unconditionally in that order. Rebuild fix counts and watcher chains, balance avoid-deallocation, and unwind the requested fix on error.</p>
+            <p><strong>Source:</strong> <code>src/storage/page_buffer.h:90-164,205-258,282-352</code>; <code>src/storage/page_buffer.c:12186-13063</code></p>
+            <p class="answer-route"><a href="../lessons/0011-rebuild-after-ordered-refix.html#io-contract">Bilingual input/output explanation</a> · <a href="../../advanced/acquisition-concurrency.md#ordered-fix-input-and-output-contract">Canonical mechanism</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-14">
+        <div class="question-meta"><span>Redo cleanup</span><span>Reader Q14</span><span>Lesson 13</span></div>
+        <h3>14. What does “redo releases through scope cleanup” mean?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Answer:</strong> after the redo fix/gate, <code>log_rv_redo_record_sync()</code> creates a stack <code>scope_exit</code> guard. When that lexical function scope ends—normal fall-through or a later explicit early return—the guard’s destructor calls <code>pgbuf_unfix_and_init_after_check(thread_p, rcv.pgptr)</code>. If the pointer is non-null, the helper unfixes once and clears it; if null, it does nothing. The guard is declared after <code>rcv</code>, so cleanup runs while the captured object is still alive.</p>
+            <p><strong>Boundary:</strong> this is C++ RAII, not a background phase, commit, dirtying step, or delayed callback. Paths that skip before guard construction already leave <code>rcv.pgptr</code> null.</p>
+            <p><strong>Source:</strong> <code>src/transaction/log_recovery_redo.hpp:601-668</code>; <code>src/storage/page_buffer.h:64-71</code>; <code>src/base/scope_exit.hpp:28-80</code></p>
+            <p class="answer-route"><a href="../lessons/0013-gate-redo-by-page-lsa.html#scope-cleanup">Bilingual scope-cleanup explanation</a> · <a href="../../advanced/recovery-and-lifecycle.md#what-release-through-scope-cleanup-means">Canonical mechanism</a></p>
           </div>
         </details>
       </article>

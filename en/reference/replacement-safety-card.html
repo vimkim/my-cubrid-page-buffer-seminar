@@ -26,8 +26,8 @@
         <tbody>
           <tr><td>Can many threads hold it?</td><td>Yes, for the same current page when latch rules permit.</td></tr>
           <tr><td>Can it represent many VPIDs simultaneously?</td><td>No.</td></tr>
-          <tr><td>Can it be in private and shared LRUs simultaneously?</td><td>No; those are alternative list homes.</td></tr>
-          <tr><td>Why protect the handoff?</td><td>Prevent a stale observation of A from being applied after detach/rebind or state movement.</td></tr>
+          <tr><td>Can it be in private and shared LRUs simultaneously?</td><td>No. One link pair plus one encoded list index represent one membership. A move removes to VOID before adding to the other list.</td></tr>
+          <tr><td>Why protect the handoff?</td><td>The scan only nominates a pointer. BCB try-lock and recheck establish current all-clear state, then detach returns the BCB still locked so an old A-based decision cannot act after ownership/state change or rebind to B.</td></tr>
         </tbody>
       </table>
     </article>
@@ -62,7 +62,7 @@
         <li><code>fcnt == 0</code> + DIRTY → unpropagated debt</li>
         <li><code>fcnt == 0</code> + FLUSHING → in-flight identity</li>
         <li><code>fcnt == 0</code> + waiter → pending right</li>
-        <li>All clear before lock → observation may be stale</li>
+        <li>All clear before BCB lock → only an earlier sample; recheck after try-lock</li>
       </ul>
     </article>
     <article class="reference-card">

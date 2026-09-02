@@ -60,6 +60,25 @@ Pinned-source evidence:
 - BCB/frame table allocation and one-to-one pairing: `src/storage/page_buffer.c:5559-5660`
 - Pool-owned BCB/frame teardown: `src/storage/page_buffer.c:1921-1971`
 
+## The pool is fixed at startup; a miss reuses a slot
+
+**Verified mechanism:** the pinned revision does not heap-create a BCB for each lookup miss. During `pgbuf_initialize()`, `data_buffer_pages` determines `num_buffers` (32,768 by default at this baseline, with an effective lower bound of ten times `MAX_NTRANS`). Initialization allocates exactly `num_buffers` BCBs and exactly `num_buffers` page frames, pairs them one-to-one, and places the BCBs in the invalid/free population. That storage remains pool-owned until finalization.
+
+A miss therefore **claims and rebinds an existing pool slot**. `pgbuf_allocate_bcb()` first removes an identity-free BCB from the invalid list; if none exists, it runs the replacement progress protocol to reuse a safe victim. The source legitimately calls this “allocating a BCB,” but “creating a new BCB” is misleading unless the pool itself is being initialized.
+
+The BCB/frame array is only the storage core. These supporting structures make lookup, ownership, replacement, and background progress possible:
+
+| Structure | Purpose |
+|---|---|
+| Resident hash anchors | A fixed table of 2^20 mutex-protected buckets maps a `VPID` hash to exact-identity BCB chains and also coordinates in-flight loads. |
+| Per-thread holders and load-lock records | Holders account nested fix debt; one load-lock record per thread coordinates concurrent misses for the same `VPID`. |
+| Invalid list | Owns BCBs with no resident identity and supplies them before victim selection is attempted. |
+| Private and shared LRU lists | Partition resident BCBs into policy domains and zones; they choose where to search, but never override hard victim eligibility. |
+| Direct-victim and post-flush queues | Connect allocators waiting for a frame with eligible clean candidates produced by flush or LRU activity. |
+| Victim-candidate and optional AOUT state | Accelerate policy decisions. AOUT structures exist, but the analyzed default disables AOUT participation. |
+
+Pinned-source evidence: `src/storage/page_buffer.c:295-300,460-832,1641-1888,5559-5736,8181-8403`; parameter default at `src/base/system_parameter.c:1169-1189`. The exact hash and replacement policies are owned by [Fix, Hold, and Release](./02-fix-hold-release.md#how-resident-hashing-narrows-the-lookup) and [Replacement Policy and Background Progress](../advanced/replacement-progress.md).
+
 ## Four independent state axes
 
 ![Four independent page-buffer state axes](../assets/state-axes.svg)

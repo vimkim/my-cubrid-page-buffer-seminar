@@ -48,8 +48,23 @@
         <p>group을 알 수 없는 page는 마지막에 정렬된다. 같은 page의 모든 watcher는 rank가 일치해야 한다. 이 순서는 access-method owner protocol이며 page buffer가 임의로 만든 범용 semantic ordering이 아니다.</p>
       </section>
 
+      <section class="section" id="io-contract">
+        <div class="eyebrow">03 · Input과 output</div>
+        <h2>return value는 status를, watcher는 ownership을 전달한다</h2>
+        <p>호출 형태는 개념적으로 <code>pgbuf_ordered_fix(thread, req_vpid, fetch_mode, request_mode, req_watcher)</code>다. 앞의 네 input은 현재 thread, page, fetch 의미, 요청 latch를 정한다. 호출 전에 caller는 <code>PGBUF_INIT_WATCHER()</code>로 clean watcher를 초기화한다. 이때 <code>pgptr</code>는 null이고, <code>initial_rank</code>와 필요하면 <code>HFID</code>에서 얻은 heap group이 access-method order를 표현한다.</p>
+        <table>
+          <thead><tr><th>결과 channel</th><th>의미</th></tr></thead>
+          <tbody>
+            <tr><td>Integer return</td><td><code>NO_ERROR</code> 또는 error code다. page pointer가 아니다.</td></tr>
+            <tr><td><code>req_watcher</code></td><td>성공하면 <code>pgptr</code>가 watched fix를 담고, watcher에는 latch mode, current rank, resolved group, holder link가 기록된다.</td></tr>
+            <tr><td>이미 attach된 watcher</td><td>helper가 현재 thread의 holder를 통해 찾아낸다. release/refix된 watcher는 <code>page_was_unfixed=true</code>와 함께 pointer를 되찾는다. partial failure 뒤에는 일부 pointer만 복구되고 나머지는 null일 수 있다.</td></tr>
+          </tbody>
+        </table>
+        <p class="big-claim">watcher는 in/out ownership ledger다. 성공은 status와 watcher pointer를 함께 봐야 완성되고, 실패는 영향받은 watcher를 하나씩 확인해야 이해할 수 있다.</p>
+      </section>
+
       <section class="section" id="protocol">
-        <div class="eyebrow">03 · Ordered refix</div>
+        <div class="eyebrow">04 · Ordered refix</div>
         <h2>먼저 싸게 시도하고, 요청 순서를 어기는 것만 release한다</h2>
         <img class="diagram" src="../../assets/ordered-watcher-refix.svg" alt="conditional ordered fix, selective release, unconditional request fix, sorted refix 흐름">
         <p class="caption">conditional fix가 성공하면 아무것도 release하지 않는다. conditional attempt가 실패한 뒤에만 reordering을 시작한다.</p>
@@ -66,7 +81,7 @@
       </section>
 
       <section class="section" id="example">
-        <div class="eyebrow">04 · heap group 예제</div>
+        <div class="eyebrow">05 · heap group 예제</div>
         <h2>0|90은 유지하고, 0|100을 0|120 앞에 넣는다</h2>
         <table>
           <thead><tr><th>Page</th><th>역할/순서</th><th>conditional failure 뒤 동작</th></tr></thead>
@@ -80,7 +95,7 @@
       </section>
 
       <section class="section" id="rebuild">
-        <div class="eyebrow">05 · Revalidation 경계</div>
+        <div class="eyebrow">06 · Revalidation 경계</div>
         <h2>pointer가 복구됐다고 지식까지 복구되는 것은 아니다</h2>
         <p><code>page_was_unfixed=true</code>인 watcher마다 다음을 다시 구성한다.</p>
         <ul>
@@ -95,14 +110,14 @@
       </section>
 
       <section class="section" id="unwind">
-        <div class="eyebrow">06 · Partial failure</div>
+        <div class="eyebrow">07 · Partial failure</div>
         <h2>function 결과 하나가 아니라 watcher마다 audit한다</h2>
         <p>R은 성공했지만 뒤의 refix가 실패하면 held set은 혼합 상태다. 이미 복구된 watcher도 있고 release state를 가진 watcher도 있으며 R 자체가 hold 중일 수도 있다. 올바른 caller/helper unwind는 각 debt를 정확히 한 번 소비하거나 유지하고 avoid-deallocation balance를 보존해야 한다.</p>
         <p class="source-note"><strong>대표 caller 경계:</strong> heap destination/watcher ownership은 pinned <code>heap_file.c:20493–20664</code>에 있다. 이 caller가 generic page-buffer ordering만으로 추론할 수 없는 heap 의미를 제공한다.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval 연습</div>
+        <div class="eyebrow">08 · Retrieval 연습</div>
         <h2>watcher별 ledger를 작성한다</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="canonical heap order는 group, rank, VPID 순이다. header 0|90, 요청한 normal 0|100, hold 중인 normal 0|120 순으로 정렬된다 -> 0|100의 conditional fix가 실패하면 header 0|90은 fixed로 유지하고 0|120은 avoid-deallocation bookkeeping과 함께 완전히 unfix한 뒤 watcher에 page_was_unfixed를 표시한다 -> 0|100을 unconditionally fix하고 0|120을 refix한다 -> 계속 hold한 0|90의 관찰값은 보호되지만 0|120과 관련된 slot, free-space 결정, header, cross-page 결론은 다시 구성해야 한다 -> pointer 값이 같아도 이전 지식은 복구되지 않는다 -> 0|120 refix가 실패하면 function error 하나로 held set을 단정하지 말고 세 watcher 모두의 debt와 cleanup state를 audit한다." data-concepts='[{"label":"canonical group-rank-vpid 순서","terms":["group","rank","vpid","90","100","120"]},{"label":"selective release 판단","terms":["keep","90","unfix","120"]},{"label":"요청 뒤 정렬된 refix","terms":["fix","100","refix","120","order"]},{"label":"page_was_unfixed가 rebuild 경계를 정함","terms":["page_was_unfixed","slot","free space","stale","reconstruct"]},{"label":"continuous hold는 계속 보호됨","terms":["90","continuous","protected","remain"]},{"label":"partial failure는 watcher별 ledger 사용","terms":["failure","each watcher","debt","cleanup","mixed"]}]'>
           <h3>문제</h3>
@@ -129,11 +144,12 @@
       <strong>Lesson map</strong>
       <a href="#watcher">1. Watcher 의미</a>
       <a href="#order">2. Canonical order</a>
-      <a href="#protocol">3. Refix protocol</a>
-      <a href="#example">4. Group 예제</a>
-      <a href="#rebuild">5. 지식 다시 세우기</a>
-      <a href="#unwind">6. Partial failure</a>
-      <a href="#retrieval">7. 직접 ledger 작성하기</a>
+      <a href="#io-contract">3. Input과 output</a>
+      <a href="#protocol">4. Refix protocol</a>
+      <a href="#example">5. Group 예제</a>
+      <a href="#rebuild">6. 지식 다시 세우기</a>
+      <a href="#unwind">7. Partial failure</a>
+      <a href="#retrieval">8. 직접 ledger 작성하기</a>
       <a href="#primary-reading">핵심 읽을거리</a>
       <hr>
       <a href="../reference/ordered-watcher-card.html">Ordered-watcher card</a>

@@ -44,6 +44,37 @@ The visual deliberately follows the normal mutex-protected path. It shows where 
 | **Fix debt** | The obligation, created by one successful fix, to call unfix exactly once. This guide does not say "commit debt": that wording suggests transaction commit, which the page buffer never performs. |
 | **Stale-observation boundary** | The point after which an observation about a hit candidate can be trusted: the protected identity recheck. Anything observed before it—`vpid`, flags, frame association—may describe a BCB that has since been rebound to another page. |
 
+### What convergence identity agreement compares
+
+![BCB identity compared with the identity stored in its frame's page header](../assets/bcb-page-header-identity.svg)
+
+The BCB and frame store the same logical identity in two different places. `PGBUF_BCB.vpid` is control metadata saying which page the reusable BCB/frame slot represents. `FILEIO_PAGE.prv.volid` and `FILEIO_PAGE.prv.pageid` are identity fields stored inside the page image occupying that frame. At the common hit/miss path, while holding the BCB mutex, the check is exactly these two field equalities:
+
+```text
+bufptr->vpid.volid  == bufptr->iopage_buffer->iopage.prv.volid
+bufptr->vpid.pageid == bufptr->iopage_buffer->iopage.prv.pageid
+```
+
+This is not pointer equality and not a comparison of all page bytes. The BCB mutex stabilizes the control-slot-to-frame association across the decision so the slot cannot be detached and rebound concurrently; it is not a substitute for the page latch that protects caller access to content after the identity check.
+
+For a fresh `NEW_PAGE` frame or an immature permanent page met during redo, an empty `(NULL_VOLID, NULL_PAGEID)` header is first initialized from the BCB VPID. If both fields then match, acquisition can continue to latch grant and debt recording. If either differs, no borrowed `PAGE_PTR` is returned; on the fresh-miss path the BCB goes back to the invalid list and the VPID load lock is released so waiters can retry. At this revision, a non-permanent volume bypasses the comparison.
+
+Source: BCB control field at `src/storage/page_buffer.c:510-518`; header initialization at `src/storage/page_buffer.c:5433-5471`; exact field comparison at `src/storage/page_buffer.c:11243-11279`; protected convergence and mismatch unwind at `src/storage/page_buffer.c:2440-2472`.
+
+### How resident hashing narrows the lookup
+
+The main resident table has 2^20 (1,048,576) hash anchors. For a `VPID`, the pinned lookup computes:
+
+```text
+bucket = (pageid ^ (reverse8(volid & 0xff) << 12)) & 0xfffff
+```
+
+In words, it reverses the low eight bits of `volid` into the high eight positions of a 20-bit value, XORs that value with `pageid`, and masks the result to 20 bits. This selects a bucket, not a BCB. Collisions are resolved by walking the bucket's BCB chain, then locking a candidate and rechecking the complete `(volid, pageid)` identity before treating it as resident.
+
+Do not substitute `pgbuf_hash_vpid()` when explaining this path. That function is a separate generic modulo hash used by optional AOUT bookkeeping; `PGBUF_HASH_VALUE()` and `pgbuf_hash_func_mirror()` implement the resident lookup described here.
+
+Source: constants and macro at `src/storage/page_buffer.c:295-300`; mirror function at `src/storage/page_buffer.c:1567-1602`; resident hash initialization at `src/storage/page_buffer.c:5672-5699`; protected exact-identity lookup at `src/storage/page_buffer.c:7594-7722`.
+
 The vocabulary above meets on a cold miss when two threads want the same absent page. Only one of them may load it, and the other must neither load a duplicate nor touch an unpublished BCB:
 
 ![VPID load owner and load waiter on one cold miss](../assets/load-owner-waiter.svg)
@@ -154,7 +185,7 @@ Blocking promotion and ordered watcher protocols may temporarily release and rea
 
 ## Advanced mechanisms deliberately deferred
 
-This page gives the ordinary contract a stable shape before concurrency optimizations and multi-page protocols are introduced. Continue to [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md) for the lock-free READ hit and its memory-ordering proof, the full latch wait queue with reader grouping and timeout handling, blocking promotion and its release/reacquire boundary, and ordered watchers with release/reorder/refix. Continue to [Replacement Policy and Background Progress](../advanced/replacement-progress.md) for what happens when a cold miss finds no free frame. Those mechanisms must preserve the identity, debt, and pointer-lifetime invariants taught here; they are not alternative shortcuts around them.
+This page gives the ordinary contract a stable shape before concurrency optimizations and multi-page protocols are introduced. Continue to [Holder Entry Structure, Lifetime, and Unfix Cost](../advanced/holder-entry-lifecycle.md) for holder storage, growth, list maintenance, and the conditional `pgbuf_unfix()` bottleneck argument. Continue to [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md) for the lock-free READ hit and its memory-ordering proof, the full latch wait queue with reader grouping and timeout handling, blocking promotion and its release/reacquire boundary, and ordered watchers with release/reorder/refix. Continue to [Replacement Policy and Background Progress](../advanced/replacement-progress.md) for what happens when a cold miss finds no free frame. Those mechanisms must preserve the identity, debt, and pointer-lifetime invariants taught here; they are not alternative shortcuts around them.
 
 ## Understanding check: Predict–Locate–Explain
 
@@ -227,5 +258,6 @@ Thus the global `fcnt` values rise through 1, 2, and 3 while the thread ledgers 
 - [Practice the two ledgers](../questions/core.md#pgbuf-qb-015-what-do-fcnt-and-per-thread-holders-tell-you) and [fix debt naming](../questions/core.md#pgbuf-qb-018-is-fix-debt-the-same-as-commit-debt)
 - [Practice many unconditional writers](../questions/advanced.md#pgbuf-qb-033-how-are-many-unconditional-write-waiters-handled) and [no free BCB](../questions/advanced.md#pgbuf-qb-040-what-happens-when-no-free-bcb-is-immediately-available)
 - [Change the Module Safely](../playbooks/change-safely.md)
+- [Holder Entry Structure, Lifetime, and Unfix Cost](../advanced/holder-entry-lifecycle.md)
 - [Source and Caller Map](../reference/source-map.md)
 - [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md)

@@ -65,6 +65,33 @@
         <p class="source-note"><strong>Verified mechanism:</strong> pinned revision의 일반 LRU selection은 victim zone을 scan하고, avoid-victim flag가 있거나 fixed 상태인 frame을 제외한다. 이어 BCB를 conditional lock하고 <code>pgbuf_is_bcb_victimizable(..., true)</code>를 호출한 다음에야 list에서 제거한다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9293-L9538"><code>page_buffer.c:9293–9538</code></a>을 읽어 보자.</p>
       </section>
 
+      <section class="section" id="handoff-details">
+        <div class="eyebrow">02A · Protected handoff 자세히 보기</div>
+        <h2>Scan observation은 detach 권한이 아닙니다</h2>
+        <table>
+          <thead><tr><th>시점</th><th>보호되는 것</th><th>결과의 의미</th></tr></thead>
+          <tbody>
+            <tr><td>LRU scan</td><td>LRU mutex가 list link와 zone membership을 안정시킵니다.</td><td>간단한 read 결과 현재 VPID A인 <code>BCB[42]</code>가 eligible해 보입니다. BCB ownership과 flag는 여전히 바뀔 수 있습니다.</td></tr>
+            <tr><td>BCB lock 전</td><td>아직 BCB protection이 없습니다.</td><td>“모두 clear”는 sample 하나일 뿐입니다. fixer, unfixer, flush, direct-victim transition이 이를 stale하게 만들 수 있습니다.</td></tr>
+            <tr><td><code>PGBUF_BCB_TRYLOCK()</code></td><td>Scan은 LRU mutex를 가진 채 BCB를 기다리지 않습니다.</td><td>실패는 다른 protected BCB transition이 seam을 소유한다는 뜻이므로 이 candidate를 건너뜁니다.</td></tr>
+            <tr><td>Protected recheck</td><td>LRU mutex와 BCB mutex를 함께 가집니다.</td><td>현재 flag, ownership, waiter, latch, identity/zone state를 다시 읽습니다. 지금 모두 clear일 때만 unlink할 수 있습니다.</td></tr>
+            <tr><td>Detach 후 반환</td><td>LRU mutex 아래에서 제거하고 BCB를 <code>PGBUF_VOID_ZONE</code>으로 바꾼 뒤 BCB lock을 유지한 채 반환합니다.</td><td>Allocator가 victimization/rebind를 위한 exclusive handoff를 받습니다. A를 보고 내린 stale 결정이 나중에 B를 나타내는 slot에 적용되지 않습니다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>“Stale”의 뜻:</strong> observation은 읽을 때는 참이었지만 detach가 작용할 현재 state를 더는 설명하지 못합니다. Protection은 옛 sample을 영원히 보존하는 것이 아니라 최신 all-clear state를 만들고 destructive handoff 동안 conflicting transition을 막습니다.</div>
+        <table>
+          <thead><tr><th>Blocker</th><th>구체적인 source state</th><th>중요한 이유</th></tr></thead>
+          <tbody>
+            <tr><td>Owner</td><td><code>atomic_latch.fcnt &gt; 0</code></td><td>Granted fixer가 아직 frame을 소유합니다.</td></tr>
+            <tr><td>Waiter</td><td><code>next_wait_thrd != NULL</code></td><td>Queue에 들어간 latch/flush transition이 이 BCB를 기다리며 올바르게 grant, reject 또는 wake되어야 합니다.</td></tr>
+            <tr><td>Transient claim</td><td>BCB protection 없는 non-idle latch, 실패한 BCB try-lock, direct-victim assignment/invalidation flag.</td><td>하나의 field 이름이 아니라 guide의 포괄 용어입니다. 다른 ownership 또는 handoff transition이 진행 중일 수 있습니다.</td></tr>
+            <tr><td>DIRTY</td><td>현재 resident generation이 아직 propagation debt를 가집니다.</td><td>Reuse하면 page-image boundary를 넘지 않은 byte를 덮어씁니다.</td></tr>
+            <tr><td>FLUSHING</td><td>이전 copied generation의 completion work가 남았습니다.</td><td>Rebind하면 과거 completion이 새 identity의 flag를 clear하거나 state를 wake할 수 있고, concurrent G+1도 DIRTY일 수 있습니다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified mechanism:</strong> prefilter, try-lock, protected recheck, detach, locked return은 <code>page_buffer.c:9399–9478</code>, fixed/waiter/latch check는 <code>9265–9325</code>, invalid-victim flag는 <code>221–263,16217–16231</code>에 있습니다.</p>
+      </section>
+
       <section class="section" id="counterexample">
         <div class="eyebrow">03 · shortcut 깨뜨리기</div>
         <h2><code>fcnt == 0</code>은 한 시점의 sample이지 재사용 증명이 아니다</h2>
@@ -80,12 +107,35 @@
         <div class="callout warn"><strong>설명할 때의 함정:</strong> “unfixed”와 “victimizable”은 같은 말이 아니다. unfixed는 현재 fix debt라는 한 좌표만 답한다.</div>
       </section>
 
+      <section class="section" id="allocation-pressure">
+        <div class="eyebrow">03A · Search가 시작되는 시점</div>
+        <h2>Miss는 victim보다 invalid list를 먼저 시도합니다</h2>
+        <p><code>pgbuf_allocate_bcb()</code>는 resident가 아니면서 materialization이 필요한 page에 대해서만 진입합니다. 먼저 invalid list에서 identity-free BCB를 얻습니다. 여기서 아무것도 얻지 못해야 LRU3에서 victim을 찾습니다. 따라서 “pool full”은 즉시 사용할 free/invalid slot이 없다는 뜻이며, 일부 slot은 fixed, provisional, flushing 또는 direct handoff 상태일 수 있습니다.</p>
+        <p>모든 BCB가 fixed이면 모든 candidate가 ownership gate에서 실패하고 Module은 어느 것도 빼앗지 않습니다. Server mode는 direct victim을 기다리며 eventual unfix에 의존합니다. ownership이 끝나지 않으면 timeout, interrupt 또는 shutdown이 request를 종료합니다. Daemon을 사용할 수 없으면 동기식으로 flush/search하고 victim이 생기지 않으면 결국 실패합니다. 실제 blocker가 “all fixed”여도 fallback error가 <code>ER_PB_ALL_BUFFERS_DIRTY</code>일 수 있습니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> invalid-list-first allocation과 demand condition은 <code>page_buffer.c:8181–8235</code>, server wait/retry와 bounded exit는 <code>8236–8403</code>에 있습니다.</p>
+      </section>
+
       <section class="section" id="policy">
         <div class="eyebrow">04 · 변경 가능한 구조</div>
         <h2>eligible frame만 replacement policy로 들어간다</h2>
         <p>LRU zone과 placement, private/shared domain, quota, candidate queue나 hint, direct assignment는 locality, fairness, CPU cost, progress에 영향을 준다. 그러나 재사용이 안전한지를 새로 정의하지는 않는다.</p>
         <p>direct-victim assignment는 revoke할 수 있다. allocator가 소비하기 전에 candidate가 다시 fixed되면 다른 candidate를 요청한다. Policy는 새로 생긴 ownership에 양보하며 재사용을 강제하지 않는다.</p>
         <p class="source-note"><strong>Implementation policy:</strong> 구체적인 zone, quota, queue priority, search order, timeout 전략은 이 revision의 선택이다. hard interface 조건은 그대로다. 성공한 fixer나 완료되지 않은 generation이 rebind 이후까지 남아서는 안 된다.</p>
+      </section>
+
+      <section class="section" id="lru-lifetime">
+        <div class="eyebrow">04A · LRU structure와 lifetime</div>
+        <h2>List object는 유지되고 assignment와 membership은 바뀝니다</h2>
+        <table>
+          <thead><tr><th>Lifetime</th><th>구체적인 형태</th><th>Transition</th></tr></thead>
+          <tbody>
+            <tr><td>LRU object</td><td>Shared index 뒤에 private index가 이어지는 pool-owned array 하나입니다. 각 double-linked list는 mutex, top/bottom, zone boundary, victim hint, count, threshold, quota, tick, flag, index를 가집니다.</td><td>Page buffer와 함께 할당·초기화되고 page-buffer finalization에서만 파괴됩니다.</td></tr>
+            <tr><td>Private context assignment</td><td>Session count가 context를 private list에 연결하며 한 list가 여러 context를 담당할 수 있습니다.</td><td><code>pgbuf_assign_private_lru()</code>가 assignment를 증가시키고 <code>pgbuf_release_private_lru()</code>가 감소시킵니다. 이때 list를 파괴하거나 resident BCB를 즉시 비우지 않습니다.</td></tr>
+            <tr><td>BCB membership</td><td><code>prev_BCB</code>/<code>next_BCB</code> 한 쌍과 <code>flags</code>에 encoding된 zone 하나 + 16-bit LRU index 하나입니다.</td><td>Add는 기존 LRU membership이 없음을 assert합니다. Private-to-shared move는 old mutex 아래에서 remove하고 <code>PGBUF_VOID_ZONE</code>을 거쳐 new mutex 아래에서 add합니다.</td></tr>
+          </tbody>
+        </table>
+        <p>이 구조가 BCB 하나가 private와 shared LRU에 동시에 속하지 않도록 보장합니다. List link storage와 encoded list index가 하나뿐이고, move helper가 zone count, hint, sanity assertion을 유지하면서 remove-then-add를 수행합니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> structure는 <code>page_buffer.c:499–623</code>, array lifetime은 <code>1921–1985,5744–5800</code>, add/remove/move는 <code>9695–9879,10200–10415</code>, encoded membership은 <code>15900–16030</code>, private assignment lifetime은 <code>14513–14650</code>에 있습니다. Quota 값과 공식은 Lesson 12에 있습니다.</p>
       </section>
 
       <section class="section" id="verbs">
@@ -140,8 +190,11 @@
       <a href="#identity-meaning">0. BCB identity</a>
       <a href="#split">1. Eligibility와 policy</a>
       <a href="#gates">2. 다섯 가지 hard proof</a>
+      <a href="#handoff-details">2A. Protected handoff</a>
       <a href="#counterexample">3. fcnt == 0 깨뜨리기</a>
+      <a href="#allocation-pressure">3A. Allocation pressure</a>
       <a href="#policy">4. Policy 구조</a>
+      <a href="#lru-lifetime">4A. LRU lifetime</a>
       <a href="#verbs">5. Lifecycle 동작</a>
       <a href="#evidence">6. Evidence 경계</a>
       <a href="#retrieval">7. 직접 판단하기</a>

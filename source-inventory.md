@@ -83,6 +83,23 @@ instrumentation. Therefore this inventory uses `f799e05` symbol-plus-line anchor
 for the teaching baseline and labels later observations rather than silently
 normalizing their line numbers.
 
+## Pinned follow-up audit for maintainer questions
+
+A focused read of the exact baseline closed implementation-detail gaps raised during maintainer review. These findings are now explained canonically in the Learning, Advanced, Playbook, and Reference routes rather than left only in raw research notes.
+
+| Question family | Pinned finding | Primary source anchors |
+|---|---|---|
+| Resident hash | `PGBUF_HASH_VALUE()` reverses the low eight `volid` bits into the high portion of a 20-bit value, XORs `pageid`, and masks to 20 bits. The resulting 2^20-bucket table narrows lookup; exact `VPID` comparison resolves collisions. The similarly named `pgbuf_hash_vpid()` is a different generic/AOUT hash. | `src/storage/page_buffer.c:295-300,1567-1616,5672-5699,7594-7722` |
+| BCB creation and pool size | `data_buffer_pages` selects `num_buffers` (default 32,768, with the page-buffer minimum applied). Startup allocates and pairs exactly that many BCBs and frames; a miss claims an invalid slot or reuses a victim rather than allocating a new BCB object. | `src/base/system_parameter.c:1169-1189`; `src/storage/page_buffer.c:84,1713-1721,5559-5667,8181-8403` |
+| LRU topology and limits | Private and shared lists form one array; a BCB has one list membership. Shared/private counts, zone ratios, quota caps, insertion/aging, and the cross-domain victim order are revision-bound policy. Only LRU3 is scanned, at most 1,000 candidates, before the final hard-eligibility recheck. | `src/storage/page_buffer.c:185-200,1071-1118,5744-5903,6636-6994,9067-9538,9695-10353,13942-14624`; `src/base/system_parameter.c:1794-1829,3754-3777,4171-4182` |
+| Background workers | Server mode nominally owns maintenance, page-flush, post-flush, and flush-control daemons; recovery gating, initialization availability, configuration, and adaptive waits qualify that count. Stand-alone mode uses synchronous progress. | `src/storage/page_buffer.c:16972-17255`; `src/base/system_parameter.c:1806-1829` |
+| Safe algorithm changes | Replacement preference must remain below stable identity, zero ownership/waiters, clean/not-flushing state, final protected recheck, list/lock invariants, and the allocation/direct-victim progress protocol. | `src/storage/page_buffer.c:8181-8403,9067-9538,15420-15660` |
+| Holder entry lifecycle and cost | Pool startup reserves seven holder entries per thread; expansion adds sets of ten; entries move between one thread's free and hold lists and backing storage lasts until finalization. Find is linear in distinct BCBs held by the thread, and final removal may traverse again, making an unfix bottleneck plausible but not runtime-proven. | `src/storage/page_buffer.c:86-94,438-500,5922-6275,6298-6634,7807-7835` |
+| Replacement handoff and LRU lifetime | Victim prefilters are observations until BCB try-lock and protected recheck; a locked candidate is detached before handoff. LRU objects persist as one pool-owned array, while context assignment and one-BCB membership have shorter lifetimes. Single links plus one encoded index/zone enforce alternative private/shared membership. | `src/storage/page_buffer.c:499-623,5744-5800,8181-8403,9265-9538,9695-10415,14513-14650,15900-16030` |
+| Cross-private discovery and zone movement | A victimizer consumes advertised private-LRU indices from lock-free queues rather than enumerating transactions or locking all lists. It locks one selected LRU, scans at most 1,000 LRU3 entries, and try-locks BCBs. Zone thresholds demote LRU1→LRU2→LRU3; old-enough LRU2 and ordinary LRU3 reuse boost to LRU1. | `src/storage/page_buffer.c:9330-9538,9695-10353,14251-14511,15674-15728,16370-16506` |
+| Ordered-fix input, output, and internal transition | The caller supplies thread, requested VPID/fetch/latch requirements, and a clean watcher initialized with rank and optional heap group. The integer result reports status; the in/out watcher carries the requested page pointer on success. Existing watched holders are discovered from the thread, selectively released only when they sort after the request, protected from deallocation, sorted, and refixed. Partial failure can leave a mixed per-watcher pointer state. | `src/storage/page_buffer.h:90-164,205-258,282-352`; `src/storage/page_buffer.c:12186-13063` |
+| Redo scope cleanup | Synchronous redo constructs a stack `scope_exit` guard after the fix/gate. On normal fall-through or a later early return, its destructor invokes the null-safe `pgbuf_unfix_and_init_after_check()` on `rcv.pgptr`; this repays and clears the pointer but does not itself choose redo or dirty the page. | `src/transaction/log_recovery_redo.hpp:601-668`; `src/storage/page_buffer.h:64-71`; `src/base/scope_exit.hpp:28-80` |
+
 ## Detailed document inventory
 
 ### 1. `FIELD/`: audited lifecycle-centered field guide
@@ -346,11 +363,13 @@ configuration/revision. Do not use “CUBRID uses 2Q” as the current core mode
 
 ### Private LRU ownership
 
-Some prose says “per thread” while the later teaching notes correct this to
-“per transaction/session allocation” in the relevant source design. Resolution:
-use “private LRU assigned to a transaction/session context” unless quoting an
-exact field/cardinality from a pinned revision. Avoid turning a storage-policy
-association into correctness ownership.
+Some prose says “per thread” or implies one exclusive list per transaction. The
+pinned allocator assigns a private-list index to transaction/session contexts,
+preferring an unassigned list but falling back to the least-active list, so more
+than one context can share a list. Resolution: use “private LRU assigned as a
+locality/quota domain to one or more transaction/session contexts” unless
+quoting an exact field/cardinality. Avoid turning a storage-policy association
+into correctness ownership.
 
 ### Fix, latch, pin, and lock terminology
 

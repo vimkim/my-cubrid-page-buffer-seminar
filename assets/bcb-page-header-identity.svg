@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">BCB identity and page-header identity agreement at fix convergence</title>
+  <desc id="desc">At the common hit and miss convergence point, the thread holds the BCB mutex. The control block identity in bufptr vpid is compared field by field with the identity stored inside the frame bytes in FILEIO_PAGE prv. Matching volume and page identifiers allow latch and fix-debt grant to continue. A mismatch returns no page pointer; a newly loaded BCB is returned to the invalid list and its VPID load lock is released. An empty header for a new or immature page is initialized from the BCB before comparison.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#435d69"/>
+    </marker>
+    <style>
+      .control{fill:#eef0ff;stroke:#5968bd;stroke-width:2.5}.bytes{fill:#fff6e8;stroke:#b86b22;stroke-width:2.5}.guard{fill:#e9f4f3;stroke:#16847d;stroke-width:2.5}.pass{fill:#e9f4f3;stroke:#16847d;stroke-width:2}.fail{fill:#fde9e5;stroke:#b74b3c;stroke-width:2}.note{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.t{font:700 24px Inter,Arial,sans-serif;fill:#173443}.h{font:700 18px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.code{font:15px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#173443}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#435d69;stroke-width:2.5;marker-end:url(#arrow)}.equal{font:700 18px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#0f6b65}
+    </style>
+  </defs>
+
+  <text x="600" y="40" text-anchor="middle" class="t">Convergence: does the control block describe the bytes in its frame?</text>
+  <rect x="270" y="66" rx="16" width="660" height="64" class="guard"/>
+  <text x="600" y="94" text-anchor="middle" class="h">BCB mutex held across the decision</text>
+  <text x="600" y="117" text-anchor="middle" class="tiny">Prevents detach or rebind while these two identities are compared</text>
+
+  <rect x="45" y="165" rx="18" width="365" height="245" class="control"/>
+  <text x="227" y="202" text-anchor="middle" class="h">Control metadata · PGBUF_BCB</text>
+  <text x="73" y="242" class="code">bufptr-&gt;vpid.volid  = 3</text>
+  <text x="73" y="277" class="code">bufptr-&gt;vpid.pageid = 812</text>
+  <path d="M78 302 H378" stroke="#9aa8cf" stroke-width="1.5"/>
+  <text x="73" y="337" class="code">bufptr-&gt;iopage_buffer ─────┐</text>
+  <text x="73" y="372" class="s">Which logical page this reusable</text>
+  <text x="73" y="396" class="s">control slot claims to represent</text>
+
+  <rect x="790" y="165" rx="18" width="365" height="245" class="bytes"/>
+  <text x="972" y="202" text-anchor="middle" class="h">Frame bytes · FILEIO_PAGE.prv</text>
+  <text x="818" y="242" class="code">iopage.prv.volid  = 3</text>
+  <text x="818" y="277" class="code">iopage.prv.pageid = 812</text>
+  <path d="M818 302 H1123" stroke="#d6aa7d" stroke-width="1.5"/>
+  <text x="818" y="337" class="code">iopage.prv.lsa    = ...</text>
+  <text x="818" y="372" class="s">Identity stored inside the page image</text>
+  <text x="818" y="396" class="s">at the start of the associated frame</text>
+
+  <path d="M410 230 H505" class="line"/>
+  <path d="M790 230 H695" class="line"/>
+  <rect x="505" y="171" rx="16" width="190" height="180" class="note"/>
+  <text x="600" y="205" text-anchor="middle" class="h">Field equality</text>
+  <text x="600" y="244" text-anchor="middle" class="equal">volid == volid</text>
+  <text x="600" y="279" text-anchor="middle" class="equal">pageid == pageid</text>
+  <text x="600" y="318" text-anchor="middle" class="tiny">Not pointer equality</text>
+  <text x="600" y="338" text-anchor="middle" class="tiny">Not a full-page comparison</text>
+
+  <path d="M550 351 C510 414 365 425 310 451" class="line"/>
+  <path d="M650 351 C690 414 835 425 890 451" class="line"/>
+  <text x="405" y="420" text-anchor="middle" class="tiny">both match</text>
+  <text x="795" y="420" text-anchor="middle" class="tiny">either differs</text>
+
+  <rect x="65" y="455" rx="16" width="470" height="112" class="pass"/>
+  <text x="300" y="488" text-anchor="middle" class="h">Both fields match · identity agrees</text>
+  <text x="300" y="520" text-anchor="middle" class="s">Continue to latch grant and record fix debt.</text>
+  <text x="300" y="547" text-anchor="middle" class="tiny">Only then can success return a borrowed PAGE_PTR.</text>
+
+  <rect x="665" y="455" rx="16" width="470" height="112" class="fail"/>
+  <text x="900" y="488" text-anchor="middle" class="h">Either field differs · identity mismatch</text>
+  <text x="900" y="520" text-anchor="middle" class="s">Return no PAGE_PTR. A fresh miss returns the BCB</text>
+  <text x="900" y="547" text-anchor="middle" class="tiny">to the invalid list and releases the VPID load lock.</text>
+
+  <rect x="35" y="592" rx="14" width="1130" height="42" class="note"/>
+  <text x="600" y="618" text-anchor="middle" class="s">New or immature permanent page with an empty header: copy the BCB VPID into the header first, then compare. Non-permanent volume: this check is a no-op.</text>
+</svg>

@@ -65,6 +65,33 @@
         <p class="source-note"><strong>Verified mechanism:</strong> pinned ordinary LRU selection scans the victim zone, rejects avoid-victim flags and fixed frames, conditionally locks the BCB, calls <code>pgbuf_is_bcb_victimizable(..., true)</code>, and only then removes it from the list. Read <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9293-L9538"><code>page_buffer.c:9293–9538</code></a>.</p>
       </section>
 
+      <section class="section" id="handoff-details">
+        <div class="eyebrow">02A · Expand the protected handoff</div>
+        <h2>A scan observation is not a right to detach</h2>
+        <table>
+          <thead><tr><th>Moment</th><th>What is protected</th><th>What the result means</th></tr></thead>
+          <tbody>
+            <tr><td>LRU scan</td><td>The LRU mutex stabilizes list links and zone membership.</td><td>Cheap reads say <code>BCB[42]</code>, currently VPID A, looks eligible. BCB ownership and flags may still change.</td></tr>
+            <tr><td>Before BCB lock</td><td>No BCB protection yet.</td><td>“All clear” is only a sample. A fixer, unfixer, flush, or direct-victim transition can make it stale.</td></tr>
+            <tr><td><code>PGBUF_BCB_TRYLOCK()</code></td><td>The scan refuses to wait for the BCB while holding the LRU mutex.</td><td>Failure means another protected BCB transition owns the seam; skip this candidate.</td></tr>
+            <tr><td>Protected recheck</td><td>LRU mutex plus BCB mutex.</td><td>Re-read current flags, ownership, waiter, latch, identity/zone state. Only current all-clear state authorizes unlink.</td></tr>
+            <tr><td>Detach and return</td><td>Remove under the LRU mutex, change the BCB to <code>PGBUF_VOID_ZONE</code>, return it still BCB-locked.</td><td>The allocator receives exclusive handoff for victimization/rebind; no stale A-based decision is applied later to a slot representing B.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>What “stale” means:</strong> the observation was true when read but no longer describes the state on which detach would act. Protection does not preserve the old sample forever; it establishes a fresh all-clear state and blocks conflicting transitions across the destructive handoff.</div>
+        <table>
+          <thead><tr><th>Blocker</th><th>Concrete source state</th><th>Why it matters</th></tr></thead>
+          <tbody>
+            <tr><td>Owner</td><td><code>atomic_latch.fcnt &gt; 0</code></td><td>A granted fixer still owns the frame.</td></tr>
+            <tr><td>Waiter</td><td><code>next_wait_thrd != NULL</code></td><td>A queued latch/flush transition still expects this BCB and must be granted, rejected, or awakened correctly.</td></tr>
+            <tr><td>Transient claim</td><td>Non-idle latch without BCB protection, failed BCB try-lock, or direct-victim assignment/invalidation flag.</td><td>This is a guide umbrella, not one field: another ownership or handoff transition may be in progress.</td></tr>
+            <tr><td>DIRTY</td><td>Current resident generation still owes propagation.</td><td>Reuse would overwrite bytes that have not crossed their page-image boundary.</td></tr>
+            <tr><td>FLUSHING</td><td>An older copied generation still owns completion work.</td><td>Rebind could let old completion clear flags or wake state for a new identity; concurrent G+1 may also be DIRTY.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified mechanism:</strong> prefilters, try-lock, protected recheck, detach, and locked return are at <code>page_buffer.c:9399–9478</code>; fixed/waiter/latch checks at <code>9265–9325</code>; invalid-victim flags at <code>221–263,16217–16231</code>.</p>
+      </section>
+
       <section class="section" id="counterexample">
         <div class="eyebrow">03 · Break the shortcut</div>
         <h2><code>fcnt == 0</code> is one sample, not a reuse proof</h2>
@@ -80,12 +107,35 @@
         <div class="callout warn"><strong>Reasoning trap:</strong> “unfixed” is not a synonym for “victimizable.” It answers only the current fix-debt coordinate.</div>
       </section>
 
+      <section class="section" id="allocation-pressure">
+        <div class="eyebrow">03A · When the search starts</div>
+        <h2>A miss tries the invalid list before any victim</h2>
+        <p><code>pgbuf_allocate_bcb()</code> is entered only for a page that is not resident and needs materialization. It first takes an identity-free BCB from the invalid list. Only when that returns nothing does it search LRU3 for a victim. “Pool full” therefore means no free/invalid slot is immediately available; some slots may instead be fixed, provisional, flushing, or in direct handoff.</p>
+        <p>If every BCB is fixed, every candidate fails the ownership gate and the Module never steals one. Server mode waits for a direct victim and relies on an eventual unfix; if ownership never ends, timeout, interrupt, or shutdown ends the request. Without an available daemon, the code flushes/searches synchronously and ultimately fails if no victim appears. The fallback error can be <code>ER_PB_ALL_BUFFERS_DIRTY</code> even when “all fixed” is the actual blocker.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> invalid-list-first allocation and the demand condition are at <code>page_buffer.c:8181–8235</code>; server wait/retry and bounded exits at <code>8236–8403</code>.</p>
+      </section>
+
       <section class="section" id="policy">
         <div class="eyebrow">04 · Changeable machinery</div>
         <h2>Only eligible frames enter replacement policy</h2>
         <p>LRU zones and placement, private versus shared domains, quotas, candidate queues or hints, and direct assignment affect locality, fairness, CPU cost, and progress. They do not redefine whether reuse is safe.</p>
         <p>A direct-victim assignment is revocable: if its candidate is fixed again before consumption, the allocator requests another candidate. Policy yields to newly acquired ownership; it does not force reuse.</p>
         <p class="source-note"><strong>Implementation policy:</strong> the specific zones, quotas, queue priorities, search order, and timeout strategy belong to this revision. The hard interface condition remains: no successful fixer or incomplete generation may survive a rebind.</p>
+      </section>
+
+      <section class="section" id="lru-lifetime">
+        <div class="eyebrow">04A · LRU structure and lifetime</div>
+        <h2>List objects persist; assignments and membership change</h2>
+        <table>
+          <thead><tr><th>Lifetime</th><th>Concrete shape</th><th>Transition</th></tr></thead>
+          <tbody>
+            <tr><td>LRU object</td><td>One pool-owned array: shared indices followed by private indices. Each double-linked list has one mutex, top/bottom, zone boundaries, victim hint, counts, thresholds, quota, ticks, flags, and index.</td><td>Allocated and initialized with the page buffer; destroyed only at page-buffer finalization.</td></tr>
+            <tr><td>Private context assignment</td><td>A session count attaches contexts to a private list; a list may serve more than one context.</td><td><code>pgbuf_assign_private_lru()</code> increments assignment; <code>pgbuf_release_private_lru()</code> decrements it without destroying the list or immediately emptying its BCBs.</td></tr>
+            <tr><td>BCB membership</td><td>One <code>prev_BCB</code>/<code>next_BCB</code> pair and one zone + 16-bit LRU index encoded in <code>flags</code>.</td><td>Add asserts no existing LRU membership. Private-to-shared movement removes under the old mutex, passes through <code>PGBUF_VOID_ZONE</code>, then adds under the new mutex.</td></tr>
+          </tbody>
+        </table>
+        <p>This is how the implementation ensures a BCB is not in private and shared LRUs simultaneously: it has storage for one list link pair and one encoded list index, and move helpers perform remove-then-add while maintaining zone counts, hints, and sanity assertions.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> structures at <code>page_buffer.c:499–623</code>; array lifetime at <code>1921–1985,5744–5800</code>; add/remove/move at <code>9695–9879,10200–10415</code>; encoded membership at <code>15900–16030</code>; private assignment lifetime at <code>14513–14650</code>. Quota values and formulas are in Lesson 12.</p>
       </section>
 
       <section class="section" id="verbs">
@@ -140,8 +190,11 @@
       <a href="#identity-meaning">0. BCB identity</a>
       <a href="#split">1. Eligibility vs policy</a>
       <a href="#gates">2. Five hard proofs</a>
+      <a href="#handoff-details">2A. Protected handoff</a>
       <a href="#counterexample">3. Break fcnt == 0</a>
+      <a href="#allocation-pressure">3A. Allocation pressure</a>
       <a href="#policy">4. Policy machinery</a>
+      <a href="#lru-lifetime">4A. LRU lifetime</a>
       <a href="#verbs">5. Lifecycle verbs</a>
       <a href="#evidence">6. Evidence boundary</a>
       <a href="#retrieval">7. Decide it back</a>

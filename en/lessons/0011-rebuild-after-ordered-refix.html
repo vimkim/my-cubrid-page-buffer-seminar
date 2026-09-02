@@ -48,8 +48,23 @@
         <p>Pages without a known group sort last. Every watcher for the same page must agree on rank. This order is an access-method owner protocol, not a universal semantic ordering invented by page buffer.</p>
       </section>
 
+      <section class="section" id="io-contract">
+        <div class="eyebrow">03 · Input and output</div>
+        <h2>The return value reports status; the watcher carries ownership</h2>
+        <p>The call is conceptually <code>pgbuf_ordered_fix(thread, req_vpid, fetch_mode, request_mode, req_watcher)</code>. The first four inputs identify the current thread, page, fetch semantics, and requested latch. Before the call, the caller initializes a clean watcher with <code>PGBUF_INIT_WATCHER()</code>: <code>pgptr</code> is null, while <code>initial_rank</code> and an optional heap group derived from <code>HFID</code> describe the access-method order.</p>
+        <table>
+          <thead><tr><th>Result channel</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>Integer return</td><td><code>NO_ERROR</code> or an error code; it is not the page pointer.</td></tr>
+            <tr><td><code>req_watcher</code></td><td>On success, <code>pgptr</code> carries the watched fix and the watcher records latch mode, current rank, resolved group, and holder links.</td></tr>
+            <tr><td>Already-attached watchers</td><td>The helper discovers these through the current thread’s holders. A released/refixed watcher regains a pointer with <code>page_was_unfixed=true</code>; after partial failure, some pointers may be restored and others null.</td></tr>
+          </tbody>
+        </table>
+        <p class="big-claim">The watcher is an in/out ownership ledger. Success is not complete until the caller checks the status and uses the watcher’s pointer; failure is not understood until every affected watcher is inspected.</p>
+      </section>
+
       <section class="section" id="protocol">
-        <div class="eyebrow">03 · Ordered refix</div>
+        <div class="eyebrow">04 · Ordered refix</div>
         <h2>Try cheaply; release only what violates the requested order</h2>
         <img class="diagram" src="../../assets/ordered-watcher-refix.svg" alt="Conditional ordered fix, selective release, unconditional request fix, and sorted refix">
         <p class="caption">A successful conditional fix releases nothing. Reordering begins only after the conditional attempt fails.</p>
@@ -66,7 +81,7 @@
       </section>
 
       <section class="section" id="example">
-        <div class="eyebrow">04 · Worked heap group</div>
+        <div class="eyebrow">05 · Worked heap group</div>
         <h2>Keep 0|90; insert 0|100 before 0|120</h2>
         <table>
           <thead><tr><th>Page</th><th>Role/order</th><th>Action after conditional failure</th></tr></thead>
@@ -80,7 +95,7 @@
       </section>
 
       <section class="section" id="rebuild">
-        <div class="eyebrow">05 · Revalidation boundary</div>
+        <div class="eyebrow">06 · Revalidation boundary</div>
         <h2>A restored pointer is not restored knowledge</h2>
         <p>For every watcher with <code>page_was_unfixed=true</code>, reconstruct:</p>
         <ul>
@@ -95,14 +110,14 @@
       </section>
 
       <section class="section" id="unwind">
-        <div class="eyebrow">06 · Partial failure</div>
+        <div class="eyebrow">07 · Partial failure</div>
         <h2>Audit each watcher, not just the function result</h2>
         <p>If R succeeds but a later refix fails, the held set is mixed. Some watchers may already be restored, some still carry release state, and R may itself be held. A correct caller or helper unwind must consume or retain each debt exactly once and preserve avoid-deallocation balance.</p>
         <p class="source-note"><strong>Representative caller boundary:</strong> heap destination/watcher ownership is pinned <code>heap_file.c:20493–20664</code>. This caller supplies heap meaning that generic page-buffer ordering cannot infer.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">08 · Retrieval practice</div>
         <h2>Produce a watcher-by-watcher ledger</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="the canonical heap order is group, then rank, then VPID; the header 0|90 sorts before requested normal 0|100, which sorts before held normal 0|120 -> after the conditional fix of 0|100 fails, keep header 0|90 fixed, fully unfix 0|120 with avoid-deallocation bookkeeping, and mark its watcher page_was_unfixed -> fix 0|100 unconditionally, then refix 0|120 -> observations from continuously held 0|90 remain protected, but slots, free-space decisions, headers, and cross-page conclusions involving 0|120 must be reconstructed -> the same pointer value does not restore old knowledge -> if refixing 0|120 fails, audit the debt and cleanup state of all three watchers rather than assuming one function error describes the held set." data-concepts='[{"label":"canonical group-rank-vpid order","terms":["group","rank","vpid","90","100","120"]},{"label":"selective release","terms":["keep","90","unfix","120"]},{"label":"request then sorted refix","terms":["fix","100","refix","120","order"]},{"label":"page_was_unfixed drives rebuild","terms":["page_was_unfixed","slot","free space","stale","reconstruct"]},{"label":"continuous hold stays protected","terms":["90","continuous","protected","remain"]},{"label":"partial failure uses per-watcher ledger","terms":["failure","each watcher","debt","cleanup","mixed"]}]'>
           <h3>Prompt</h3>
@@ -129,11 +144,12 @@
       <strong>Lesson map</strong>
       <a href="#watcher">1. Watcher meaning</a>
       <a href="#order">2. Canonical order</a>
-      <a href="#protocol">3. Refix protocol</a>
-      <a href="#example">4. Worked group</a>
-      <a href="#rebuild">5. Rebuild knowledge</a>
-      <a href="#unwind">6. Partial failure</a>
-      <a href="#retrieval">7. Ledger it back</a>
+      <a href="#io-contract">3. Input and output</a>
+      <a href="#protocol">4. Refix protocol</a>
+      <a href="#example">5. Worked group</a>
+      <a href="#rebuild">6. Rebuild knowledge</a>
+      <a href="#unwind">7. Partial failure</a>
+      <a href="#retrieval">8. Ledger it back</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/ordered-watcher-card.html">Ordered-watcher card</a>

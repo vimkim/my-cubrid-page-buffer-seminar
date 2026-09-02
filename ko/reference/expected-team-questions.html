@@ -11,7 +11,7 @@
 <main class="course-shell">
   <div class="topline"><span>CUBRID page buffer · Maintainer challenge guide</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">팀에서 나올 만한 질문 15개</div>
+    <div class="eyebrow">팀 challenge 15개 + 구현 질문 14개</div>
     <h1>설계의 이면을 묻는 질문에 답해 보세요.</h1>
     <p>Maintainer self-check와 동료 review에 이 질문들을 활용하세요. model을 펼치기 전에 먼저 자신의 답을 정리하고, owner, state, guard, invariant, evidence boundary로 그 답을 방어합니다.</p>
     <div class="pills"><span class="pill">Object</span><span class="pill">Ownership</span><span class="pill">Durability</span><span class="pill">Replacement</span><span class="pill">Proof</span></div>
@@ -248,6 +248,204 @@
             <p><strong>Model answer:</strong> 모든 변경에 통하는 test는 없습니다. risk를 실제로 가로지르는 seam을 골라야 합니다. Interface 변경에는 대표 caller regression, ordering race에는 deterministic interleaving, unwind에는 이름이 명확한 fault injection과 state assertion, replacement policy에는 통제된 pressure, durability에는 crash/recovery evidence가 필요합니다. 그리고 무엇을 test하지 못했는지도 정확히 밝혀야 합니다.</p>
             <p><strong>이렇게 방어하세요:</strong> 실행이 위험한 transition을 한 번도 지나지 않는다면 반복 횟수가 많아도 더 강한 evidence가 되지 않습니다.</p>
             <p class="answer-route"><a href="../../questions/maintenance-scenarios-answers.md#pgbuf-qb-070-which-verification-seam-crosses-the-actual-risk">Canonical answer와 source anchor</a> · <a href="change-defense-card.html">Change-defense card</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="reader-implementation-questions">
+    <div class="eyebrow">독자의 구현 질문</div>
+    <h2>고정된 소스에서 확인한 열네 가지 직접 답변</h2>
+    <div class="question-stack">
+      <article class="question-card" id="reader-q-01">
+        <div class="question-meta"><span>조회</span><span>Reader Q1</span><span>Lesson 3</span></div>
+        <h3>1. VPID를 BCB 후보로 연결하는 해시 알고리즘은 무엇인가요?</h3>
+        <details open>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> resident lookup은 <code>bucket = (pageid ^ (reverse8(volid &amp; 0xff) &lt;&lt; 12)) &amp; 0xfffff</code>를 사용합니다. volume id의 하위 8비트를 뒤집어 20비트 값의 상위 부분에 놓고 page id와 XOR하여 2^20개 anchor 중 하나를 고릅니다. bucket에는 chain이 있으므로 candidate를 잠근 뒤 전체 VPID를 다시 비교해야 합니다. <code>pgbuf_hash_vpid()</code>는 별도의 generic/AOUT hash이며 이 resident table 공식이 아닙니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:295-300,1567-1602,5672-5699,7594-7722</code></p>
+            <p class="answer-route"><a href="../../learning/02-fix-hold-release.md#how-resident-hashing-narrows-the-lookup">Canonical hash 설명</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-02">
+        <div class="question-meta"><span>Pool lifetime</span><span>Reader Q2</span><span>Lesson 2</span></div>
+        <h3>2. 조회 miss가 새 BCB를 생성하나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> 아닙니다. startup이 고정된 BCB array와 일대일 frame array를 할당합니다. <code>data_buffer_pages</code>가 <code>num_buffers</code>를 결정하며, 이 baseline의 기본값은 32,768이고 page-buffer 최솟값이 적용됩니다. 모든 slot은 처음에 resident identity가 없습니다. miss는 invalid/free slot을 얻거나 victim을 재사용합니다. 코드의 “allocate a BCB”는 기존 pool에서 할당한다는 뜻이며, initialization 이후 “새 BCB를 생성한다”는 표현은 부정확합니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:1713-1721,5559-5667,8181-8403</code></p>
+            <p class="answer-route"><a href="../../learning/01-contract-and-objects.md#the-pool-is-fixed-at-startup-a-miss-reuses-a-slot">Canonical pool 설명</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-03">
+        <div class="question-meta"><span>Pressure</span><span>Reader Q3</span><span>Lessons 7 and 12</span></div>
+        <h3>3. BCB pool이 가득 차면 어떻게 되나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> allocator가 안전한 LRU victim을 찾습니다. 바로 eligible한 대상이 없으면 server mode는 flush progress를 요청하고 direct victim을 기다릴 수 있으며, stand-alone 또는 recovery path는 동기식으로 flush하고 재시도합니다. assignment, retry, interrupt, timeout, <code>ER_PB_ALL_BUFFERS_DIRTY</code>가 bounded outcome입니다. 선택 정책은 hard gate를 우회하지 않습니다. unsafe fixed, dirty, flushing, waited-on, transient 또는 identity-changed BCB는 재사용할 수 없습니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:8181-8403,9067-9538,15420-15660</code></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop">Canonical progress loop</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-04">
+        <div class="question-meta"><span>LRU policy</span><span>Reader Q4</span><span>Lesson 12</span></div>
+        <h3>4. private/shared LRU는 몇 개이며 quota는 무엇을 뜻하나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> 개수는 설정과 실행 mode에 따라 달라집니다. shared 자동 개수는 <code>MAX_NTRANS</code>에서 시작해 list당 약 1,000 buffers를 목표로 하며 최소 네 개이고, 명시값 상한은 1,000입니다. server mode에서 private 개수 <code>-1</code>은 transaction과 vacuum capacity로부터 계산하고, <code>0</code>은 private quota를 끄며, 양수는 최소 네 개입니다. 한 BCB는 한 list에만 속합니다. quota는 placement와 search를 이끌 뿐 fix 수를 제한하거나 reuse를 허가하지 않습니다.</p>
+            <p><strong>답변:</strong> shared LRU1/LRU2 기본 비율은 40%/5%이고 private quota target은 5%/5%를 확보합니다. activity-weighted private quota는 smoothing되며 5,000 pages와 pool 절반으로 제한되고, shared remainder는 list당 최소 target 50을 둡니다. 이 숫자는 모두 고정 revision의 policy이지 Interface contract가 아닙니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:1071-1118,5744-5903,13942-14624</code></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#counts-quotas-and-zone-boundaries-at-the-pinned-revision">Canonical LRU 상세 설명</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-05">
+        <div class="question-meta"><span>Ownership</span><span>Reader Q5</span><span>Lessons 3 and 4</span></div>
+        <h3>5. fix와 unfix는 무엇을 뜻하나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> 성공한 fix는 요청 page를 resident로 만들고, 요청 page latch를 부여하며, global BCB fix ownership을 증가시키고, 현재 thread의 nested holder debt를 기록한 다음 <code>PAGE_PTR</code>를 빌려줍니다. matching unfix는 debt 하나를 갚습니다. global count가 0이 되면 latch를 풀고 BCB를 place, boost, flush하거나 replacement에 제공할 수 있습니다. unfix는 commit, flush, eviction, deallocation이 아닙니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:2260-2685,3062-3201,6277-6883</code></p>
+            <p class="answer-route"><a href="../../learning/02-fix-hold-release.md">Canonical fix/unfix trace</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-06">
+        <div class="question-meta"><span>Background progress</span><span>Reader Q6</span><span>Lesson 12</span></div>
+        <h3>6. page-buffer daemon은 몇 개이고 어떤 일을 하나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> server mode는 명목상 네 개를 등록합니다. maintenance는 100 ms마다 quota/direct-victim 작업을 하고, page flush는 요청 시 또는 기본 1,000 ms 간격으로 실행하며, post-flush는 1/10/100 ms adaptive wait를 사용하고, flush control은 50 ms마다 I/O token을 공급합니다. recovery gate, 설정, flush-control initialization 실패에 따라 실제 개수는 달라질 수 있습니다. stand-alone mode에는 page-buffer daemon이 없고 동기식 progress를 사용합니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:16972-17255</code></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive">Canonical daemon 표</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-07">
+        <div class="question-meta"><span>Structures</span><span>Reader Q7</span><span>Lesson 2</span></div>
+        <h3>7. BCB와 frame 외에 어떤 supporting data structure가 중요한가요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> 최소 구조 지도에는 resident hash anchor와 load-lock chain, per-thread holder, invalid/free list, private/shared three-zone LRU, victim hint와 candidate storage, direct-victim waiter queue, flushed-BCB handoff, sequence-flusher state, optional AOUT ghost history가 포함됩니다. 각 구조는 identity, release debt, free capacity, preference, progress라는 서로 다른 질문에 답합니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:460-832,1796-1888,5701-5903</code></p>
+            <p class="answer-route"><a href="../../learning/01-contract-and-objects.md#the-pool-is-fixed-at-startup-a-miss-reuses-a-slot">Canonical structure map</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-08">
+        <div class="question-meta"><span>Safe change</span><span>Reader Q8</span><span>Playbook</span></div>
+        <h3>8. replacement를 변경할 때 무엇을 보존해야 하나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> policy를 hard eligibility 아래에 두고, 정확한 list membership, zone counter/hint, lock order, 최종 protected recheck, insertion/aging assumption, direct-victim revocation, timeout/interrupt cleanup, dirty-generation safety를 보존해야 합니다. private quota on/off, server와 stand-alone/recovery path, AOUT-disabled default를 모두 시험해야 합니다. fairness나 performance를 평가하기 전에 controlled pressure에서 실제 eviction을 입증해야 합니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:8181-8403,9067-9538,15420-15660</code></p>
+            <p class="answer-route"><a href="../../playbooks/change-safely.md#replacement-policy-change-gate">Replacement change gate</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-09">
+        <div class="question-meta"><span>Victim order</span><span>Reader Q9</span><span>Lesson 12</span></div>
+        <h3>9. victim priority는 어떻게 정해지나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> 단일 priority number는 없습니다. 순서는 계층적입니다. domain pressure가 own over-quota private, other private, shared, own under-quota private 순서를 정하고, LRU3만 hint 또는 가장 오래된 끝에서 최대 1,000 candidates까지 scan하며, 마지막 safety gate가 선호 candidate를 거절할 수 있습니다. 별도의 high/low queue는 direct-victim waiter의 순서를 정할 뿐 BCB eligibility를 정하지 않습니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:9067-9538,11734-11790</code></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#how-the-victim-search-assigns-priority">Canonical priority 설명</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-10">
+        <div class="question-meta"><span>Holder lifetime</span><span>Reader Q10</span><span>Lesson 4</span></div>
+        <h3>10. Holder entry는 어떻게 살아 있고, unfix를 느리게 만들 수 있나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> initialization은 thread마다 entry 일곱 개를 예약하고, 모두 쓰면 열 개 단위 set으로 storage를 늘립니다. 첫 fix는 free entry 하나를 한 BCB에 binding해 해당 thread hold list의 앞에 붙입니다. Nested fix는 <code>fix_count</code>를 늘려 같은 entry를 재사용합니다. 마지막 matching unfix는 binding을 제거하고 entry를 해당 thread free list로 돌려보내지만, backing memory는 page-buffer finalization까지 남습니다.</p>
+            <p><strong>Performance 판단:</strong> bottleneck은 가능하지만 자동으로 성립하지는 않습니다. Find는 그 thread가 hold한 서로 다른 BCB 수에 선형이고, final removal은 singly linked list를 다시 걸을 수 있습니다. 작거나 LIFO인 hold set은 저렴하지만 불리한 순서는 quadratic traversal을 누적할 수 있습니다. 여러 thread가 한 BCB를 사용하면 대신 공유 atomic latch에서 contend할 수 있고, 한 thread가 한 page를 nested fix하는 경우에는 holder list가 길어지지 않습니다. 이를 zero-count LRU work, wakeup, flush와 분리해서 profile해야 합니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:86-94,438-500,5922-6275,6298-6634,7807-7835</code></p>
+            <p class="answer-route"><a href="../../advanced/holder-entry-lifecycle.md">Canonical holder lifetime과 cost 분석</a> · <a href="../lessons/0004-repay-fix-debt.html#holder-lifecycle">Bilingual lesson section</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-11">
+        <div class="question-meta"><span>Replacement safety</span><span>Reader Q11</span><span>Lessons 7 and 12</span></div>
+        <h3>11. Victim selection에는 왜 protected handoff가 필요한가요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>Handoff:</strong> LRU scan은 pointer를 지목할 뿐입니다. Lock 전 “모두 clear” read는 ownership, flag, waiter state, list state가 바뀌면 stale해집니다. BCB try-lock과 현재 state recheck가 detach를 허가합니다. Removal은 membership을 <code>PGBUF_VOID_ZONE</code>으로 바꾸고 BCB lock을 유지한 채 반환하여 A를 보고 내린 결정이 B로 rebind된 뒤 작용하지 않게 합니다.</p>
+            <p><strong>Safety:</strong> <code>fcnt &gt; 0</code>, <code>next_wait_thrd != NULL</code>, non-idle latch/transient protocol state, DIRTY, FLUSHING, direct-victim flag는 ordinary reuse를 막습니다. DIRTY는 전파되지 않은 현재 byte를 보호하고, FLUSHING은 이전 snapshot과 identity에 연결된 completion을 보호합니다.</p>
+            <p><strong>Pressure:</strong> nonresident materialization은 invalid list를 먼저 시도하고 free slot이 없을 때만 victim을 찾습니다. 모든 BCB가 fixed이면 하나도 빼앗지 않습니다. Server mode는 이후 unfix를 기다리거나 timeout/interrupt/shutdown으로 끝나며, no-daemon path는 동기식으로 retry하고 victim이 없으면 실패합니다.</p>
+            <p><strong>One LRU:</strong> 한 BCB에는 link 한 쌍과 encoded list index/zone 하나가 있습니다. Private-to-shared move는 새 list에 add하기 전에 VOID로 remove합니다. LRU object는 pool lifetime을 가지며 context assignment와 BCB membership은 더 짧습니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:499-623,8181-8403,9265-9538,9695-10415,14513-14650,15900-16030</code></p>
+            <p class="answer-route"><a href="../lessons/0007-replace-one-frame.html#handoff-details">Bilingual protected-handoff 설명</a> · <a href="../../advanced/replacement-progress.md#lru-object-assignment-and-membership-lifetimes">Canonical LRU lifetime</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-12">
+        <div class="question-meta"><span>Cross-private LRU</span><span>Reader Q12</span><span>Lesson 12</span></div>
+        <h3>12. 한 transaction은 다른 private LRU에서 victim을 어떻게 찾나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>Discovery:</strong> transaction object를 조사하거나 모든 private list를 순회하지 않습니다. LRU3 candidate가 있는 over-quota private list가 lock-free circular queue에 integer index를 advertise합니다. Victimizer는 big-private queue를 먼저 consume하고 허용될 때 regular queue를 사용하여 index를 곧바로 <code>buf_LRU_list[lru_idx]</code>에 mapping합니다.</p>
+            <p><strong>Locking:</strong> 선택한 list 하나만 lock하고 LRU3 entry를 최대 1,000개 scan하며 BCB를 try-lock합니다. 집중된 hot list에서는 contention이 가능하지만 모든 private LRU mutex를 도는 sweep은 없습니다. 심한 bottleneck 주장은 측정 evidence가 필요합니다.</p>
+            <p><strong>Zones:</strong> new private BCB는 보통 LRU1 top, new shared BCB는 LRU2 middle에 들어갑니다. Threshold pressure는 LRU1→LRU2→LRU3로 demote합니다. 충분히 old인 LRU2 hit와 ordinary LRU3 hit는 LRU1으로 boost됩니다. Private LRU1/LRU2 target은 quota의 5%/5%이고 shared 기본값은 shared target의 40%/5%입니다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.c:9330-9538,9695-10353,14251-14511,15674-15728,16370-16506</code></p>
+            <p class="answer-route"><a href="../lessons/0012-prove-replacement-progress.html#cross-private-search">Bilingual cross-private와 zone visual</a> · <a href="../../advanced/replacement-progress.md#how-a-caller-finds-another-private-list">Canonical mechanism</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-13">
+        <div class="question-meta"><span>Ordered ownership</span><span>Reader Q13</span><span>Lesson 11</span></div>
+        <h3>13. ordered fix의 input, output, 내부 단계는 무엇인가요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>Input:</strong> <code>thread_p</code>, 요청 VPID, fetch mode, latch mode, clean in/out watcher다. caller는 access-method rank와 optional heap group으로 watcher를 초기화하며 <code>pgptr</code>는 null이어야 한다. 이미 hold한 watcher array를 따로 넘기지는 않는다. helper가 현재 thread의 holder list를 통해 찾아낸다.</p>
+            <p><strong>Output:</strong> function은 integer status를 반환한다. 성공하면 <code>req_watcher.pgptr</code>가 요청한 watched fix이고 watcher에 latch/rank/group/link state가 기록된다. release/refix gap을 지난 기존 watcher는 pointer와 <code>page_was_unfixed=true</code>를 받는다. partial failure에서는 앞의 watcher만 복구되고 뒤의 watcher는 null일 수 있으므로 각각 확인해야 한다.</p>
+            <p><strong>내부 경로:</strong> 다른 page를 hold한 채 요청을 conditionally 시도하고 성공하면 watcher를 attach하고 끝낸다. reject되면 watched holder를 검증하고 요청보다 앞에 정렬되는 page는 유지한다. 뒤에 정렬되는 page에는 avoid-deallocation을 등록하고 완전히 unfix한다. 필요하면 모르는 heap group을 찾고 group→rank→VPID로 정렬한 뒤 요청과 release된 page를 그 순서대로 unconditionally acquire한다. fix count와 watcher chain을 복구하고 avoid-deallocation을 balance하며 error 때 요청 fix를 unwind한다.</p>
+            <p><strong>소스:</strong> <code>src/storage/page_buffer.h:90-164,205-258,282-352</code>; <code>src/storage/page_buffer.c:12186-13063</code></p>
+            <p class="answer-route"><a href="../lessons/0011-rebuild-after-ordered-refix.html#io-contract">Bilingual input/output 설명</a> · <a href="../../advanced/acquisition-concurrency.md#ordered-fix-input-and-output-contract">Canonical mechanism</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-14">
+        <div class="question-meta"><span>Redo cleanup</span><span>Reader Q14</span><span>Lesson 13</span></div>
+        <h3>14. “redo가 scope cleanup으로 release한다”는 것은 무슨 뜻인가요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>답변:</strong> redo fix/gate 뒤 <code>log_rv_redo_record_sync()</code>가 stack <code>scope_exit</code> guard를 만든다. 정상적으로 function 끝에 도달하거나 이후 명시적 early return으로 lexical scope를 나갈 때 guard destructor가 <code>pgbuf_unfix_and_init_after_check(thread_p, rcv.pgptr)</code>를 호출한다. pointer가 non-null이면 한 번 unfix하고 null로 만들며, null이면 아무 일도 하지 않는다. guard가 <code>rcv</code> 뒤에 선언되어 capture한 object가 살아 있는 동안 cleanup이 먼저 실행된다.</p>
+            <p><strong>경계:</strong> C++ RAII이며 background phase, commit, dirtying step, delayed callback이 아니다. guard 생성 전에 skip하는 path는 이미 <code>rcv.pgptr</code>를 null로 남긴다.</p>
+            <p><strong>소스:</strong> <code>src/transaction/log_recovery_redo.hpp:601-668</code>; <code>src/storage/page_buffer.h:64-71</code>; <code>src/base/scope_exit.hpp:28-80</code></p>
+            <p class="answer-route"><a href="../lessons/0013-gate-redo-by-page-lsa.html#scope-cleanup">Bilingual scope-cleanup 설명</a> · <a href="../../advanced/recovery-and-lifecycle.md#what-release-through-scope-cleanup-means">Canonical mechanism</a></p>
           </div>
         </details>
       </article>

@@ -46,6 +46,11 @@
           <article><span class="step">C</span><h3>Converge</h3><p>Confirm that BCB identity and page-header identity agree under protection.</p></article>
           <article><span class="step">G</span><h3>Grant</h3><p>Grant the requested latch, update global and thread debt, then return the borrowed pointer.</p></article>
         </div>
+        <img class="diagram" src="../../assets/bcb-page-header-identity.svg" alt="BCB VPID fields compared with volume and page identifiers stored inside the associated frame header">
+        <p class="caption">The example uses VPID 3|812. Agreement means two integer pairs match; it is not pointer equality or a comparison of the whole page.</p>
+        <p><code>PGBUF_BCB.vpid</code> is control metadata: “this reusable slot represents logical page 3|812.” The associated frame starts with <code>FILEIO_PAGE.prv</code>, whose <code>volid</code> and <code>pageid</code> say “these bytes belong to logical page 3|812.” At convergence, the thread holds the BCB mutex and compares those two fields one by one. The mutex prevents detach/rebind across the decision; the later page latch protects caller access to content.</p>
+        <p>If a new or recovery-immature permanent page has an empty header, the code first copies the BCB VPID into it. Both fields matching allows latch/debt grant to continue. Either field differing returns no <code>PAGE_PTR</code>; a fresh miss returns its BCB to the invalid list and releases the VPID load lock so waiters can retry. Non-permanent volumes bypass this comparison at the pinned revision.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> BCB field at <code>page_buffer.c:510–518</code>, header initialization at <code>5433–5471</code>, exact comparison at <code>11243–11279</code>, and protected convergence/unwind at <code>2440–2472</code>.</p>
         <p class="big-claim">A caller never receives a weaker contract merely because the page was a hit, or a stronger contract merely because it was a miss.</p>
       </section>
 

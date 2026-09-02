@@ -34,6 +34,19 @@ A **policy change** alters selection, placement, batching, quota, cadence, or pr
 
 Use the [Source and Caller Map](../reference/source-map.md) to select callers and the [Maintainer Invariant Index](../reference/invariant-index.md) to name the preserved guarantees.
 
+### Replacement-policy change gate
+
+For a replacement-algorithm change, make the following preservation ledger explicit before editing:
+
+- Keep the hard eligibility gate independent of preference: stable identity, zero fix ownership and waiters, no blocking transient flag, clean/not-flushing state, and a final BCB-protected recheck.
+- Preserve one-list membership, zone counts and hints, and the established lock discipline. In particular, a victim scan holding an LRU mutex only tries the BCB mutex; it must not introduce an unbounded wait that reverses the normal order.
+- Trace both initial placement and later zero-crossing unfix. A new selection policy is incomplete if insertion, promotion, demotion, and private-to-shared movement still encode incompatible assumptions.
+- Preserve no-free-BCB progress: invalid-list preference, direct-victim assignment and revocation, timeout/interrupt cleanup, dirty-generation handoff, and synchronous progress when daemons are unavailable.
+- Exercise private quotas enabled and disabled, server and stand-alone/recovery operation, and the analyzed default with AOUT disabled. Recheck all of these assumptions on the target revision.
+- Prove an actual eligible frame was evicted under controlled pressure, then test progress, fairness, and performance separately. A changed counter or a cold/warm read difference does not prove the new victim order.
+
+Use [Replacement Policy and Background Progress](../advanced/replacement-progress.md) for the pinned search order, quotas, and daemon coordination, and [Replace One Frame](../learning/05-replace-one-frame.md) for the invariant the policy must not weaken.
+
 ## 4. Audit the applicable negative paths
 
 - Expected absence such as `OLD_PAGE_IF_IN_BUFFER` returning `NULL` without debt.

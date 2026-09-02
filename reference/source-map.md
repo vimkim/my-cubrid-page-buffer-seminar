@@ -18,13 +18,19 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | `src/storage/page_buffer.c:1641-1945` | pool initialization/finalization | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
 | `src/storage/page_buffer.c:2125-3354` | public fix/unfix/invalidate entry region | [Fix, Hold, and Release](../learning/02-fix-hold-release.md) |
 | `src/storage/page_buffer.c:460-488,5911-6085` | BCB/holder ownership structures and holder allocation | [Contract and Objects](../learning/01-contract-and-objects.md) |
+| `src/storage/page_buffer.c:5922-6275,6298-6634,7807-7835` | holder initialization, growth, lookup/removal, grant reuse, and lock-free READ unfix | [Holder Entry Structure, Lifetime, and Unfix Cost](../advanced/holder-entry-lifecycle.md) |
+| `src/storage/page_buffer.c:295-300,1567-1602,5672-5699` | resident `VPID` hash formula and fixed hash-anchor initialization | [Fix, Hold, and Release](../learning/02-fix-hold-release.md#how-resident-hashing-narrows-the-lookup) |
+| `src/storage/page_buffer.c:1641-1888,5559-5667` | fixed BCB/frame pool sizing, pairing, and supporting queues | [Contract and Objects](../learning/01-contract-and-objects.md#the-pool-is-fixed-at-startup-a-miss-reuses-a-slot) |
 | `src/storage/page_buffer.c:7041-7590` | latch wait queue, timed sleep, timeout cleanup, zero-crossing wakeup | [Acquisition Concurrency](../advanced/acquisition-concurrency.md#latch-queue-classify-the-outcome) |
 | `src/storage/page_buffer.c:7594-8634` | resident lookup, lock-free READ hit, miss/load convergence | [Acquisition Concurrency](../advanced/acquisition-concurrency.md) |
 | `src/storage/page_buffer.c:8181-8403,9067-9265` | BCB allocation progress loop and victim search order | [Replacement Progress](../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop) |
 | `src/storage/page_buffer.c:9293-9538` | ordinary victim eligibility and LRU candidate path | [Replace One Frame](../learning/05-replace-one-frame.md) |
+| `src/storage/page_buffer.c:5744-5903,6636-6994,9695-10353,13942-14624` | LRU domain counts, placement, zone movement, and quota assignment | [Replacement Progress](../advanced/replacement-progress.md#counts-quotas-and-zone-boundaries-at-the-pinned-revision) |
+| `src/storage/page_buffer.c:15674-15728,16370-16506` | lock-free advertisement and consumption of private/shared LRU indices with victims | [Replacement Progress](../advanced/replacement-progress.md#how-a-caller-finds-another-private-list) |
 | `src/storage/page_buffer.c:10723-10962` | one snapshot/WAL/write generation | [Flush One Generation](../learning/04-flush-one-generation.md) |
-| `src/storage/page_buffer.c:12268-13531` | ordered fix, reordering, and ordered unfix | [Acquisition Concurrency](../advanced/acquisition-concurrency.md) |
+| `src/storage/page_buffer.c:12186-13531` | ordered comparison, fix input/output, reordering, callback, and ordered unfix | [Acquisition Concurrency](../advanced/acquisition-concurrency.md#ordered-fix-input-and-output-contract) |
 | `src/storage/page_buffer.c:15420-15627` | direct-victim assignment and revocation | [Replacement Progress](../advanced/replacement-progress.md) |
+| `src/storage/page_buffer.c:16972-17255` | maintenance, page-flush, post-flush, and flush-control daemons | [Replacement Progress](../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive) |
 
 ## Representative callers
 
@@ -35,7 +41,7 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | File allocation/materialization | `src/storage/file_manager.c:5420-5590` | Allocation before `NEW_PAGE`, initializer ownership | [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) |
 | Log append/page LSA | `src/transaction/log_manager.c:2194-2226` | Recovery meaning crosses into page LSA update | [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) |
 | WAL forcing | `src/transaction/log_page_buffer.c:4150-4189` | Log durability gate before copied page submission | [Flush One Generation](../learning/04-flush-one-generation.md) |
-| Redo | `src/transaction/log_recovery_redo.hpp:587-668` | Recovery fix/gate, scope cleanup, redo application, and page-LSA update | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
+| Redo | `src/transaction/log_recovery_redo.hpp:587-668`; `src/base/scope_exit.hpp:28-80` | Recovery fix/gate, lexical scope cleanup, redo application, and page-LSA update | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md#what-release-through-scope-cleanup-means) |
 | Boot/client lifecycle | `src/transaction/boot_cl.c:1102-1449` | Outer restart/shutdown coordination; follow server/log initialization seams | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
 | Page-buffer lifetime seam | `src/transaction/log_tran_table.c:460-610` | Calls `pgbuf_initialize()`/`pgbuf_finalize()` | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
 

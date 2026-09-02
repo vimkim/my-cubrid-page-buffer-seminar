@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Per-thread holder entry structure and lifetime</title>
+  <desc id="desc">Page-buffer initialization creates one holder anchor and seven reserved holder entries per thread. A fix takes an entry from the thread free list, binds it to one BCB, and links it into the thread hold list. Nested fixes increment the same fix count. Final unfix returns the entry to the thread free list. Extra entries are allocated in shared sets of ten, and all backing storage lives until page-buffer finalization.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#435d69"/>
+    </marker>
+    <style>
+      .pool{fill:#eef0ff;stroke:#5968bd;stroke-width:2}.thread{fill:#e9f4f3;stroke:#16847d;stroke-width:2}.entry{fill:#fff6e8;stroke:#b86b22;stroke-width:2}.state{fill:#fff;stroke:#c5d2d8;stroke-width:2}.note{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.t{font:700 24px Inter,Arial,sans-serif;fill:#173443}.h{font:700 18px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#435d69;stroke-width:2.5;marker-end:url(#arrow)}.dash{fill:none;stroke:#6b7780;stroke-width:2;stroke-dasharray:7 5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="600" y="40" text-anchor="middle" class="t">Holder entry: pool lifetime versus logical hold lifetime</text>
+  <text x="600" y="68" text-anchor="middle" class="s">The entry storage persists; its binding to one thread–BCB debt is repeatedly created and removed.</text>
+
+  <rect x="42" y="102" rx="18" width="300" height="226" class="pool"/>
+  <text x="192" y="137" text-anchor="middle" class="h">Page-buffer pool</text>
+  <text x="65" y="174" class="s">thrd_holder_info[thread]</text>
+  <text x="65" y="201" class="s">thrd_reserved_holder</text>
+  <text x="65" y="228" class="s">7 reserved entries / thread</text>
+  <text x="65" y="255" class="s">extra holder sets: 10 entries</text>
+  <text x="65" y="294" class="tiny">Backing memory: initialize → finalize</text>
+
+  <rect x="429" y="100" rx="18" width="342" height="230" class="thread"/>
+  <text x="600" y="136" text-anchor="middle" class="h">PGBUF_HOLDER_ANCHOR</text>
+  <text x="456" y="174" class="s">num_free_cnt</text>
+  <text x="456" y="201" class="s">num_hold_cnt</text>
+  <text x="456" y="228" class="s">thrd_free_list ───────────┐</text>
+  <text x="456" y="255" class="s">thrd_hold_list ────────┐  │</text>
+  <text x="456" y="294" class="tiny">One cache-line-padded anchor per thread index</text>
+
+  <rect x="856" y="95" rx="18" width="302" height="242" class="entry"/>
+  <text x="1007" y="132" text-anchor="middle" class="h">PGBUF_HOLDER</text>
+  <text x="880" y="168" class="s">fix_count + bufptr</text>
+  <text x="880" y="195" class="s">thrd_link | next_holder</text>
+  <text x="880" y="222" class="s">perf_stat</text>
+  <text x="880" y="249" class="s">watch_count</text>
+  <text x="880" y="276" class="s">first_watcher / last_watcher</text>
+  <text x="880" y="309" class="tiny">Debug builds also retain fix-site text</text>
+
+  <path d="M342 215 H421" class="line"/>
+  <path d="M771 215 H848" class="line"/>
+
+  <rect x="55" y="398" rx="15" width="220" height="100" class="state"/>
+  <text x="165" y="432" text-anchor="middle" class="h">FREE</text>
+  <text x="165" y="460" text-anchor="middle" class="s">next_holder chain</text>
+  <text x="165" y="483" text-anchor="middle" class="tiny">no current BCB debt</text>
+
+  <rect x="360" y="388" rx="15" width="225" height="120" class="state"/>
+  <text x="472" y="424" text-anchor="middle" class="h">FIRST FIX</text>
+  <text x="472" y="452" text-anchor="middle" class="s">bind bufptr</text>
+  <text x="472" y="477" text-anchor="middle" class="s">fix_count = 1</text>
+  <text x="472" y="499" text-anchor="middle" class="tiny">prepend to hold list</text>
+
+  <rect x="665" y="388" rx="15" width="225" height="120" class="state"/>
+  <text x="777" y="424" text-anchor="middle" class="h">NESTED FIX</text>
+  <text x="777" y="452" text-anchor="middle" class="s">same thread + BCB</text>
+  <text x="777" y="477" text-anchor="middle" class="s">fix_count += 1</text>
+  <text x="777" y="499" text-anchor="middle" class="tiny">reuse the entry</text>
+
+  <rect x="970" y="398" rx="15" width="180" height="100" class="state"/>
+  <text x="1060" y="432" text-anchor="middle" class="h">UNFIX</text>
+  <text x="1060" y="460" text-anchor="middle" class="s">fix_count -= 1</text>
+  <text x="1060" y="483" text-anchor="middle" class="tiny">zero returns FREE</text>
+
+  <path d="M275 448 H352" class="line"/>
+  <path d="M585 448 H657" class="line"/>
+  <path d="M890 448 H962" class="line"/>
+  <path d="M1060 498 C1060 570 165 570 165 506" class="dash"/>
+
+  <rect x="115" y="606" rx="16" width="970" height="78" class="note"/>
+  <text x="600" y="638" text-anchor="middle" class="h">Hot-path cost follows the thread hold list</text>
+  <text x="600" y="666" text-anchor="middle" class="s">Find is linear in distinct held BCBs; final removal may walk it again. LIFO release is favorable; poor order can accumulate quadratic work.</text>
+</svg>
