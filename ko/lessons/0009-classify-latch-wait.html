@@ -36,8 +36,62 @@
         <p class="big-claim">queue에 있다는 것은 pending request이지 ownership이 아니다. 완료된 grant만 release debt를 만든다.</p>
       </section>
 
+      <section class="section" id="structures">
+        <div class="eyebrow">02 · Grant 전후를 thread 관점에서 보기</div>
+        <h2>Waiter list와 holder list는 서로 다른 구조입니다</h2>
+        <p class="big-claim">기다리는 동안에는 BCB에서 <code>THREAD_ENTRY</code>로 request가 연결됩니다. Grant 뒤에는 그 thread에서 <code>PGBUF_HOLDER</code>로 ownership이 연결됩니다.</p>
+        <img class="diagram" src="../../assets/latch-request-structures.svg" alt="Transaction wait policy가 한 thread request에 적용되고, BCB wait queue membership을 거쳐 grant 뒤 holder entry가 생기는 구조">
+        <p class="caption">기다리는 thread 자체가 queue node입니다. Latch grant가 성공하기 전에는 새 holder가 생기지 않습니다.</p>
+        <table>
+          <thead><tr><th>시점</th><th>Linked-list anchor와 link</th><th>Node의 의미</th></tr></thead>
+          <tbody>
+            <tr><td>Incompatible unconditional wait</td><td><code>BCB.next_wait_thrd</code> → <code>THREAD_ENTRY.next_wait_thrd</code></td><td><code>THREAD_ENTRY</code>가 <code>request_latch_mode</code>와 <code>request_fix_count</code>를 담습니다. Pending request일 뿐 새 ownership은 아닙니다.</td></tr>
+            <tr><td>성공한 grant</td><td><code>holder_anchor.thrd_hold_list</code> → <code>PGBUF_HOLDER.thrd_link</code></td><td>Holder가 BCB를 가리키고 이 thread의 nested fix debt를 셉니다.</td></tr>
+          </tbody>
+        </table>
+        <p>Waker가 BCB latch tuple을 바꾸고 기다리던 <code>THREAD_ENTRY</code>를 unlink한 뒤 깨웁니다. 재개된 thread는 free list에서 재사용 가능한 holder를 pop하여 active list head에 붙입니다. BCB에는 wait-queue head가 있지만 holder 또는 transaction의 reverse list는 없습니다.</p>
+        <h3>Thread ownership과 transaction policy의 차이</h3>
+        <p>실행 중인 thread가 page-buffer의 두 bookkeeping을 모두 소유합니다. Thread의 <code>tran_index</code>를 통해 page buffer가 transaction의 <code>wait_msecs</code>를 읽고 transaction-aware timeout 또는 interrupt error를 보고합니다. Transaction은 wait policy에 영향을 주지만 page-buffer holder list의 node는 아닙니다.</p>
+        <p class="source-note"><strong>검증된 mechanism:</strong> BCB queue head와 holder 구조는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L528"><code>page_buffer.c:460–528</code></a>, thread request field는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_entry.hpp#L228-L256"><code>thread_entry.hpp:228–256</code></a>, holder allocation은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5922-L6086"><code>page_buffer.c:5922–6086</code></a>입니다.</p>
+      </section>
+
+      <section class="section" id="request-matrix">
+        <div class="eyebrow">03 · READ, WRITE, unconditional</div>
+        <h2>Unconditional은 “충돌하면 기다린다”이지 “항상 기다린다”가 아닙니다</h2>
+        <p>Latch 작업 전, zero-wait policy인 transaction은 unconditional fix도 conditional behavior로 바꿉니다. 그렇지 않다면 compatible request는 즉시 성공하고 incompatible request는 queue에 들어갑니다.</p>
+        <table>
+          <thead><tr><th>현재 BCB 상태</th><th>READ request</th><th>WRITE request</th></tr></thead>
+          <tbody>
+            <tr><td><code>NO_LATCH</code></td><td>READ와 global <code>fcnt=1</code>을 set하고 holder를 만듭니다.</td><td>WRITE와 global <code>fcnt=1</code>을 set하고 holder를 만듭니다.</td></tr>
+            <tr><td>READ, waiter 없음</td><td>즉시 grant합니다. 기존 thread holder는 증가하고 새 reader는 자기 holder를 얻습니다.</td><td>이 thread가 현재 fix count 전부를 소유할 때만 즉시 promote합니다. 아니면 기다립니다.</td></tr>
+            <tr><td>READ, waiter 있음</td><td>기존 holder는 re-enter할 수 있습니다. 새 reader는 앞지르지 않고 기다립니다.</td><td>Only-reader promotion은 여전히 가능하고, 그 외에는 기다립니다.</td></tr>
+            <tr><td>WRITE</td><td>현재 WRITE holder는 READ를 nested로 요청할 수 있고, 다른 thread는 기다립니다.</td><td>현재 WRITE holder는 re-enter할 수 있고, 다른 thread는 기다립니다.</td></tr>
+          </tbody>
+        </table>
+        <img class="diagram" src="../../assets/unconditional-latch-scenarios.svg" alt="Idle, N-reader, queued-writer, existing-holder, new-thread 상황의 unconditional READ와 WRITE 상태 전이">
+        <p class="caption">“Reader 하나 추가”만으로는 부족합니다. Writer가 기다릴 때 기존 reader와 새 non-holder reader가 서로 다른 길을 갑니다.</p>
+        <p><code>N</code> reader가 있고 waiter는 없으면 READ 하나를 즉시 grant합니다. <code>N</code> reader와 queued writer가 있으면 새 non-holder reader는 writer 뒤로 가지만 기존 reader는 READ로 re-enter할 수 있습니다. 새 writer도 tail에 붙습니다. 현재 reader의 WRITE 요청은 모든 fix를 혼자 소유하면 promote하고, general fix path에서는 자기 READ share를 놓고 기다리며, dedicated promotion interface라면 head에 삽입됩니다.</p>
+        <p>General WRITE fix가 기다려야 하는데 이 thread가 이미 READ fix를 보유했다면, 이 thread의 READ contribution을 global <code>fcnt</code>에서 빼고 holder를 제거한 다음 combined count를 담은 request를 queue에 넣습니다. Dedicated blocking <code>pgbuf_promote_read_latch()</code>는 다른 interface이며 promoter를 queue head에 삽입합니다. 일반 conflicting fix는 tail에 append합니다.</p>
+
+        <h3>Waiter 100명을 queue에 넣으면 O(N²)인가?</h3>
+        <p><strong>Queue가 줄지 않는 동안의 누적 insertion은 맞습니다.</strong> BCB에는 head pointer인 <code>next_wait_thrd</code>만 있고 tail pointer는 없습니다. 일반 append는 head부터 마지막 <code>THREAD_ENTRY</code>까지 걷습니다.</p>
+        <table>
+          <thead><tr><th>Operation</th><th>구조적 비용</th><th>이유</th></tr></thead>
+          <tbody>
+            <tr><td><code>W</code>명이 이미 있을 때 waiter 하나 append</td><td><code>O(W)</code></td><td>Singly linked list를 순회하여 tail을 찾습니다.</td></tr>
+            <tr><td>Dequeue 전에 waiter 100명 append</td><td>누적 <code>O(N²)</code></td><td>약 <code>1+2+...+99=4,950</code>개 node 검사, 실제 next-link advance는 4,851번입니다.</td></tr>
+            <tr><td>Blocking promoter 삽입</td><td><code>O(1)</code></td><td>Head에 바로 삽입합니다.</td></tr>
+            <tr><td>Head의 WRITE waiter 하나 깨우기</td><td>List 작업 <code>O(1)</code></td><td>Head를 제거하고 멈춥니다. Latch가 이제 WRITE이기 때문입니다.</td></tr>
+            <tr><td>READ group 깨우기</td><td>최대 <code>O(W)</code></td><td>Rule이 멈출 때까지 compatible reader를 순회하고 grant합니다.</td></tr>
+            <tr><td>임의 위치의 timed-out waiter 제거</td><td>최악 <code>O(W)</code></td><td>Predecessor를 찾습니다. 이런 제거가 많으면 누적 <code>O(N²)</code>가 될 수도 있습니다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Performance 경계:</strong> 이 scan은 BCB mutex를 잡은 채 실행되므로 contention을 증폭할 수 있습니다. Source는 complexity를 입증하지만 실제 workload의 주된 병목이라고 입증하지는 않습니다. Queue depth와 scan sample을 가진 profile이 필요합니다.</div>
+        <p class="source-note"><strong>검증된 mechanism:</strong> grant 분류는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>page_buffer.c:6277–6634</code></a>, ordinary tail append와 promoter head insertion은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7041-L7099"><code>7041–7099</code></a>, 임의 timeout 제거는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7198-L7279"><code>7198–7279</code></a>입니다.</p>
+      </section>
+
       <section class="section" id="queue">
-        <div class="eyebrow">02 · writer 백 개</div>
+        <div class="eyebrow">04 · writer 백 개</div>
         <h2>incompatible request는 ownership zero-crossing을 기다린다</h2>
         <img class="diagram" src="../../assets/latch-wait-queue.svg" alt="현재 WRITE holder 하나와 queue에 들어간 WRITE request 백 개가 fix-count zero-crossing에서 handoff되는 흐름">
         <p class="caption">serialized handoff는 source에서 확인할 수 있지만 strict fairness는 확인할 수 없다.</p>
@@ -52,13 +106,13 @@
       </section>
 
       <section class="section" id="head">
-        <div class="eyebrow">03 · head request가 batch를 결정한다</div>
+        <div class="eyebrow">05 · head request가 batch를 결정한다</div>
         <h2>Writer는 하나씩, reader는 group으로 grant한다</h2>
         <table>
           <thead><tr><th>Queue head</th><th>Zero-crossing 동작</th><th>남는 것</th></tr></thead>
           <tbody>
             <tr><td>WRITE</td><td>그 writer 하나만 grant하고 멈춘다.</td><td>나머지 reader/writer는 queue에 남는다.</td></tr>
-            <tr><td>READ</td><td>queue의 READ request를 compatible group으로 grant한다.</td><td>writer는 queue에 남는다.</td></tr>
+            <tr><td>READ</td><td>Head의 연속된 READ 구간을 grant하고 첫 WRITE에서 멈춥니다.</td><td>그 writer와 그 뒤의 모든 request가 queue에 남습니다.</td></tr>
             <tr><td>cancel된 <code>NO_LATCH</code></td><td>건너뛴다.</td><td>scan을 계속한다.</td></tr>
             <tr><td>FLUSH waiter</td><td>flush-completion protocol에 맡겨 둔다.</td><td>unfix가 grant하지 않는다.</td></tr>
           </tbody>
@@ -67,26 +121,26 @@
       </section>
 
       <section class="section" id="fairness">
-        <div class="eyebrow">04 · Evidence 경계</div>
+        <div class="eyebrow">06 · Evidence 경계</div>
         <h2>“대체로 도착 순서”는 FIFO도 starvation freedom도 아니다</h2>
-        <p>writer 백 개는 보통 queue 순서대로 zero-crossing마다 하나씩 처리된다. 그러나 다음 세 mechanism이 겉으로 보이는 처리 순서를 바꿀 수 있다.</p>
+        <p>Writer 백 개는 보통 queue 순서대로 zero-crossing마다 하나씩 처리됩니다. Head가 <code>R1 → R2 → W1 → R3</code>이면 R1과 R2를 grant한 뒤 W1에서 멈춥니다. R3는 W1을 뛰어넘지 않습니다. 그래도 다음 세 mechanism은 겉으로 보이는 처리 순서를 바꿀 수 있습니다.</p>
         <ul>
           <li><strong>Holder re-entry:</strong> 기존 holder는 waiter를 지나 nested ownership을 얻을 수 있다.</li>
           <li><strong>Promotion:</strong> blocking promoter는 head에 삽입된다.</li>
-          <li><strong>Reader grouping:</strong> writer가 남아 있어도 compatible reader를 batch로 grant할 수 있다.</li>
+          <li><strong>Reader grouping:</strong> head의 연속된 compatible READ 구간을 batch로 grant할 수 있습니다.</li>
         </ul>
         <div class="callout warn"><strong>주장하면 안 되는 것:</strong> strict FIFO, starvation freedom, wall-clock 기준 처리 보장, latch-level deadlock freedom. timed sleep이 deadlock guard 역할을 하며 정확한 시간은 revision policy다.</div>
       </section>
 
       <section class="section" id="failure">
-        <div class="eyebrow">05 · 실패한 wait에는 debt가 남지 않는다</div>
+        <div class="eyebrow">07 · 실패한 wait에는 debt가 남지 않는다</div>
         <h2>Timeout과 interrupt는 늦은 grant가 아니라 cleanup 경로다</h2>
         <p>timeout은 request를 reset/cancel하고 transaction wait policy에 따라 mapping된 page-latch timeout을 보고한다. interrupt된 waiter는 스스로를 제거한다. 어느 쪽도 page pointer를 반환하거나 caller가 unfix해야 할 holder를 만들지 않는다.</p>
         <p>모든 wakeup의 양쪽을 확인해야 한다. waker의 tuple transition과 재개된 thread의 holder allocation이다. Lesson 8의 <code>VS-11</code> candidate는 정확히 이 post-grant holder-recording seam에 있다. 두 ledger가 일치해야 queue success가 완성된다.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">06 · Retrieval 연습</div>
+        <div class="eyebrow">08 · Retrieval 연습</div>
         <h2>“waiter가 page를 소유한다”는 표현 없이 queue 하나를 trace한다</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="현재 WRITE holder가 global fcnt를 0보다 크게 유지하는 동안 incompatible unconditional writer는 queue 뒤에 붙으며 fix debt를 소유하지 않는다 -> waiter_exists는 새 non-holder reader의 앞지르기를 막는다 -> unfix로 fcnt가 0이 되면 release thread가 BCB protection 아래 scan한다 -> head가 WRITE면 writer 하나, READ면 compatible reader group을 grant한다 -> waker가 latch tuple을 갱신하고 재개된 thread가 holder를 기록하면서 일반 success debt가 생긴다 -> timeout 또는 interrupt는 request를 cancel/remove하고 page pointer나 debt 없이 반환한다 -> holder re-entry, promoter head insertion, reader grouping 때문에 strict FIFO나 starvation freedom을 주장할 수 없다." data-concepts='[{"label":"queued request에는 debt가 없음","terms":["queued","pending","no debt","not own"]},{"label":"zero-crossing handoff 흐름","terms":["fcnt","zero","unfix","protected"]},{"label":"head writer와 reader group","terms":["writer","one","reader","group"]},{"label":"grant는 두 ledger를 완성","terms":["tuple","holder","debt","woken"]},{"label":"timeout과 interrupt는 깨끗한 실패","terms":["timeout","interrupt","remove","no pointer"]},{"label":"fairness theorem 없음","terms":["fifo","fairness","starvation","re-entry","promoter"]}]'>
           <h3>문제</h3>
@@ -112,11 +166,13 @@
     <nav class="lesson-nav" aria-label="Lesson 목차">
       <strong>Lesson map</strong>
       <a href="#outcomes">1. 다섯 outcome</a>
-      <a href="#queue">2. Queue와 handoff</a>
-      <a href="#head">3. Head request</a>
-      <a href="#fairness">4. Fairness 경계</a>
-      <a href="#failure">5. 실패한 wait</a>
-      <a href="#retrieval">6. 직접 trace하기</a>
+      <a href="#structures">2. 두 linked list</a>
+      <a href="#request-matrix">3. READ/WRITE matrix와 비용</a>
+      <a href="#queue">4. Queue와 handoff</a>
+      <a href="#head">5. Head request</a>
+      <a href="#fairness">6. Fairness 경계</a>
+      <a href="#failure">7. 실패한 wait</a>
+      <a href="#retrieval">8. 직접 trace하기</a>
       <a href="#primary-reading">핵심 읽을거리</a>
       <hr>
       <a href="../reference/latch-queue-card.html">Latch-queue card</a>

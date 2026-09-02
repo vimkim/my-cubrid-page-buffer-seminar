@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 980" role="img" aria-labelledby="title desc">
+  <title id="title">State transitions for unconditional READ and WRITE latch scenarios</title>
+  <desc id="desc">Four panels show arrivals on an idle page, a page held by readers without waiters, a page held by readers with writers waiting, and a page held by one writer. Each panel separates a request from an existing holder from a request by a new thread, then shows queue handoff when fix count reaches zero.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f9fc}.panel{fill:#fff;stroke:#cbd5e1;stroke-width:2}.read{fill:#eff6ff;stroke:#2563eb;stroke-width:2}.write{fill:#fff1f2;stroke:#e11d48;stroke-width:2}.queue{fill:#fff7ed;stroke:#ea580c;stroke-width:2}.ok{fill:#ecfdf5;stroke:#059669;stroke-width:2}.note{fill:#f8fafc;stroke:#64748b;stroke-width:2;stroke-dasharray:7 5}.title{font:700 28px system-ui,sans-serif;fill:#0f172a}.head{font:700 20px system-ui,sans-serif;fill:#0f172a}.sub{font:700 16px system-ui,sans-serif;fill:#1e293b}.text{font:15px system-ui,sans-serif;fill:#334155}.small{font:13px system-ui,sans-serif;fill:#475569}.mono{font:600 14px ui-monospace,SFMono-Regular,monospace;fill:#0f172a}.arrow{fill:none;stroke:#64748b;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#64748b"/></marker>
+  </defs>
+  <rect width="1280" height="980" class="bg"/>
+  <text x="45" y="48" class="title">Effective UNCONDITIONAL latch: grant now or join the queue</text>
+  <rect x="45" y="70" width="1190" height="56" rx="12" class="note"/>
+  <text x="65" y="104" class="text">Zero-wait transaction policy converts the request to CONDITIONAL first; the transitions below assume it remains UNCONDITIONAL.</text>
+
+  <rect x="45" y="150" width="575" height="190" rx="16" class="panel"/>
+  <text x="65" y="180" class="head">A · Idle page</text>
+  <rect x="70" y="203" width="150" height="58" rx="10" class="note"/>
+  <text x="145" y="237" text-anchor="middle" class="mono">NO_LATCH, fcnt=0</text>
+  <path d="M220 232 H282" class="arrow"/>
+  <text x="298" y="215" class="sub">new READ</text>
+  <rect x="410" y="192" width="180" height="58" rx="10" class="read"/>
+  <text x="500" y="217" text-anchor="middle" class="mono">READ, fcnt=1</text>
+  <text x="500" y="238" text-anchor="middle" class="small">new holder</text>
+  <text x="298" y="283" class="sub">new WRITE</text>
+  <rect x="410" y="260" width="180" height="58" rx="10" class="write"/>
+  <text x="500" y="285" text-anchor="middle" class="mono">WRITE, fcnt=1</text>
+  <text x="500" y="306" text-anchor="middle" class="small">new holder</text>
+
+  <rect x="660" y="150" width="575" height="190" rx="16" class="panel"/>
+  <text x="680" y="180" class="head">B · N readers, no waiters</text>
+  <rect x="685" y="203" width="190" height="58" rx="10" class="read"/>
+  <text x="780" y="228" text-anchor="middle" class="mono">READ, fcnt=N</text>
+  <text x="780" y="249" text-anchor="middle" class="small">waiter_exists=0</text>
+  <text x="900" y="211" class="sub">+ READ, any thread</text>
+  <text x="900" y="233" class="text">grant → fcnt=N+1</text>
+  <text x="900" y="272" class="sub">+ WRITE, new thread</text>
+  <text x="900" y="294" class="text">append tail → sleep</text>
+  <text x="900" y="317" class="small">Current reader: promote only if it owns all N fixes;</text>
+  <text x="900" y="333" class="small">otherwise release own READ share, then wait.</text>
+
+  <rect x="45" y="370" width="1190" height="260" rx="16" class="panel"/>
+  <text x="65" y="402" class="head">C · N current readers + queued writers W1 → W2 → … → Wk</text>
+  <rect x="70" y="426" width="205" height="64" rx="10" class="read"/>
+  <text x="172" y="453" text-anchor="middle" class="mono">READ, fcnt=N</text>
+  <text x="172" y="475" text-anchor="middle" class="mono">waiter_exists=1</text>
+  <rect x="315" y="426" width="360" height="64" rx="10" class="queue"/>
+  <text x="495" y="453" text-anchor="middle" class="mono">queue: W1 → W2 → … → Wk</text>
+  <text x="495" y="475" text-anchor="middle" class="small">ordinary requests append after Wk</text>
+
+  <rect x="70" y="516" width="265" height="86" rx="11" class="ok"/>
+  <text x="90" y="543" class="sub">Existing reader requests READ</text>
+  <text x="90" y="566" class="mono">grant nested; fcnt=N+1</text>
+  <text x="90" y="587" class="small">writers stay queued</text>
+
+  <rect x="360" y="516" width="265" height="86" rx="11" class="queue"/>
+  <text x="380" y="543" class="sub">New thread requests READ</text>
+  <text x="380" y="566" class="mono">queue … → Wk → Rnew</text>
+  <text x="380" y="587" class="small">no reader barging</text>
+
+  <rect x="650" y="516" width="265" height="86" rx="11" class="queue"/>
+  <text x="670" y="543" class="sub">New thread requests WRITE</text>
+  <text x="670" y="566" class="mono">queue … → Wk → Wnew</text>
+  <text x="670" y="587" class="small">ordinary tail append</text>
+
+  <rect x="940" y="516" width="265" height="86" rx="11" class="queue"/>
+  <text x="960" y="543" class="sub">Current reader requests WRITE</text>
+  <text x="960" y="566" class="small">sole owner: promote now</text>
+  <text x="960" y="587" class="small">else: general → tail; dedicated → head</text>
+
+  <rect x="45" y="660" width="575" height="180" rx="16" class="panel"/>
+  <text x="65" y="692" class="head">D · Current WRITE owner</text>
+  <rect x="70" y="716" width="190" height="64" rx="10" class="write"/>
+  <text x="165" y="743" text-anchor="middle" class="mono">WRITE, fcnt&gt;0</text>
+  <text x="165" y="765" text-anchor="middle" class="small">exclusive current holder</text>
+  <text x="292" y="724" class="sub">Same holder requests READ or WRITE</text>
+  <text x="292" y="748" class="text">nested grant; increment holder debt</text>
+  <text x="292" y="787" class="sub">Other thread requests READ or WRITE</text>
+  <text x="292" y="811" class="text">append tail and sleep</text>
+
+  <rect x="660" y="660" width="575" height="180" rx="16" class="panel"/>
+  <text x="680" y="692" class="head">E · Last owner unfixes: fcnt reaches zero</text>
+  <rect x="685" y="716" width="195" height="76" rx="10" class="queue"/>
+  <text x="782" y="744" text-anchor="middle" class="mono">head = WRITE</text>
+  <text x="782" y="769" text-anchor="middle" class="text">grant one writer</text>
+  <rect x="910" y="716" width="295" height="76" rx="10" class="read"/>
+  <text x="1057" y="744" text-anchor="middle" class="mono">head = READ → READ → …</text>
+  <text x="1057" y="769" text-anchor="middle" class="text">grant compatible reader group</text>
+  <text x="685" y="811" class="small">Waker updates latch/fcnt, removes each granted THREAD_ENTRY, and wakes it.</text>
+  <text x="685" y="830" class="small">Each resumed thread then creates its holder before returning success.</text>
+
+  <rect x="45" y="868" width="1190" height="70" rx="13" class="note"/>
+  <text x="65" y="896" class="sub">The key question is not only READ versus WRITE.</text>
+  <text x="65" y="920" class="text">Also ask: is the requester already a holder, are waiters present, does it own every current READ fix, and is this general fix or dedicated promotion?</text>
+  <text x="45" y="965" class="small">Queue order is revision-visible policy, not a strict FIFO or starvation-freedom contract.</text>
+</svg>

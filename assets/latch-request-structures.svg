@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
+  <title id="title">A latch request moves between thread state, a BCB wait queue, and a per-thread holder list</title>
+  <desc id="desc">Transaction policy supplies wait behavior to an executing thread. An incompatible unconditional request stores its mode and count in the thread entry, then links that thread entry into a singly linked BCB wait queue with a head pointer and no tail pointer. A granted request is removed from that queue and represented by a holder entry in the requesting thread's singly linked active holder list. The BCB stores only global latch mode, fix count, and waiter existence, not a reverse holder list.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f9fc}.panel{fill:#fff;stroke:#cbd5e1;stroke-width:2}.thread{fill:#eef2ff;stroke:#6366f1;stroke-width:2}.bcb{fill:#ecfeff;stroke:#0891b2;stroke-width:2}.wait{fill:#fff7ed;stroke:#ea580c;stroke-width:2}.hold{fill:#ecfdf5;stroke:#059669;stroke-width:2}.muted{fill:#f8fafc;stroke:#94a3b8;stroke-width:2;stroke-dasharray:7 5}.bad{fill:#fff1f2;stroke:#e11d48;stroke-width:2}.title{font:700 28px system-ui,sans-serif;fill:#0f172a}.head{font:700 20px system-ui,sans-serif;fill:#0f172a}.sub{font:700 16px system-ui,sans-serif;fill:#1e293b}.text{font:15px system-ui,sans-serif;fill:#334155}.small{font:13px system-ui,sans-serif;fill:#475569}.mono{font:600 14px ui-monospace,SFMono-Regular,monospace;fill:#0f172a}.arrow{fill:none;stroke:#64748b;stroke-width:2.5;marker-end:url(#arrow)}.dash{fill:none;stroke:#64748b;stroke-width:2;stroke-dasharray:7 6;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#64748b"/></marker>
+  </defs>
+  <rect width="1280" height="900" class="bg"/>
+  <text x="50" y="48" class="title">Where one READ/WRITE latch request is represented</text>
+
+  <rect x="50" y="75" width="1180" height="120" rx="16" class="panel"/>
+  <rect x="75" y="98" width="250" height="74" rx="12" class="muted"/>
+  <text x="94" y="126" class="head">Transaction context</text>
+  <text x="94" y="151" class="text">wait_msecs · interrupt policy</text>
+  <path d="M325 135 H395" class="arrow"/>
+  <rect x="398" y="92" width="390" height="90" rx="12" class="thread"/>
+  <text x="418" y="120" class="head">Executing THREAD_ENTRY T</text>
+  <text x="418" y="146" class="mono">tran_index · request_latch_mode</text>
+  <text x="418" y="168" class="mono">request_fix_count · next_wait_thrd</text>
+  <path d="M788 135 H858" class="arrow"/>
+  <rect x="862" y="92" width="340" height="90" rx="12" class="bcb"/>
+  <text x="882" y="120" class="head">BCB P under protection</text>
+  <text x="882" y="146" class="mono">latch_mode · fcnt · waiter_exists</text>
+  <text x="882" y="168" class="mono">next_wait_thrd = queue head</text>
+
+  <text x="50" y="238" class="head">Incompatible + unconditional: T becomes a wait-queue node</text>
+  <rect x="50" y="258" width="1180" height="245" rx="16" class="wait"/>
+  <rect x="75" y="286" width="290" height="82" rx="12" class="bcb"/>
+  <text x="94" y="315" class="sub">BCB P</text>
+  <text x="94" y="340" class="mono">next_wait_thrd</text>
+  <text x="94" y="359" class="small">one head pointer; no tail pointer</text>
+  <path d="M365 328 H418" class="arrow"/>
+  <rect x="421" y="291" width="150" height="74" rx="11" class="thread"/>
+  <text x="496" y="317" text-anchor="middle" class="sub">THREAD W1</text>
+  <text x="496" y="342" text-anchor="middle" class="mono">next →</text>
+  <path d="M571 328 H614" class="arrow"/>
+  <rect x="617" y="291" width="150" height="74" rx="11" class="thread"/>
+  <text x="692" y="317" text-anchor="middle" class="sub">THREAD W2</text>
+  <text x="692" y="342" text-anchor="middle" class="mono">next →</text>
+  <path d="M767 328 H810" class="arrow"/>
+  <rect x="813" y="291" width="150" height="74" rx="11" class="thread"/>
+  <text x="888" y="317" text-anchor="middle" class="sub">THREAD T</text>
+  <text x="888" y="342" text-anchor="middle" class="mono">next = NULL</text>
+  <rect x="990" y="291" width="205" height="74" rx="11" class="muted"/>
+  <text x="1092" y="317" text-anchor="middle" class="sub">ordinary append</text>
+  <text x="1092" y="342" text-anchor="middle" class="mono">walk head → tail</text>
+
+  <text x="76" y="405" class="text">Queue node = the waiting THREAD_ENTRY itself. There is no PGBUF_HOLDER yet, so T owns no new fix debt.</text>
+  <text x="76" y="434" class="text">One append with W existing waiters: O(W). N arrivals into an initially empty, non-draining queue: O(N²) total traversal.</text>
+  <rect x="75" y="451" width="1120" height="34" rx="9" class="bad"/>
+  <text x="95" y="474" class="mono">N = 100 → about 4,950 queue-node inspections during tail searches (4,851 next-link advances)</text>
+
+  <path d="M640 503 V546" class="arrow"/>
+  <text x="666" y="532" class="small">waker grants tuple, unlinks T, wakes it</text>
+
+  <text x="50" y="580" class="head">Granted: T leaves the wait queue and gains a holder in T's active list</text>
+  <rect x="50" y="600" width="1180" height="245" rx="16" class="hold"/>
+  <rect x="75" y="630" width="260" height="88" rx="12" class="thread"/>
+  <text x="95" y="660" class="sub">Thread T holder anchor</text>
+  <text x="95" y="686" class="mono">thrd_hold_list</text>
+  <text x="95" y="706" class="mono">thrd_free_list</text>
+  <path d="M335 670 H390" class="arrow"/>
+  <rect x="393" y="630" width="230" height="88" rx="12" class="hold"/>
+  <text x="413" y="658" class="sub">PGBUF_HOLDER for P</text>
+  <text x="413" y="683" class="mono">bufptr = BCB P</text>
+  <text x="413" y="705" class="mono">fix_count · thrd_link</text>
+  <path d="M623 670 H678" class="arrow"/>
+  <rect x="681" y="630" width="210" height="88" rx="12" class="hold"/>
+  <text x="701" y="658" class="sub">holder for page Q</text>
+  <text x="701" y="683" class="mono">bufptr = BCB Q</text>
+  <text x="701" y="705" class="mono">thrd_link → …</text>
+  <path d="M508 630 V614 H1099 V712" class="dash"/>
+  <rect x="1003" y="716" width="192" height="78" rx="12" class="bcb"/>
+  <text x="1023" y="746" class="sub">BCB P</text>
+  <text x="1023" y="771" class="mono">mode · global fcnt</text>
+
+  <text x="76" y="759" class="text">New holder: pop T's free-list head and prepend to T's active list, O(1). Repeated fix: find existing holder, O(H).</text>
+  <text x="76" y="786" class="text">The arrow is holder → BCB. BCB P has no reverse list of owning holders or owning transactions.</text>
+  <text x="76" y="820" class="small">Waiting membership and granted ownership are different states and use different links: THREAD_ENTRY.next_wait_thrd versus PGBUF_HOLDER.thrd_link.</text>
+
+  <text x="50" y="878" class="small">Conditional conflict stops before queueing. Zero-wait transaction policy converts an unconditional fix request to conditional behavior.</text>
+</svg>

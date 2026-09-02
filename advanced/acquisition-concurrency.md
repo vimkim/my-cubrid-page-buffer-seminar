@@ -26,6 +26,58 @@ This establishes one resident-identity owner/load protocol. It does not prove ex
 
 Source: lookup/load ownership at `src/storage/page_buffer.c:7981-8178` and provisional load/publication at `src/storage/page_buffer.c:8392-8634`. The DWB-read early-return candidate is routed as `VS-10` in the [uncertainty registry](../unresolved-or-version-sensitive-findings.md).
 
+## Thread view: a request is waiting state first, holder state only after grant
+
+Page-latch bookkeeping is structurally **thread-oriented**, not transaction-owned. The executing `THREAD_ENTRY` carries `tran_index`; page buffer uses that association to read the transaction descriptor's `wait_msecs` and to report timeout or interrupt outcomes. But the page buffer does not attach latch requests or holders to a transaction-owned list.
+
+![Transaction policy feeding one thread request, the BCB wait queue, and the thread holder list after grant](../assets/latch-request-structures.svg)
+
+There are two different singly linked lists, and a request means something different in each:
+
+| State | Anchor and link | Node | Meaning |
+|---|---|---|---|
+| Waiting for an incompatible latch | `PGBUF_BCB.next_wait_thrd` → `THREAD_ENTRY.next_wait_thrd` | The waiting `THREAD_ENTRY` itself | Pending request only. `request_latch_mode` and `request_fix_count` describe the requested grant; no new holder/fix debt belongs to the requester yet. |
+| Latch granted | `PGBUF_HOLDER_ANCHOR.thrd_hold_list` → `PGBUF_HOLDER.thrd_link` | A holder entry owned by the successful thread | Active ownership. `bufptr` identifies the BCB and `fix_count` attributes nested debt to this thread. |
+
+The transition is deliberate. `pgbuf_block_bcb()` writes the request fields into the current `THREAD_ENTRY`, links that entry into the BCB queue, releases the BCB mutex, and sleeps. At a zero-crossing, the releasing thread updates the BCB's atomic latch tuple, removes the waiter from the queue, clears that waiter's `next_wait_thrd`, and wakes it. The resumed thread then allocates or reuses a `PGBUF_HOLDER`, prepends it to its own active list, and returns success. The BCB stores the global latch mode, global `fcnt`, `waiter_exists`, and the queue head; it has no reverse list of holders or transactions.
+
+### READ and WRITE with an effective unconditional condition
+
+“Unconditional” means “wait if the request cannot be granted now,” not “always block.” An outer `pgbuf_fix()` first converts the request to conditional behavior when the current transaction uses zero-wait policy. Otherwise the protected grant decision is:
+
+| Current BCB state | READ request | WRITE request |
+|---|---|---|
+| `NO_LATCH` | Grant immediately; set READ and `fcnt=1`; create this thread's holder. | Grant immediately; set WRITE and `fcnt=1`; create this thread's holder. |
+| READ, no blocked reader/writer | Grant another reader. Reuse this thread's holder when nested; otherwise create a new holder. | Promote in place only when the requester already holds all current fix counts. Otherwise wait; if this thread was already a reader, the general fix path removes its READ contribution and holder before queueing the combined request. |
+| READ, `waiter_exists` | An existing holder may re-enter. A new reader waits so it does not barge past queued work. | Same only-reader promotion possibility; otherwise wait. |
+| WRITE | The current holder may make a nested READ request. Any other thread waits. | The current holder may re-enter WRITE. Any other thread waits. |
+
+![State transitions for idle, N-reader, queued-writer, existing-holder, and new-thread unconditional READ/WRITE scenarios](../assets/unconditional-latch-scenarios.svg)
+
+The visual makes the ambiguous “one more reader” case explicit. With `N` current readers and no waiter, another reader is compatible and joins immediately. With `N` current readers and queued writers, a **new non-holder reader** appends behind the queued writers, while a reader that already owns this BCB may take a nested READ immediately. Likewise, a new WRITE requester appends at the tail; a current reader asking for WRITE must be split into the in-place-only-owner, general fix wait, and dedicated promotion cases.
+
+An incompatible **conditional** request returns without queue membership and without new ownership. A dedicated blocking promotion through `pgbuf_promote_read_latch()` differs from the general fix path: it releases the caller's READ ownership and inserts the promoter at the queue head. Ordinary incompatible fix requests append at the tail.
+
+### List costs: the BCB queue has no tail pointer
+
+Let `W` be the number of current entries in one BCB wait queue and `H` the number of distinct BCB holders in one thread's active holder list. These are source-structure bounds, not measured latency:
+
+| Operation | Structural cost | Why |
+|---|---:|---|
+| Find whether this thread already holds the BCB | `O(H)` | Linear `thrd_hold_list` search by `holder->bufptr`. |
+| Reuse an existing holder after grant | `O(H)` lookup, then `O(1)` increment | Nested fixes share one per-thread/per-BCB holder entry. |
+| Add a new holder | `O(1)` list work | Pop the thread free-list head and prepend to the active-list head; holder-pool expansion is a separate exceptional allocation path. |
+| Ordinary wait-queue append | `O(W)` | The BCB stores only the head. `pgbuf_block_bcb()` walks `THREAD_ENTRY.next_wait_thrd` until the tail. |
+| Blocking promoter head insertion | `O(1)` | The promoter links directly before the old head. |
+| Wakeup | `O(S)`, `S ≤ W` | Scan from the head until the grant rule stops; one head WRITE is constant list work, while a READ group or skipped cancelled/FLUSH entries can require a longer scan. |
+| Timeout/interrupt removal | `O(W)` worst case | Removing an arbitrary thread searches for its predecessor in the singly linked queue. |
+
+If 100 ordinary incompatible requests arrive while the queue never drains, their individual append scans grow from 0 to 99 existing nodes. The cumulative work is quadratic: about `1 + 2 + ... + 99 = 4,950` queue-node inspections (`4,851` actual `next_wait_thrd` advances in the loop). Thus the **enqueue phase is `O(N²)` cumulatively**, not `O(N)`, because there is no tail pointer. For 100 pure WRITE waiters, dequeue is not another quadratic pass: each zero-crossing normally removes the head writer with constant list work. Arbitrary mass timeouts can again become quadratic because each removal may search the queue.
+
+All queue traversal and mutation occurs while holding the BCB mutex, so a large `W` is a plausible contention amplifier. It becomes a demonstrated bottleneck only when a profile or focused queue-depth experiment attributes meaningful time to these scans; Big-O alone is not a latency measurement.
+
+Source: holder/BCB structures at `src/storage/page_buffer.c:460-528`; holder lookup/allocation at `src/storage/page_buffer.c:5922-6086`; grant decision and post-wakeup holder recording at `src/storage/page_buffer.c:6277-6634`; queue insertion at `src/storage/page_buffer.c:7041-7099`; timeout removal at `src/storage/page_buffer.c:7198-7279`; zero-crossing grant at `src/storage/page_buffer.c:7452-7590`; transaction wait-policy lookup at `src/storage/page_buffer.c:16945-16969`; request fields at `src/thread/thread_entry.hpp:228-256`.
+
 ## Latch queue: classify the outcome
 
 The normal latch path can produce distinct outcomes:
@@ -48,11 +100,13 @@ Suppose one thread holds a WRITE latch and one hundred other threads request WRI
 
 1. **Queue.** Each incompatible request is appended to the BCB's `next_wait_thrd` list in arrival order and sets the atomic latch's `waiter_exists` bit. A blocking promoter is the one exception: it is inserted at the head, and the source asserts that at most one promoter waits per BCB.
 2. **Sleep with a bound.** Each waiter sleeps in `pgbuf_timed_sleep()` with a timeout taken from the hidden server parameter `page_latch_timeout_in_msecs` (300 seconds at the pinned revision); a transaction configured for zero wait was already converted to conditional behavior and never queues. The sleep is interrupt-aware for worker threads.
-3. **Hand off at zero.** When the holder unfixes and global `fcnt` reaches zero (a zero-crossing, the only moment at which the queue is walked), the releasing thread sets `NO_LATCH` and calls `pgbuf_wakeup_reader_writer()` while still holding the BCB mutex. It walks the queue from the head, skipping entries whose request mode was reset to `NO_LATCH` by a timeout or interrupt and leaving FLUSH waiters in place. If the head is a reader, it grants every queued reader and leaves writers waiting; if the head is a writer, it grants only that writer and stops. The waker performs the grant by updating the latch tuple with the waiter's requested mode and fix count; the woken thread then allocates its own holder and returns `NO_ERROR` with the ordinary success postcondition.
+3. **Hand off at zero.** When the holder unfixes and global `fcnt` reaches zero (a zero-crossing, the only moment at which the queue is walked), the releasing thread sets `NO_LATCH` and calls `pgbuf_wakeup_reader_writer()` while still holding the BCB mutex. It walks the queue from the head, skipping entries whose request mode was reset to `NO_LATCH` by a timeout or interrupt and leaving FLUSH waiters in place. If the head is a reader, it grants the consecutive compatible READ run at the head and stops at the first WRITE; if the head is a writer, it grants only that writer and stops. The waker performs the grant by updating the latch tuple with the waiter's requested mode and fix count; the woken thread then allocates its own holder and returns `NO_ERROR` with the ordinary success postcondition.
 4. **Keep newcomers honest.** While blocked readers or writers remain, `waiter_exists` stays set, so a newly arriving non-holder READ blocks even though the latch mode might be compatible. A thread that already holds the BCB may still re-enter.
 5. **Exit without debt.** A timed-out waiter is treated as a page-latch deadlock victim: `ER_PAGE_LATCH_TIMEDOUT` is raised, followed by `ER_LK_UNILATERALLY_ABORTED` for a transaction with infinite lock wait or `ER_LK_PAGE_TIMEOUT` for a finite one. An interrupted waiter removes itself from the queue. Neither outcome creates a fix debt, and neither leaves the caller with a page pointer.
 
-One hundred writers are therefore served one grant per zero-crossing, which is roughly arrival order. Three things reorder service and are the reason fairness is not a contract: holder re-entry (a current holder's nested request is granted past waiters), promoter head insertion, and reader grouping (a wakeup that starts with a reader grants every queued reader ahead of every queued writer). The source also states its own design position in a comment: page latches do not guarantee deadlock freedom, so the timed sleep is the deadlock guard. Treat the timeout as a policy value and the ordering as a Verified mechanism of this revision, not as an Interface contract.
+One hundred writers are therefore served one grant per zero-crossing, which is roughly arrival order. Three things reorder service and are the reason fairness is not a contract: holder re-entry (a current holder's nested request is granted past waiters), promoter head insertion, and reader grouping (a wakeup can grant the consecutive READ run at the queue head as a batch). The source also states its own design position in a comment: page latches do not guarantee deadlock freedom, so the timed sleep is the deadlock guard. Treat the timeout as a policy value and the ordering as a Verified mechanism of this revision, not as an Interface contract.
+
+The insertion cost is separate from the one-per-zero-crossing handoff. Because the queue has no tail pointer, enqueueing those 100 writers into a non-draining queue performs roughly 4,950 cumulative node inspections, or `O(N²)`. Once they are queued, each pure-WRITE handoff removes the head with constant list work. See the structural diagram and cost table above rather than describing the entire scenario with one complexity label.
 
 Source: grant/wait decision at `src/storage/page_buffer.c:6278-6634`; queue append and timed sleep at `src/storage/page_buffer.c:7041-7450`; zero-crossing wakeup at `src/storage/page_buffer.c:7452-7590`; timeout parameter at `src/base/system_parameter.c:5308-5319`.
 
