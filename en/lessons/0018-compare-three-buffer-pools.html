@@ -12,95 +12,85 @@
 <main class="course-shell">
   <div class="topline"><span>CUBRID page buffer · Lesson 0018</span><a href="../index.html">Course home</a></div>
   <header class="hero">
-    <div class="eyebrow">Optional comparative lens · performance reasoning</div>
-    <h1>Compare responsibilities, then test the hot seam</h1>
-    <p>By the end, you can translate one page journey across CUBRID, PostgreSQL, and InnoDB—and defend one performance hypothesis without pretending it is a measured result.</p>
-    <div class="pills"><span class="pill">Protection</span><span class="pill">Ownership</span><span class="pill">Miss publication</span><span class="pill">Replacement</span><span class="pill">Measurement</span></div>
+    <div class="eyebrow">Optional comparison · one simple mental model</div>
+    <h1>Same safety jobs, different places to do them</h1>
+    <p>Learn two shared responsibilities first. Then remember one ownership sentence and one replacement sentence for each engine.</p>
+    <div class="pills"><span class="pill">Keep frame</span><span class="pill">Protect bytes</span><span class="pill">Who cleans up?</span><span class="pill">How choose a victim?</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="lens">
         <div class="eyebrow">01 · The comparison rule</div>
-        <h2>Start with two protections</h2>
-        <p><strong>Replacement protection</strong> prevents a referenced frame from being reused for another logical page. <strong>Content protection</strong> prevents incompatible access to the current page bytes. Every engine needs both responsibilities; none of the nearest Interfaces is a complete one-to-one equivalent.</p>
-        <div class="reference-grid" aria-label="CUBRID, PostgreSQL, and InnoDB ownership seams">
-          <article class="reference-card"><h3>CUBRID</h3><p><code>pgbuf_fix()</code> → BCB <code>fcnt</code> + thread holder + requested latch → <code>pgbuf_unfix()</code></p></article>
-          <article class="reference-card"><h3>PostgreSQL</h3><p>Pin → private/shared refcount → separate content lock → independent unlock and unpin</p></article>
-          <article class="reference-card full"><h3>MySQL / InnoDB</h3><p><code>buf_page_get_gen(..., mtr)</code> → atomic <code>buf_fix_count</code> + S/SX/X memo entry → memo unlatches, then unfixes</p></article>
-        </div>
-        <p class="big-claim">CUBRID couples fix, latch, and thread ownership. PostgreSQL separates pin from content lock. InnoDB separates the low-level states but reunites their lifetime in an MTR memo.</p>
+        <h2>Every engine must answer two questions</h2>
+        <p><strong>1. May this frame be reused?</strong> A fix or pin says no while somebody owns it. <strong>2. May another worker touch these bytes incompatibly?</strong> A latch or content lock says no. The names differ; the two safety jobs do not.</p>
+        <img class="diagram" src="../../assets/three-engine-responsibility-seams.svg" alt="CUBRID, PostgreSQL, and InnoDB place frame and content protection at different ownership seams">
+        <p class="caption">Do not map APIs by name. Map the safety responsibility and the cleanup owner.</p>
       </section>
 
       <section class="section" id="scenario">
-        <div class="eyebrow">02 · One shared scenario</div>
-        <h2>Read, modify, flush, and reuse one page</h2>
+        <div class="eyebrow">02 · Three sentences to remember</div>
+        <h2>How one worker borrows a page</h2>
         <table>
-          <thead><tr><th>Axis</th><th>CUBRID</th><th>PostgreSQL</th><th>MySQL / InnoDB</th></tr></thead>
+          <thead><tr><th>Engine</th><th>Frame protection</th><th>Byte protection</th><th>Cleanup memory</th></tr></thead>
           <tbody>
-            <tr><td>Acquire and owner</td><td><code>pgbuf_fix()</code> grants a requested latch, increments BCB <code>fcnt</code>, and records a per-thread holder.</td><td>A buffer pin protects residency; a separate content lock protects bytes. <code>PrivateRefCount</code> and <code>ResourceOwner</code> track backend ownership.</td><td><code>buf_fix_count</code> protects residency; S/SX/X protects bytes; an <code>mtr_t</code> memo owns their release scope.</td></tr>
-            <tr><td>Nested acquisition</td><td>Holder <code>fix_count</code> and shared BCB <code>fcnt</code> both rise for the repeated fix.</td><td>Only the first pin by one backend changes the shared refcount; repeated pins change the private count.</td><td>Each low-level fix changes atomic <code>buf_fix_count</code>; memo slots record the MTR resources.</td></tr>
-            <tr><td>Cold miss publication</td><td>A per-VPID load lock selects one loader; the new BCB is hash-published after load and latch grant. Waiters wake and retry lookup.</td><td>The mapping is published invalid before I/O; readers join <code>BM_IO_IN_PROGRESS</code>.</td><td>The page is hash/LRU-published with <code>BUF_IO_READ</code> before file I/O; readers wait on that state.</td></tr>
-            <tr><td>Replacement policy</td><td>Private/shared LRU domains, three zones, quota policy, daemons, and direct-victim handoff.</td><td>Clock sweep ages <code>usage_count</code>; strategy rings isolate some scan workloads.</td><td>Per-instance midpoint LRU inserts new pages into an old region and uses page-cleaner budgets.</td></tr>
-            <tr><td>Durability and torn-page defense</td><td>Page LSA gates WAL-before-data; DWB may stage the page; FLUSHING and DIRTY can represent copied G and resident G+1.</td><td>Page LSN gates WAL-before-data; core output has no DWB stage; full-page images support torn-page recovery.</td><td>Redo LSN gates data output; dirty pages join a flush list; doublewrite is conditional, not universal.</td></tr>
-            <tr><td>Row-storage consequence</td><td>B-tree locators commonly lead to separate heap pages.</td><td>Index TIDs commonly lead to heap pages.</td><td>An InnoDB clustered-index leaf stores the row; a secondary lookup may perform another B-tree traversal.</td></tr>
+            <tr><td>CUBRID</td><td>BCB <code>fcnt</code></td><td>READ/WRITE page latch requested by normal <code>pgbuf_fix()</code></td><td>Per-thread holder; <code>pgbuf_unfix()</code> repays one debt</td></tr>
+            <tr><td>PostgreSQL</td><td>Buffer pin/refcount</td><td>Separately acquired content lock</td><td>Backend private refcount and <code>ResourceOwner</code>; unlock and unpin are separate</td></tr>
+            <tr><td>MySQL / InnoDB</td><td>Atomic <code>buf_fix_count</code></td><td>Block S/SX/X latch</td><td><code>mtr_t</code> memo remembers resources and releases the latch, then the fix</td></tr>
           </tbody>
         </table>
-        <p class="source-note"><strong>Evidence level:</strong> these are pinned-source mechanisms and responsibility-level partial analogies. No PostgreSQL or MySQL runtime comparison was run. The <a href="../../source-inventory.md">source inventory</a> owns the audited comparison's provenance, evidence routes, and limitations.</p>
+        <p class="big-claim">CUBRID couples the normal fix and latch request. PostgreSQL exposes pin and content lock separately. InnoDB keeps the states separate but lets one MTR memo own their lifetime.</p>
       </section>
 
       <section class="section" id="performance">
-        <div class="eyebrow">03 · The first performance bet</div>
-        <h2>Measure per-thread holder lookup before changing replacement</h2>
-        <p><strong>Verified mechanism:</strong> <code>pgbuf_find_thrd_holder()</code> walks the current thread's singly linked held-BCB list until it finds the target. It is called on normal latch acquisition, lock-free READ hits, unfix, dirty validation, and other ownership checks. The lock-free READ path then performs a shared CAS on the BCB <code>fcnt</code>, even when the same thread already holds that BCB.</p>
-        <p><strong>Inference:</strong> when a worker holds many distinct pages at once or repeatedly fixes an already-held hot page, linear holder discovery and shared cache-line traffic may become a CPU bottleneck. PostgreSQL's small private-refcount array plus overflow hash, and its local-only repeated-pin increment, show that the same safety responsibilities can be placed at a cheaper seam. They do not prove CUBRID will be faster after copying that design.</p>
+        <div class="eyebrow">03 · Replacement in one line</div>
+        <h2>All reject owned frames; they remember “hot” differently</h2>
         <table>
-          <thead><tr><th>Rank</th><th>Hypothesis</th><th>Why this order</th></tr></thead>
+          <thead><tr><th>Engine</th><th>One-line replacement picture</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td>Add traversal-depth and cycle measurements around holder lookup; benchmark held-set sizes 1, 4, 16, and 64.</td><td>Observation only; it identifies whether the linear search is material before redesign.</td></tr>
-            <tr><td>2</td><td>Prototype a bounded per-thread lookup accelerator or hash for larger held sets.</td><td>It preserves today's global <code>fcnt</code> semantics and limits the proof surface.</td></tr>
-            <tr><td>3</td><td>If shared CAS dominates nested re-fixes, prototype first/last-holder aggregation so inner nesting stays local.</td><td>Higher potential, but promotion, waiter fairness, final-unfix wakeup, and victim eligibility currently depend on exact <code>fcnt</code> semantics.</td></tr>
+            <tr><td>CUBRID</td><td>Pages age through LRU1 → LRU2 → LRU3 across private/shared lists; victim search looks in LRU3.</td></tr>
+            <tr><td>PostgreSQL</td><td>A clock hand skips pinned buffers, reduces positive <code>usage_count</code>, and chooses an unpinned zero.</td></tr>
+            <tr><td>InnoDB</td><td>New reads enter the old part of a young/old LRU; qualified reuse promotes them, and candidates come from the old tail.</td></tr>
           </tbody>
         </table>
-        <div class="callout warn"><strong>Do not begin with an LRU rewrite.</strong> Existing runtime evidence did not force real eviction, and replacement policy has a much larger correctness and workload-sensitivity surface. Profile the ownership hot path first.</div>
+        <div class="callout"><strong>Want the mechanisms and exact defaults?</strong> Continue to <a href="0018a-compare-replacement-policies.html">Lesson 18A: Compare replacement policies</a>. Keeping this detail on its own page makes the basic ownership comparison readable.</div>
       </section>
 
       <section class="section" id="experiment">
-        <div class="eyebrow">04 · Falsifiable experiment</div>
-        <h2>Separate list cost from shared-atomic cost</h2>
-        <ol>
-          <li>Use a release build and a resident working set. Exclude storage I/O from the measured interval.</li>
-          <li>Hold H distinct pages while repeatedly fixing/unfixing one target; sweep H across 1, 4, 16, and 64.</li>
-          <li>Run one thread, then several threads sharing the target BCB. Record holder nodes inspected, CAS attempts/retries, cycles per pair, and throughput.</li>
-          <li>Compare four shapes: non-nested/private page, nested/private page, non-nested/shared page, nested/shared page.</li>
-          <li>Reject the lookup hypothesis if cost is flat with H. Reject the aggregation hypothesis if shared contention does not grow or nested re-fix is negligible in representative callers.</li>
-        </ol>
-        <p class="big-claim">A source-shaped opportunity becomes a performance finding only after the workload makes its cost visible.</p>
+        <div class="eyebrow">04 · What the comparison cannot prove</div>
+        <h2>Different design is not a benchmark result</h2>
+        <ul>
+          <li>Clock sweep is not inherently faster than LRU, and midpoint LRU is not inherently better than either.</li>
+          <li>Replacement policy cannot be compared apart from pool size, access pattern, dirty-page pressure, sharding, and concurrency.</li>
+          <li>Copying another engine's data structure would also require preserving CUBRID's holder, waiter, flush-generation, quota, and direct-victim contracts.</li>
+        </ul>
+        <p class="big-claim">Use the comparison to form a workload-specific question—not to declare a winner.</p>
       </section>
 
       <section class="section" id="retrieval">
         <div class="eyebrow">05 · Retrieval practice</div>
-        <h2>Defend the comparison and the optimization boundary</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="shared invariant: all three prevent frame reuse while a caller owns residency and require separate content protection for mutable bytes -> CUBRID: pgbuf_fix combines BCB fcnt, per-thread holder, requested latch, and borrowed PAGE_PTR lifetime -> PostgreSQL: pin and content lock are separate; repeated pins by one backend update PrivateRefCount without another shared refcount increment -> InnoDB: atomic buf_fix_count and S/SX/X latch are distinct, while the MTR memo owns their combined release scope -> miss publication: CUBRID publishes after load and latch under a VPID loader protocol; PostgreSQL and InnoDB publish an in-progress descriptor before I/O -> replacement and durability: LRU zones plus DWB versus clock sweep plus FPI versus midpoint LRU plus conditional doublewrite -> performance: first measure linear per-thread holder lookup by held-set depth; only then test a lookup accelerator -> if shared nested CAS dominates, consider first/last-holder aggregation but preserve promotion, waiter, final-unfix, and victim invariants -> evidence boundary: source-backed design difference and optimization inference, not measured speedup." data-concepts='[{"label":"shared safety responsibilities","terms":["replacement","content","protect"]},{"label":"CUBRID coupled ownership seam","terms":["fcnt","holder","latch","page_ptr"]},{"label":"PostgreSQL split and private nesting","terms":["pin","content lock","private","repeated"]},{"label":"InnoDB MTR lifetime","terms":["buf_fix_count","mtr","memo","s/sx/x"]},{"label":"different miss publication timing","terms":["publish","i/o","vpid","in-progress"]},{"label":"first measure holder lookup","terms":["linear","holder","depth","measure"]},{"label":"higher-risk atomic aggregation","terms":["cas","nested","promotion","victim"]},{"label":"honest evidence boundary","terms":["inference","not measured","benchmark"]}]'>
+        <h2>Explain the six sentences without looking</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="shared jobs: prevent frame reuse while owned and prevent incompatible byte access -> CUBRID couples normal fix, fcnt, requested latch, and thread holder -> PostgreSQL separates pin from content lock and tracks backend-local ownership -> InnoDB separates buf_fix_count from S/SX/X state while the MTR memo owns cleanup -> replacement memory: CUBRID three LRU zones, PostgreSQL clock usage_count, InnoDB young/old midpoint LRU -> evidence boundary: these are source-backed responsibility differences, not a performance ranking." data-concepts='[{"label":"two shared safety jobs","terms":["frame","reuse","bytes","protect"]},{"label":"CUBRID seam","terms":["fcnt","holder","latch"]},{"label":"PostgreSQL seam","terms":["pin","content lock","private"]},{"label":"InnoDB seam","terms":["buf_fix_count","mtr","memo"]},{"label":"three replacement memories","terms":["lru3","usage_count","young","old"]},{"label":"no benchmark winner","terms":["performance","benchmark","winner"]}]'>
           <h3>Prompt</h3>
-          <p>A teammate says, “PostgreSQL is faster because it uses clock sweep, so CUBRID should replace its LRU.” Give a source-bounded answer.</p>
-          <p><strong>Your task:</strong> compare the three ownership seams, miss-publication timing, replacement policy, and durability defense; then rank the holder-lookup and nested-atomic hypotheses and name what would falsify each.</p>
-          <textarea aria-label="Your three-engine comparison" placeholder="Shared invariant → CUBRID → PostgreSQL → InnoDB → miss/replacement/durability → first measurement → higher-risk follow-up → evidence boundary."></textarea>
+          <p>A teammate asks, “What is the shortest accurate difference among these three buffer pools?”</p>
+          <p><strong>Your task:</strong> name the two shared safety jobs, give one ownership sentence and one replacement sentence per engine, then explain why this is not a speed ranking.</p>
+          <textarea aria-label="Your three-engine comparison" placeholder="Two safety jobs → CUBRID → PostgreSQL → InnoDB → three replacement memories → no performance winner."></textarea>
           <button type="button" data-check>Check comparison coverage</button>
           <button type="button" class="secondary" data-reveal>Reveal model route</button>
           <div class="feedback" aria-live="polite"></div>
         </div>
-        <p>Paste your answer into the chat. I will challenge any false equivalence and check whether the proposed benchmark can separate traversal from shared-atomic cost.</p>
+        <p>Paste your answer into the chat. I will check whether every API analogy names the responsibility it actually covers.</p>
       </section>
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
-        <h2>Read the ownership code, not a feature checklist</h2>
+        <h2>Choose ownership or replacement depth</h2>
         <ul>
           <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6090-L6126">CUBRID holder lookup</a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7724-L7829">lock-free fix/unfix</a>.</li>
           <li><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L230-L269">PostgreSQL private-refcount rationale</a> and <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3269-L3386"><code>PinBuffer()</code></a>.</li>
           <li><a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/include/buf0buf.ic#L755-L817">InnoDB buffer-fix count</a> and <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/mtr/mtr0mtr.cc#L243-L296">MTR memo release</a>.</li>
         </ul>
+        <p><a href="0018a-compare-replacement-policies.html">Continue to the detailed replacement-policy comparison →</a></p>
         <p><a href="../reference/three-engine-performance-card.html">Open the printable comparison card →</a></p>
         <p><a href="0017-defend-the-module-live.html">← Return to Lesson 0017</a></p>
       </section>
@@ -110,18 +100,19 @@
       <strong>Lesson map</strong>
       <a href="#lens">1. Two protections</a>
       <a href="#scenario">2. Shared scenario</a>
-      <a href="#performance">3. Performance bet</a>
-      <a href="#experiment">4. Falsifiable experiment</a>
-      <a href="#retrieval">5. Defend the claim</a>
+      <a href="#performance">3. Replacement memory</a>
+      <a href="#experiment">4. No winner claim</a>
+      <a href="#retrieval">5. Explain six sentences</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/three-engine-performance-card.html">Comparison card</a>
+      <a href="0018a-compare-replacement-policies.html">Replacement detail</a>
       <a href="../../source-inventory.md">Evidence inventory</a>
       <a href="../index.html">Course home</a>
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever an analogy, performance hypothesis, or evidence boundary is unclear.</footer>
+  <footer class="footer">Ask the teaching agent whenever an API analogy hides which safety responsibility it actually covers.</footer>
 </main>
 </body>
 </html>

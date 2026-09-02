@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "expectedPageCount": 42,
+  "expectedPageCount": 43,
   "canonicalLanguage": "en",
   "legacyRedirectMinimumDays": 90,
   "pages": [
@@ -24,6 +24,7 @@
     { "path": "lessons/0016-close-a-failure-proof.html", "en": "en/lessons/0016-close-a-failure-proof.html", "ko": "ko/lessons/0016-close-a-failure-proof.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0017-defend-the-module-live.html", "en": "en/lessons/0017-defend-the-module-live.html", "ko": "ko/lessons/0017-defend-the-module-live.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0018-compare-three-buffer-pools.html", "en": "en/lessons/0018-compare-three-buffer-pools.html", "ko": "ko/lessons/0018-compare-three-buffer-pools.html", "review": { "state": "pending" }, "fingerprints": {} },
+    { "path": "lessons/0018a-compare-replacement-policies.html", "en": "en/lessons/0018a-compare-replacement-policies.html", "ko": "ko/lessons/0018a-compare-replacement-policies.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "reference/caller-mutation-card.html", "en": "en/reference/caller-mutation-card.html", "ko": "ko/reference/caller-mutation-card.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "reference/change-defense-card.html", "en": "en/reference/change-defense-card.html", "ko": "ko/reference/change-defense-card.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "reference/core-synthesis-studio.html", "en": "en/reference/core-synthesis-studio.html", "ko": "ko/reference/core-synthesis-studio.html", "review": { "state": "pending" }, "fingerprints": {} },

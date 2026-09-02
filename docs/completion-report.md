@@ -131,3 +131,20 @@ and explains that repeated reads combine current fix protection, a saturating
 but approximate 64-fix migration heuristic, zone/age movement, and one
 containing-LRU activity sample per adjustment epoch—there is no exact
 per-page read-frequency victim score.
+
+## Cross-engine replacement follow-up
+
+Lesson 0018 was shortened to a responsibility-first comparison: all three
+engines separately protect frame identity from reuse and page bytes from
+incompatible access, but place those duties at different seams. Detailed
+replacement material moved to paired Lesson 0018A pages. The new lesson asks
+the same three questions of CUBRID, PostgreSQL, and InnoDB—admission, reuse
+memory, and victim choice—then compares dirty-page progress and scan resistance.
+It states exact pinned quantities only where primary source supports them and
+does not infer a performance winner from source shape.
+
+The detailed evidence lives in
+`reference/cross-database-replacement-policy-comparison.md`, pinned separately
+to CUBRID `f799e05`, PostgreSQL `fd2b898`, and MySQL/InnoDB `06a5c1c`. Two
+English-only visuals distinguish the responsibility seams and the three
+replacement paths. The bilingual inventory now contains 43 paired pages.

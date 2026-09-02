@@ -59,7 +59,7 @@ test("guide pages route VS IDs without copying mutable statuses", async () => {
 
 test("the final asset seam contains and displays exactly the canonical visual roster", async () => {
   const expected = [...canonicalVisualNames];
-  assert.equal(expected.length, 37);
+  assert.equal(expected.length, 39);
   const assets = (await readdir(path.join(guideRoot, "assets")))
     .filter((entry) => entry.endsWith(".svg"))
     .sort();

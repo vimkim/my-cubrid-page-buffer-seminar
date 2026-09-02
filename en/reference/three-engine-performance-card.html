@@ -13,7 +13,7 @@
   <header class="hero">
     <div class="eyebrow">Responsibility and performance card</div>
     <h1>Same invariant. Different seam.</h1>
-    <p>Use this after Lesson 18 to compare ownership accurately and keep optimization claims falsifiable.</p>
+    <p>Use this after Lesson 18 to recall the common safety rule before studying the different replacement algorithms.</p>
   </header>
 
   <section class="section">
@@ -30,34 +30,14 @@
   </section>
 
   <section class="section">
-    <h2>Design differences that matter</h2>
-    <table>
-      <thead><tr><th>Axis</th><th>CUBRID</th><th>PostgreSQL</th><th>InnoDB</th></tr></thead>
-      <tbody>
-        <tr><td>Fix/latch lifetime</td><td>Coupled in normal fix/unfix</td><td>Independently selectable</td><td>Distinct state, MTR-coupled lifetime</td></tr>
-        <tr><td>Repeated local ownership</td><td>Local holder and shared <code>fcnt</code> both change</td><td>Private count changes after first shared pin</td><td>Atomic fix count changes per low-level fix</td></tr>
-        <tr><td>Miss visibility</td><td>Publish after load and latch</td><td>Publish invalid before I/O</td><td>Publish <code>BUF_IO_READ</code> before I/O</td></tr>
-        <tr><td>Victim policy</td><td>LRU domains and zones</td><td>Clock sweep and rings</td><td>Midpoint old/new LRU</td></tr>
-        <tr><td>Torn-page defense</td><td>DWB stage</td><td>WAL full-page image</td><td>Conditional doublewrite</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="section">
-    <h2>Performance-opportunity funnel</h2>
-    <ol>
-      <li><strong>Observe:</strong> measure held-list depth, nodes inspected, shared CAS attempts/retries, and cycles per fix/unfix.</li>
-      <li><strong>Localize:</strong> vary held-set size separately from thread count and target-page sharing.</li>
-      <li><strong>Low-risk prototype:</strong> accelerate per-thread holder lookup while preserving global <code>fcnt</code>.</li>
-      <li><strong>Higher-risk prototype:</strong> aggregate nested ownership locally only if shared CAS is proven material.</li>
-      <li><strong>Prove:</strong> preserve promotion, waiter ordering, zero-crossing wakeup, last-unfix LRU work, and victim exclusion.</li>
-    </ol>
-    <div class="callout warn"><strong>Current conclusion:</strong> source-backed opportunity, not measured improvement. Existing evidence does not compare latency or throughput across the three engines.</div>
-  </section>
-
-  <section class="section">
-    <h2>Maintainer summary</h2>
-    <p>CUBRID's distinctive seam is that a normal fix combines residency protection, a per-thread holder, and the requested page latch. PostgreSQL makes pin and content lock independent and keeps repeated pins backend-local after the first shared contribution. InnoDB keeps fix count and latch state separate but records their lifetime in an MTR memo. The first CUBRID performance bet is to measure linear holder lookup as held-set depth grows; only if shared atomic traffic dominates should nested-fix aggregation be considered.</p>
+    <h2>Replacement in one line</h2>
+    <ul>
+      <li><strong>CUBRID:</strong> choose one private/shared LRU domain, then inspect its cold LRU3 zone.</li>
+      <li><strong>PostgreSQL:</strong> move a clock hand and decay bounded <code>usage_count</code> credit.</li>
+      <li><strong>InnoDB:</strong> admit disk reads into the old region and scan backward from its tail.</li>
+    </ul>
+    <div class="callout warn"><strong>No winner follows from these shapes.</strong> Workload, effective capacity, cleaning, and contention still require measurement.</div>
+    <p><a href="../lessons/0018a-compare-replacement-policies.html">Open the detailed replacement-policy lesson →</a></p>
     <p><a href="../lessons/0018-compare-three-buffer-pools.html">Return to Lesson 18 →</a></p>
   </section>
 

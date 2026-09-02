@@ -139,8 +139,14 @@
       <article class="reference-card full">
         <span class="status waiting">선택 비교 과정</span>
         <h3>Lesson 18 · 세 buffer pool 비교하기</h3>
-        <p>CUBRID, PostgreSQL, InnoDB의 ownership, miss publication, replacement, durability를 공통 개념으로 비교한 뒤 holder hot path를 반증 가능한 performance hypothesis로 바꿉니다.</p>
+        <p>모든 buffer pool이 수행하는 두 가지 safety 역할을 먼저 익히고, CUBRID, PostgreSQL, InnoDB가 그 책임을 어디에 두는지 살펴봅니다.</p>
         <p><a href="lessons/0018-compare-three-buffer-pools.html">Lesson 18 열기 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">선택 replacement 심화 과정</span>
+        <h3>Lesson 18A · Replacement policy 비교하기</h3>
+        <p>Benchmark winner를 단정하지 않고 세 engine의 admission, reuse memory, victim choice, dirty-page progress, scan resistance를 따라갑니다.</p>
+        <p><a href="lessons/0018a-compare-replacement-policies.html">Lesson 18A 열기 →</a></p>
       </article>
     </div>
   </section>
@@ -160,7 +166,8 @@
       <article class="course-item"><span class="step">8</span><div><span class="status">준비됨</span><h3>안전한 변경 방어하기</h3><p>interface family, owner, invariant, failure unwind, caller impact, risk에 맞춘 verification.</p></div><a href="lessons/0008-defend-a-safe-change.html">열기 →</a></article>
       <article class="course-item"><span class="step">9</span><div><span class="status">첫 Lesson 준비됨</span><h3>Advanced mechanism</h3><p>concurrency, ordered access, replacement progress, recovery, lifecycle, specialized interface, proof obligation.</p></div><a href="lessons/0009-classify-latch-wait.html">열기 →</a></article>
       <article class="course-item"><span class="step">10</span><div><span class="status">최종 gate 준비됨</span><h3>동료 challenge review</h3><p>model을 설명하고, review 중에 evidence를 찾아가며, 공격적인 질문에 답하고, 동료 feedback을 기록합니다.</p></div><a href="lessons/0017-defend-the-module-live.html">열기 →</a></article>
-      <article class="course-item"><span class="step">X</span><div><span class="status">선택</span><h3>cross-engine performance 관점</h3><p>측정하지 않은 speedup을 단정하지 않고 responsibility seam을 비교해 source 근거가 있는 performance hypothesis의 우선순위를 정합니다.</p></div><a href="lessons/0018-compare-three-buffer-pools.html">열기 →</a></article>
+      <article class="course-item"><span class="step">X</span><div><span class="status">선택</span><h3>Cross-engine responsibility map</h3><p>공통 safety model에서 시작한 뒤 source가 고정된 replacement-policy 비교로 이어갑니다.</p></div><a href="lessons/0018-compare-three-buffer-pools.html">열기 →</a></article>
+      <article class="course-item"><span class="step">18A</span><div><span class="status">선택 심화</span><h3>Replacement policy</h3><p>세 engine이 사용하는 data structure, transition, bounded scan, dirty-victim path를 비교합니다.</p></div><a href="lessons/0018a-compare-replacement-policies.html">열기 →</a></article>
     </div>
   </section>
 

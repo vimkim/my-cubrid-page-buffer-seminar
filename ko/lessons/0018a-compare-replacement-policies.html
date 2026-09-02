@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0018A — replacement policy 비교하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0018a-compare-replacement-policies.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · Lesson 0018A</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">선택 심화 비교 · replacement만 다루기</div>
+    <h1>Admission, reuse, victim이라는 같은 세 질문을 던진다</h1>
+    <p>서로 다른 data structure를 모두 “LRU”라고 뭉개지 않고 CUBRID, PostgreSQL, InnoDB를 비교한다.</p>
+    <div class="pills"><span class="pill">Admission</span><span class="pill">Reuse memory</span><span class="pill">Victim choice</span><span class="pill">Dirty page</span><span class="pill">Scan resistance</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="map">
+        <div class="eyebrow">01 · 비교 frame 하나</div>
+        <h2>Page 하나를 세 decision에 걸쳐 따라간다</h2>
+        <img class="diagram" src="../../assets/three-engine-replacement-paths.svg" alt="CUBRID, PostgreSQL, InnoDB replacement policy의 admission, reuse, victim path">
+        <p class="caption">공통 hard rule은 단순하다. Fix 또는 pin 중인 frame은 ordinary victim이 아니다. Admission, hotness memory, candidate order, dirty handling은 implementation policy다.</p>
+        <table>
+          <thead><tr><th>질문</th><th>CUBRID</th><th>PostgreSQL</th><th>MySQL / InnoDB</th></tr></thead>
+          <tbody>
+            <tr><td>무엇을 순서화하는가?</td><td>Private/shared doubly linked LRU가 여러 개이고 각각 LRU1/LRU2/LRU3로 나뉜다.</td><td>Normal shared buffer에 recency list가 없다. Atomic clock hand 하나가 descriptor array를 걷는다.</td><td>Buffer-pool instance마다 doubly linked young/old LRU 하나가 있다.</td></tr>
+            <tr><td>Reuse를 무엇으로 기억하는가?</td><td>Zone, list position/tick, adaptive per-list activity/quota.</td><td>최대 5인 작은 resident <code>usage_count</code>.</td><td>Young/old position, first-access time, eviction-clock distance.</td></tr>
+            <tr><td>Candidate는 어디 있는가?</td><td>Policy가 고른 list 하나의 LRU3.</td><td>Clock이 만난 첫 unpinned zero-count descriptor.</td><td>Old tail에서 역방향으로 scan해 찾은 clean relocatable page.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="cubrid">
+        <div class="eyebrow">02 · CUBRID</div>
+        <h2>Domain을 고른 뒤 그 cold zone을 search한다</h2>
+        <ol>
+          <li><strong>Admission:</strong> AOUT이 꺼진 pinned default에서 첫 final unfix는 private-domain page를 private LRU1 top에 넣는다. 그렇지 않으면 shared LRU2 middle에 넣는다.</li>
+          <li><strong>Reuse:</strong> LRU1은 그대로 둔다. LRU2 page는 list-tick age가 현재 LRU2 count 절반 이상일 때만 LRU1으로 돌아간다. Ordinary LRU3 reuse는 LRU1으로 돌아간다.</li>
+          <li><strong>Victim:</strong> allocator가 advertise된 LRU index를 consume하고 그 list를 lock한 뒤 LRU3 BCB를 최대 1,000개 검사한다. 모든 candidate는 clean/unfixed/waiter-free identity revalidation을 통과해야 한다.</li>
+          <li><strong>Scale:</strong> 여러 list와 mutex가 ordering을 shard한다. Private quota의 LRU1/LRU2 threshold는 각각 5%다. Shared default는 shared target의 40%와 5%다.</li>
+        </ol>
+        <div class="callout"><strong>Scan resistance:</strong> private/shared locality와 zone admission이 한 access stream이 다른 stream과 경쟁하는 방식을 줄인다. Source에는 AOUT ghost history가 있지만 pinned build가 ratio를 0으로 강제하므로 active 2Q behavior로 설명하면 안 된다.</div>
+        <p class="source-note"><strong>Pinned CUBRID:</strong> <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6636-L7040">admission과 hit transition</a>, <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9315-L9538">bounded LRU3 scan</a>, <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14252-L14511">quota adjustment</a>.</p>
+      </section>
+
+      <section class="section" id="postgresql">
+        <div class="eyebrow">03 · PostgreSQL</div>
+        <h2>Global clock hand로 reuse credit을 감쇠한다</h2>
+        <ol>
+          <li><strong>Admission:</strong> 새로 claim한 shared descriptor는 <code>usage_count = 1</code>을 받는다.</li>
+          <li><strong>Reuse:</strong> backend의 첫 pin이 shared <code>usage_count</code>를 최대 5까지 증가시킨다. 같은 backend의 nested pin은 private refcount만 바꾸므로 두 번째 shared credit을 얻지 않는다.</li>
+          <li><strong>Victim:</strong> atomic clock hand가 buffer descriptor를 진행한다. Pinned buffer는 건너뛰고 unpinned positive count는 줄이며 unpinned zero를 claim한다. 따라서 count 5는 최대 여섯 번의 full visit까지 살아남을 수 있다.</li>
+          <li><strong>Bulk scan:</strong> backend-local strategy ring이 bulk read/write와 vacuum을 위해 작은 ID 집합을 reuse한다. 그래도 shared pool의 frame을 가리키며 private buffer pool은 아니다.</li>
+        </ol>
+        <div class="callout"><strong>LRU order가 아니다:</strong> <code>usage_count = 2</code>인 descriptor 둘 사이에는 “더 오래된 것을 먼저”라는 관계가 없다. Count는 clock visit이 줄이는 bounded reuse credit이지 timestamp나 linked-list rank가 아니다.</div>
+        <p class="source-note"><strong>Pinned PostgreSQL:</strong> <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L104-L317">clock selection</a>, <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L136-L147">maximum usage count 5</a>, <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L420-L540">strategy-ring size</a>.</p>
+      </section>
+
+      <section class="section" id="innodb">
+        <div class="eyebrow">04 · MySQL / InnoDB</div>
+        <h2>Disk read에 young 자격을 주기 전에 old region으로 admit한다</h2>
+        <ol>
+          <li><strong>Topology:</strong> buffer-pool instance마다 LRU, free list, flush list를 소유한다. LRU가 512 entry 이상이 되면 <code>LRU_old</code>가 하나의 physical list를 young/old region으로 나눈다.</li>
+          <li><strong>Admission:</strong> disk-read page는 old region head에 들어간다. Old target default는 37%다. Memory에서 직접 만든 page는 young head에 들어간다.</li>
+          <li><strong>Reuse:</strong> old page는 보통 first access에서 <code>innodb_old_blocks_time</code> 이상 지난 뒤 다시 access되어야 young head로 promote된다. Default delay는 1,000ms다.</li>
+          <li><strong>Victim:</strong> allocation은 free block을 얻거나 old tail부터 clean relocatable page를 scan한다. 첫 common foreground scan은 100 entry로 제한되며 이후 pressure iteration은 LRU 전체를 scan할 수 있다.</li>
+        </ol>
+        <div class="callout"><strong>Scan resistance:</strong> one-pass scan은 old region을 채우지만 빠른 first touch만으로 모든 page가 young으로 promote되지는 않는다. Old/new는 resident region이며 evicted identity를 기억하는 2Q ghost list가 아니다.</div>
+        <p class="source-note"><strong>Pinned MySQL/InnoDB:</strong> <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L642-L907">old boundary와 midpoint insertion</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/handler/ha_innodb.cc#L23090-L23100">37%와 1,000ms default</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L493-L640">free-block pressure loop</a>.</p>
+      </section>
+
+      <section class="section" id="dirty">
+        <div class="eyebrow">05 · Dirty page가 progress를 바꾼다</div>
+        <h2>Recency policy가 writeback까지 끝내지는 않는다</h2>
+        <table>
+          <thead><tr><th>Engine</th><th>Candidate가 dirty일 때</th><th>Background help</th></tr></thead>
+          <tbody>
+            <tr><td>CUBRID</td><td>Ordinary detach는 clean을 요구한다. Dirty LRU3는 generation-aware flush가 clean으로 만들 때까지 resident다.</td><td>Page-flush와 post-flush/direct-victim progress가 waiting allocator와 협력한다.</td></tr>
+            <tr><td>PostgreSQL</td><td>Clock은 dirty unpinned buffer를 고를 수 있다. Allocating backend가 conditional lock, flush, revalidation을 수행할 수 있다.</td><td>Background writer가 곧 필요할 가능성이 있는 victim을 미리 clean한다.</td></tr>
+            <tr><td>InnoDB</td><td>즉시 replacement하려면 clean이어야 한다. Foreground pressure가 dirty tail page 하나를 flush하고 free list를 retry할 수 있다.</td><td>Page cleaner는 LRU-tail free-page target과 redo/flush-list target을 모두 좇는다.</td></tr>
+          </tbody>
+        </table>
+        <p class="big-claim">“Cold”는 어디를 볼지 답한다. “Clean and unowned”는 지금 reuse 가능한지 답한다.</p>
+      </section>
+
+      <section class="section" id="misreadings">
+        <div class="eyebrow">06 · False equivalence 막기</div>
+        <h2>비슷한 단어가 다른 algorithm을 가린다</h2>
+        <table>
+          <thead><tr><th>유혹적인 shortcut</th><th>수정된 설명</th></tr></thead>
+          <tbody>
+            <tr><td>“CUBRID LRU3는 InnoDB old와 같다.”</td><td>둘 다 cold region이지만 admission, domain 수, promotion gate, candidate scan이 다르다.</td></tr>
+            <tr><td>“PostgreSQL clock은 approximate LRU다.”</td><td><code>usage_count</code>는 bounded credit이며 같은 count끼리 recency order가 없다.</td></tr>
+            <tr><td>“PostgreSQL strategy ring은 CUBRID private LRU다.”</td><td>Ring은 shared-buffer ID의 backend-local array이고 CUBRID private LRU는 pool-global linked residency/quota domain이다.</td></tr>
+            <tr><td>“InnoDB old/new는 2Q다.”</td><td>두 region 모두 resident page를 담으며 이 path에는 general evicted-identity ghost queue가 없다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Source shape만으로 winner를 고를 수 없다.</strong> Hit ratio와 latency는 effective pool byte, page/row layout, workload, dirtying, cleaning, checkpoint behavior, contention에도 달려 있다. 이 lesson은 measurement hypothesis를 제공하지 benchmark result를 제공하지 않는다.</div>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval 연습</div>
+        <h2>두 번째 access와 첫 dirty victim을 trace한다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="CUBRID: private LRU1 또는 shared LRU2 admission -> zone/age-based boost -> advertise된 list 하나의 LRU3 scan 최대 1000 -> ordinary detach 전에 dirty를 flush해야 함 -> PostgreSQL: usage_count 1 admission -> backend 첫 pin은 최대 5까지 올리지만 nested local pin은 올리지 않음 -> clock은 pin을 건너뛰고 positive count를 줄여 zero 선택 -> dirty selection은 allocator가 flush할 수 있음 -> InnoDB: disk read는 old head에 들어가고 기본 old target 37% -> promotion은 보통 1000ms 기다림 -> old tail부터 scan하며 첫 common attempt는 최대 100 -> dirty pressure는 cleaner 또는 foreground flush를 부름 -> 셋 모두 owned frame을 제외하지만 policy 이름이 performance 우월성을 증명하지 않음." data-concepts='[{"label":"CUBRID path","terms":["lru1","lru2","lru3","1000"]},{"label":"PostgreSQL path","terms":["usage_count","5","clock","zero"]},{"label":"InnoDB path","terms":["old","37","1000ms","tail"]},{"label":"dirty progress 차이","terms":["dirty","flush","clean"]},{"label":"공통 ownership gate","terms":["fixed","pinned","owned"]},{"label":"winner 없음","terms":["performance","benchmark","winner"]}]'>
+          <h3>문제</h3>
+          <p>Sequential scan이 page를 한 번 touch하고 나중에 다시 touch한다. 그 뒤 allocation pressure가 dirty 상태의 그 page에 도달한다. Engine별 가능한 policy path를 설명하라.</p>
+          <textarea aria-label="replacement-policy 비교 답안" placeholder="CUBRID admission/reuse/victim/dirty → PostgreSQL → InnoDB → 공통 hard rule → evidence boundary."></textarea>
+          <button type="button" data-check>policy trace 확인</button>
+          <button type="button" class="secondary" data-reveal>model route 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Maintenance claim에는 상세 evidence note를 사용한다</h2>
+        <p><a href="../../reference/cross-database-replacement-policy-comparison.md">Pinned primary-source comparison</a>에는 이 teaching page에서 생략한 정확한 source route, concurrency shape, scan strategy detail, evidence boundary가 있다.</p>
+        <p><a href="0018-compare-three-buffer-pools.html">← 단순한 세 buffer-pool 비교로 돌아가기</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson 목차">
+      <strong>Lesson map</strong>
+      <a href="#map">1. 세 decision</a>
+      <a href="#cubrid">2. CUBRID</a>
+      <a href="#postgresql">3. PostgreSQL</a>
+      <a href="#innodb">4. InnoDB</a>
+      <a href="#dirty">5. Dirty candidate</a>
+      <a href="#misreadings">6. False equivalence</a>
+      <a href="#retrieval">7. 직접 trace</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="0018-compare-three-buffer-pools.html">단순 비교</a>
+      <a href="../../reference/cross-database-replacement-policy-comparison.md">Evidence note</a>
+      <a href="../index.html">과정 홈</a>
+    </nav>
+  </div>
+  <footer class="footer">Admission, reuse memory, victim choice, dirty progress를 따로 비교하고 이름만으로 winner를 추론하지 않는다.</footer>
+</main>
+</body>
+</html>

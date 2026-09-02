@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620" role="img" aria-labelledby="title desc">
+  <title id="title">The same two safety responsibilities at three different seams</title>
+  <desc id="desc">CUBRID combines frame protection, content latch, and thread holder in normal fix and unfix. PostgreSQL exposes pin and content lock independently and tracks backend ownership. InnoDB keeps buffer fix and block latch distinct while an MTR memo owns their release scope.</desc>
+  <defs><style>.panel{fill:#fff;stroke:#c5d2d8;stroke-width:2}.cub{fill:#eef0ff;stroke:#5968bd;stroke-width:2}.pg{fill:#e9f4f3;stroke:#16847d;stroke-width:2}.my{fill:#fff6e8;stroke:#b86b22;stroke-width:2}.t{font:700 26px Inter,Arial,sans-serif;fill:#173443}.h{font:700 21px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}</style></defs>
+  <text x="640" y="38" text-anchor="middle" class="t">Same responsibilities, different ownership seams</text>
+  <rect x="35" y="70" rx="16" width="1210" height="92" class="panel"/>
+  <text x="335" y="106" text-anchor="middle" class="h">Replacement protection</text>
+  <text x="335" y="136" text-anchor="middle" class="s">Do not reuse the frame while a caller owns it</text>
+  <text x="945" y="106" text-anchor="middle" class="h">Content protection</text>
+  <text x="945" y="136" text-anchor="middle" class="s">Do not allow incompatible access to resident bytes</text>
+
+  <rect x="35" y="205" rx="18" width="380" height="330" class="cub"/>
+  <text x="225" y="245" text-anchor="middle" class="h">CUBRID</text>
+  <text x="225" y="280" text-anchor="middle" class="s">normal pgbuf_fix()</text>
+  <rect x="78" y="310" rx="10" width="294" height="52" class="panel"/>
+  <text x="225" y="343" text-anchor="middle" class="s">BCB fcnt protects the frame</text>
+  <rect x="78" y="380" rx="10" width="294" height="52" class="panel"/>
+  <text x="225" y="413" text-anchor="middle" class="s">READ / WRITE latch protects bytes</text>
+  <rect x="78" y="450" rx="10" width="294" height="52" class="panel"/>
+  <text x="225" y="483" text-anchor="middle" class="s">thread holder records release debt</text>
+  <text x="225" y="525" text-anchor="middle" class="tiny">one normal acquire/release seam</text>
+
+  <rect x="450" y="205" rx="18" width="380" height="330" class="pg"/>
+  <text x="640" y="245" text-anchor="middle" class="h">PostgreSQL</text>
+  <text x="640" y="280" text-anchor="middle" class="s">pin and lock are separate choices</text>
+  <rect x="493" y="310" rx="10" width="294" height="52" class="panel"/>
+  <text x="640" y="343" text-anchor="middle" class="s">pin/refcount protects the frame</text>
+  <rect x="493" y="380" rx="10" width="294" height="52" class="panel"/>
+  <text x="640" y="413" text-anchor="middle" class="s">content lock protects bytes</text>
+  <rect x="493" y="450" rx="10" width="294" height="52" class="panel"/>
+  <text x="640" y="483" text-anchor="middle" class="s">backend-local refcount + ResourceOwner</text>
+  <text x="640" y="525" text-anchor="middle" class="tiny">unlock and unpin independently</text>
+
+  <rect x="865" y="205" rx="18" width="380" height="330" class="my"/>
+  <text x="1055" y="245" text-anchor="middle" class="h">MySQL / InnoDB</text>
+  <text x="1055" y="280" text-anchor="middle" class="s">distinct state, MTR-owned scope</text>
+  <rect x="908" y="310" rx="10" width="294" height="52" class="panel"/>
+  <text x="1055" y="343" text-anchor="middle" class="s">buf_fix_count protects the frame</text>
+  <rect x="908" y="380" rx="10" width="294" height="52" class="panel"/>
+  <text x="1055" y="413" text-anchor="middle" class="s">S / SX / X latch protects bytes</text>
+  <rect x="908" y="450" rx="10" width="294" height="52" class="panel"/>
+  <text x="1055" y="483" text-anchor="middle" class="s">mtr_t memo records cleanup</text>
+  <text x="1055" y="525" text-anchor="middle" class="tiny">memo releases latch, then fix</text>
+
+  <text x="640" y="585" text-anchor="middle" class="h">Compare responsibilities first; API names are only partial analogies.</text>
+</svg>

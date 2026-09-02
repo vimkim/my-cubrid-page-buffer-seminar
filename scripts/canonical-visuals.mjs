@@ -39,6 +39,8 @@ export const canonicalVisualOwners = Object.freeze({
   "replacement-lifecycle-quantities.svg": "advanced/replacement-progress.md",
   "startup-bcb-lifetime.svg": "learning/01-contract-and-objects.md",
   "state-axes.svg": "learning/01-contract-and-objects.md",
+  "three-engine-replacement-paths.svg": "reference/cross-database-replacement-policy-comparison.md",
+  "three-engine-responsibility-seams.svg": "reference/cross-database-replacement-policy-comparison.md",
   "two-lsa-timeline.svg": "learning/04-flush-one-generation.md",
   "unconditional-latch-scenarios.svg": "advanced/acquisition-concurrency.md",
   "victim-eligibility.svg": "learning/05-replace-one-frame.md",

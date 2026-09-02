@@ -121,7 +121,7 @@ Question-bank validation additionally enforces the approved ten-page topology, p
 
 ADR 0002 continues to govern the canonical Markdown maintainer guide. ADR 0004 separately governs the interactive teaching HTML:
 
-- `en/` contains the canonical 42-page HTML course and `ko/` contains a structurally paired natural-Korean translation.
+- `en/` contains the canonical 43-page HTML course and `ko/` contains a structurally paired natural-Korean translation.
 - Root `index.html` is a language selector. Every paired page links directly to its counterpart with a visible `EN | KO` control.
 - Korean prose keeps established database/CUBRID jargon, evidence labels, code, and source identifiers in English. It translates meaning naturally rather than mirroring English sentence structure.
 - CSS, language-neutral JavaScript behavior, and English SVGs stay in the root `assets/` seam. Reader-facing interaction messages are supplied by fingerprinted language content rather than hard-coded in shared behavior scripts.
