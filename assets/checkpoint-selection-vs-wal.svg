@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 780" role="img" aria-labelledby="title desc">
+  <title id="title">Checkpoint selection boundary versus WAL force target</title>
+  <desc id="desc">Three cases distinguish a required checkpoint flush, an optional extra flush, and two unsafe accounting or WAL ordering mistakes.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f9fc}.panel{fill:#fff;stroke:#cbd5e1;stroke-width:2}.good{fill:#ecfdf5;stroke:#10b981;stroke-width:2}.extra{fill:#eff6ff;stroke:#3b82f6;stroke-width:2}.bad{fill:#fff1f2;stroke:#e11d48;stroke-width:2}.title{font:700 28px system-ui,sans-serif;fill:#0f172a}.head{font:700 20px system-ui,sans-serif;fill:#0f172a}.text{font:16px system-ui,sans-serif;fill:#334155}.small{font:14px system-ui,sans-serif;fill:#475569}.mono{font:600 16px ui-monospace,SFMono-Regular,monospace;fill:#0f172a}.label{font:700 15px system-ui,sans-serif;fill:#fff}.line{stroke:#64748b;stroke-width:3}.dash{stroke:#64748b;stroke-width:2;stroke-dasharray:7 7}.arrow{fill:#64748b}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" class="arrow"/></marker>
+  </defs>
+  <rect width="1200" height="780" class="bg"/>
+  <text x="60" y="55" class="title">Two boundaries answer two different questions</text>
+  <rect x="60" y="82" width="1080" height="82" rx="14" class="panel"/>
+  <text x="86" y="116" class="head">Checkpoint boundary = 150</text>
+  <text x="86" y="144" class="text">Selection: did this dirty generation begin at or before 150?</text>
+  <text x="630" y="116" class="head">Copied page LSA</text>
+  <text x="630" y="144" class="text">WAL order: force log through this value before writing the copy.</text>
+
+  <rect x="60" y="190" width="1080" height="150" rx="16" class="good"/>
+  <rect x="80" y="210" width="112" height="30" rx="15" fill="#059669"/><text x="104" y="231" class="label">REQUIRED</text>
+  <text x="220" y="233" class="head">oldest = 100 ≤ 150, copied page LSA = 170</text>
+  <text x="90" y="275" class="mono">select P</text>
+  <line x1="190" y1="270" x2="350" y2="270" class="line" marker-end="url(#arrow)"/>
+  <text x="375" y="275" class="mono">force WAL → 170</text>
+  <line x1="570" y1="270" x2="730" y2="270" class="line" marker-end="url(#arrow)"/>
+  <text x="755" y="275" class="mono">write current copy</text>
+  <text x="90" y="314" class="small">Reason: unpropagated history reaches behind the checkpoint boundary. The current image contains that history.</text>
+
+  <rect x="60" y="365" width="1080" height="150" rx="16" class="extra"/>
+  <rect x="80" y="385" width="112" height="30" rx="15" fill="#2563eb"/><text x="111" y="406" class="label">OPTIONAL</text>
+  <text x="220" y="408" class="head">oldest = 200 &gt; 150, copied page LSA = 220</text>
+  <text x="90" y="450" class="mono">checkpoint may skip P</text>
+  <line x1="320" y1="445" x2="480" y2="445" class="dash" marker-end="url(#arrow)"/>
+  <text x="505" y="450" class="mono">or flush it early</text>
+  <text x="90" y="489" class="small">An early flush is extra work, not a checkpoint violation. If chosen, it must still force WAL through 220.</text>
+
+  <rect x="60" y="540" width="525" height="180" rx="16" class="bad"/>
+  <rect x="80" y="560" width="96" height="30" rx="15" fill="#be123c"/><text x="102" y="581" class="label">UNSAFE</text>
+  <text x="195" y="583" class="head">False checkpoint progress</text>
+  <text x="86" y="624" class="mono">oldest 100 still unpaid</text>
+  <text x="86" y="653" class="mono">but redo claimed &gt; 100</text>
+  <text x="86" y="690" class="small">Recovery may start too late and miss change 100.</text>
+
+  <rect x="615" y="540" width="525" height="180" rx="16" class="bad"/>
+  <rect x="635" y="560" width="96" height="30" rx="15" fill="#be123c"/><text x="657" y="581" class="label">UNSAFE</text>
+  <text x="750" y="583" class="head">Actual WAL-order violation</text>
+  <text x="641" y="624" class="mono">write page LSA 220</text>
+  <text x="641" y="653" class="mono">while durable WAL ends at 150</text>
+  <text x="641" y="690" class="small">The data page can survive without the log needed to explain it.</text>
+
+  <text x="60" y="758" class="small">Rule of thumb: oldest_unflush_lsa selects checkpoint work; copied page LSA sets the WAL force target.</text>
+</svg>

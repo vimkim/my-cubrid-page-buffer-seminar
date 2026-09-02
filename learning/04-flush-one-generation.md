@@ -60,6 +60,21 @@ Assume P is unfixed and otherwise flushable when scanned:
 
 Selection by 100 does not mean writing a historical page version. Flush copies the current image containing A+B+C, carries lower bound 100 for checkpoint accounting, and uses copied page LSA 170 as the WAL force target. The lower bound decides whether the generation crosses the checkpoint boundary; the page LSA decides how far WAL must precede that captured image.
 
+### Newer than the checkpoint boundary is not unsafe to flush
+
+`flush_upto_lsa` is a **checkpoint selection boundary**, not the WAL force target. If P has `oldest_unflush_lsa = 200` and the checkpoint boundary is 150, this dirty generation began after the boundary. `pgbuf_flush_checkpoint()` may skip P because the current checkpoint does not need that propagation to cover its chosen history.
+
+Another background or pressure-driven operation may nevertheless flush P. That is safe extra work, provided the ordinary flush protocol forces WAL through the **copied page LSA** before submitting the page image. For example, if the copied page LSA is 220, forcing WAL only through the checkpoint boundary 150 is insufficient; WAL must be forced through 220.
+
+![Checkpoint selection boundary versus the WAL force target, including safe extra work and two unsafe cases](../assets/checkpoint-selection-vs-wal.svg)
+
+Two different mistakes are genuinely unsafe:
+
+1. **False checkpoint progress:** P still has unpropagated history beginning at 100, but checkpoint accounting records a redo start later than 100. Recovery may then start too late and miss the change. Merely failing to flush P is not itself corrupt if the smallest remaining lower bound correctly keeps redo at or before 100; the unsafe act is claiming that the outstanding history is covered.
+2. **Page-before-WAL ordering:** a copied page with page LSA 220 reaches page storage while durable WAL ends at 150. A crash can then preserve page bytes whose explaining log record is absent. This, not `oldest_unflush_lsa > flush_upto_lsa`, is the WAL-order violation.
+
+The compact rule is: **oldest-unflush selects checkpoint work; copied page LSA sets the WAL force target.**
+
 The field's lifetime preserves this meaning:
 
 1. A clean generation has a null lower bound.

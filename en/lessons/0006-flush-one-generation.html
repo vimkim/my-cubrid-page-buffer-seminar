@@ -13,251 +13,181 @@
   <div class="topline"><span>CUBRID page buffer · lesson 0006</span><a href="../index.html">Course home</a></div>
   <header class="hero">
     <div class="eyebrow">Core capability · propagation</div>
-    <h1>Flush one generation without erasing the next</h1>
-    <p>By the end, you can trace a copied dirty generation through WAL and I/O while a writer creates a newer resident generation.</p>
-    <div class="pills"><span class="pill">Page LSA</span><span class="pill">Oldest-unflush LSA</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">WAL gate</span><span class="pill">Re-dirty</span></div>
+    <h1>Flushing: move one page image safely toward disk</h1>
+    <p>Learn the purpose first. Then separate checkpoint selection from the WAL safety rule.</p>
+    <div class="pills"><span class="pill">Flush</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Checkpoint</span><span class="pill">WAL</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="flush-purpose">
-        <div class="eyebrow">Start here · Operation and purpose</div>
-        <h2>Flush propagates one page image out of volatile buffer memory</h2>
-        <p class="big-claim"><strong>Flushing</strong> is the page-buffer operation that captures a stable image of a resident page and sends that image through the required WAL gate toward persistent page storage.</p>
-        <p>A database changes the in-memory frame first. That resident image is fast to access but volatile: it does not by itself update the page's home location in the data volume. Marking the BCB <code>DIRTY</code> records this unfinished propagation work. A later flush processes that debt.</p>
+        <div class="eyebrow">Start here · The entire lesson in one picture</div>
+        <h2>Memory changed; disk has not caught up</h2>
+        <p class="big-claim"><strong>Flush</strong> means: make a stable copy of a changed resident page and send that copy toward persistent page storage.</p>
         <table>
-          <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+          <thead><tr><th>Place</th><th>State</th><th>Why it matters</th></tr></thead>
           <tbody>
-            <tr><td>What is copied?</td><td>The current resident page bytes are captured as a stable, private image so later writers do not change the bytes already being submitted.</td></tr>
-            <tr><td>Why flush?</td><td>To propagate page changes beyond volatile buffer memory, support checkpoint and shutdown progress, and make a clean, unfixed frame eligible for later replacement.</td></tr>
-            <tr><td>What does <code>FLUSHING</code> mean?</td><td>One previously captured image is currently in the flush path. It is an in-progress state, not a command and not proof that the current resident bytes are clean.</td></tr>
-            <tr><td>What is it not?</td><td>Flush is not transaction commit, unfix, eviction, or page deallocation. Those are separate lifecycle events.</td></tr>
+            <tr><td>Buffer frame in memory</td><td>New page bytes</td><td>Fast, but lost if the process or machine loses volatile memory.</td></tr>
+            <tr><td>Page's home location</td><td>Older page bytes</td><td>The durable page copy has not caught up yet.</td></tr>
+            <tr><td>BCB <code>DIRTY</code></td><td>Set</td><td>Records the unfinished job: the resident change still needs propagation.</td></tr>
           </tbody>
         </table>
-        <p>The WAL rule answers an ordering question: for a logged non-temporary page, the recovery log covering the copied image must reach its required boundary before the page image is submitted. DWB, when enabled, answers a different integrity question about incomplete/torn page writes. Neither concept is the definition of flush.</p>
-        <div class="callout"><strong>Concrete outcome:</strong> if no writer changes the resident page after its image is captured and submission succeeds, the BCB can finish with neither DIRTY nor FLUSHING set. The page remains resident; a later replacement decision may reuse its frame.</div>
+        <p>A flush pays that propagation debt. It helps a checkpoint limit recovery work, helps shutdown move dirty pages out, and makes a clean unfixed frame eligible for replacement. Flush is <em>not</em> commit, unfix, eviction, or page deletion. A successfully flushed page may remain in memory.</p>
+        <div class="callout"><strong>Shortest mental model:</strong> <code>DIRTY</code> means “there is page work to do.” <code>FLUSHING</code> means “a copied version is doing that work now.”</div>
       </section>
 
       <section class="section" id="generation-meaning">
-        <div class="eyebrow">00 · Decode the notation</div>
-        <h2><code>G</code> names a copied page image; it is not a stored counter</h2>
-        <p class="big-claim">A <strong>generation</strong> is our reasoning label for one coherent version of the page bytes that a flush treats as a unit.</p>
-        <p>When flush starts, it copies the resident page. Call that frozen copy <strong>G</strong>. A writer may then modify the still-resident page while G is being written. Call those newer resident bytes <strong>G+1</strong>. The source does not store a field named <code>generation</code>, <code>G</code>, or <code>G+1</code>; the labels keep two versions of the same logical page separate in our heads.</p>
+        <div class="eyebrow">01 · Why make a copy?</div>
+        <h2>The writer must be allowed to continue</h2>
+        <p>The flush copies the current resident bytes into private memory. We call that frozen copy <strong>G</strong>. After the copy is made, another writer may change the resident page again. We call the newer resident bytes <strong>G+1</strong>.</p>
+        <img class="diagram" src="../../assets/two-lsa-timeline.svg" alt="A copied generation G and a newer resident generation G plus one">
+        <p class="caption"><code>G</code> and <code>G+1</code> are teaching labels, not counters stored in the BCB.</p>
         <table>
-          <thead><tr><th>Thing</th><th>What it is</th><th>Example</th></tr></thead>
+          <thead><tr><th>State</th><th>Plain meaning</th></tr></thead>
           <tbody>
-            <tr><td>Generation G</td><td>Conceptual identity of the page-image copy now being flushed.</td><td>Copied bytes include logged changes through LSA 140.</td></tr>
-            <tr><td>Generation G+1</td><td>Conceptual identity of resident bytes changed after G was copied.</td><td>A writer applies a later change at LSA 170.</td></tr>
-            <tr><td>Page LSA</td><td>A real log address stored with page state: the latest logged change included in those particular bytes.</td><td>G carries 140; G+1 carries 170.</td></tr>
+            <tr><td><code>DIRTY=1, FLUSHING=0</code></td><td>The resident page needs a flush.</td></tr>
+            <tr><td><code>DIRTY=0, FLUSHING=1</code></td><td>Copy G is in flight; no later resident change is known yet.</td></tr>
+            <tr><td><code>DIRTY=1, FLUSHING=1</code></td><td>G is in flight and a newer resident G+1 also needs a later flush.</td></tr>
+            <tr><td><code>DIRTY=0, FLUSHING=0</code></td><td>No resident propagation debt and no copy in flight.</td></tr>
           </tbody>
         </table>
-        <p><strong>Why generation is not LSA:</strong> several logged modifications can move the page LSA from 100 to 140 while still belonging to the same not-yet-copied resident generation. Conversely, a new post-copy generation can exist for a change that is not represented by a new log address. Generation distinguishes page-image versions; LSA locates recovery history.</p>
-
-        <h3>DIRTY and FLUSHING are two independent yes/no questions</h3>
-        <table>
-          <thead><tr><th>DIRTY</th><th>FLUSHING</th><th>Plain meaning</th></tr></thead>
-          <tbody>
-            <tr><td>0</td><td>0</td><td>No resident change awaits propagation; no copied image is in flight.</td></tr>
-            <tr><td>1</td><td>0</td><td>The resident page has propagation debt and needs a future flush.</td></tr>
-            <tr><td>0</td><td>1</td><td>Copy G is in flight; the resident page has not changed since that copy.</td></tr>
-            <tr><td>1</td><td>1</td><td>Copy G is in flight <em>and</em> the resident page changed afterward—G+1 also needs a later flush.</td></tr>
-          </tbody>
-        </table>
-        <p><strong>DIRTY is a to-do flag:</strong> current resident bytes include changes not covered by a completed propagation. <strong>FLUSHING is an in-progress flag:</strong> a previously captured copy is still moving through the flush path. FLUSHING does not freeze the resident page.</p>
-        <div class="callout"><strong>Why clear DIRTY when setting FLUSHING?</strong> G's old debt has moved into the in-flight operation. Clearing DIRTY creates a clean signal slot: if a writer changes the resident page, it sets DIRTY again. Then <code>DIRTY + FLUSHING</code> unambiguously means “old copy in flight, newer resident work waiting.”</div>
       </section>
 
       <section class="section" id="why-flushing">
-        <div class="eyebrow">00A · Why a second flag exists</div>
-        <h2>DIRTY describes pending resident work; FLUSHING coordinates captured work</h2>
-        <p class="big-claim">One bit cannot faithfully represent two facts that may be true at the same time: “copy G is in flight” and “resident G+1 needs another flush.”</p>
-        <table>
-          <thead><tr><th>Reason for <code>FLUSHING</code></th><th>Failure if only <code>DIRTY</code> existed</th></tr></thead>
-          <tbody>
-            <tr><td>Preserve a concurrent re-dirty</td><td>If completion simply cleared DIRTY, it could erase a writer's newer dirty publication. With two flags, G completion clears only FLUSHING and leaves G+1 DIRTY.</td></tr>
-            <tr><td>Exclude overlapping flushes</td><td>A second flusher could see newly DIRTY G+1 and submit it while older G is still in flight. If storage completions reorder, old G could overwrite newer G+1.</td></tr>
-            <tr><td>Coordinate synchronous callers</td><td>A caller that must wait could not distinguish “no propagation running” from “another thread already owns the propagation.” FLUSHING directs it to the BCB wait queue instead of starting another flush.</td></tr>
-            <tr><td>Close success or failure explicitly</td><td>Completion needs a state to clear and waiters to wake. Failure clears FLUSHING and restores the captured dirty debt/lower bound so it remains retryable.</td></tr>
-          </tbody>
-        </table>
-        <p>Use this thought experiment. Start with <code>DIRTY=1, FLUSHING=0</code>. Flusher F captures G, then publishes <code>DIRTY=0, FLUSHING=1</code>: the old debt is owned by F. Writer W changes resident bytes and publishes <code>DIRTY=1, FLUSHING=1</code>: G is still owned by F and G+1 is new work. On success, F changes only FLUSHING to 0. The remaining DIRTY bit still means G+1 must be flushed.</p>
-        <div class="callout warn"><strong>FLUSHING does not freeze writers.</strong> It prevents unsafe competing flush ownership and makes wait/completion visible while DIRTY remains free to record a later resident generation.</div>
-        <p class="source-note"><strong>Verified mechanism:</strong> safe flush rejects a concurrent flush and optionally queues a synchronous waiter at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8809-L8901"><code>page_buffer.c:8809–8901</code></a>; the source explicitly names out-of-order old-over-new writes at <code>8839–8847</code>. Flag transitions are at <code>16077–16137</code>, with completion/failure wakeups at <code>10908–10951</code>.</p>
-      </section>
-
-      <section class="section" id="copy-versus-dwb">
-        <div class="eyebrow">00B · Separate copy from destination</div>
-        <h2>Copying the resident page does not mean “write it to DWB”</h2>
-        <p class="big-claim">The flush first creates a stable page image in private memory. DWB is one possible destination for that copied image, not the copy operation itself.</p>
-        <p>In <code>pgbuf_bcb_flush_with_wal()</code>, <code>page_buf</code> is a local aligned buffer. The code either encrypts the resident page into that buffer for TDE or uses <code>memcpy</code> to copy it. This separates the in-flight bytes G from resident bytes that may become G+1 after BCB protection is released.</p>
-        <table>
-          <thead><tr><th>Configuration decision</th><th>What still happens</th><th>Where copied G goes after the WAL gate</th></tr></thead>
-          <tbody>
-            <tr><td>DWB created and page is non-temporary</td><td>Stable image copy, captured LSAs, and required WAL force.</td><td><code>dwb_add_page()</code> accepts the image into a DWB slot; DWB later coordinates protected home-volume propagation.</td></tr>
-            <tr><td>DWB disabled, not created, or page is temporary</td><td>The same stable-image separation still happens; logged non-temporary pages still obey the WAL gate.</td><td>The page-buffer path calls <code>fileio_write()</code> directly for the page's home data-volume location.</td></tr>
-          </tbody>
-        </table>
-        <div class="callout warn"><strong>If DWB is disabled:</strong> flushing does not stop, and the page is not written twice by this DWB mechanism. It takes the direct-write branch instead. What is lost is DWB's torn/incomplete page-image protection and startup repair source; WAL still has its separate ordering and recovery role.</div>
-        <p>The pinned code chooses <code>uses_dwb = dwb_is_created() &amp;&amp; !is_temp</code> before releasing BCB protection. It also contains a test-oriented runtime transition: if DWB disappears while adding the page, the path reacquires BCB protection, recopies the resident page, and retries without DWB. The source comment says live activation/deactivation needs additional work, so do not present runtime toggling as a supported monitoring or administration protocol.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> local copy and branch selection are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>; WAL gating and DWB/direct submission are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>. DWB recovery behavior is a separate startup mechanism.</p>
+        <div class="eyebrow">02 · Why DIRTY alone is not enough</div>
+        <h2>Two facts can be true at the same time</h2>
+        <p>When flush starts, it marks <code>FLUSHING</code> and clears the old <code>DIRTY</code>. This does not lose the work: the flusher now owns copy G. The cleared DIRTY bit becomes an empty signal slot for the next writer.</p>
+        <ol>
+          <li>G starts: <code>DIRTY=0, FLUSHING=1</code>.</li>
+          <li>A writer changes the resident page: <code>DIRTY=1, FLUSHING=1</code>.</li>
+          <li>G succeeds: clear only <code>FLUSHING</code>.</li>
+          <li>The surviving <code>DIRTY=1</code> correctly says G+1 still needs a flush.</li>
+        </ol>
+        <p><code>FLUSHING</code> also blocks a second competing flush. Otherwise an older write G could finish after a newer write G+1 and overwrite it. A synchronous caller can wait for the current flusher instead of starting another one.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> concurrent-flush exclusion and waiting are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8809-L8901"><code>page_buffer.c:8809–8901</code></a>; the flag helpers are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16077-L16126"><code>16077–16126</code></a>.</p>
       </section>
 
       <section class="section" id="moments">
-        <div class="eyebrow">01 · Name the boundary</div>
-        <h2>“Written” hides four different moments</h2>
-        <img class="diagram" src="../../assets/durability-chain.svg" alt="Four distinct boundaries from write permission through page propagation">
-        <p class="caption">Never move a claim rightward on this chain without stronger evidence.</p>
-        <table>
-          <thead><tr><th>Moment</th><th>What becomes true</th><th>What does not follow</th></tr></thead>
-          <tbody>
-            <tr><td>Write permission</td><td>WRITE latch permits exclusive resident-byte mutation.</td><td>Recoverability or persistence.</td></tr>
-            <tr><td>Recoverability</td><td>Appropriate log evidence exists and page LSA reflects the logged image.</td><td>Commit WAL or home page is durable.</td></tr>
-            <tr><td>Transaction durability</td><td>Commit WAL has reached its durability boundary.</td><td>Every changed page is at its home location.</td></tr>
-            <tr><td>Page propagation</td><td>The copied generation reached the configured DWB/direct-write boundary.</td><td>A concurrently changed resident generation is clean.</td></tr>
-          </tbody>
-        </table>
-        <p class="big-claim">A flush completes a copied generation, not “the page for all time.”</p>
+        <div class="eyebrow">03 · Do not call all of this “written”</div>
+        <h2>Log durability and page propagation are different</h2>
+        <img class="diagram" src="../../assets/durability-chain.svg" alt="Separate boundaries for mutation, recovery logging, commit durability, and page propagation">
+        <p class="caption">A transaction can commit before every changed page reaches its home location. WAL makes that safe.</p>
+        <p>A flush is about the page image. WAL is about the log needed to explain that image. For a logged non-temporary page, the log must be forced far enough <em>before</em> the copied page image is submitted.</p>
       </section>
 
       <section class="section" id="lsas">
-        <div class="eyebrow">02 · Two LSA questions</div>
-        <h2>Latest included change and oldest unpropagated change are different coordinates</h2>
-        <img class="diagram" src="../../assets/two-lsa-timeline.svg" alt="Timeline showing page LSA and oldest-unflush LSA across two dirty generations">
-        <p class="caption">The copied generation G carries 140/100; the later resident generation G+1 carries 170/170.</p>
+        <div class="eyebrow">04 · The two LSA labels</div>
+        <h2>One says “how new”; the other says “how far back”</h2>
         <table>
-          <thead><tr><th>Coordinate</th><th>Question answered</th><th>Flush use</th></tr></thead>
+          <thead><tr><th>Value</th><th>Question</th><th>Used for</th></tr></thead>
           <tbody>
-            <tr><td>Page LSA</td><td>What is the latest logged change included in these bytes?</td><td>For a logged non-temporary image, force WAL through the copied value before page-image submission.</td></tr>
-            <tr><td><code>oldest_unflush_lsa</code></td><td>What is the oldest logged change still unpropagated for this generation?</td><td>Carry the checkpoint lower-bound material with the copied generation.</td></tr>
+            <tr><td>Copied page LSA</td><td>What is the latest logged change included in these copied bytes?</td><td>Force WAL through this value before writing the copy.</td></tr>
+            <tr><td><code>oldest_unflush_lsa</code></td><td>Where did this still-unpropagated dirty run begin?</td><td>Decide whether this page belongs to checkpoint work and bound the next redo start.</td></tr>
           </tbody>
         </table>
-        <ol>
-          <li>Clean image: page LSA 80.</li>
-          <li>Log A at 100: page LSA 100, DIRTY, oldest-unflush 100.</li>
-          <li>Log B at 140: page LSA 140, oldest-unflush remains 100.</li>
-          <li>Flush G snapshots page LSA 140 and oldest-unflush 100, then clears the resident lower bound.</li>
-          <li>Log C at 170 while G is in flight: resident G+1 has page LSA 170, DIRTY, oldest-unflush 170.</li>
-        </ol>
+        <p>Example: disk has P through 80. P changes at log 100, then 140, then 170 without any completed flush. Its page LSA moves <code>100 → 140 → 170</code>. Its <code>oldest_unflush_lsa</code> stays <code>100</code>, because the change at 100 is still not represented by a completed page propagation.</p>
+        <div class="callout"><strong>Memory aid:</strong> page LSA is the <em>right edge</em> of the copied image's log history. Oldest-unflush is the <em>left edge</em> of the unpaid dirty history.</div>
       </section>
 
       <section class="section" id="oldest-unflush-purpose">
-        <div class="eyebrow">02A · Why the lower bound exists</div>
-        <h2>Checkpoint must remember where the dirty generation began</h2>
-        <p class="big-claim"><code>DIRTY</code> says that propagation is owed. The <code>page LSA</code> says how new the resident image has become. Only <code>oldest_unflush_lsa</code> preserves how far back the current unpaid generation reaches.</p>
-        <p>A checkpoint chooses a log boundary and asks the page buffer to flush eligible dirty pages whose unpropagated history reaches that boundary. It also needs the smallest lower bound among dirty pages that remain, because recovery may still have to redo from there. This is a range question—“does this dirty generation contain work at or before the boundary?”—not a latest-value question.</p>
-        <img class="diagram" src="../../assets/oldest-unflush-checkpoint.svg" alt="A page dirtied at LSAs 100 and 140, checkpoint boundary 150, and later change 170 showing why oldest-unflush 100 selects the page although page LSA is 170">
-        <p class="caption">Assume P is unfixed and otherwise flushable when the checkpoint scans it. The boundary selects the generation by its beginning; the copied page LSA still supplies the WAL force target.</p>
-        <h3>The counterexample that makes the field necessary</h3>
+        <div class="eyebrow">05 · The checkpoint question</div>
+        <h2>The boundary selects work by its beginning</h2>
+        <p>Suppose the checkpoint boundary, named <code>flush_upto_lsa</code>, is 150. The checkpoint asks: “Does this still-unpropagated dirty run reach back to 150 or earlier?”</p>
+        <img class="diagram" src="../../assets/oldest-unflush-checkpoint.svg" alt="Oldest unflush LSA 100 selecting a page for checkpoint boundary 150 even though its latest page LSA is 170">
+        <p class="caption">P is selected because <code>100 ≤ 150</code>. It writes the current image, not a historical image from 100.</p>
         <ol>
-          <li>Disk has P through LSA 80. Log A at 100 first dirties P: latest is 100 and oldest is 100.</li>
-          <li>Log B at 140 changes the same unflushed generation: latest moves to 140, but oldest remains 100.</li>
-          <li>The checkpoint chooses <code>flush_upto_lsa = 150</code>.</li>
-          <li>Before the scan, log C at 170 changes P again: latest moves to 170, while oldest remains 100 because none of A/B/C has been propagated yet.</li>
+          <li><code>oldest_unflush_lsa=100 ≤ 150</code>: this checkpoint should try to flush P.</li>
+          <li>The current copy contains changes through page LSA 170.</li>
+          <li>Before writing that copy, force WAL through 170.</li>
         </ol>
+
+        <h3>What if <code>oldest_unflush_lsa &gt; flush_upto_lsa</code>?</h3>
+        <p><strong>That is not a violation.</strong> If oldest is 200 and the checkpoint boundary is 150, this dirty run began after the checkpoint's chosen boundary. The checkpoint may skip it. Another background or pressure-driven flush may still write it early; that is safe extra work if the normal WAL rule is followed.</p>
+        <img class="diagram" src="../../assets/checkpoint-selection-vs-wal.svg" alt="Required checkpoint flush, optional newer-page flush, false checkpoint progress, and an actual WAL-order violation">
+        <p class="caption">Checkpoint selection and WAL ordering use different values. “Newer than the checkpoint boundary” does not mean “unsafe to flush.”</p>
+
+        <h3>What is actually unsafe?</h3>
         <table>
-          <thead><tr><th>Candidate test</th><th>Result</th><th>Why</th></tr></thead>
+          <thead><tr><th>Mistake</th><th>Crash consequence</th></tr></thead>
           <tbody>
-            <tr><td><code>page LSA 170 &gt; 150</code></td><td>Would skip P if misused as the checkpoint predicate.</td><td>It answers only “what is the latest logged change in these bytes?” and hides unpaid A at 100.</td></tr>
-            <tr><td><code>oldest 100 ≤ 150</code></td><td>Selects P.</td><td>The still-unpropagated generation began before the checkpoint boundary.</td></tr>
+            <tr><td>P still has unpaid oldest 100, but checkpoint records a redo start later than 100.</td><td>Recovery may begin too late and never replay the missing change at 100. Merely leaving P dirty is not itself corrupt if the returned minimum keeps redo at or before 100; the false progress claim is the dangerous part.</td></tr>
+            <tr><td>A copied page with page LSA 220 reaches page storage while durable WAL ends at 150.</td><td>The surviving page contains a change whose explaining log may be absent. This is the actual write-ahead-order violation.</td></tr>
           </tbody>
         </table>
-        <p>After selection, flush does not write an old 100-version. It copies the current generation containing A+B+C, carries oldest 100 for checkpoint accounting, and forces WAL through the copied page LSA 170 before submitting that image. The two coordinates cooperate rather than compete.</p>
-        <h3>Lifetime of the lower bound</h3>
-        <table>
-          <thead><tr><th>Moment</th><th>Resident lower bound</th><th>Meaning</th></tr></thead>
-          <tbody>
-            <tr><td>Clean generation</td><td><code>NULL</code></td><td>No logged dirty history is waiting under this field.</td></tr>
-            <tr><td>First logged dirty change</td><td>Initialize once from the new page LSA.</td><td>Marks the beginning of this unpropagated generation.</td></tr>
-            <tr><td>More changes before flush</td><td>Keep the old value.</td><td>Advancing it would forget earlier unpaid changes.</td></tr>
-            <tr><td>Flush G opens</td><td>Copy it locally, then set resident value to <code>NULL</code>.</td><td>G owns the old lower bound; a concurrent G+1 change can establish a new one.</td></tr>
-            <tr><td>Ordinary G failure</td><td>Restore the copied value.</td><td>The unpaid generation remains visible for retry and checkpoint accounting.</td></tr>
-          </tbody>
-        </table>
-        <div class="callout"><strong>Do not rename it mentally:</strong> it is not the oldest LSA ever seen by the page, not the oldest active transaction, and not a field persisted in the page header. It is volatile BCB metadata for the beginning of the current unpropagated dirty generation.</div>
-        <p class="source-note"><strong>Where the pinned source says this:</strong> the field comment defines it at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L541"><code>page_buffer.c:541</code></a>. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5041-L5071"><code>pgbuf_set_lsa()</code></a> initializes it only when <code>NULL</code>. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4172-L4186"><code>pgbuf_flush_checkpoint()</code></a> states the checkpoint goal; its <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4247-L4257"><code>4247–4257</code></a> predicate skips a dirty page only when its oldest lower bound is newer than <code>flush_upto_lsa</code>, and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4533-L4600"><code>4533–4600</code></a> revalidates and returns the smallest remaining lower bound. The log manager uses that result to establish the next redo point at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L6974-L7030"><code>log_page_buffer.c:6974–7030</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L7217-L7225"><code>7217–7225</code></a>.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> the field meaning and initialization are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L541"><code>page_buffer.c:541</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5041-L5071"><code>5041–5071</code></a>. Checkpoint selection is at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4172-L4186"><code>4172–4186</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4247-L4257"><code>4247–4257</code></a>; revalidation and the smallest remaining lower bound are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4533-L4600"><code>4533–4600</code></a>. The log manager uses the result at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L6974-L7030"><code>log_page_buffer.c:6974–7030</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L7217-L7225"><code>7217–7225</code></a>.</p>
       </section>
 
       <section class="section" id="generation">
-        <div class="eyebrow">03 · Ordinary success path</div>
-        <h2>Follow the generation, not just the BCB</h2>
+        <div class="eyebrow">06 · One ordinary flush</div>
+        <h2>Eight source steps, four human-sized actions</h2>
         <ol>
-          <li><strong>Validate identity:</strong> confirm the protected BCB still names the intended page.</li>
-          <li><strong>Open an in-flight generation:</strong> set FLUSHING and clear the old DIRTY bit so later mutation can publish a new DIRTY generation.</li>
-          <li><strong>Capture stable bytes:</strong> copy the resident image; transform the copy for TDE and reserve/copy a DWB slot when configured.</li>
-          <li><strong>Capture recovery coordinates:</strong> copy page LSA and oldest-unflush LSA; clear the resident lower bound.</li>
-          <li><strong>Release BCB protection:</strong> I/O need not hold the resident state lock.</li>
-          <li><strong>Gate by WAL:</strong> for a logged non-temporary image, force WAL through the copied page LSA.</li>
-          <li><strong>Submit the copied image:</strong> use the configured DWB or direct data-volume write path.</li>
-          <li><strong>Complete under protection:</strong> clear FLUSHING and wake waiters, or perform the post-flush handoff required under pressure.</li>
+          <li><strong>Claim the job:</strong> validate the BCB, set FLUSHING, clear the old DIRTY.</li>
+          <li><strong>Freeze G:</strong> copy the bytes, copied page LSA, and oldest-unflush LSA; clear the resident lower bound so G+1 can get its own.</li>
+          <li><strong>Send G safely:</strong> release BCB protection, force WAL through the copied page LSA, then use DWB or direct write.</li>
+          <li><strong>Close the job:</strong> reacquire protection, clear FLUSHING, and wake waiters. Do not erase a newer DIRTY.</li>
         </ol>
-        <p class="source-note"><strong>Verified mechanism:</strong> the ordinary path is pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>. The configured endpoint must be stated precisely: DWB acceptance and later home-page persistence are not the same observation.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> the ordinary path is pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>.</p>
+      </section>
+
+      <section class="section" id="copy-versus-dwb">
+        <div class="eyebrow">07 · Copy is not DWB</div>
+        <h2>DWB changes the route, not the meaning of flush</h2>
+        <p>The private copy isolates G from later writers. DWB is an optional protected destination for that copy. When DWB is unavailable or the page is temporary, the page-buffer path uses direct <code>fileio_write()</code> instead. Flush still happens, and logged non-temporary pages still obey WAL.</p>
+        <table>
+          <thead><tr><th>DWB path</th><th>Direct path</th></tr></thead>
+          <tbody>
+            <tr><td>Add copied G to DWB; later DWB processing propagates it to the home volume.</td><td>Write copied G to its home data-volume location.</td></tr>
+            <tr><td>Provides DWB torn/incomplete-page protection.</td><td>Does not provide that DWB repair source.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified mechanism:</strong> stable copy and route choice are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>; WAL gating and DWB/direct submission are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>.</p>
       </section>
 
       <section class="section" id="redirty">
-        <div class="eyebrow">04 · Concurrent re-dirty</div>
-        <h2>Success clears G's in-flight marker, not G+1's dirty debt</h2>
-        <table>
-          <thead><tr><th>Moment</th><th>Copied G</th><th>Resident G+1</th><th>BCB flags</th></tr></thead>
-          <tbody>
-            <tr><td>Before flush</td><td>Not captured</td><td>LSA 140; oldest 100</td><td>DIRTY</td></tr>
-            <tr><td>G opened</td><td>LSA 140; oldest 100</td><td>Lower bound cleared</td><td>FLUSHING; old DIRTY cleared</td></tr>
-            <tr><td>Log C at 170</td><td>Still 140/100</td><td>LSA 170; oldest 170</td><td>FLUSHING + DIRTY</td></tr>
-            <tr><td>G succeeds</td><td>Propagation complete at configured boundary</td><td>Still 170/170</td><td>DIRTY; FLUSHING cleared</td></tr>
-          </tbody>
-        </table>
-        <p>The flag algebra is deliberate: <code>pgbuf_bcb_mark_is_flushing</code> clears the captured generation's DIRTY state; <code>pgbuf_bcb_mark_was_flushed</code> clears only FLUSHING. A newer DIRTY publication survives completion.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> compare the flag helpers at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16077-L16126"><code>page_buffer.c:16077–16126</code></a>.</p>
+        <div class="eyebrow">08 · Success and failure</div>
+        <h2>Finish G without losing G+1</h2>
+        <p>On success, completion clears only FLUSHING. If a writer created G+1, its DIRTY bit and new oldest-unflush value remain for the next flush.</p>
+        <p>On ordinary DWB/direct-I/O failure, the path clears FLUSHING, restores the captured DIRTY debt and oldest-unflush lower bound, wakes waiters, and returns failure. The work remains visible and retryable.</p>
+        <div class="callout warn"><strong>Review question:</strong> after every success or failure exit, which generation owns DIRTY, which operation owns FLUSHING, and what lower bound must checkpoint still see?</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> ordinary failure reconstruction is at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>. Earlier TDE/DWB preparation returns remain routed to <code>VS-12</code> in the uncertainty registry rather than being declared a proven defect here.</p>
       </section>
 
       <section class="section" id="failure">
-        <div class="eyebrow">05 · Ordinary failure</div>
-        <h2>Rollback reconstructs retryable generation state</h2>
-        <p>If DWB addition or direct I/O fails on the ordinary post-release path, the code reacquires BCB protection, clears FLUSHING, restores DIRTY when the captured generation was dirty, restores the copied oldest-unflush LSA, wakes waiters, and returns failure.</p>
-        <div class="callout"><strong>Review invariant:</strong> after ordinary failure, the captured propagation debt must remain discoverable and retryable; no waiter should be stranded behind stale FLUSHING state.</div>
-        <p>When a concurrent G+1 exists, describe both generations and the concrete interleaving before simplifying the restored state. Do not let one scalar flag name erase two logical debts.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> ordinary unwind is pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>.</p>
-      </section>
-
-      <section class="section" id="evidence">
-        <div class="eyebrow">06 · Evidence boundary</div>
-        <h2>Say exactly what the source and experiment establish</h2>
+        <div class="eyebrow">09 · Quick checkpoint</div>
+        <h2>Answer these before reading source</h2>
         <table>
-          <thead><tr><th>Label</th><th>Safe claim</th><th>Unsafe promotion</th></tr></thead>
+          <thead><tr><th>Question</th><th>Answer</th></tr></thead>
           <tbody>
-            <tr><td>Verified mechanism</td><td>The pinned ordinary source path orders snapshot, WAL gate, submission, completion, and rollback as described.</td><td>Every early failure follows the ordinary rollback.</td></tr>
-            <tr><td>Runtime observation</td><td>The recorded experiment observed expected mutation/commit state and an accepted synchronous backup boundary.</td><td>It proved per-page WAL-before-data, DWB completion, crash recovery, or page-write counts.</td></tr>
-            <tr><td>Open finding · VS-12</td><td>Source inspection raises a concern about earlier TDE/DWB preparation returns before ordinary rollback.</td><td>Calling the concern a current production defect without reachable fault injection.</td></tr>
+            <tr><td>Boundary 150, oldest 100, page LSA 170?</td><td>Select for checkpoint; force WAL through 170; write the current copy.</td></tr>
+            <tr><td>Boundary 150, oldest 200, page LSA 220?</td><td>Checkpoint may skip. Flushing anyway is safe extra work if WAL is forced through 220.</td></tr>
+            <tr><td>What must never happen?</td><td>Claim redo may start after unpaid history, or let a page image reach storage before its copied page LSA is durable in WAL.</td></tr>
           </tbody>
         </table>
-        <p>TDE changes the copied image, not the ownership of resident plaintext. DWB protects page-image integrity but does not replace WAL or recovery. Prefer: “the page-buffer flush path completed at its configured DWB/direct-write boundary.”</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
-        <h2>Track G and G+1 without saying “the page became clean”</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="before flush the resident generation has page LSA 140, oldest-unflush LSA 100, and DIRTY -> opening G sets FLUSHING, captures 140/100, clears old DIRTY, and clears the resident lower bound -> logging 170 creates resident G+1 with page LSA 170, oldest-unflush LSA 170, and DIRTY while G remains FLUSHING -> successful completion of G clears only FLUSHING, so G+1 remains DIRTY at 170/170 -> ordinary failure restores retryable captured-generation state and wakes waiters, but a concurrent G+1 interleaving must be analyzed explicitly -> source proves the ordinary mechanism; the existing runtime observation does not prove this interleaving." data-concepts='[{"label":"pre-flush LSA state","terms":["140","100","dirty"]},{"label":"captured generation G","terms":["flushing","capture","snapshot","140","100"]},{"label":"concurrent generation G+1","terms":["170","newer","g+1","redirty","re-dirty"]},{"label":"success preserves newer DIRTY","terms":["clear","flushing","remain","dirty"]},{"label":"ordinary failure is retryable","terms":["failure","restore","retry","wake"]},{"label":"evidence boundary","terms":["source","runtime","observation","open","inference"]}]'>
+        <div class="eyebrow">10 · Retrieval practice</div>
+        <h2>Explain the two boundaries without mixing them</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it once without looking." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="flush copies one resident generation -> oldest-unflush selects whether dirty history crosses the checkpoint boundary -> copied page LSA sets how far WAL must be forced -> oldest newer than the checkpoint boundary may be skipped but is safe to flush early -> unsafe means false redo progress or page-before-WAL ordering -> concurrent G+1 remains DIRTY after G completes." data-concepts='[{"label":"flush purpose","terms":["copy","resident","propagation"]},{"label":"checkpoint selection","terms":["oldest","boundary","select"]},{"label":"WAL target","terms":["page lsa","force","wal"]},{"label":"optional extra flush","terms":["newer","skip","extra","safe"]},{"label":"actual violations","terms":["redo","late","before","violation"]},{"label":"concurrent generation","terms":["g+1","dirty","remain"]}]'>
           <h3>Prompt</h3>
-          <p>A clean page starts at LSA 80. Logs at 100 and 140 dirty it. Flush generation G begins; a writer logs at 170 while G is in flight. Predict page LSA, oldest-unflush LSA, DIRTY, and FLUSHING:</p>
-          <ol>
-            <li>just before G begins,</li>
-            <li>after G captures its image,</li>
-            <li>after the 170 mutation,</li>
-            <li>after G succeeds, and</li>
-            <li>what ordinary failure must preserve instead.</li>
-          </ol>
-          <p><strong>Your task:</strong> identify which state belongs to G versus G+1 and label each claim as source, runtime observation, inference, or open finding.</p>
-          <textarea aria-label="Your flush generation trace" placeholder="Close the timeline, then reconstruct both generations and their evidence boundaries."></textarea>
-          <button type="button" data-check>Check generation coverage</button>
-          <button type="button" class="secondary" data-reveal>Reveal model trace</button>
+          <p>Checkpoint boundary is 150. P has oldest-unflush 200 and page LSA 220. May the checkpoint skip P? May another flusher write P? If it does, how far must WAL be forced? Then contrast this with a page whose oldest-unflush is 100.</p>
+          <textarea aria-label="Your checkpoint and WAL explanation" placeholder="Explain selection first, then WAL ordering, then the failure cases."></textarea>
+          <button type="button" data-check>Check coverage</button>
+          <button type="button" class="secondary" data-reveal>Reveal model spine</button>
           <div class="feedback" aria-live="polite"></div>
         </div>
-        <p>Paste your answer into the chat. I will check generation identity, flag algebra, LSA purpose, persistence language, and evidence strength before recording mastery.</p>
+      </section>
+
+      <section class="section" id="evidence">
+        <div class="eyebrow">Evidence boundary</div>
+        <h2>What this lesson establishes</h2>
+        <p>The pinned source establishes the ordinary control flow, selection predicate, WAL gate, flag transitions, and ordinary rollback described here. It does not by itself prove physical device persistence timing or every early-error runtime effect. Name the observed boundary instead of saying only “written.”</p>
       </section>
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
-        <h2>Annotate one ordinary flush attempt</h2>
-        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>. Mark identity protection, copied bytes, copied LSAs, WAL gate, I/O boundary, success cleanup, and ordinary failure reconstruction. Then inspect the WAL gate in <code>transaction/log_page_buffer.c:4150–4189</code>.</p>
+        <h2>Read the simple model first, then trace the implementation</h2>
+        <p>Trace pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>. Mark claim, copy, WAL gate, submission, and completion. Use the <a href="../../learning/04-flush-one-generation.md">canonical Core page</a> for the full evidence boundary.</p>
         <p><a href="../reference/flush-generation-card.html">Open the printable flush-generation card →</a></p>
         <p><a href="0005-audit-a-logged-mutation.html">← Return to Lesson 0005</a> · <a href="0007-replace-one-frame.html">Continue to Lesson 0007 →</a></p>
       </section>
@@ -265,18 +195,18 @@
 
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lesson map</strong>
-      <a href="#flush-purpose">Start. What and why</a>
-      <a href="#generation-meaning">0. G, DIRTY, FLUSHING</a>
-      <a href="#why-flushing">0A. Why FLUSHING</a>
-      <a href="#copy-versus-dwb">0B. Copy versus DWB</a>
-      <a href="#moments">1. Four moments</a>
-      <a href="#lsas">2. Two LSAs</a>
-      <a href="#oldest-unflush-purpose">2A. Why oldest-unflush</a>
-      <a href="#generation">3. Ordinary path</a>
-      <a href="#redirty">4. Concurrent re-dirty</a>
-      <a href="#failure">5. Failure unwind</a>
-      <a href="#evidence">6. Evidence boundary</a>
-      <a href="#retrieval">7. Trace it back</a>
+      <a href="#flush-purpose">Start. What flush does</a>
+      <a href="#generation-meaning">1. Why copy</a>
+      <a href="#why-flushing">2. Why FLUSHING</a>
+      <a href="#moments">3. Page versus log</a>
+      <a href="#lsas">4. Two LSA labels</a>
+      <a href="#oldest-unflush-purpose">5. Checkpoint question</a>
+      <a href="#generation">6. Ordinary path</a>
+      <a href="#copy-versus-dwb">7. Copy versus DWB</a>
+      <a href="#redirty">8. Success and failure</a>
+      <a href="#failure">9. Quick checkpoint</a>
+      <a href="#retrieval">10. Practice</a>
+      <a href="#evidence">Evidence boundary</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/flush-generation-card.html">Flush-generation card</a>
@@ -286,7 +216,7 @@
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever a generation, flag transition, LSA role, persistence boundary, or evidence label is unclear.</footer>
+  <footer class="footer">Keep two questions separate: which page belongs to this checkpoint, and how far must WAL be forced for the copied image?</footer>
 </main>
 </body>
 </html>

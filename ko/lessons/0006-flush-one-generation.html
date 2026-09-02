@@ -12,281 +12,211 @@
 <main class="course-shell">
   <div class="topline"><span>CUBRID page buffer · lesson 0006</span><a href="../index.html">강의 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">Core capability · propagation</div>
-    <h1>다음 generation을 지우지 않고 한 generation flush하기</h1>
-    <p>이 lesson을 마치면 writer가 더 새로운 resident generation을 만드는 동안, 복사된 dirty generation이 WAL과 I/O를 통과하는 과정을 추적할 수 있습니다.</p>
-    <div class="pills"><span class="pill">Page LSA</span><span class="pill">Oldest-unflush LSA</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">WAL gate</span><span class="pill">Re-dirty</span></div>
+    <div class="eyebrow">핵심 역량 · propagation</div>
+    <h1>Flushing: page image 하나를 안전하게 disk 쪽으로 보내기</h1>
+    <p>먼저 목적부터 이해합니다. 그 다음 checkpoint 선택과 WAL 안전 규칙을 분리합니다.</p>
+    <div class="pills"><span class="pill">Flush</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Checkpoint</span><span class="pill">WAL</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="flush-purpose">
-        <div class="eyebrow">여기서 시작 · operation과 목적</div>
-        <h2>Flush는 volatile buffer memory 밖으로 page image 하나를 propagate합니다</h2>
-        <p class="big-claim"><strong>Flushing</strong>은 resident page의 안정적인 image를 capture하여, 필요한 WAL gate를 거쳐 persistent page storage 쪽으로 보내는 page-buffer operation입니다.</p>
-        <p>Database는 먼저 in-memory frame을 변경합니다. 이 resident image는 빠르게 접근할 수 있지만 volatile합니다. 이것만으로는 data volume에 있는 page의 home location이 갱신되지 않습니다. BCB에 <code>DIRTY</code>를 표시하는 것은 아직 끝나지 않은 propagation work를 기록하는 일이며, 이후 flush가 이 debt를 처리합니다.</p>
+        <div class="eyebrow">여기서 시작 · 강의 전체를 한 장면으로</div>
+        <h2>Memory는 바뀌었지만 disk는 아직 따라오지 못했습니다</h2>
+        <p class="big-claim"><strong>Flush</strong>란 변경된 resident page를 안정된 사본으로 만들고, 그 사본을 persistent page storage 쪽으로 보내는 일입니다.</p>
         <table>
-          <thead><tr><th>질문</th><th>답</th></tr></thead>
+          <thead><tr><th>장소</th><th>상태</th><th>중요한 이유</th></tr></thead>
           <tbody>
-            <tr><td>무엇을 복사하나요?</td><td>현재 resident page bytes를 안정적인 private image로 capture합니다. 그래서 이후 writer가 이미 submit 중인 bytes를 바꾸지 못합니다.</td></tr>
-            <tr><td>왜 flush하나요?</td><td>Page change를 volatile buffer memory 바깥으로 propagate하고, checkpoint와 shutdown의 진행을 지원하며, clean하고 unfixed인 frame이 나중에 replacement 후보가 될 수 있게 합니다.</td></tr>
-            <tr><td><code>FLUSHING</code>은 무엇인가요?</td><td>앞서 capture한 image 하나가 현재 flush path에 있다는 in-progress state입니다. Command가 아니며 현재 resident bytes가 clean하다는 증거도 아닙니다.</td></tr>
-            <tr><td>무엇이 아닌가요?</td><td>Flush는 transaction commit, unfix, eviction, page deallocation이 아닙니다. 이들은 서로 다른 lifecycle event입니다.</td></tr>
+            <tr><td>Memory의 buffer frame</td><td>새 page bytes</td><td>빠르지만 process나 machine이 volatile memory를 잃으면 함께 사라집니다.</td></tr>
+            <tr><td>Page의 home location</td><td>이전 page bytes</td><td>Durable page 사본은 아직 최신 변경을 따라오지 못했습니다.</td></tr>
+            <tr><td>BCB <code>DIRTY</code></td><td>Set</td><td>Resident 변경을 아직 전파해야 한다는 미완료 작업을 기록합니다.</td></tr>
           </tbody>
         </table>
-        <p>WAL rule은 ordering 질문에 답합니다. Logged non-temporary page라면 copied image를 포함하는 recovery log가 필요한 boundary에 먼저 도달한 뒤 page image를 submit해야 합니다. DWB가 enabled라면 incomplete/torn page write라는 별도의 integrity 질문에 답합니다. 어느 개념도 flush 자체의 정의는 아닙니다.</p>
-        <div class="callout"><strong>구체적인 결과:</strong> image capture 뒤 resident page를 바꾼 writer가 없고 submission이 성공하면, BCB는 DIRTY와 FLUSHING이 모두 꺼진 상태로 끝날 수 있습니다. Page는 여전히 resident이며, 이후 replacement 판단이 그 frame을 재사용할 수 있습니다.</div>
+        <p>Flush는 이 propagation debt를 처리합니다. Checkpoint의 recovery 범위를 줄이고, shutdown 때 dirty page를 내보내며, clean이고 unfixed인 frame이 나중에 교체될 수 있게 합니다. Flush는 commit, unfix, eviction, page 삭제가 아닙니다. Flush를 마친 page도 memory에 남을 수 있습니다.</p>
+        <div class="callout"><strong>가장 짧은 mental model:</strong> <code>DIRTY</code>는 “처리할 page 작업이 있다.” <code>FLUSHING</code>은 “복사된 version 하나가 지금 그 작업을 수행 중이다.”</div>
       </section>
 
       <section class="section" id="generation-meaning">
-        <div class="eyebrow">00 · 표기법 이해하기</div>
-        <h2><code>G</code>는 복사된 page image에 붙인 이름이며 stored counter가 아닙니다</h2>
-        <p class="big-claim"><strong>generation</strong>은 flush가 하나의 단위로 다루는 일관된 page bytes version에 붙인 reasoning label입니다.</p>
-        <p>flush가 시작되면 resident page를 복사합니다. 이 고정된 copy를 <strong>G</strong>라고 부르겠습니다. G를 쓰는 동안 writer가 아직 resident인 page를 다시 변경할 수 있습니다. 이렇게 더 새로워진 resident bytes를 <strong>G+1</strong>이라고 부릅니다. source에는 <code>generation</code>, <code>G</code>, <code>G+1</code>이라는 field가 없습니다. 같은 logical page의 두 version을 머릿속에서 분리하려고 쓰는 label입니다.</p>
+        <div class="eyebrow">01 · 왜 사본을 만드나?</div>
+        <h2>Writer가 계속 진행할 수 있어야 합니다</h2>
+        <p>Flush는 현재 resident bytes를 private memory에 복사합니다. 이 고정된 사본을 <strong>G</strong>라고 부르겠습니다. 사본을 만든 뒤 다른 writer가 resident page를 다시 변경할 수 있습니다. 이 더 새로운 resident bytes를 <strong>G+1</strong>이라고 부르겠습니다.</p>
+        <img class="diagram" src="../../assets/two-lsa-timeline.svg" alt="복사된 generation G와 더 새로운 resident generation G plus one">
+        <p class="caption"><code>G</code>와 <code>G+1</code>은 설명을 위한 이름이지 BCB에 저장되는 counter가 아닙니다.</p>
         <table>
-          <thead><tr><th>대상</th><th>무엇인가</th><th>예</th></tr></thead>
+          <thead><tr><th>상태</th><th>쉬운 의미</th></tr></thead>
           <tbody>
-            <tr><td>Generation G</td><td>현재 flush 중인 page-image copy의 conceptual identity.</td><td>복사된 bytes에는 LSA 140까지의 logged change가 들어 있습니다.</td></tr>
-            <tr><td>Generation G+1</td><td>G를 복사한 뒤 변경된 resident bytes의 conceptual identity.</td><td>writer가 LSA 170에서 더 나중 change를 적용합니다.</td></tr>
-            <tr><td>Page LSA</td><td>page state에 실제로 저장되는 log address로, 해당 bytes에 포함된 가장 최근 logged change를 나타냅니다.</td><td>G는 140, G+1은 170을 가집니다.</td></tr>
+            <tr><td><code>DIRTY=1, FLUSHING=0</code></td><td>Resident page를 flush해야 합니다.</td></tr>
+            <tr><td><code>DIRTY=0, FLUSHING=1</code></td><td>사본 G가 이동 중이고, 아직 그 이후 resident 변경은 없습니다.</td></tr>
+            <tr><td><code>DIRTY=1, FLUSHING=1</code></td><td>G가 이동 중이며 더 새로운 resident G+1도 나중에 flush해야 합니다.</td></tr>
+            <tr><td><code>DIRTY=0, FLUSHING=0</code></td><td>Resident propagation debt도, 이동 중인 사본도 없습니다.</td></tr>
           </tbody>
         </table>
-        <p><strong>generation과 LSA가 다른 이유:</strong> 여러 logged modification이 page LSA를 100에서 140으로 옮겨도 아직 복사되지 않은 같은 resident generation에 속할 수 있습니다. 반대로 새 log address로 표현되지 않는 change라도 copy 이후의 새 generation을 만들 수 있습니다. Generation은 page-image version을 구분하고, LSA는 recovery history의 위치를 가리킵니다.</p>
-
-        <h3>DIRTY와 FLUSHING은 서로 독립적인 yes/no 질문입니다</h3>
-        <table>
-          <thead><tr><th>DIRTY</th><th>FLUSHING</th><th>의미</th></tr></thead>
-          <tbody>
-            <tr><td>0</td><td>0</td><td>propagation을 기다리는 resident change도, in flight 상태인 copied image도 없습니다.</td></tr>
-            <tr><td>1</td><td>0</td><td>resident page에 propagation debt가 있어 이후 flush가 필요합니다.</td></tr>
-            <tr><td>0</td><td>1</td><td>copy G가 in flight이고, copy 뒤 resident page는 바뀌지 않았습니다.</td></tr>
-            <tr><td>1</td><td>1</td><td>copy G가 in flight인 상태와 resident page의 재변경이 <em>동시에</em> 존재합니다. G+1도 나중에 flush해야 합니다.</td></tr>
-          </tbody>
-        </table>
-        <p><strong>DIRTY는 to-do flag입니다.</strong> 현재 resident bytes에 완료된 propagation으로 아직 처리하지 못한 change가 있다는 뜻입니다. <strong>FLUSHING은 in-progress flag입니다.</strong> 앞서 capture한 copy가 아직 flush path를 지나고 있다는 뜻입니다. FLUSHING이 resident page를 고정시키는 것은 아닙니다.</p>
-        <div class="callout"><strong>FLUSHING을 설정할 때 DIRTY를 지우는 이유는?</strong> G의 기존 debt는 in-flight operation으로 옮겨 갔습니다. DIRTY를 지우면 깨끗한 signal slot이 생깁니다. writer가 resident page를 바꾸면 DIRTY를 다시 설정합니다. 그러면 <code>DIRTY + FLUSHING</code>은 “이전 copy는 in flight이고, 더 새로운 resident work가 대기 중”이라는 뜻이 됩니다.</div>
       </section>
 
       <section class="section" id="why-flushing">
-        <div class="eyebrow">00A · 두 번째 flag가 필요한 이유</div>
-        <h2>DIRTY는 pending resident work를, FLUSHING은 captured work를 조정합니다</h2>
-        <p class="big-claim">“copy G가 in flight”와 “resident G+1을 다시 flush해야 함”은 동시에 참일 수 있습니다. Bit 하나로는 두 사실을 정확히 나타낼 수 없습니다.</p>
-        <table>
-          <thead><tr><th><code>FLUSHING</code>이 필요한 이유</th><th><code>DIRTY</code>만 있을 때 생기는 문제</th></tr></thead>
-          <tbody>
-            <tr><td>Concurrent re-dirty 보존</td><td>Completion이 DIRTY를 단순히 지우면 writer가 더 새롭게 publish한 dirty state를 지울 수 있습니다. Flag가 둘이면 G completion은 FLUSHING만 지우고 G+1 DIRTY를 남깁니다.</td></tr>
-            <tr><td>Overlapping flush 배제</td><td>두 번째 flusher가 새로 DIRTY가 된 G+1을 보고, 더 오래된 G가 in flight인 동안 submit할 수 있습니다. Storage completion 순서가 바뀌면 old G가 newer G+1을 덮어쓸 수 있습니다.</td></tr>
-            <tr><td>Synchronous caller 조정</td><td>반드시 기다려야 하는 caller가 “propagation이 없음”과 “다른 thread가 이미 propagation을 소유함”을 구분할 수 없습니다. FLUSHING을 보면 새 flush를 시작하지 않고 BCB wait queue에서 기다립니다.</td></tr>
-            <tr><td>Success 또는 failure의 명시적 종료</td><td>Completion 때 지울 state와 깨울 waiter가 필요합니다. Failure는 FLUSHING을 지우고 captured dirty debt/lower bound를 복구하여 retry 가능하게 만듭니다.</td></tr>
-          </tbody>
-        </table>
-        <p>다음 thought experiment를 사용하세요. <code>DIRTY=1, FLUSHING=0</code>에서 시작합니다. Flusher F가 G를 capture하고 <code>DIRTY=0, FLUSHING=1</code>을 publish합니다. 이제 old debt는 F가 소유합니다. Writer W가 resident bytes를 변경하여 <code>DIRTY=1, FLUSHING=1</code>을 publish합니다. G는 여전히 F가 소유하고 G+1은 새 work입니다. 성공하면 F는 FLUSHING만 0으로 바꿉니다. 남은 DIRTY는 여전히 G+1을 flush해야 한다는 뜻입니다.</p>
-        <div class="callout warn"><strong>FLUSHING은 writer를 freeze하지 않습니다.</strong> Unsafe competing flush ownership을 막고 wait/completion을 보이게 하면서, DIRTY는 이후 resident generation을 기록할 수 있게 비워 둡니다.</div>
-        <p class="source-note"><strong>Verified mechanism:</strong> safe flush가 concurrent flush를 거절하고 필요한 경우 synchronous waiter를 queue하는 동작은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8809-L8901"><code>page_buffer.c:8809–8901</code></a>에 있습니다. Source는 <code>8839–8847</code>에서 out-of-order old-over-new write를 명시합니다. Flag transition은 <code>16077–16137</code>, completion/failure wakeup은 <code>10908–10951</code>에 있습니다.</p>
-      </section>
-
-      <section class="section" id="copy-versus-dwb">
-        <div class="eyebrow">00B · copy와 destination 구분</div>
-        <h2>Resident page를 복사한다는 말은 “DWB에 쓴다”는 뜻이 아닙니다</h2>
-        <p class="big-claim">Flush는 먼저 private memory에 안정적인 page image를 만듭니다. DWB는 그 copied image가 갈 수 있는 destination 하나이지 copy operation 자체가 아닙니다.</p>
-        <p><code>pgbuf_bcb_flush_with_wal()</code>의 <code>page_buf</code>는 local aligned buffer입니다. TDE가 필요하면 resident page를 이 buffer로 encrypt하고, 아니면 <code>memcpy</code>로 복사합니다. 이렇게 하면 BCB protection을 놓은 뒤 resident bytes가 G+1으로 바뀌어도 in-flight bytes G는 분리되어 있습니다.</p>
-        <table>
-          <thead><tr><th>Configuration 판단</th><th>공통으로 일어나는 일</th><th>WAL gate 뒤 copied G가 가는 곳</th></tr></thead>
-          <tbody>
-            <tr><td>DWB가 created 상태이고 non-temporary page</td><td>Stable image copy, LSA capture, 필요한 WAL force.</td><td><code>dwb_add_page()</code>가 image를 DWB slot에 받아들이고, 이후 DWB가 보호된 home-volume propagation을 조정합니다.</td></tr>
-            <tr><td>DWB가 disabled/not created이거나 temporary page</td><td>Stable-image 분리는 그대로 일어납니다. Logged non-temporary page는 여전히 WAL gate를 지킵니다.</td><td>Page-buffer path가 page의 home data-volume location에 <code>fileio_write()</code>를 직접 호출합니다.</td></tr>
-          </tbody>
-        </table>
-        <div class="callout warn"><strong>DWB가 disabled라면:</strong> flush가 멈추는 것도 아니고 이 DWB mechanism에 의해 page를 두 번 쓰는 것도 아닙니다. 대신 direct-write branch를 탑니다. 없어지는 것은 DWB의 torn/incomplete page-image protection과 startup repair source입니다. WAL은 별개의 ordering과 recovery 역할을 계속 가집니다.</div>
-        <p>Pinned code는 BCB protection을 놓기 전에 <code>uses_dwb = dwb_is_created() &amp;&amp; !is_temp</code>로 판단합니다. DWB에 page를 추가하는 동안 DWB가 사라지면 BCB protection을 다시 얻고 resident page를 다시 복사한 뒤 DWB 없이 retry하는 test-oriented runtime transition도 있습니다. Source comment는 live activation/deactivation에 추가 작업이 필요하다고 명시하므로 runtime toggling을 지원되는 monitoring 또는 administration protocol처럼 설명하면 안 됩니다.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> local copy와 branch selection은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>, WAL gating과 DWB/direct submission은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>에 있습니다. DWB recovery behavior는 별도의 startup mechanism입니다.</p>
+        <div class="eyebrow">02 · DIRTY 하나로 부족한 이유</div>
+        <h2>두 사실이 동시에 참일 수 있습니다</h2>
+        <p>Flush가 시작되면 <code>FLUSHING</code>을 표시하고 기존 <code>DIRTY</code>를 지웁니다. 작업을 잃은 것이 아닙니다. 이제 flusher가 사본 G를 맡았습니다. 비워 둔 DIRTY bit는 다음 writer를 위한 새 신호 칸이 됩니다.</p>
+        <ol>
+          <li>G 시작: <code>DIRTY=0, FLUSHING=1</code>.</li>
+          <li>Writer가 resident page를 변경: <code>DIRTY=1, FLUSHING=1</code>.</li>
+          <li>G 성공: <code>FLUSHING</code>만 지웁니다.</li>
+          <li>남아 있는 <code>DIRTY=1</code>은 G+1을 한 번 더 flush해야 한다고 정확히 알려 줍니다.</li>
+        </ol>
+        <p><code>FLUSHING</code>은 두 번째 flush가 경쟁해서 시작되는 것도 막습니다. 그렇지 않으면 이전 write G가 더 새로운 write G+1보다 늦게 끝나 G+1을 덮어쓸 수 있습니다. Synchronous caller는 또 시작하지 않고 현재 flusher를 기다릴 수 있습니다.</p>
+        <p class="source-note"><strong>검증된 mechanism:</strong> concurrent flush 배제와 wait는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8809-L8901"><code>page_buffer.c:8809–8901</code></a>, flag helper는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16077-L16126"><code>16077–16126</code></a>입니다.</p>
       </section>
 
       <section class="section" id="moments">
-        <div class="eyebrow">01 · boundary에 이름 붙이기</div>
-        <h2>“썼다”라는 말 뒤에는 서로 다른 네 moment가 숨어 있습니다</h2>
-        <img class="diagram" src="../../assets/durability-chain.svg" alt="write permission부터 page propagation까지 서로 다른 네 boundary">
-        <p class="caption">더 강한 evidence 없이 claim을 이 chain의 오른쪽으로 옮기지 마세요.</p>
-        <table>
-          <thead><tr><th>Moment</th><th>새로 성립하는 것</th><th>따라오지 않는 것</th></tr></thead>
-          <tbody>
-            <tr><td>Write permission</td><td>WRITE latch가 exclusive resident-byte mutation을 허용합니다.</td><td>Recoverability 또는 persistence.</td></tr>
-            <tr><td>Recoverability</td><td>적절한 log evidence가 존재하고 page LSA가 logged image를 반영합니다.</td><td>Commit WAL 또는 home page가 durable하다는 사실.</td></tr>
-            <tr><td>Transaction durability</td><td>Commit WAL이 durability boundary에 도달했습니다.</td><td>변경된 모든 page가 home location에 있다는 사실.</td></tr>
-            <tr><td>Page propagation</td><td>복사된 generation이 설정된 DWB/direct-write boundary에 도달했습니다.</td><td>동시에 변경된 resident generation이 clean하다는 사실.</td></tr>
-          </tbody>
-        </table>
-        <p class="big-claim">flush가 완료하는 것은 복사된 generation이지, “영원히 변하지 않는 page”가 아닙니다.</p>
+        <div class="eyebrow">03 · 이 모든 것을 “write됐다”고 부르지 않기</div>
+        <h2>Log durability와 page propagation은 다릅니다</h2>
+        <img class="diagram" src="../../assets/durability-chain.svg" alt="Mutation, recovery logging, commit durability, page propagation의 서로 다른 경계">
+        <p class="caption">Transaction은 변경된 모든 page가 home location에 도착하기 전에 commit할 수 있습니다. WAL이 이것을 안전하게 만듭니다.</p>
+        <p>Flush는 page image에 관한 일입니다. WAL은 그 image를 설명하는 log에 관한 일입니다. Logged non-temporary page라면, 복사된 page image를 제출하기 <em>전에</em> log를 충분히 먼저 force해야 합니다.</p>
       </section>
 
       <section class="section" id="lsas">
-        <div class="eyebrow">02 · 두 LSA 질문</div>
-        <h2>포함된 최신 change와 propagate하지 않은 가장 오래된 change는 서로 다른 coordinate입니다</h2>
-        <img class="diagram" src="../../assets/two-lsa-timeline.svg" alt="두 dirty generation의 page LSA와 oldest-unflush LSA timeline">
-        <p class="caption">복사된 generation G는 140/100을, 이후 resident generation G+1은 170/170을 가집니다.</p>
+        <div class="eyebrow">04 · 두 LSA label</div>
+        <h2>하나는 “얼마나 최신인가”, 다른 하나는 “얼마나 과거까지 걸치는가”</h2>
         <table>
-          <thead><tr><th>Coordinate</th><th>답하는 질문</th><th>Flush에서의 용도</th></tr></thead>
+          <thead><tr><th>값</th><th>질문</th><th>용도</th></tr></thead>
           <tbody>
-            <tr><td>Page LSA</td><td>이 bytes에 포함된 가장 최근 logged change는 무엇인가?</td><td>logged non-temporary image라면 page-image를 submit하기 전에 복사된 값까지 WAL을 force합니다.</td></tr>
-            <tr><td><code>oldest_unflush_lsa</code></td><td>이 generation에서 아직 propagate하지 않은 가장 오래된 logged change는 무엇인가?</td><td>checkpoint lower-bound material을 복사된 generation과 함께 운반합니다.</td></tr>
+            <tr><td>복사된 page LSA</td><td>복사된 bytes에 포함된 가장 최근 logged change는 무엇인가?</td><td>사본을 write하기 전에 WAL을 이 값까지 force합니다.</td></tr>
+            <tr><td><code>oldest_unflush_lsa</code></td><td>아직 전파되지 않은 이 dirty 구간은 어디서 시작했는가?</td><td>이 page가 checkpoint 대상인지 결정하고 다음 redo 시작점을 제한합니다.</td></tr>
           </tbody>
         </table>
-        <ol>
-          <li>Clean image: page LSA 80.</li>
-          <li>100에서 Log A: page LSA 100, DIRTY, oldest-unflush 100.</li>
-          <li>140에서 Log B: page LSA 140, oldest-unflush는 100 유지.</li>
-          <li>Flush G가 page LSA 140과 oldest-unflush 100을 snapshot한 뒤 resident lower bound를 지웁니다.</li>
-          <li>G가 in flight인 동안 170에서 Log C: resident G+1은 page LSA 170, DIRTY, oldest-unflush 170.</li>
-        </ol>
+        <p>예: disk의 P는 80까지 반영되어 있습니다. 완료된 flush 없이 P가 log 100, 140, 170에서 바뀝니다. Page LSA는 <code>100 → 140 → 170</code>으로 이동합니다. <code>oldest_unflush_lsa</code>는 <code>100</code>에 남습니다. 100의 변경이 아직 완료된 page propagation에 포함되지 않았기 때문입니다.</p>
+        <div class="callout"><strong>기억법:</strong> page LSA는 복사된 image가 포함한 log history의 <em>오른쪽 끝</em>입니다. Oldest-unflush는 아직 갚지 않은 dirty history의 <em>왼쪽 끝</em>입니다.</div>
       </section>
 
       <section class="section" id="oldest-unflush-purpose">
-        <div class="eyebrow">02A · Lower bound가 존재하는 이유</div>
-        <h2>Checkpoint는 dirty generation이 어디서 시작했는지 기억해야 합니다</h2>
-        <p class="big-claim"><code>DIRTY</code>는 propagation debt가 있다는 사실만 말합니다. <code>page LSA</code>는 resident image가 얼마나 최신인지 말합니다. <code>oldest_unflush_lsa</code>만 현재 갚지 않은 generation이 과거의 어디까지 걸쳐 있는지 보존합니다.</p>
-        <p>Checkpoint는 log boundary를 하나 정하고, 아직 propagate하지 않은 history가 그 boundary에 닿는 eligible dirty page를 page buffer에 flush하라고 요청합니다. 또한 남은 dirty page 중 가장 작은 lower bound가 필요합니다. Recovery가 그 지점부터 다시 redo해야 할 수 있기 때문입니다. 이는 “이 dirty generation에 boundary 이전 또는 같은 시점의 work가 있는가?”라는 range 질문이지 latest-value 질문이 아닙니다.</p>
-        <img class="diagram" src="../../assets/oldest-unflush-checkpoint.svg" alt="LSA 100과 140에서 dirty된 page, checkpoint boundary 150, 이후 change 170을 통해 page LSA가 170이어도 oldest-unflush 100이 page를 선택하는 이유를 보여 주는 그림">
-        <p class="caption">Checkpoint가 P를 scan할 때 P는 unfixed이고 그 밖의 flush 조건도 만족한다고 가정합니다. Boundary는 generation의 시작점으로 대상을 고르고, 복사한 page LSA는 여전히 WAL force target을 제공합니다.</p>
-        <h3>이 field가 꼭 필요한 반례</h3>
+        <div class="eyebrow">05 · Checkpoint 질문</div>
+        <h2>Boundary는 작업의 시작점을 보고 대상을 고릅니다</h2>
+        <p><code>flush_upto_lsa</code>라는 checkpoint boundary가 150이라고 합시다. Checkpoint는 “아직 전파되지 않은 이 dirty 구간이 150 또는 그 이전까지 걸쳐 있는가?”라고 묻습니다.</p>
+        <img class="diagram" src="../../assets/oldest-unflush-checkpoint.svg" alt="최신 page LSA가 170이어도 oldest unflush LSA 100이 checkpoint boundary 150의 대상으로 page를 선택하는 모습">
+        <p class="caption"><code>100 ≤ 150</code>이므로 P를 선택합니다. 100 시점의 과거 image가 아니라 현재 image를 write합니다.</p>
         <ol>
-          <li>Disk의 P는 LSA 80까지 반영되어 있습니다. 100의 Log A가 P를 처음 dirty로 만듭니다. Latest와 oldest는 모두 100입니다.</li>
-          <li>140의 Log B가 같은 unflushed generation을 변경합니다. Latest는 140으로 움직이지만 oldest는 100에 남습니다.</li>
-          <li>Checkpoint가 <code>flush_upto_lsa = 150</code>을 정합니다.</li>
-          <li>Scan 전에 170의 Log C가 P를 다시 변경합니다. Latest는 170으로 움직이지만 A/B/C 중 어느 것도 propagate되지 않았으므로 oldest는 100에 남습니다.</li>
+          <li><code>oldest_unflush_lsa=100 ≤ 150</code>: 이 checkpoint는 P를 flush하려고 해야 합니다.</li>
+          <li>현재 사본은 page LSA 170까지의 변경을 포함합니다.</li>
+          <li>그 사본을 write하기 전에 WAL을 170까지 force합니다.</li>
         </ol>
+
+        <h3><code>oldest_unflush_lsa &gt; flush_upto_lsa</code>이면 어떻게 되나?</h3>
+        <p><strong>이것은 위반이 아닙니다.</strong> Oldest가 200이고 checkpoint boundary가 150이면 이 dirty 구간은 checkpoint가 정한 boundary보다 나중에 시작했습니다. Checkpoint는 이 page를 건너뛸 수 있습니다. 다른 background 또는 pressure-driven flush가 미리 write해도 됩니다. 정상 WAL 규칙을 지킨다면 안전한 추가 작업입니다.</p>
+        <img class="diagram" src="../../assets/checkpoint-selection-vs-wal.svg" alt="필수 checkpoint flush, 선택적인 더 최신 page flush, 잘못된 checkpoint 진전, 실제 WAL 순서 위반">
+        <p class="caption">Checkpoint 선택과 WAL 순서는 서로 다른 값을 사용합니다. “Checkpoint boundary보다 최신”이라는 말은 “flush하면 위험하다”는 뜻이 아닙니다.</p>
+
+        <h3>실제로 위험한 것은 무엇인가?</h3>
         <table>
-          <thead><tr><th>Candidate test</th><th>결과</th><th>이유</th></tr></thead>
+          <thead><tr><th>실수</th><th>Crash 결과</th></tr></thead>
           <tbody>
-            <tr><td><code>page LSA 170 &gt; 150</code></td><td>이를 checkpoint predicate로 잘못 사용하면 P를 skip합니다.</td><td>“이 bytes의 가장 최신 logged change는 무엇인가?”에만 답하므로 100의 unpaid A를 숨깁니다.</td></tr>
-            <tr><td><code>oldest 100 ≤ 150</code></td><td>P를 선택합니다.</td><td>아직 propagate하지 않은 generation이 checkpoint boundary 이전에 시작했습니다.</td></tr>
+            <tr><td>P에 아직 oldest 100의 미완료 작업이 있는데 checkpoint가 redo 시작점을 100보다 뒤라고 기록합니다.</td><td>Recovery가 너무 늦게 시작해 100의 누락된 변경을 replay하지 않을 수 있습니다. P를 dirty 상태로 남긴 것만으로 곧바로 corruption은 아닙니다. 반환된 minimum이 redo를 100 이하로 유지한다면 안전합니다. 위험한 것은 거짓 진전 주장입니다.</td></tr>
+            <tr><td>Page LSA 220인 사본이 page storage에 도착했지만 durable WAL은 150까지만 있습니다.</td><td>살아남은 page에 그 변경을 설명하는 log가 없을 수 있습니다. 이것이 실제 write-ahead 순서 위반입니다.</td></tr>
           </tbody>
         </table>
-        <p>선택한 뒤 flush가 과거의 100-version을 쓰는 것은 아닙니다. A+B+C를 포함한 현재 generation을 복사하고 checkpoint accounting을 위해 oldest 100을 운반하며, image를 submit하기 전에 복사한 page LSA 170까지 WAL을 force합니다. 두 coordinate는 경쟁하지 않고 협력합니다.</p>
-        <h3>Lower bound의 lifetime</h3>
-        <table>
-          <thead><tr><th>Moment</th><th>Resident lower bound</th><th>의미</th></tr></thead>
-          <tbody>
-            <tr><td>Clean generation</td><td><code>NULL</code></td><td>이 field 아래에서 기다리는 logged dirty history가 없습니다.</td></tr>
-            <tr><td>첫 logged dirty change</td><td>새 page LSA로 한 번 initialize합니다.</td><td>이 unpropagated generation의 시작점을 표시합니다.</td></tr>
-            <tr><td>Flush 전 추가 change</td><td>이전 값을 유지합니다.</td><td>앞으로 옮기면 더 오래된 unpaid change를 잊습니다.</td></tr>
-            <tr><td>Flush G 시작</td><td>Local로 복사한 뒤 resident 값을 <code>NULL</code>로 만듭니다.</td><td>G가 이전 lower bound를 소유하고 concurrent G+1 change는 새 값을 세울 수 있습니다.</td></tr>
-            <tr><td>Ordinary G failure</td><td>복사해 둔 값을 복구합니다.</td><td>갚지 않은 generation이 retry와 checkpoint accounting에 계속 보입니다.</td></tr>
-          </tbody>
-        </table>
-        <div class="callout"><strong>이름을 다르게 해석하면 안 됩니다.</strong> Page가 지금까지 본 가장 오래된 LSA도, 가장 오래된 active transaction도, page header에 persist하는 field도 아닙니다. 현재 unpropagated dirty generation의 시작점을 나타내는 volatile BCB metadata입니다.</div>
-        <p class="source-note"><strong>Pinned source에서 말하는 위치:</strong> field comment는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L541"><code>page_buffer.c:541</code></a>에서 이를 정의합니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5041-L5071"><code>pgbuf_set_lsa()</code></a>는 값이 <code>NULL</code>일 때만 initialize합니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4172-L4186"><code>pgbuf_flush_checkpoint()</code></a>는 checkpoint goal을 설명합니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4247-L4257"><code>4247–4257</code></a>의 predicate는 oldest lower bound가 <code>flush_upto_lsa</code>보다 새로운 경우에만 dirty page를 skip하며, <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4533-L4600"><code>4533–4600</code></a>은 이를 재검증하고 남은 lower bound 중 가장 작은 값을 반환합니다. Log manager는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L6974-L7030"><code>log_page_buffer.c:6974–7030</code></a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L7217-L7225"><code>7217–7225</code></a>에서 이 결과로 다음 redo point를 정합니다.</p>
+        <p class="source-note"><strong>검증된 mechanism:</strong> field 의미와 초기화는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L541"><code>page_buffer.c:541</code></a> 및 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5041-L5071"><code>5041–5071</code></a>입니다. Checkpoint 선택은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4172-L4186"><code>4172–4186</code></a> 및 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4247-L4257"><code>4247–4257</code></a>, revalidation과 남은 값 중 가장 작은 lower bound는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4533-L4600"><code>4533–4600</code></a>입니다. Log manager는 이 결과를 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L6974-L7030"><code>log_page_buffer.c:6974–7030</code></a> 및 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L7217-L7225"><code>7217–7225</code></a>에서 사용합니다.</p>
       </section>
 
       <section class="section" id="generation">
-        <div class="eyebrow">03 · Ordinary success path</div>
-        <h2>BCB만 보지 말고 generation을 따라갑니다</h2>
+        <div class="eyebrow">06 · 평범한 flush 하나</div>
+        <h2>Source의 여덟 단계를 사람이 이해할 네 동작으로</h2>
         <ol>
-          <li><strong>Validate identity:</strong> 보호된 BCB가 여전히 의도한 page를 가리키는지 확인합니다.</li>
-          <li><strong>Open an in-flight generation:</strong> FLUSHING을 설정하고 이전 DIRTY bit를 지워 이후 mutation이 새 DIRTY generation을 publish할 수 있게 합니다.</li>
-          <li><strong>Capture stable bytes:</strong> resident image를 복사합니다. TDE를 위해 copy를 transform하고, 설정되어 있다면 DWB slot을 reserve/copy합니다.</li>
-          <li><strong>Capture recovery coordinates:</strong> page LSA와 oldest-unflush LSA를 복사하고 resident lower bound를 지웁니다.</li>
-          <li><strong>Release BCB protection:</strong> I/O 동안 resident state lock을 계속 잡고 있을 필요는 없습니다.</li>
-          <li><strong>Gate by WAL:</strong> logged non-temporary image라면 복사된 page LSA까지 WAL을 force합니다.</li>
-          <li><strong>Submit the copied image:</strong> 설정된 DWB 또는 direct data-volume write path를 사용합니다.</li>
-          <li><strong>Complete under protection:</strong> FLUSHING을 지우고 waiter를 깨우거나, pressure 상황에서 필요한 post-flush handoff를 수행합니다.</li>
+          <li><strong>작업을 맡는다:</strong> BCB를 검증하고 FLUSHING을 set하고 기존 DIRTY를 clear합니다.</li>
+          <li><strong>G를 고정한다:</strong> bytes, 복사된 page LSA, oldest-unflush LSA를 복사합니다. G+1이 자기 값을 가질 수 있도록 resident lower bound를 clear합니다.</li>
+          <li><strong>G를 안전하게 보낸다:</strong> BCB protection을 놓고, 복사된 page LSA까지 WAL을 force한 다음 DWB 또는 direct write를 사용합니다.</li>
+          <li><strong>작업을 닫는다:</strong> protection을 다시 잡고 FLUSHING을 clear하고 waiter를 깨웁니다. 더 새로운 DIRTY를 지우면 안 됩니다.</li>
         </ol>
-        <p class="source-note"><strong>Verified mechanism:</strong> ordinary path는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>에 있습니다. 설정된 endpoint를 정확히 표현해야 합니다. DWB acceptance와 이후 home-page persistence는 같은 observation이 아닙니다.</p>
+        <p class="source-note"><strong>검증된 mechanism:</strong> ordinary path는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>입니다.</p>
+      </section>
+
+      <section class="section" id="copy-versus-dwb">
+        <div class="eyebrow">07 · Copy는 DWB가 아닙니다</div>
+        <h2>DWB는 경로를 바꾸지만 flush의 의미는 바꾸지 않습니다</h2>
+        <p>Private copy는 G를 이후 writer와 분리합니다. DWB는 그 사본이 갈 수 있는 선택적인 보호 destination입니다. DWB를 사용할 수 없거나 temporary page이면 page-buffer path는 대신 direct <code>fileio_write()</code>를 사용합니다. Flush는 계속 일어나며 logged non-temporary page는 계속 WAL을 지킵니다.</p>
+        <table>
+          <thead><tr><th>DWB path</th><th>Direct path</th></tr></thead>
+          <tbody>
+            <tr><td>복사된 G를 DWB에 추가하고, 이후 DWB processing이 home volume으로 전파합니다.</td><td>복사된 G를 home data-volume location에 write합니다.</td></tr>
+            <tr><td>DWB의 torn/incomplete-page 보호를 제공합니다.</td><td>그 DWB repair source를 제공하지 않습니다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>검증된 mechanism:</strong> stable copy와 route 선택은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>, WAL gating과 DWB/direct submission은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>입니다.</p>
       </section>
 
       <section class="section" id="redirty">
-        <div class="eyebrow">04 · Concurrent re-dirty</div>
-        <h2>성공은 G의 in-flight marker만 지우며 G+1의 dirty debt는 지우지 않습니다</h2>
-        <table>
-          <thead><tr><th>Moment</th><th>Copied G</th><th>Resident G+1</th><th>BCB flag</th></tr></thead>
-          <tbody>
-            <tr><td>Flush 전</td><td>capture 전</td><td>LSA 140; oldest 100</td><td>DIRTY</td></tr>
-            <tr><td>G를 연 뒤</td><td>LSA 140; oldest 100</td><td>Lower bound 지움</td><td>FLUSHING; 이전 DIRTY 지움</td></tr>
-            <tr><td>170에서 Log C</td><td>여전히 140/100</td><td>LSA 170; oldest 170</td><td>FLUSHING + DIRTY</td></tr>
-            <tr><td>G 성공</td><td>설정된 boundary에서 propagation 완료</td><td>여전히 170/170</td><td>DIRTY; FLUSHING 지움</td></tr>
-          </tbody>
-        </table>
-        <p>이 flag algebra는 의도적으로 설계되었습니다. <code>pgbuf_bcb_mark_is_flushing</code>은 capture한 generation의 DIRTY state를 지우고, <code>pgbuf_bcb_mark_was_flushed</code>는 FLUSHING만 지웁니다. 더 새로운 DIRTY publication은 completion 뒤에도 남습니다.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16077-L16126"><code>page_buffer.c:16077–16126</code></a>의 flag helper를 비교하세요.</p>
+        <div class="eyebrow">08 · 성공과 실패</div>
+        <h2>G+1을 잃지 않고 G를 끝냅니다</h2>
+        <p>성공하면 completion은 FLUSHING만 clear합니다. Writer가 G+1을 만들었다면 그 DIRTY bit와 새 oldest-unflush 값은 다음 flush를 위해 남습니다.</p>
+        <p>Ordinary DWB/direct-I/O failure에서는 FLUSHING을 clear하고, 복사해 둔 DIRTY debt와 oldest-unflush lower bound를 복원하고, waiter를 깨운 뒤 failure를 반환합니다. 작업은 계속 보이고 재시도할 수 있습니다.</p>
+        <div class="callout warn"><strong>Review 질문:</strong> 모든 success 또는 failure exit 뒤에 어느 generation이 DIRTY를 소유하는가, 어느 operation이 FLUSHING을 소유하는가, checkpoint가 어떤 lower bound를 계속 볼 수 있어야 하는가?</div>
+        <p class="source-note"><strong>검증된 mechanism:</strong> ordinary failure reconstruction은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>입니다. 더 이른 TDE/DWB preparation return은 여기서 입증된 defect라고 선언하지 않고 uncertainty registry의 <code>VS-12</code>로 보냅니다.</p>
       </section>
 
       <section class="section" id="failure">
-        <div class="eyebrow">05 · Ordinary failure</div>
-        <h2>Rollback은 retry할 수 있는 generation state를 복구합니다</h2>
-        <p>일반 post-release path에서 DWB addition이나 direct I/O가 실패하면 code는 BCB protection을 다시 얻고 FLUSHING을 지웁니다. capture한 generation이 dirty였다면 DIRTY를 복구하고, 복사해 둔 oldest-unflush LSA도 복구한 뒤 waiter를 깨우고 failure를 반환합니다.</p>
-        <div class="callout"><strong>Review invariant:</strong> ordinary failure 뒤에도 capture된 propagation debt를 발견해 retry할 수 있어야 하며, stale FLUSHING state 뒤에 waiter가 갇혀서는 안 됩니다.</div>
-        <p>동시에 G+1이 있다면 복구된 state를 단순화하기 전에 두 generation과 실제 interleaving을 모두 설명하세요. scalar flag 하나의 이름 때문에 두 logical debt를 지워 버리면 안 됩니다.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> ordinary unwind는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>에 있습니다.</p>
-      </section>
-
-      <section class="section" id="evidence">
-        <div class="eyebrow">06 · Evidence boundary</div>
-        <h2>source와 experiment가 무엇을 입증하는지 정확히 말합니다</h2>
+        <div class="eyebrow">09 · 빠른 확인</div>
+        <h2>Source를 읽기 전에 답해 보세요</h2>
         <table>
-          <thead><tr><th>Label</th><th>안전한 claim</th><th>위험한 확대 해석</th></tr></thead>
+          <thead><tr><th>질문</th><th>답</th></tr></thead>
           <tbody>
-            <tr><td>Verified mechanism</td><td>pinned ordinary source path는 설명한 순서대로 snapshot, WAL gate, submission, completion, rollback을 수행합니다.</td><td>모든 early failure가 ordinary rollback을 따른다고 단정하는 것.</td></tr>
-            <tr><td>Runtime observation</td><td>기록된 experiment에서 예상한 mutation/commit state와 accepted synchronous backup boundary를 관찰했습니다.</td><td>per-page WAL-before-data, DWB completion, crash recovery 또는 page-write count까지 증명했다고 보는 것.</td></tr>
-            <tr><td>Open finding · VS-12</td><td>source inspection은 ordinary rollback 이전의 TDE/DWB preparation return에 우려를 제기합니다.</td><td>실행 가능한 fault injection 없이 이 우려를 현재 production defect라고 부르는 것.</td></tr>
+            <tr><td>Boundary 150, oldest 100, page LSA 170?</td><td>Checkpoint 대상으로 선택하고 WAL을 170까지 force한 다음 현재 사본을 write합니다.</td></tr>
+            <tr><td>Boundary 150, oldest 200, page LSA 220?</td><td>Checkpoint는 건너뛸 수 있습니다. 그래도 flush한다면 WAL을 220까지 force하는 한 안전한 추가 작업입니다.</td></tr>
+            <tr><td>절대 일어나면 안 되는 일?</td><td>미완료 history보다 뒤에서 redo를 시작해도 된다고 주장하거나, copied page LSA가 WAL에 durable해지기 전에 page image가 storage에 도착하게 하는 것입니다.</td></tr>
           </tbody>
         </table>
-        <p>TDE는 복사된 image를 바꾸며 resident plaintext의 ownership을 바꾸지 않습니다. DWB는 page-image integrity를 보호하지만 WAL이나 recovery를 대체하지 않습니다. “page-buffer flush path가 설정된 DWB/direct-write boundary에서 완료되었다”라고 표현하세요.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
-        <h2>“page가 clean이 되었다”라고 말하지 않고 G와 G+1을 추적합니다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="flush 전 resident generation은 page LSA 140, oldest-unflush LSA 100, DIRTY 상태임 -> G를 열면 FLUSHING을 설정하고 140/100을 capture하며 이전 DIRTY와 resident lower bound를 지움 -> G가 FLUSHING인 동안 170을 logging하면 page LSA 170, oldest-unflush LSA 170, DIRTY인 resident G+1이 생김 -> G가 성공하면 FLUSHING만 지우므로 G+1은 170/170에서 DIRTY로 남음 -> ordinary failure는 retry 가능한 captured-generation state를 복구하고 waiter를 깨우지만 concurrent G+1 interleaving은 명시적으로 분석해야 함 -> source는 ordinary mechanism을 증명하고 기존 runtime observation은 이 interleaving을 증명하지 않음." data-concepts='[{"label":"pre-flush LSA state 확인","terms":["140","100","dirty"]},{"label":"capture된 generation G","terms":["flushing","capture","snapshot","140","100"]},{"label":"concurrent generation G+1 처리","terms":["170","newer","g+1","redirty","re-dirty"]},{"label":"새 DIRTY를 보존하는 success","terms":["clear","flushing","remain","dirty"]},{"label":"retry 가능한 ordinary failure","terms":["failure","restore","retry","wake"]},{"label":"evidence boundary 구분","terms":["source","runtime","observation","open","inference"]}]'>
-          <h3>문제</h3>
-          <p>clean page가 LSA 80에서 시작합니다. 100과 140의 log가 page를 dirty로 만듭니다. Flush generation G가 시작되고, G가 in flight인 동안 writer가 170에서 log를 남깁니다. 다음 시점의 page LSA, oldest-unflush LSA, DIRTY, FLUSHING을 예측하세요.</p>
-          <ol>
-            <li>G가 시작되기 직전,</li>
-            <li>G가 image를 capture한 뒤,</li>
-            <li>170 mutation 뒤,</li>
-            <li>G가 성공한 뒤,</li>
-            <li>ordinary failure라면 대신 무엇을 보존해야 하는지.</li>
-          </ol>
-          <p><strong>할 일:</strong> 어느 state가 G에 속하고 어느 state가 G+1에 속하는지 구분하고, 각 claim에 source, runtime observation, inference 또는 open finding label을 붙이세요.</p>
-          <textarea aria-label="flush generation trace 답안" placeholder="timeline을 닫고 두 generation과 evidence boundary를 기억만으로 다시 구성하세요."></textarea>
-          <button type="button" data-check>generation 포함 여부 확인</button>
-          <button type="button" class="secondary" data-reveal>model trace 보기</button>
+        <div class="eyebrow">10 · Retrieval practice</div>
+        <h2>두 boundary를 섞지 않고 설명하기</h2>
+        <div class="quiz" data-retrieval data-coverage-template="핵심 개념 {found}/{total}개를 찾았습니다." data-complete-message="좋습니다. 이제 보지 않고 한 번 설명해 보세요." data-revisit-label="다시 볼 것:" data-model-label="모범 답안 뼈대:" data-model="flush는 resident generation 하나를 복사한다 -> oldest-unflush는 dirty history가 checkpoint boundary를 가로지르는지 판단한다 -> copied page LSA는 WAL을 어디까지 force할지 정한다 -> oldest가 checkpoint boundary보다 최신이면 건너뛸 수 있지만 미리 flush해도 안전하다 -> 위험한 것은 거짓 redo 진전 또는 page-before-WAL 순서다 -> G가 끝난 뒤 concurrent G+1은 DIRTY로 남는다." data-concepts='[{"label":"flush 목적","terms":["copy","resident","propagation"]},{"label":"checkpoint 선택","terms":["oldest","boundary","select"]},{"label":"WAL target","terms":["page lsa","force","wal"]},{"label":"선택적인 추가 flush","terms":["newer","skip","extra","safe"]},{"label":"실제 위반","terms":["redo","late","before","violation"]},{"label":"concurrent generation","terms":["g+1","dirty","remain"]}]'>
+          <h3>Prompt</h3>
+          <p>Checkpoint boundary는 150입니다. P의 oldest-unflush는 200이고 page LSA는 220입니다. Checkpoint가 P를 건너뛸 수 있습니까? 다른 flusher가 P를 write해도 됩니까? 그렇다면 WAL을 어디까지 force해야 합니까? 그 다음 oldest-unflush가 100인 page와 비교하세요.</p>
+          <textarea aria-label="Checkpoint와 WAL 설명" placeholder="먼저 selection, 그 다음 WAL ordering, 마지막으로 failure case를 설명하세요."></textarea>
+          <button type="button" data-check>Coverage 확인</button>
+          <button type="button" class="secondary" data-reveal>Model spine 보기</button>
           <div class="feedback" aria-live="polite"></div>
         </div>
-        <p>답을 chat에 붙여 넣으세요. mastery를 기록하기 전에 generation identity, flag algebra, LSA 목적, persistence 표현, evidence strength를 확인합니다.</p>
+      </section>
+
+      <section class="section" id="evidence">
+        <div class="eyebrow">Evidence boundary</div>
+        <h2>이 강의가 입증하는 범위</h2>
+        <p>Pinned source는 여기서 설명한 ordinary control flow, selection predicate, WAL gate, flag transition, ordinary rollback을 입증합니다. Source만으로 physical device persistence timing이나 모든 early-error runtime effect까지 입증하지는 않습니다. 단순히 “written”이라고 말하지 말고 관찰한 boundary의 이름을 붙이세요.</p>
       </section>
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">필수 읽기</div>
-        <h2>ordinary flush attempt 하나를 annotate합니다</h2>
-        <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>를 읽으세요. identity protection, copied bytes, copied LSA, WAL gate, I/O boundary, success cleanup, ordinary failure reconstruction을 표시합니다. 그런 다음 <code>transaction/log_page_buffer.c:4150–4189</code>의 WAL gate를 확인하세요.</p>
-        <p><a href="../reference/flush-generation-card.html">인쇄용 flush-generation card 열기 →</a></p>
+        <h2>쉬운 model을 먼저 익힌 뒤 implementation을 추적하세요</h2>
+        <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>에서 claim, copy, WAL gate, submission, completion을 표시하세요. 전체 evidence boundary는 <a href="../../learning/04-flush-one-generation.md">canonical Core page</a>에서 확인하세요.</p>
+        <p><a href="../reference/flush-generation-card.html">인쇄 가능한 flush-generation card 열기 →</a></p>
         <p><a href="0005-audit-a-logged-mutation.html">← Lesson 0005로 돌아가기</a> · <a href="0007-replace-one-frame.html">Lesson 0007로 계속 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="강의 목차">
       <strong>강의 지도</strong>
-      <a href="#flush-purpose">시작. 무엇을 왜 하나</a>
-      <a href="#generation-meaning">0. G, DIRTY, FLUSHING</a>
-      <a href="#why-flushing">0A. FLUSHING이 필요한 이유</a>
-      <a href="#copy-versus-dwb">0B. Copy와 DWB</a>
-      <a href="#moments">1. 네 moment</a>
-      <a href="#lsas">2. 두 LSA</a>
-      <a href="#oldest-unflush-purpose">2A. oldest-unflush가 필요한 이유</a>
-      <a href="#generation">3. Ordinary path</a>
-      <a href="#redirty">4. Concurrent re-dirty</a>
-      <a href="#failure">5. Failure unwind</a>
-      <a href="#evidence">6. Evidence boundary</a>
-      <a href="#retrieval">7. trace-back</a>
+      <a href="#flush-purpose">시작. Flush가 하는 일</a>
+      <a href="#generation-meaning">1. Copy하는 이유</a>
+      <a href="#why-flushing">2. FLUSHING이 필요한 이유</a>
+      <a href="#moments">3. Page와 log</a>
+      <a href="#lsas">4. 두 LSA label</a>
+      <a href="#oldest-unflush-purpose">5. Checkpoint 질문</a>
+      <a href="#generation">6. Ordinary path</a>
+      <a href="#copy-versus-dwb">7. Copy와 DWB</a>
+      <a href="#redirty">8. 성공과 실패</a>
+      <a href="#failure">9. 빠른 확인</a>
+      <a href="#retrieval">10. 연습</a>
+      <a href="#evidence">Evidence boundary</a>
       <a href="#primary-reading">필수 읽기</a>
       <hr>
-      <a href="../reference/flush-generation-card.html">Flush-generation 카드</a>
-      <a href="../../learning/04-flush-one-generation.md">Canonical Core 문서</a>
+      <a href="../reference/flush-generation-card.html">Flush-generation card</a>
+      <a href="../../learning/04-flush-one-generation.md">Canonical Core page</a>
       <a href="0007-replace-one-frame.html">다음 lesson →</a>
       <a href="../index.html">강의 홈</a>
     </nav>
   </div>
 
-  <footer class="footer">generation, flag transition, LSA 역할, persistence boundary, evidence label이 불분명하면 언제든 teaching agent에게 물어보세요.</footer>
+  <footer class="footer">두 질문을 분리하세요. 어느 page가 이번 checkpoint 대상인가? 복사된 image를 위해 WAL을 어디까지 force해야 하는가?</footer>
 </main>
 </body>
 </html>
