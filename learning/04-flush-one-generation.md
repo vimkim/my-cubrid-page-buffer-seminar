@@ -12,6 +12,43 @@
 
 Flush is not commit, unfix, eviction, or page deallocation. A successful flush may leave the page resident. The `FLUSHING` flag is likewise not a command: it says a previously captured image is currently owned by an in-progress flush operation.
 
+## Who actually performs a flush?
+
+`DIRTY` does not name one owner and is not a per-page job inserted into a daemon queue. Setting it publishes that resident bytes still need propagation. A later policy or caller selects the page; the selected thread then enters the common generation-flush mechanism described below.
+
+![Page-buffer daemon roles and all major actors that converge on the common generation-flush path](../assets/dirty-page-flush-actors.svg)
+
+### Four page-buffer daemons are independent roles, not master and slaves
+
+In server mode, the pinned `pgbuf_daemons_init()` attempts to create four daemon objects through the common thread manager. They do not form a page-flush master with four worker slaves:
+
+| Page-buffer daemon | What it owns | Does it initiate a page-image write? |
+|---|---|---|
+| `pgbuf-maintain` | Periodic quota adjustment and direct-victim progress. | No. |
+| `pgbuf-page-flush` | Select dirty LRU3 victim candidates under background/replacement-pressure policy and flush them. | **Yes. This is the page-buffer background flusher.** |
+| `pgbuf-page-post-flush` | Finish BCB state and direct-victim handoff for pages the page-flush daemon already submitted. | No new page write; it processes completed submissions. |
+| `pgbuf-flush-control` | Replenish file-I/O pacing tokens. Initialization can leave this daemon absent. | No; it controls rate rather than selecting a page. |
+
+The objects are created before log recovery, but their tasks return while the boot-level flush-daemon gate is closed; boot enables them after recovery. Stand-alone builds do not create these page-buffer daemons. Counts, periods, thresholds, and batching are revision-bound **Implementation policy**, not a fix/unfix Interface contract.
+
+### The background flusher is not the only flusher
+
+The important distinction is **who selects the dirty page**, not whether every path has a daemon name:
+
+| Selection owner or trigger | What happens at the pinned revision |
+|---|---|
+| Background/replacement pressure | `pgbuf-page-flush` scans dirty victim-zone candidates. It does not sweep every dirty BCB merely because `DIRTY` became set. |
+| Checkpoint | The log checkpoint actor calls `pgbuf_flush_checkpoint()` in its own thread. That routine scans the BCB table, selects generations whose `oldest_unflush_lsa` crosses the checkpoint boundary, and performs the selective flush. It is not delegated to `pgbuf-page-flush`. |
+| Explicit page, volume, recovery, or shutdown work | The calling thread executes `pgbuf_flush_with_wal()` or a `pgbuf_flush_all*()` path synchronously. |
+| Another thread asks to flush a page held WRITE | Immediate copying would race with mutation. The requester publishes `PGBUF_BCB_ASYNC_FLUSH_REQ`; the WRITE owner fulfills it at a safe point such as final unfix, or a permanently latched owner checks `pgbuf_flush_if_requested()`. A synchronous requester can wait for that completion. |
+| No page-flush daemon in stand-alone mode | The requesting thread calls victim flushing synchronously and searches for a victim again. |
+
+All of these selectors converge on the same per-BCB safety work: claim one generation with `FLUSHING`, copy stable bytes and LSA state, force WAL as required, submit through DWB or direct I/O, then complete or restore retryable state. This convergence is why “the daemon flushed it” is often too vague for a review: name both the selection owner and the common generation boundary.
+
+If DWB is enabled, the page-buffer actor may finish its submission by calling `dwb_add_page()`. The separate DWB subsystem has its own flush-block and file-sync-helper daemons; they are **not** two more members of the four page-buffer roles. When the DWB flush daemon is unavailable, a producer can flush the DWB block itself. With DWB disabled (and for temporary pages on this path), the page-buffer actor calls `fileio_write()` directly for the home page.
+
+Source: daemon tasks and creation at `src/storage/page_buffer.c:16972-17255`; boot gating at `src/transaction/boot_sr.c:2415-2440`; direct and whole-pool interfaces at `src/storage/page_buffer.c:3570-3751`; checkpoint selection/execution at `4173-4610`; deferred-owner handoff at `6815-6890,8810-8901`; stand-alone fallback at `11678-11702`; DWB submission and daemon roles at `src/storage/double_write_buffer.cpp:2715-2820,4017-4120`. Detailed evidence: [Dirty-page Flush Actors](../reference/dirty-page-flush-actors.md).
+
 ## Four moments that must not collapse into “written”
 
 | Moment | What it establishes | What it does not establish |
@@ -185,3 +222,5 @@ On an ordinary post-submission failure, the code restores G’s dirty bit if it 
 - [Evidence and uncertainty registry](../unresolved-or-version-sensitive-findings.md)
 - [Maintainer Invariant Index](../reference/invariant-index.md)
 - [Recovery, Allocation State, and Module Lifecycle](../advanced/recovery-and-lifecycle.md)
+- [Replacement Policy and Background Progress](../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive)
+- [Dirty-page Flush Actors](../reference/dirty-page-flush-actors.md)

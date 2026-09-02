@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="920" viewBox="0 0 1200 920" role="img" aria-labelledby="title desc">
+  <title id="title">Dirty-page flush actors and daemon roles at the pinned CUBRID revision</title>
+  <desc id="desc">DIRTY is page-buffer state, not a work item assigned to one master. Server mode creates four independent page-buffer daemon roles: maintenance, page flush, post-flush, and flush control. Only the page-flush daemon selects and flushes dirty victim candidates. Checkpoint, explicit callers, a write owner satisfying a deferred request, and a standalone caller can also execute the common generation flush path. That path copies the page, enforces WAL, then either writes directly or submits to the separate double-write-buffer subsystem.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#476273"/></marker>
+    <style>
+      .title{font:700 25px Inter,Arial,sans-serif;fill:#173443}.h{font:700 16px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#536875}.tiny{font:12px Inter,Arial,sans-serif;fill:#536875}.white{fill:#fff}.dirty{fill:#fff0e8;stroke:#d45b2c;stroke-width:3}.role{fill:#f7f9fa;stroke:#aebdc5;stroke-width:2}.writer{fill:#e7f5f2;stroke:#16847d;stroke-width:3}.helper{fill:#f5f2ff;stroke:#7462b5;stroke-width:2}.common{fill:#e9f0ff;stroke:#3769c8;stroke-width:3}.route{fill:#fff8e6;stroke:#b88420;stroke-width:2}.note{fill:#fff;stroke:#778b96;stroke-width:2;stroke-dasharray:7 5}.line{fill:none;stroke:#476273;stroke-width:2.5;marker-end:url(#arrow)}.dash{fill:none;stroke:#778b96;stroke-width:2;stroke-dasharray:6 5}.no{fill:#a34232;font:700 12px Inter,Arial,sans-serif}
+    </style>
+  </defs>
+
+  <text x="40" y="42" class="title">Who flushes a DIRTY page? Several actors, one generation protocol</text>
+  <rect x="40" y="65" width="1120" height="58" rx="12" class="dirty"/>
+  <text x="58" y="89" class="h">BCB DIRTY = resident bytes still need propagation</text>
+  <text x="58" y="109" class="s">Setting this bit does not assign the page to one master thread or immediately start I/O.</text>
+
+  <text x="40" y="158" class="h">Server-mode page-buffer daemons: four independent roles, not one master with four slaves</text>
+  <rect x="40" y="176" width="265" height="94" rx="13" class="role"/>
+  <text x="56" y="201" class="h">pgbuf-maintain</text>
+  <text x="56" y="224" class="s">adjust quotas; maintain</text>
+  <text x="56" y="243" class="s">direct-victim progress</text>
+  <text x="56" y="260" class="no">does not write page images</text>
+
+  <rect x="325" y="176" width="265" height="94" rx="13" class="writer"/>
+  <text x="341" y="201" class="h">pgbuf-page-flush</text>
+  <text x="341" y="224" class="s">selects dirty LRU3 victim</text>
+  <text x="341" y="243" class="s">candidates and flushes them</text>
+  <text x="341" y="260" class="tiny">the background page writer here</text>
+
+  <rect x="610" y="176" width="265" height="94" rx="13" class="helper"/>
+  <text x="626" y="201" class="h">pgbuf-page-post-flush</text>
+  <text x="626" y="224" class="s">finishes BCB state and assigns</text>
+  <text x="626" y="243" class="s">already-flushed direct victims</text>
+  <text x="626" y="260" class="no">does not select a new page write</text>
+
+  <rect x="895" y="176" width="265" height="94" rx="13" class="role"/>
+  <text x="911" y="201" class="h">pgbuf-flush-control</text>
+  <text x="911" y="224" class="s">replenishes file-I/O pacing</text>
+  <text x="911" y="243" class="s">tokens; may be unavailable</text>
+  <text x="911" y="260" class="no">does not choose dirty pages</text>
+
+  <rect x="40" y="304" width="1120" height="54" rx="12" class="note"/>
+  <text x="58" y="328" class="h">Other threads also initiate or perform flush work</text>
+  <text x="58" y="348" class="s">The background daemon is only one entry path into the page-buffer flush mechanism.</text>
+
+  <rect x="40" y="392" width="202" height="92" rx="12" class="writer"/>
+  <text x="55" y="417" class="h">Page-flush daemon</text>
+  <text x="55" y="439" class="s">background / pressure</text>
+  <text x="55" y="459" class="s">dirty victim candidates</text>
+
+  <rect x="40" y="500" width="202" height="92" rx="12" class="route"/>
+  <text x="55" y="525" class="h">Checkpoint actor</text>
+  <text x="55" y="547" class="s">select by oldest-unflush</text>
+  <text x="55" y="567" class="s">and execute synchronously</text>
+
+  <rect x="40" y="608" width="202" height="92" rx="12" class="role"/>
+  <text x="55" y="633" class="h">Explicit caller</text>
+  <text x="55" y="655" class="s">one page, all pages,</text>
+  <text x="55" y="675" class="s">volume/recovery operation</text>
+
+  <rect x="258" y="392" width="202" height="92" rx="12" class="route"/>
+  <text x="273" y="417" class="h">Current WRITE owner</text>
+  <text x="273" y="439" class="s">fulfills deferred async</text>
+  <text x="273" y="459" class="s">request at a safe point</text>
+
+  <rect x="258" y="608" width="202" height="92" rx="12" class="role"/>
+  <text x="273" y="633" class="h">No pgbuf daemon</text>
+  <text x="273" y="655" class="s">stand-alone caller performs</text>
+  <text x="273" y="675" class="s">victim flush synchronously</text>
+  <text x="379" y="538" class="tiny">selected path</text>
+  <path d="M460 546 H490" class="line"/>
+
+  <rect x="500" y="420" width="360" height="236" rx="16" class="common"/>
+  <text x="520" y="451" class="h">Common page-buffer generation flush</text>
+  <text x="520" y="480" class="s">1. validate BCB/page identity</text>
+  <text x="520" y="505" class="s">2. set FLUSHING; clear old DIRTY</text>
+  <text x="520" y="530" class="s">3. copy one stable generation G</text>
+  <text x="520" y="555" class="s">4. copy page LSA / oldest-unflush</text>
+  <text x="520" y="580" class="s">5. release BCB; force WAL through page LSA</text>
+  <text x="520" y="605" class="s">6. submit G; complete or restore retryable state</text>
+  <text x="520" y="636" class="tiny">Representative core: pgbuf_bcb_flush_with_wal()</text>
+
+  <path d="M680 656 V684 H950 V694" class="line"/>
+  <path d="M860 584 H890" class="line"/>
+
+  <rect x="900" y="524" width="260" height="120" rx="14" class="writer"/>
+  <text x="918" y="551" class="h">DWB disabled / temp page</text>
+  <text x="918" y="576" class="s">the same flush actor calls</text>
+  <text x="918" y="599" class="s">fileio_write() for the home page</text>
+  <text x="918" y="625" class="tiny">flush still occurs; WAL remains separate</text>
+
+  <rect x="740" y="694" width="420" height="158" rx="14" class="helper"/>
+  <text x="758" y="719" class="h">DWB enabled: a separate downstream subsystem</text>
+  <text x="758" y="739" class="h">takes the copied image</text>
+  <text x="758" y="766" class="s">pgbuf actor calls dwb_add_page()</text>
+  <text x="758" y="789" class="s">dwb-flush-block daemon (or producer fallback) writes the block</text>
+  <text x="758" y="812" class="s">dwb-file-sync helper may assist volume synchronization</text>
+  <text x="758" y="838" class="tiny">These two DWB daemons are not members of the four pgbuf roles above.</text>
+
+  <rect x="40" y="862" width="1120" height="40" rx="10" class="note"/>
+  <text x="58" y="887" class="h">Selection owner varies; generation safety converges. Always name who selected the page and which persistence boundary completed.</text>
+</svg>

@@ -14,8 +14,8 @@
   <header class="hero">
     <div class="eyebrow">핵심 역량 · propagation</div>
     <h1>Flushing: page image 하나를 안전하게 disk 쪽으로 보내기</h1>
-    <p>먼저 목적부터 이해합니다. 그 다음 checkpoint 선택과 WAL 안전 규칙을 분리합니다.</p>
-    <div class="pills"><span class="pill">Flush</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Checkpoint</span><span class="pill">WAL</span></div>
+    <p>먼저 목적과 실행 주체를 이해합니다. 그 다음 checkpoint 선택과 WAL 안전 규칙을 분리합니다.</p>
+    <div class="pills"><span class="pill">Flush actors</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Checkpoint</span><span class="pill">WAL</span></div>
   </header>
 
   <div class="lesson-grid">
@@ -36,8 +36,35 @@
         <div class="callout"><strong>가장 짧은 mental model:</strong> <code>DIRTY</code>는 “처리할 page 작업이 있다.” <code>FLUSHING</code>은 “복사된 version 하나가 지금 그 작업을 수행 중이다.”</div>
       </section>
 
+      <section class="section" id="flush-actors">
+        <div class="eyebrow">01 · 실제로 누가 flush하는가?</div>
+        <h2>동등한 daemon 역할은 네 개지만 background page flusher는 하나입니다</h2>
+        <img class="diagram" src="../../assets/dirty-page-flush-actors.svg" alt="독립된 page-buffer daemon 역할 네 개와 하나의 generation flush로 합류하는 checkpoint, caller, write owner, standalone 경로">
+        <p class="caption"><code>DIRTY</code>는 아직 갚지 않은 propagation work를 publish합니다. Page를 master thread 하나에 배정하거나 즉시 I/O를 시작하는 표시는 아닙니다.</p>
+        <p class="big-claim">Pinned server mode는 <em>서로 독립적인 single-thread daemon object 네 개</em>를 만들려고 합니다. Master 하나와 flush slave 네 개 구조가 아닙니다. Background에서 dirty victim candidate를 고르고 제출하는 것은 <code>pgbuf-page-flush</code> 하나입니다.</p>
+        <table>
+          <thead><tr><th>Page-buffer daemon</th><th>역할</th><th>Dirty-page I/O 시작?</th></tr></thead>
+          <tbody>
+            <tr><td><code>pgbuf-maintain</code></td><td>Quota를 조정하고 direct-victim progress를 유지합니다.</td><td>아니요.</td></tr>
+            <tr><td><code>pgbuf-page-flush</code></td><td>Background/pressure policy로 dirty LRU3 victim candidate를 골라 flush합니다.</td><td><strong>예.</strong></td></tr>
+            <tr><td><code>pgbuf-page-post-flush</code></td><td>이미 제출된 flush의 BCB state와 victim handoff를 마무리합니다.</td><td>새 page write는 시작하지 않습니다.</td></tr>
+            <tr><td><code>pgbuf-flush-control</code></td><td>File-I/O pacing token을 보충합니다. 초기화 실패 시 없을 수 있습니다.</td><td>아니요.</td></tr>
+          </tbody>
+        </table>
+        <h3>Daemon은 여러 selection path 중 하나일 뿐입니다</h3>
+        <ul>
+          <li>별도의 log-checkpoint daemon/caller가 자기 thread에서 <code>pgbuf_flush_checkpoint()</code>를 실행하고 <code>oldest_unflush_lsa</code>로 page를 고릅니다.</li>
+          <li>Foreground storage, recovery, volume, shutdown caller가 page 하나 또는 pool 전체 flush를 synchronous하게 실행할 수 있습니다.</li>
+          <li>다른 thread가 WRITE-held page를 flush하려 하면 async request를 표시합니다. WRITE owner가 unfix 또는 명시적인 safe point에서 안전한 copy를 수행하고, synchronous requester는 completion을 기다립니다.</li>
+          <li>Stand-alone mode에는 page-buffer daemon object가 없으므로 요청한 thread가 victim flush를 synchronous하게 수행합니다.</li>
+        </ul>
+        <p>모든 경로는 같은 generation mechanism으로 합류합니다. <code>FLUSHING</code>을 claim하고, stable G를 복사하고, WAL을 force하고, DWB 또는 direct I/O로 제출한 뒤, 완료하거나 retryable state를 복원합니다. DWB에는 별도의 downstream helper daemon 두 개가 있으며 위 네 page-buffer 역할에 포함되지 않습니다. DWB가 꺼져 있으면 선택된 page-buffer actor가 직접 <code>fileio_write()</code>를 호출합니다.</p>
+        <p class="source-note"><strong>검증된 mechanism; revision-bound topology:</strong> daemon task와 생성은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16972-L17255"><code>page_buffer.c:16972–17255</code></a>, checkpoint selection은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4173-L4610"><code>4173–4610</code></a>, deferred-owner flush는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6815-L6890"><code>6815–6890</code></a> 및 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8810-L8901"><code>8810–8901</code></a>, stand-alone fallback은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11678-L11702"><code>11678–11702</code></a>입니다.</p>
+        <p><a href="../../reference/dirty-page-flush-actors.md">Actor와 lifecycle 전체 research note 열기 →</a></p>
+      </section>
+
       <section class="section" id="generation-meaning">
-        <div class="eyebrow">01 · 왜 사본을 만드나?</div>
+        <div class="eyebrow">02 · 왜 사본을 만드나?</div>
         <h2>Writer가 계속 진행할 수 있어야 합니다</h2>
         <p>Flush는 현재 resident bytes를 private memory에 복사합니다. 이 고정된 사본을 <strong>G</strong>라고 부르겠습니다. 사본을 만든 뒤 다른 writer가 resident page를 다시 변경할 수 있습니다. 이 더 새로운 resident bytes를 <strong>G+1</strong>이라고 부르겠습니다.</p>
         <img class="diagram" src="../../assets/two-lsa-timeline.svg" alt="복사된 generation G와 더 새로운 resident generation G plus one">
@@ -54,7 +81,7 @@
       </section>
 
       <section class="section" id="why-flushing">
-        <div class="eyebrow">02 · DIRTY 하나로 부족한 이유</div>
+        <div class="eyebrow">03 · DIRTY 하나로 부족한 이유</div>
         <h2>두 사실이 동시에 참일 수 있습니다</h2>
         <p>Flush가 시작되면 <code>FLUSHING</code>을 표시하고 기존 <code>DIRTY</code>를 지웁니다. 작업을 잃은 것이 아닙니다. 이제 flusher가 사본 G를 맡았습니다. 비워 둔 DIRTY bit는 다음 writer를 위한 새 신호 칸이 됩니다.</p>
         <ol>
@@ -68,7 +95,7 @@
       </section>
 
       <section class="section" id="moments">
-        <div class="eyebrow">03 · 이 모든 것을 “write됐다”고 부르지 않기</div>
+        <div class="eyebrow">04 · 이 모든 것을 “write됐다”고 부르지 않기</div>
         <h2>Log durability와 page propagation은 다릅니다</h2>
         <img class="diagram" src="../../assets/durability-chain.svg" alt="Mutation, recovery logging, commit durability, page propagation의 서로 다른 경계">
         <p class="caption">Transaction은 변경된 모든 page가 home location에 도착하기 전에 commit할 수 있습니다. WAL이 이것을 안전하게 만듭니다.</p>
@@ -76,7 +103,7 @@
       </section>
 
       <section class="section" id="lsas">
-        <div class="eyebrow">04 · 두 LSA label</div>
+        <div class="eyebrow">05 · 두 LSA label</div>
         <h2>하나는 “얼마나 최신인가”, 다른 하나는 “얼마나 과거까지 걸치는가”</h2>
         <table>
           <thead><tr><th>값</th><th>질문</th><th>용도</th></tr></thead>
@@ -90,7 +117,7 @@
       </section>
 
       <section class="section" id="oldest-unflush-purpose">
-        <div class="eyebrow">05 · Checkpoint 질문</div>
+        <div class="eyebrow">06 · Checkpoint 질문</div>
         <h2>Boundary는 작업의 시작점을 보고 대상을 고릅니다</h2>
         <p><code>flush_upto_lsa</code>라는 checkpoint boundary가 150이라고 합시다. Checkpoint는 “아직 전파되지 않은 이 dirty 구간이 150 또는 그 이전까지 걸쳐 있는가?”라고 묻습니다.</p>
         <img class="diagram" src="../../assets/oldest-unflush-checkpoint.svg" alt="최신 page LSA가 170이어도 oldest unflush LSA 100이 checkpoint boundary 150의 대상으로 page를 선택하는 모습">
@@ -118,7 +145,7 @@
       </section>
 
       <section class="section" id="generation">
-        <div class="eyebrow">06 · 평범한 flush 하나</div>
+        <div class="eyebrow">07 · 평범한 flush 하나</div>
         <h2>Source의 여덟 단계를 사람이 이해할 네 동작으로</h2>
         <ol>
           <li><strong>작업을 맡는다:</strong> BCB를 검증하고 FLUSHING을 set하고 기존 DIRTY를 clear합니다.</li>
@@ -130,7 +157,7 @@
       </section>
 
       <section class="section" id="copy-versus-dwb">
-        <div class="eyebrow">07 · Copy는 DWB가 아닙니다</div>
+        <div class="eyebrow">08 · Copy는 DWB가 아닙니다</div>
         <h2>DWB는 경로를 바꾸지만 flush의 의미는 바꾸지 않습니다</h2>
         <p>Private copy는 G를 이후 writer와 분리합니다. DWB는 그 사본이 갈 수 있는 선택적인 보호 destination입니다. DWB를 사용할 수 없거나 temporary page이면 page-buffer path는 대신 direct <code>fileio_write()</code>를 사용합니다. Flush는 계속 일어나며 logged non-temporary page는 계속 WAL을 지킵니다.</p>
         <table>
@@ -144,7 +171,7 @@
       </section>
 
       <section class="section" id="redirty">
-        <div class="eyebrow">08 · 성공과 실패</div>
+        <div class="eyebrow">09 · 성공과 실패</div>
         <h2>G+1을 잃지 않고 G를 끝냅니다</h2>
         <p>성공하면 completion은 FLUSHING만 clear합니다. Writer가 G+1을 만들었다면 그 DIRTY bit와 새 oldest-unflush 값은 다음 flush를 위해 남습니다.</p>
         <p>Ordinary DWB/direct-I/O failure에서는 FLUSHING을 clear하고, 복사해 둔 DIRTY debt와 oldest-unflush lower bound를 복원하고, waiter를 깨운 뒤 failure를 반환합니다. 작업은 계속 보이고 재시도할 수 있습니다.</p>
@@ -153,7 +180,7 @@
       </section>
 
       <section class="section" id="failure">
-        <div class="eyebrow">09 · 빠른 확인</div>
+        <div class="eyebrow">10 · 빠른 확인</div>
         <h2>Source를 읽기 전에 답해 보세요</h2>
         <table>
           <thead><tr><th>질문</th><th>답</th></tr></thead>
@@ -166,11 +193,11 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">10 · Retrieval practice</div>
+        <div class="eyebrow">11 · Retrieval practice</div>
         <h2>두 boundary를 섞지 않고 설명하기</h2>
-        <div class="quiz" data-retrieval data-coverage-template="핵심 개념 {found}/{total}개를 찾았습니다." data-complete-message="좋습니다. 이제 보지 않고 한 번 설명해 보세요." data-revisit-label="다시 볼 것:" data-model-label="모범 답안 뼈대:" data-model="flush는 resident generation 하나를 복사한다 -> oldest-unflush는 dirty history가 checkpoint boundary를 가로지르는지 판단한다 -> copied page LSA는 WAL을 어디까지 force할지 정한다 -> oldest가 checkpoint boundary보다 최신이면 건너뛸 수 있지만 미리 flush해도 안전하다 -> 위험한 것은 거짓 redo 진전 또는 page-before-WAL 순서다 -> G가 끝난 뒤 concurrent G+1은 DIRTY로 남는다." data-concepts='[{"label":"flush 목적","terms":["copy","resident","propagation"]},{"label":"checkpoint 선택","terms":["oldest","boundary","select"]},{"label":"WAL target","terms":["page lsa","force","wal"]},{"label":"선택적인 추가 flush","terms":["newer","skip","extra","safe"]},{"label":"실제 위반","terms":["redo","late","before","violation"]},{"label":"concurrent generation","terms":["g+1","dirty","remain"]}]'>
+        <div class="quiz" data-retrieval data-coverage-template="핵심 개념 {found}/{total}개를 찾았습니다." data-complete-message="좋습니다. 이제 보지 않고 한 번 설명해 보세요." data-revisit-label="다시 볼 것:" data-model-label="모범 답안 뼈대:" data-model="DIRTY는 flusher 하나를 배정하지 않는다 -> page-flush daemon, checkpoint actor, explicit caller, WRITE owner, standalone caller가 작업을 고르거나 실행할 수 있다 -> 모든 actor가 generation protocol 하나로 합류한다 -> flush는 resident generation 하나를 복사한다 -> oldest-unflush는 dirty history가 checkpoint boundary를 가로지르는지 판단한다 -> copied page LSA는 WAL을 어디까지 force할지 정한다 -> oldest가 checkpoint boundary보다 최신이면 건너뛸 수 있지만 미리 flush해도 안전하다 -> 위험한 것은 거짓 redo 진전 또는 page-before-WAL 순서다 -> G가 끝난 뒤 concurrent G+1은 DIRTY로 남는다." data-concepts='[{"label":"flush actor","terms":["daemon","checkpoint","caller","owner"]},{"label":"flush 목적","terms":["copy","resident","propagation"]},{"label":"checkpoint 선택","terms":["oldest","boundary","select"]},{"label":"WAL target","terms":["page lsa","force","wal"]},{"label":"선택적인 추가 flush","terms":["newer","skip","extra","safe"]},{"label":"실제 위반","terms":["redo","late","before","violation"]},{"label":"concurrent generation","terms":["g+1","dirty","remain"]}]'>
           <h3>Prompt</h3>
-          <p>Checkpoint boundary는 150입니다. P의 oldest-unflush는 200이고 page LSA는 220입니다. Checkpoint가 P를 건너뛸 수 있습니까? 다른 flusher가 P를 write해도 됩니까? 그렇다면 WAL을 어디까지 force해야 합니까? 그 다음 oldest-unflush가 100인 page와 비교하세요.</p>
+          <p>먼저 DIRTY가 flusher 하나를 지정하지 않는 이유를 설명하고, 이 작업을 실행할 수 있는 actor 두 개를 드세요. 그 다음 checkpoint boundary 150을 사용합니다. P의 oldest-unflush는 200이고 page LSA는 220입니다. Checkpoint가 P를 건너뛸 수 있습니까? 다른 flusher가 write해도 됩니까? 그렇다면 WAL을 어디까지 force해야 합니까? Oldest-unflush가 100인 page와 비교하세요.</p>
           <textarea aria-label="Checkpoint와 WAL 설명" placeholder="먼저 selection, 그 다음 WAL ordering, 마지막으로 failure case를 설명하세요."></textarea>
           <button type="button" data-check>Coverage 확인</button>
           <button type="button" class="secondary" data-reveal>Model spine 보기</button>
@@ -196,16 +223,17 @@
     <nav class="lesson-nav" aria-label="강의 목차">
       <strong>강의 지도</strong>
       <a href="#flush-purpose">시작. Flush가 하는 일</a>
-      <a href="#generation-meaning">1. Copy하는 이유</a>
-      <a href="#why-flushing">2. FLUSHING이 필요한 이유</a>
-      <a href="#moments">3. Page와 log</a>
-      <a href="#lsas">4. 두 LSA label</a>
-      <a href="#oldest-unflush-purpose">5. Checkpoint 질문</a>
-      <a href="#generation">6. Ordinary path</a>
-      <a href="#copy-versus-dwb">7. Copy와 DWB</a>
-      <a href="#redirty">8. 성공과 실패</a>
-      <a href="#failure">9. 빠른 확인</a>
-      <a href="#retrieval">10. 연습</a>
+      <a href="#flush-actors">1. 누가 flush하는가</a>
+      <a href="#generation-meaning">2. Copy하는 이유</a>
+      <a href="#why-flushing">3. FLUSHING이 필요한 이유</a>
+      <a href="#moments">4. Page와 log</a>
+      <a href="#lsas">5. 두 LSA label</a>
+      <a href="#oldest-unflush-purpose">6. Checkpoint 질문</a>
+      <a href="#generation">7. Ordinary path</a>
+      <a href="#copy-versus-dwb">8. Copy와 DWB</a>
+      <a href="#redirty">9. 성공과 실패</a>
+      <a href="#failure">10. 빠른 확인</a>
+      <a href="#retrieval">11. 연습</a>
       <a href="#evidence">Evidence boundary</a>
       <a href="#primary-reading">필수 읽기</a>
       <hr>

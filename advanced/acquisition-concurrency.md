@@ -140,14 +140,14 @@ When the owner unfixes and `fcnt` reaches zero, the actual loop does **not** sto
 
 This distinction matters: the source comment summarizes the case as waking readers “at the head,” but the pinned loop's control flow continues past incompatible WRITE and FLUSH entries while the tuple is READ. The maintainer-facing mechanism here follows the executable control flow, not the looser comment. Source: `src/storage/page_buffer.c:7452-7590`.
 
-The cost has two separate phases; do not multiply them together as though every reader arrival performs a group wakeup:
+The cost has two separate phases; do not multiply them together as though each granted reader restarted the group scan:
 
 | Non-draining queue built behind the original WRITE owner | Ordinary tail-append work | Work caused by READ arrivals alone | Reader-group wakeup |
 |---|---:|---:|---:|
 | 100 total alternating requests: 50 READ + 50 WRITE | 4,950 node inspections cumulatively | 2,450 if READ arrives first; 2,500 if WRITE arrives first | One `O(100)` scan grants all 50 readers. If WRITE is first, that writer is granted first and the reader scan happens at its release. |
 | 200 total requests: 100 READ + 100 WRITE | 19,900 node inspections cumulatively | 9,900 if READ arrives first; 10,000 if WRITE arrives first | One `O(200)` scan grants all 100 readers, subject to the same first-WRITE step. |
 
-Why do READ arrivals account for thousands of inspections? It is **ordinary enqueue**, not reader grouping. With no tail pointer, arrival `i` walks the existing singly linked queue from its head to its tail while holding the BCB mutex. The one group wakeup later scans the mixed list once, grants the READ entries, and leaves the WRITE entries linked. It is `O(N²)` cumulative append work plus `O(N)` group-scan work, not `O(N²)` group-wakeup work. These exact sums assume the original WRITE owner remains fixed until every arrival has queued; concurrent dequeue shortens later append walks.
+Why do READ arrivals account for thousands of inspections? It is **ordinary enqueue**, not reader grouping. With no tail pointer, arrival `i` walks the existing singly linked queue from its head to its tail while holding the BCB mutex. The one group wakeup later makes one forward pass over the mixed list; it does not restart at the head for every reader. That pass grants the READ entries and leaves the WRITE entries linked. It is `O(N²)` cumulative append work plus `O(N)` group-scan work, not `O(N²)` group-wakeup work. These exact sums assume the original WRITE owner remains fixed until every arrival has queued; concurrent dequeue shortens later append walks.
 
 Evidence reference: [Alternating Reader/Writer Wakeup Cost](../reference/alternating-reader-writer-wakeup-cost.md).
 

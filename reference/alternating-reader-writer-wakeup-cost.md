@@ -44,7 +44,7 @@ queue:        W1 -> W2 -> W3 -> null
 
 Building this six-node queue performs `0+1+2+3+4+5=15` existing-node link tests and `0+0+1+2+3+4=10` pointer advances. The first wake visits all six nodes. The three later writer handoffs visit `2+2+1=5` nodes, so the main wake loop makes 11 node visits over the complete drain. There are four grant epochs: one three-reader group, then W1, W2, and W3 serially.
 
-Thus “group grant” means that one serialized wakeup call grants and signals the whole eligible reader set. It does **not** mean that all signaled threads execute simultaneously.
+Thus “group grant” means that one serialized wakeup call makes one forward traversal and grants and signals the whole eligible reader set. It does **not** restart from the queue head for each reader, and it does not mean that all signaled threads execute simultaneously.
 
 This cross-writer result follows the executable control flow. The nearby comment says readers at the head can be woken together, but the implementation does not stop on a WRITE encountered after READ has already been granted: it records that WRITE as `prev_thrd_entry` and continues the outer scan. Only a WRITE that is itself granted changes the tuple to WRITE and sets the stop condition for the next candidate. [Pinned wakeup loop](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7452-L7590), especially the incompatible-WRITE branch at lines 7545-7550 and the WRITE-held stop at lines 7551-7564.
 

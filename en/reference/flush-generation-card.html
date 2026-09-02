@@ -81,6 +81,7 @@
     <article class="reference-card">
       <h2>Review questions</h2>
       <ol>
+        <li>Who selected this page, and which thread executed the safe flush?</li>
         <li>Which generation does each byte/LSA/flag describe?</li>
         <li>What exact persistence boundary was observed?</li>
         <li>Can a writer publish G+1 while G is in flight?</li>
@@ -93,6 +94,7 @@
       <table>
         <thead><tr><th>Responsibility</th><th>Pinned source</th><th>Evidence use</th></tr></thead>
         <tbody>
+          <tr><td>Flush actors and daemon roles</td><td><code>page_buffer.c:16972–17302</code></td><td>Verified mechanism; revision-bound topology</td></tr>
           <tr><td>Page-LSA coupling</td><td><code>page_buffer.c:4983–5055</code></td><td>Verified mechanism</td></tr>
           <tr><td>Ordinary flush and rollback</td><td><code>page_buffer.c:10723–10962</code></td><td>Verified mechanism</td></tr>
           <tr><td>DIRTY / FLUSHING helpers</td><td><code>page_buffer.c:16077–16126</code></td><td>Verified mechanism</td></tr>
@@ -103,7 +105,7 @@
     </article>
   </section>
 
-  <footer class="footer">Canonical explanation: <a href="../../learning/04-flush-one-generation.md">Flush One Generation</a>. Ask the teaching agent when a generation or persistence boundary is ambiguous.</footer>
+  <footer class="footer">Canonical explanation: <a href="../../learning/04-flush-one-generation.md">Flush One Generation</a>. Distinguish the selection owner, executing thread, generation, and persistence boundary.</footer>
 </main>
 </body>
 </html>

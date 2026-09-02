@@ -67,7 +67,7 @@
       <article class="reference-card full">
         <span class="status waiting">Read reported</span>
         <h3>Lesson 6 · Flush one generation</h3>
-        <p>Take this after the caller contract. Track a copied generation through its WAL gate and DWB/direct-write boundary while a writer creates a newer resident DIRTY generation.</p>
+        <p>Take this after the caller contract. Distinguish the four peer daemon roles from checkpoint and foreground flush actors, then track one copied generation through WAL and DWB/direct-write while a writer creates newer DIRTY state.</p>
         <p><a href="lessons/0006-flush-one-generation.html">Preview Lesson 6 →</a></p>
       </article>
       <article class="reference-card full">
@@ -155,7 +155,7 @@
       <article class="course-item"><span class="step">4</span><div><span class="status">Ready</span><h3>Ownership debt</h3><p>Global <code>fcnt</code>, per-thread nested holders, one debt per successful call, and matching release.</p></div><a href="lessons/0004-repay-fix-debt.html">Open →</a></article>
       <article class="course-item"><span class="step">4A</span><div><span class="status">Ready</span><h3>Holder anchor and entry</h3><p>Per-thread list heads, linear BCB lookup, nested-count reuse, entry recycling, and cost boundary.</p></div><a href="lessons/0004a-understand-holder-anchor.html">Open →</a></article>
       <article class="course-item"><span class="step">5</span><div><span class="status">Ready</span><h3>Caller completes correctness</h3><p>Logical lock, validation, mutation, recovery logging, page LSA, dirty transition, and all-exit cleanup.</p></div><a href="lessons/0005-audit-a-logged-mutation.html">Open →</a></article>
-      <article class="course-item"><span class="step">6</span><div><span class="status">Ready</span><h3>Flush one generation</h3><p>Copied generation, WAL gate, DWB/direct-write boundary, two LSAs, retryable failure, and concurrent re-dirty.</p></div><a href="lessons/0006-flush-one-generation.html">Open →</a></article>
+      <article class="course-item"><span class="step">6</span><div><span class="status">Ready</span><h3>Flush one generation</h3><p>Flush actors, copied generation, WAL gate, DWB/direct-write boundary, two LSAs, retryable failure, and concurrent re-dirty.</p></div><a href="lessons/0006-flush-one-generation.html">Open →</a></article>
       <article class="course-item"><span class="step">7</span><div><span class="status">Ready</span><h3>Replace one frame</h3><p>Hard safety predicates before LRU selection and allocation-progress policy.</p></div><a href="lessons/0007-replace-one-frame.html">Open →</a></article>
       <article class="course-item"><span class="step">8</span><div><span class="status">Ready</span><h3>Defend a safe change</h3><p>Interface family, owner, invariant, failure unwind, caller impact, and risk-matched verification.</p></div><a href="lessons/0008-defend-a-safe-change.html">Open →</a></article>
       <article class="course-item"><span class="step">9</span><div><span class="status">First lesson ready</span><h3>Advanced mechanisms</h3><p>Concurrency, ordered access, replacement progress, recovery, lifecycle, specialized interfaces, and proof obligations.</p></div><a href="lessons/0009-classify-latch-wait.html">Open →</a></article>

@@ -14,8 +14,8 @@
   <header class="hero">
     <div class="eyebrow">Core capability · propagation</div>
     <h1>Flushing: move one page image safely toward disk</h1>
-    <p>Learn the purpose first. Then separate checkpoint selection from the WAL safety rule.</p>
-    <div class="pills"><span class="pill">Flush</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Checkpoint</span><span class="pill">WAL</span></div>
+    <p>Learn the purpose and actors first. Then separate checkpoint selection from the WAL safety rule.</p>
+    <div class="pills"><span class="pill">Flush actors</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Checkpoint</span><span class="pill">WAL</span></div>
   </header>
 
   <div class="lesson-grid">
@@ -36,8 +36,35 @@
         <div class="callout"><strong>Shortest mental model:</strong> <code>DIRTY</code> means “there is page work to do.” <code>FLUSHING</code> means “a copied version is doing that work now.”</div>
       </section>
 
+      <section class="section" id="flush-actors">
+        <div class="eyebrow">01 · Who actually flushes it?</div>
+        <h2>Four peer daemon roles; only one is the background page flusher</h2>
+        <img class="diagram" src="../../assets/dirty-page-flush-actors.svg" alt="Four independent page-buffer daemon roles and the checkpoint, caller, write-owner, and standalone paths that converge on one generation flush">
+        <p class="caption"><code>DIRTY</code> publishes unpaid propagation work. It does not assign the page to a master thread or immediately start I/O.</p>
+        <p class="big-claim">Pinned server mode attempts to create four <em>independent, single-thread daemon objects</em>—not one master plus four flush slaves. Only <code>pgbuf-page-flush</code> selects and submits dirty victim candidates in the background.</p>
+        <table>
+          <thead><tr><th>Page-buffer daemon</th><th>Job</th><th>Starts dirty-page I/O?</th></tr></thead>
+          <tbody>
+            <tr><td><code>pgbuf-maintain</code></td><td>Adjust quotas and maintain direct-victim progress.</td><td>No.</td></tr>
+            <tr><td><code>pgbuf-page-flush</code></td><td>Select dirty LRU3 victim candidates under background/pressure policy and flush them.</td><td><strong>Yes.</strong></td></tr>
+            <tr><td><code>pgbuf-page-post-flush</code></td><td>Finish BCB state and victim handoff for an already-submitted flush.</td><td>No new page write.</td></tr>
+            <tr><td><code>pgbuf-flush-control</code></td><td>Replenish file-I/O pacing tokens; it may be absent if initialization fails.</td><td>No.</td></tr>
+          </tbody>
+        </table>
+        <h3>The daemon is only one selection path</h3>
+        <ul>
+          <li>The separate log-checkpoint daemon/caller runs <code>pgbuf_flush_checkpoint()</code> in its own thread and selects pages by <code>oldest_unflush_lsa</code>.</li>
+          <li>A foreground storage, recovery, volume, or shutdown caller can run a one-page or whole-pool flush synchronously.</li>
+          <li>If another thread wants to flush a page held WRITE, it sets an async request. The WRITE owner performs the safe copy at unfix or another explicit safe point; a synchronous requester waits.</li>
+          <li>Stand-alone mode has no page-buffer daemon objects, so the requesting thread performs victim flush synchronously.</li>
+        </ul>
+        <p>These paths converge on the same generation mechanism: claim <code>FLUSHING</code>, copy stable G, force WAL, submit via DWB or direct I/O, then complete or restore retryable state. DWB has two separate downstream helper daemons; they are not part of the four page-buffer roles. With DWB disabled, the selected page-buffer actor calls <code>fileio_write()</code> itself.</p>
+        <p class="source-note"><strong>Verified mechanism; revision-bound topology:</strong> daemon tasks and creation are pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16972-L17255"><code>page_buffer.c:16972–17255</code></a>; checkpoint selection is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4173-L4610"><code>4173–4610</code></a>; deferred-owner flush is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6815-L6890"><code>6815–6890</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8810-L8901"><code>8810–8901</code></a>; stand-alone fallback is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11678-L11702"><code>11678–11702</code></a>.</p>
+        <p><a href="../../reference/dirty-page-flush-actors.md">Open the complete actor and lifecycle research note →</a></p>
+      </section>
+
       <section class="section" id="generation-meaning">
-        <div class="eyebrow">01 · Why make a copy?</div>
+        <div class="eyebrow">02 · Why make a copy?</div>
         <h2>The writer must be allowed to continue</h2>
         <p>The flush copies the current resident bytes into private memory. We call that frozen copy <strong>G</strong>. After the copy is made, another writer may change the resident page again. We call the newer resident bytes <strong>G+1</strong>.</p>
         <img class="diagram" src="../../assets/two-lsa-timeline.svg" alt="A copied generation G and a newer resident generation G plus one">
@@ -54,7 +81,7 @@
       </section>
 
       <section class="section" id="why-flushing">
-        <div class="eyebrow">02 · Why DIRTY alone is not enough</div>
+        <div class="eyebrow">03 · Why DIRTY alone is not enough</div>
         <h2>Two facts can be true at the same time</h2>
         <p>When flush starts, it marks <code>FLUSHING</code> and clears the old <code>DIRTY</code>. This does not lose the work: the flusher now owns copy G. The cleared DIRTY bit becomes an empty signal slot for the next writer.</p>
         <ol>
@@ -68,7 +95,7 @@
       </section>
 
       <section class="section" id="moments">
-        <div class="eyebrow">03 · Do not call all of this “written”</div>
+        <div class="eyebrow">04 · Do not call all of this “written”</div>
         <h2>Log durability and page propagation are different</h2>
         <img class="diagram" src="../../assets/durability-chain.svg" alt="Separate boundaries for mutation, recovery logging, commit durability, and page propagation">
         <p class="caption">A transaction can commit before every changed page reaches its home location. WAL makes that safe.</p>
@@ -76,7 +103,7 @@
       </section>
 
       <section class="section" id="lsas">
-        <div class="eyebrow">04 · The two LSA labels</div>
+        <div class="eyebrow">05 · The two LSA labels</div>
         <h2>One says “how new”; the other says “how far back”</h2>
         <table>
           <thead><tr><th>Value</th><th>Question</th><th>Used for</th></tr></thead>
@@ -90,7 +117,7 @@
       </section>
 
       <section class="section" id="oldest-unflush-purpose">
-        <div class="eyebrow">05 · The checkpoint question</div>
+        <div class="eyebrow">06 · The checkpoint question</div>
         <h2>The boundary selects work by its beginning</h2>
         <p>Suppose the checkpoint boundary, named <code>flush_upto_lsa</code>, is 150. The checkpoint asks: “Does this still-unpropagated dirty run reach back to 150 or earlier?”</p>
         <img class="diagram" src="../../assets/oldest-unflush-checkpoint.svg" alt="Oldest unflush LSA 100 selecting a page for checkpoint boundary 150 even though its latest page LSA is 170">
@@ -118,7 +145,7 @@
       </section>
 
       <section class="section" id="generation">
-        <div class="eyebrow">06 · One ordinary flush</div>
+        <div class="eyebrow">07 · One ordinary flush</div>
         <h2>Eight source steps, four human-sized actions</h2>
         <ol>
           <li><strong>Claim the job:</strong> validate the BCB, set FLUSHING, clear the old DIRTY.</li>
@@ -130,7 +157,7 @@
       </section>
 
       <section class="section" id="copy-versus-dwb">
-        <div class="eyebrow">07 · Copy is not DWB</div>
+        <div class="eyebrow">08 · Copy is not DWB</div>
         <h2>DWB changes the route, not the meaning of flush</h2>
         <p>The private copy isolates G from later writers. DWB is an optional protected destination for that copy. When DWB is unavailable or the page is temporary, the page-buffer path uses direct <code>fileio_write()</code> instead. Flush still happens, and logged non-temporary pages still obey WAL.</p>
         <table>
@@ -144,7 +171,7 @@
       </section>
 
       <section class="section" id="redirty">
-        <div class="eyebrow">08 · Success and failure</div>
+        <div class="eyebrow">09 · Success and failure</div>
         <h2>Finish G without losing G+1</h2>
         <p>On success, completion clears only FLUSHING. If a writer created G+1, its DIRTY bit and new oldest-unflush value remain for the next flush.</p>
         <p>On ordinary DWB/direct-I/O failure, the path clears FLUSHING, restores the captured DIRTY debt and oldest-unflush lower bound, wakes waiters, and returns failure. The work remains visible and retryable.</p>
@@ -153,7 +180,7 @@
       </section>
 
       <section class="section" id="failure">
-        <div class="eyebrow">09 · Quick checkpoint</div>
+        <div class="eyebrow">10 · Quick checkpoint</div>
         <h2>Answer these before reading source</h2>
         <table>
           <thead><tr><th>Question</th><th>Answer</th></tr></thead>
@@ -166,11 +193,11 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">10 · Retrieval practice</div>
+        <div class="eyebrow">11 · Retrieval practice</div>
         <h2>Explain the two boundaries without mixing them</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it once without looking." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="flush copies one resident generation -> oldest-unflush selects whether dirty history crosses the checkpoint boundary -> copied page LSA sets how far WAL must be forced -> oldest newer than the checkpoint boundary may be skipped but is safe to flush early -> unsafe means false redo progress or page-before-WAL ordering -> concurrent G+1 remains DIRTY after G completes." data-concepts='[{"label":"flush purpose","terms":["copy","resident","propagation"]},{"label":"checkpoint selection","terms":["oldest","boundary","select"]},{"label":"WAL target","terms":["page lsa","force","wal"]},{"label":"optional extra flush","terms":["newer","skip","extra","safe"]},{"label":"actual violations","terms":["redo","late","before","violation"]},{"label":"concurrent generation","terms":["g+1","dirty","remain"]}]'>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it once without looking." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="DIRTY does not assign one flusher -> the page-flush daemon, checkpoint actor, explicit caller, WRITE owner, or standalone caller can select or execute work -> every actor converges on one generation protocol -> flush copies one resident generation -> oldest-unflush selects whether dirty history crosses the checkpoint boundary -> copied page LSA sets how far WAL must be forced -> oldest newer than the checkpoint boundary may be skipped but is safe to flush early -> unsafe means false redo progress or page-before-WAL ordering -> concurrent G+1 remains DIRTY after G completes." data-concepts='[{"label":"flush actor","terms":["daemon","checkpoint","caller","owner"]},{"label":"flush purpose","terms":["copy","resident","propagation"]},{"label":"checkpoint selection","terms":["oldest","boundary","select"]},{"label":"WAL target","terms":["page lsa","force","wal"]},{"label":"optional extra flush","terms":["newer","skip","extra","safe"]},{"label":"actual violations","terms":["redo","late","before","violation"]},{"label":"concurrent generation","terms":["g+1","dirty","remain"]}]'>
           <h3>Prompt</h3>
-          <p>Checkpoint boundary is 150. P has oldest-unflush 200 and page LSA 220. May the checkpoint skip P? May another flusher write P? If it does, how far must WAL be forced? Then contrast this with a page whose oldest-unflush is 100.</p>
+          <p>First explain why DIRTY does not identify one flusher and name two actors that could execute this work. Then use checkpoint boundary 150: P has oldest-unflush 200 and page LSA 220. May checkpoint skip P? May another flusher write P? If so, how far must WAL be forced? Contrast this with oldest-unflush 100.</p>
           <textarea aria-label="Your checkpoint and WAL explanation" placeholder="Explain selection first, then WAL ordering, then the failure cases."></textarea>
           <button type="button" data-check>Check coverage</button>
           <button type="button" class="secondary" data-reveal>Reveal model spine</button>
@@ -196,16 +223,17 @@
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lesson map</strong>
       <a href="#flush-purpose">Start. What flush does</a>
-      <a href="#generation-meaning">1. Why copy</a>
-      <a href="#why-flushing">2. Why FLUSHING</a>
-      <a href="#moments">3. Page versus log</a>
-      <a href="#lsas">4. Two LSA labels</a>
-      <a href="#oldest-unflush-purpose">5. Checkpoint question</a>
-      <a href="#generation">6. Ordinary path</a>
-      <a href="#copy-versus-dwb">7. Copy versus DWB</a>
-      <a href="#redirty">8. Success and failure</a>
-      <a href="#failure">9. Quick checkpoint</a>
-      <a href="#retrieval">10. Practice</a>
+      <a href="#flush-actors">1. Who flushes it</a>
+      <a href="#generation-meaning">2. Why copy</a>
+      <a href="#why-flushing">3. Why FLUSHING</a>
+      <a href="#moments">4. Page versus log</a>
+      <a href="#lsas">5. Two LSA labels</a>
+      <a href="#oldest-unflush-purpose">6. Checkpoint question</a>
+      <a href="#generation">7. Ordinary path</a>
+      <a href="#copy-versus-dwb">8. Copy versus DWB</a>
+      <a href="#redirty">9. Success and failure</a>
+      <a href="#failure">10. Quick checkpoint</a>
+      <a href="#retrieval">11. Practice</a>
       <a href="#evidence">Evidence boundary</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>

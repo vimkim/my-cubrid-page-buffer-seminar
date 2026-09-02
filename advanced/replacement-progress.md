@@ -99,7 +99,7 @@ A cold miss needs a frame, and "the free list is empty" is sometimes described a
 2. **Victim search.** Otherwise `pgbuf_get_victim()` searches the LRU lists in a fixed order: the thread's own private list when it is over quota, then other private lists, then the shared lists, and finally the thread's own private list even under quota as a last resort. A found candidate still passes the [core eligibility gate](../learning/05-replace-one-frame.md) under the BCB mutex before it is reused.
 3. **Wait for a direct victim (server mode).** If nothing is eligible and the page-flush daemon is available, the thread enqueues itself in the direct-victim waiter queue—high priority for vacuum threads and for threads that hold a hot page or a page others are waiting on, low priority otherwise—wakes the page-flush daemon, and sleeps with the same latch timeout used by latch waiters. Producers of direct victims are victim flush, post-flush, LRU direct assignment, and vacuum unfix in the LRU3 zone.
 4. **Resume and revalidate.** A thread resumed with an assigned BCB locks it and revalidates. If another thread fixed the page in between, the assignment is revoked and the allocator retries the wait with high priority. An interrupt or shutdown un-assigns any BCB and returns `ER_INTERRUPTED`. A timeout ends the wait with an error and no frame.
-5. **No daemon.** In stand-alone mode or during recovery, the thread flushes synchronously and searches the LRU lists again.
+5. **No daemon object.** In stand-alone mode, the thread flushes synchronously and searches the LRU lists again. The allocator's source comment also describes this as the intended fallback whenever the page-flush thread is unavailable, including recovery. At the pinned server boot order, however, daemon objects are created before log recovery and their tasks are separately boot-gated; the availability helper tests only the daemon pointer. Do not generalize the stand-alone branch into a proved statement that every recovery-pressure allocation takes it.
 6. **Explicit failure.** If no BCB was produced and no earlier error is set, the allocator reports `ER_PB_ALL_BUFFERS_DIRTY` and the fix returns without a page pointer.
 
 So an empty free list starts a progress protocol whose every path ends in an assignment, a retry, an interrupt, a timeout, or an explicit error. Two limits remain. The source's own comment acknowledges that a waiter depends on producers and describes a theoretical "forgotten waiter" whose only exit is the timeout; the [uncertainty registry](../unresolved-or-version-sensitive-findings.md) records that fairness and starvation bounds for direct victims are not proved. And the timeout, queue priorities, and search order are Implementation policy that another revision may change.
@@ -122,18 +122,20 @@ Source: flush handoff at `src/storage/page_buffer.c:10925-10952`; post-flush ass
 
 ## Daemons: ownership is source-visible, cadence is version-sensitive
 
-In server mode, the pinned module nominally registers four daemon objects after recovery makes them available. Stand-alone mode has no page-buffer daemons and uses synchronous progress instead.
+In server mode, the pinned module attempts to create four independent, single-thread daemon objects through the thread manager. They are not a master and four flush workers. Boot creates the objects before log recovery, their tasks return while the flush-daemon gate is closed, and boot enables the gate after recovery. Stand-alone mode has no page-buffer daemons and uses synchronous progress instead.
 
 | Daemon | Pinned work and wake cadence |
 |---|---|
-| Maintenance | Adjusts private/shared quotas and maintains direct-victim progress every 100 ms. |
-| Page flush | Wakes on demand or after `page_bg_flush_interval` (1,000 ms by default), then may loop while pressure still calls for victim flushing. A nonpositive interval makes it event-driven. |
-| Post-flush | Rechecks completed flush candidates and hands eligible ones to waiters; adaptive waits are 1, 10, or 100 ms, returning to the fast interval when assignment work is found. |
-| Flush control | Adds I/O tokens from elapsed time every 50 ms. Its daemon can be absent when flush-control initialization is unavailable. |
+| Maintenance | Adjusts private/shared quotas and maintains direct-victim progress every 100 ms. It does not write page images. |
+| Page flush | The one page-buffer background flusher: wakes on demand or after `page_bg_flush_interval` (1,000 ms by default), selects dirty LRU3 victim candidates, and may loop while pressure still calls for victim flushing. A nonpositive interval makes it event-driven. |
+| Post-flush | Rechecks already-submitted flush candidates and hands eligible ones to waiters; adaptive waits are 1, 10, or 100 ms, returning to the fast interval when assignment work is found. It does not initiate another page write. |
+| Flush control | Adds I/O tokens from elapsed time every 50 ms. It does not select dirty pages, and its daemon can be absent when flush-control initialization is unavailable. |
+
+The page-flush daemon is not the only thread that can flush a dirty page. Checkpoint, explicit page/volume/lifecycle operations, and a WRITE owner servicing a deferred request execute the same generation mechanism from their own threads. The separate DWB subsystem may then use its own two daemons for downstream block writing and volume synchronization. See the canonical [flush-actor explanation](../learning/04-flush-one-generation.md#who-actually-performs-a-flush) and [primary-source research note](../reference/dirty-page-flush-actors.md).
 
 Daemon count, ownership, and cadence are version-sensitive implementation policy, not caller guarantees. Wake thresholds, periods, priorities, batch sizes, and quota formulas must be rechecked on the target revision and configuration. Do not encode them into the fix/unfix contract.
 
-Source: `src/storage/page_buffer.c:16972-17255`; default page-flush interval at `src/base/system_parameter.c:1806-1829`.
+Source: `src/storage/page_buffer.c:16972-17255`; lifecycle gate at `src/transaction/boot_sr.c:2405-2441`; default page-flush interval at `src/base/system_parameter.c:1806-1829`; DWB daemons at `src/storage/double_write_buffer.cpp:4017-4152`.
 
 ## AOUT caveat: structures present, analyzed default disabled
 

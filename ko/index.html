@@ -67,7 +67,7 @@
       <article class="reference-card full">
         <span class="status waiting">읽었다고 보고됨</span>
         <h3>Lesson 6 · 한 generation flush하기</h3>
-        <p>caller contract 다음에 진행하세요. writer가 더 새로운 resident DIRTY generation을 만드는 동안, 복사된 generation이 WAL gate와 DWB/direct-write boundary를 통과하는 과정을 추적합니다.</p>
+        <p>caller contract 다음에 진행하세요. 동등한 daemon 역할 네 개와 checkpoint/foreground flush actor를 구분한 뒤, writer가 더 새로운 resident DIRTY state를 만드는 동안 copied generation 하나가 WAL과 DWB/direct-write를 통과하는 과정을 추적합니다.</p>
         <p><a href="lessons/0006-flush-one-generation.html">Lesson 6 미리 보기 →</a></p>
       </article>
       <article class="reference-card full">
@@ -155,7 +155,7 @@
       <article class="course-item"><span class="step">4</span><div><span class="status">준비됨</span><h3>Ownership debt</h3><p>global <code>fcnt</code>, thread별 nested holder, 성공한 call마다 생기는 debt 하나, 이에 대응하는 release.</p></div><a href="lessons/0004-repay-fix-debt.html">열기 →</a></article>
       <article class="course-item"><span class="step">4A</span><div><span class="status">준비됨</span><h3>Holder anchor와 entry</h3><p>Per-thread list head, linear BCB lookup, nested-count reuse, entry recycling, cost boundary.</p></div><a href="lessons/0004a-understand-holder-anchor.html">열기 →</a></article>
       <article class="course-item"><span class="step">5</span><div><span class="status">준비됨</span><h3>correctness를 완성하는 caller</h3><p>logical lock, validation, mutation, recovery logging, page LSA, dirty transition, 모든 exit의 cleanup.</p></div><a href="lessons/0005-audit-a-logged-mutation.html">열기 →</a></article>
-      <article class="course-item"><span class="step">6</span><div><span class="status">준비됨</span><h3>한 generation flush하기</h3><p>copied generation, WAL gate, DWB/direct-write boundary, 두 LSA, retryable failure, 동시 re-dirty.</p></div><a href="lessons/0006-flush-one-generation.html">열기 →</a></article>
+      <article class="course-item"><span class="step">6</span><div><span class="status">준비됨</span><h3>한 generation flush하기</h3><p>Flush actor, copied generation, WAL gate, DWB/direct-write boundary, 두 LSA, retryable failure, 동시 re-dirty.</p></div><a href="lessons/0006-flush-one-generation.html">열기 →</a></article>
       <article class="course-item"><span class="step">7</span><div><span class="status">준비됨</span><h3>frame 하나 교체하기</h3><p>LRU selection과 allocation-progress policy보다 먼저 확인할 hard safety predicate.</p></div><a href="lessons/0007-replace-one-frame.html">열기 →</a></article>
       <article class="course-item"><span class="step">8</span><div><span class="status">준비됨</span><h3>안전한 변경 방어하기</h3><p>interface family, owner, invariant, failure unwind, caller impact, risk에 맞춘 verification.</p></div><a href="lessons/0008-defend-a-safe-change.html">열기 →</a></article>
       <article class="course-item"><span class="step">9</span><div><span class="status">첫 Lesson 준비됨</span><h3>Advanced mechanism</h3><p>concurrency, ordered access, replacement progress, recovery, lifecycle, specialized interface, proof obligation.</p></div><a href="lessons/0009-classify-latch-wait.html">열기 →</a></article>
