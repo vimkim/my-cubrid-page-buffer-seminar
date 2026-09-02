@@ -143,12 +143,15 @@ test("the completion report records deterministic, HTTP, DOM, migration, and sco
     "node --test scripts/*.test.mjs",
     "node scripts/check-maintainer-guide.mjs",
     "--copyparty-url http://127.0.0.1:39497/",
-    "17 pages",
+    "27 pages",
     "6 displayed",
-    "23 resources",
+    "33 resources",
     "Playwright is not installed",
     "Migration audit",
     "be16718",
+    "b4179ee",
+    "74 immutable paired Canonical IDs",
+    "189 verified source items",
     "No CUBRID engine build",
   ]) {
     assert.match(report, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
