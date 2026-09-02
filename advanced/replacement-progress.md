@@ -10,11 +10,11 @@ Eligibility comes before every mechanism on this page. A policy may decide where
 
 ## Pinned implementation policy: domains, zones, and hints
 
-The pinned revision distributes resident frames across private LRU domains assigned to active contexts and shared LRU domains. Each list uses LRU1/LRU2/LRU3 zones; the victim scan starts in the victim zone and may use a victim hint (`victim_hint`) to avoid rescanning known-ineligible candidates.
+The pinned revision distributes resident frames across private LRU domains assigned to active contexts and shared LRU domains. Each list uses three zones: LRU1 is the hot zone, LRU2 is a buffer zone in which a fallen BCB can be boosted back, and LRU3 is the victimization zone, so "victim zone" in this guide always means LRU3. The victim scan starts in LRU3 and may use a victim hint (`victim_hint`) to avoid rescanning known-ineligible candidates.
 
 Quota policy adjusts private-list targets from activity and redistributes pressure toward shared lists. Each candidate queue, count, and hint accelerates search; none is an ownership proof. The scan still rejects flags/fix ownership and performs a final BCB-protected eligibility check before removal.
 
-Source: structures and list state at `src/storage/page_buffer.c:560-773`; initialization at `src/storage/page_buffer.c:5744-5903`; ordinary selection at `src/storage/page_buffer.c:9293-9538`; quota policy at `src/storage/page_buffer.c:13942-14440`. Detailed routing: [CUBRID LRU/victim fact sheet](../../../pgbuf-analysis/research/cubrid-lru-victim.md).
+Source: zone semantics at `src/storage/page_buffer.c:185-200`; structures and list state at `src/storage/page_buffer.c:560-773`; initialization at `src/storage/page_buffer.c:5744-5903`; ordinary selection at `src/storage/page_buffer.c:9293-9538`; quota policy at `src/storage/page_buffer.c:13942-14440`. Detailed routing: [CUBRID LRU/victim fact sheet](../../../pgbuf-analysis/research/cubrid-lru-victim.md).
 
 ## No free BCB: the allocation progress loop
 

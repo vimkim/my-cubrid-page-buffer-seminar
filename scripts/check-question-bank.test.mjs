@@ -58,6 +58,7 @@ function migrationRows() {
     EXEC: 17,
     GRILL: 12,
     READER: 16,
+    READER2: 7,
   };
   const rows = [];
   for (const [source, count] of Object.entries(counts)) {
@@ -67,7 +68,7 @@ function migrationRows() {
           ? `PGBUF-Q${String(index).padStart(3, "0")}`
           : `${source}-${String(index).padStart(2, "0")}`;
       const retained = source === "TEACH" && index === 1;
-      const reader = source === "READER";
+      const reader = source.startsWith("READER");
       rows.push(
         `| \`${source}\` | \`${legacy}\` | Topic ${index} | ${
           retained ? "Retained" : reader ? "Merged" : "Excluded"

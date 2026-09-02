@@ -1,0 +1,1 @@
+This directory contains a second reader pass over the revised material at commit 4fe4e7e. It was recorded by an agent standing in for the reader at the reader's request, reading `learning/02-fix-hold-release.md` and the two Advanced sections it routes to as a target maintainer would. Keep `questions.md` unedited; it is digest-pinned in `../maintainer-guide-validation.json`.

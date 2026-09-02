@@ -31,6 +31,7 @@ test("the hundred-writer worked case is visual, bounded, and routed to its quest
   assert.match(m, /### Worked case: one hundred unconditional WRITE requests/);
   assert.match(m, /!\[Unconditional WRITE waiters queued on one BCB and granted one zero-crossing at a time\]\(\.\.\/assets\/latch-wait-queue\.svg\)/);
   for (const term of ["`next_wait_thrd`", "`waiter_exists`", "`pgbuf_timed_sleep()`", "`pgbuf_wakeup_reader_writer()`", "`page_latch_timeout_in_msecs`", "reader grouping", "holder re-entry", "`ER_PAGE_LATCH_TIMEDOUT`", "not as an Interface contract"]) assert.ok(m.includes(term), term);
+  assert.match(m, /a zero-crossing, the only moment at which the queue is walked/);
   assert.match(m, /one grant per zero-crossing/i);
   for (const anchor of ["src/storage/page_buffer.c:7041-7450", "src/storage/page_buffer.c:7452-7590", "src/base/system_parameter.c:5308-5319"]) assert.ok(m.includes(`\`${anchor}\``), anchor);
   assert.ok(m.includes("](../questions/advanced.md#pgbuf-qb-033-how-are-many-unconditional-write-waiters-handled)"));

@@ -78,7 +78,7 @@ Every SVG displayed anywhere in the document set is owned by [`assets/`](./asset
 
 ## Reader question intake loop
 
-Reader questions recorded against a draft (for example `questions-b4179ee/questions.md`) are Reader question intake: keep the file unedited and digest-pinned in `maintainer-guide-validation.json`. Handle each question twice.
+Reader questions recorded against a draft (for example `questions-b4179ee/questions.md`) are Reader question intake: keep the file unedited and digest-pinned in `maintainer-guide-validation.json`. Name the directory after the commit the reader read (`questions-<commit>/`), and give it an `AGENTS.md` that says who recorded it; a pass recorded by an agent standing in for the reader must say so. Each new intake becomes one source population in `questions/migration-audit.md` and in `scripts/question-bank-contract.mjs`. Handle each question twice.
 
 1. Give it a Question disposition in `questions/migration-audit.md` that maps to a Canonical question with an evidence-aware answer.
 2. Ask what made the reader stumble in the Canonical explanation itself. An undefined term (DWB, load owner, provisional BCB, page header identity), a label in a visual, or a mechanism deferred without a summary is a guide defect. Fix it on the owning page, add or reword a visual only when the state transitions are materially harder in prose, and link the page's Related routes to the Canonical questions that rehearse the point.

@@ -12,7 +12,7 @@ This report records the final validation of the English page-buffer maintainer-g
 
 - The prior stable entry, six Core pages, three playbooks, five Advanced pages, and two compact references remain complete. The ten approved Question-bank pages bring the aggregate discovery seam to 27 pages.
 - The Question bank contains 74 immutable paired Canonical IDs: 30 Core, 25 Advanced, 15 Maintenance-scenario, and 4 Applied-exercise items.
-- The complete disposition ledger contains 189 verified source items: 38 TEACH, 55 ADV, 24 HIST, 27 PLAN, 17 EXEC, 12 GRILL, and 16 Reader-intake questions.
+- The complete disposition ledger contains 189 verified source items: 38 TEACH, 55 ADV, 24 HIST, 27 PLAN, 17 EXEC, 12 GRILL, and 16 Reader-intake questions, plus the 7 second-pass Reader questions recorded below.
 - Every Reader-intake item maps to a Canonical answer; the unedited intake is SHA-256 pinned. Cross-database questions, runners, scoring, Korean prose, and unsupported defect/runtime claims remain outside Canonical routes.
 - Every Core page has one Predict–Locate–Explain Understanding check and an adjacent evidence-aware model answer.
 - The final visual set contains 9 displayed English SVGs and no orphaned asset: six from the guide cutover plus three added by the Reader-intake follow-up below.
@@ -37,7 +37,7 @@ Run from `code-analysis/page-buffer-presentation/` unless stated otherwise.
 
 ## Live-rendering gate
 
-Copyparty HTTP requested every discovered page with `?v` and every displayed SVG: 36 resources returned successfully. Live DOM was explicitly unavailable because Playwright is not installed. Therefore HTTP availability and source compatibility passed, but browser-evaluated image `naturalWidth`/`naturalHeight` and render-console checks remain unexecuted rather than being reported as passing.
+Copyparty HTTP requested every discovered page with `?v` and every displayed SVG: 36 resources returned successfully. At the original completion, Live DOM was explicitly unavailable because Playwright is not installed in this repository, so browser-evaluated image `naturalWidth`/`naturalHeight` and render-console checks were reported as unexecuted rather than passing. The second reader pass below ran that gate by linking a scratch Playwright install into the guide directory for the duration of one validator run: Live DOM PASS for all 27 pages, every displayed image with nonzero natural dimensions and no relevant render error. The link was removed afterwards; Playwright is still not a project dependency.
 
 ## Question-bank review verdicts
 
@@ -56,11 +56,21 @@ The sixteen Reader-intake questions recorded against draft `b4179ee` were rechec
 - **Validation** was extended: page tests assert the new vocabulary, sections, anchors, and visuals; the two asset-seam tests share one visual roster in `scripts/canonical-visuals.mjs`; the Reader-intake file remains unedited and digest-pinned.
 - **Review:** a two-axis Standards and Spec review of the working tree against `1a0b679` found one hard wording contradiction ("ownership debt is committed" next to the rule against "commit debt"), one canonical-ownership duplication (the Core page restating the Advanced queue-walk rule), missing anchors on the cold-miss sequence, a non-canonical counter name, an anchor gap for `latch_last_thread`, a 7582/7590 range drift, an over-broad zero-wait statement, and a narrowed header-setter statement. All were fixed before commit; the roster duplication smell was resolved by the shared module.
 
-Results after the follow-up: `node --test scripts/*.test.mjs` 106/106; `node scripts/check-maintainer-guide.mjs` PASS with 27 pages and 9 displayed SVGs; Copyparty HTTP PASS for 36 resources; live DOM still UNAVAILABLE because Playwright is not installed.
+Results after the follow-up: `node --test scripts/*.test.mjs` 106/106; `node scripts/check-maintainer-guide.mjs` PASS with 27 pages and 9 displayed SVGs; Copyparty HTTP PASS for 36 resources.
+
+### Second reader pass
+
+After the first intake was folded in, a second pass over the revised Core page 2 and the two new Advanced sections was recorded by an agent standing in for the reader, at the reader's request, as `questions-4fe4e7e/questions.md` (7 questions, digest-pinned, source population `READER2` in the migration audit and the question-bank contract). Every question maps to a Canonical answer, and each was removed from the pages:
+
+- Core page 2 defines hash anchor and invalid list, names the source symbols behind "VPID load lock", and explains why a stale BCB pointer stays safe to lock (BCB storage is allocated once and freed only at finalization).
+- The "Who holds this BCB?" paragraph was corrected: `pgbuf_dump()` prints per-BCB counts without thread identity, so no pinned routine attributes holders for an arbitrary BCB; the holder anchor is now defined.
+- The Advanced pages define zero-crossing at first use and state that LRU3 is the victimization zone.
+
+Results after the second pass: `node --test scripts/*.test.mjs` 106/106; `node scripts/check-maintainer-guide.mjs` PASS with 27 pages and 9 displayed SVGs; Copyparty HTTP PASS for 36 resources; Live DOM PASS for 27 pages with a temporarily linked Playwright.
 
 ## Boundaries not exercised
 
 - No CUBRID engine build or runtime workload was run because this implementation changes documentation and its validation only; it does not change engine code or strengthen a runtime claim.
-- No browser live-DOM gate was run because Playwright is not installed.
+- The browser live-DOM gate was not run at the original completion because Playwright is not installed in this repository; it was run once during the second reader pass with a temporary scratch install. Repeating it requires providing Playwright again.
 - The guide remains pinned to `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`. Applying implementation claims to another revision still requires the update procedure in the authoring notes.
 - Core source exercises are self-checkable, but an applied change-impact plan still requires a controlled caller regression or narrow runtime probe on the target revision and another maintainer's review.

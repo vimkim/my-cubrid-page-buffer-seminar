@@ -161,8 +161,10 @@ test("the lesson defines its trace vocabulary and explains why three identity ch
 
   assert.match(markdown, /### Vocabulary the trace depends on/);
   for (const term of [
+    "**Hash anchor**",
     "**Hash candidate**",
     "**VPID load lock and load owner**",
+    "**Invalid list**",
     "**Provisional BCB**",
     "**DWB**",
     "**Page header identity**",
@@ -175,6 +177,15 @@ test("the lesson defines its trace vocabulary and explains why three identity ch
   assert.match(markdown, /`FILEIO_PAGE\.prv`/);
   assert.match(markdown, /registering the record first, not from having searched/i);
   assert.match(markdown, /not yet linked into the hash chain/i);
+  assert.match(markdown, /The source calls this a buffer lock \(`pgbuf_lock_page\(\)`, `buf_lock_table`\)/);
+  assert.match(markdown, /allocated once at pool initialization and freed only at finalization/i);
+  for (const anchor of [
+    "src/storage/page_buffer.c:575-582",
+    "src/storage/page_buffer.c:626-633,8905-8985",
+    "src/storage/page_buffer.c:5559-5660,1921-1971",
+  ]) {
+    assert.ok(markdown.includes(`\`${anchor}\``), anchor);
+  }
   assert.doesNotMatch(markdown, /Grant and commit debt/);
 
   assert.match(markdown, /### Why three identity checks are not redundant/);
@@ -229,7 +240,11 @@ test("the lesson summarizes waiting, the cold-miss sequence, and holder attribut
 
   assert.match(markdown, /\*\*Who holds this BCB\?\*\*/);
   assert.match(markdown, /`thrd_hold_list`/);
+  assert.match(markdown, /`PGBUF_HOLDER_ANCHOR`/);
+  assert.match(markdown, /`pgbuf_dump\(\)`.*without any thread identity/);
+  assert.doesNotMatch(markdown, /which is what the debug dump routines do/);
   assert.match(markdown, /`latch_last_thread`.*`src\/storage\/page_buffer\.c:524`/);
+  assert.ok(markdown.includes("`src/storage/page_buffer.c:11365-11446`"));
   for (const anchor of [
     "src/storage/page_buffer.c:7981-8178,11598-11604",
     "src/storage/page_buffer.c:8181-8403",

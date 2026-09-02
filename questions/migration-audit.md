@@ -21,6 +21,7 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `EXEC` | [Executed quiz tree](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/) | 17 |
 | `GRILL` | [Live-grill seeds](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md) | 12 |
 | `READER` | [Unedited Reader question intake](../questions-b4179ee/questions.md) | 16 |
+| `READER2` | [Unedited second reader pass](../questions-4fe4e7e/questions.md), recorded by an agent standing in for the reader after the first intake was folded into the guide | 7 |
 
 ## Disposition ledger
 
@@ -80,6 +81,13 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `READER` | `READER-14` | Miss steps and performance issues | Merged | PGBUF-QB-008, PGBUF-QB-011, PGBUF-QB-063 | Splits mechanism from diagnostic performance evidence. |
 | `READER` | `READER-15` | No free BCB and infinite wait claim | Rewritten | PGBUF-QB-040 | Tests allocation progress timeout interrupt and all-dirty outcomes. |
 | `READER` | `READER-16` | Victim conditions | Merged | PGBUF-QB-029 | Answered by the hard eligibility gate. |
+| `READER2` | `READER2-01` | Hash anchor definition | Merged | PGBUF-QB-008 | Defined in the Core vocabulary as the bucket head with a mutex, a resident-BCB chain, and a buffer-lock chain. |
+| `READER2` | `READER2-02` | Invalid list definition | Merged | PGBUF-QB-040 | Defined in the Core vocabulary; the allocation-loop answer owns its role. |
+| `READER2` | `READER2-03` | Load lock versus buffer lock naming | Merged | PGBUF-QB-008 | The vocabulary now names the source symbols for the one mechanism. |
+| `READER2` | `READER2-04` | Stale BCB pointer safety | Merged | PGBUF-QB-012, PGBUF-QB-031 | Answered by BCB storage permanence, which the lock-free proof also relies on. |
+| `READER2` | `READER2-05` | Which zone is the victim zone | Merged | PGBUF-QB-037 | LRU3 named as the victimization zone with the pinned comment anchor. |
+| `READER2` | `READER2-06` | Zero-crossing term | Merged | PGBUF-QB-033 | Defined at first use as global fcnt returning to zero. |
+| `READER2` | `READER2-07` | Holder attribution routine and holder anchor | Rewritten | PGBUF-QB-015 | Corrected: the debug dump prints per-BCB counts without thread identity; holder anchor defined. |
 | `ADV` | `PGBUF-Q001` | Successful fix promise | Merged | PGBUF-QB-005 | The Core postcondition is the prerequisite for deeper acquisition proofs. |
 | `ADV` | `PGBUF-Q002` | Page object identity | Merged | PGBUF-QB-003 | The Canonical object map owns this distinction. |
 | `ADV` | `PGBUF-Q003` | Choosing acquisition families | Rewritten | PGBUF-QB-006, PGBUF-QB-044, PGBUF-QB-049 | Split ordinary policy choice from recovery and specialized interfaces. |

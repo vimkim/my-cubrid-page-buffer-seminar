@@ -60,7 +60,11 @@ const sourceLegacyItems = {
   EXEC: sequentialLegacyIds("EXEC-", 17),
   GRILL: sequentialLegacyIds("GRILL-", 12),
   READER: sequentialLegacyIds("READER-", 16),
+  READER2: sequentialLegacyIds("READER2-", 7),
 };
+const readerSources = new Set(
+  Object.keys(sourceLegacyItems).filter((source) => source.startsWith("READER")),
+);
 const sourceCounts = Object.fromEntries(
   Object.entries(sourceLegacyItems).map(([source, items]) => [source, items.length]),
 );
@@ -145,7 +149,7 @@ function validateAudit(markdown, canonicalIds, failures) {
   const rows = markdown
     .split(/\r?\n/)
     .filter((line) =>
-      /^\|\s*`(?:TEACH|ADV|HIST|PLAN|EXEC|GRILL|READER|NEW)`\s*\|\s*`[^`]+`\s*\|/.test(
+      /^\|\s*`(?:TEACH|ADV|HIST|PLAN|EXEC|GRILL|READER2|READER|NEW)`\s*\|\s*`[^`]+`\s*\|/.test(
         line,
       ),
     )
@@ -181,7 +185,7 @@ function validateAudit(markdown, canonicalIds, failures) {
         failures.push(`questions/migration-audit.md: unknown canonical destination ${id}`);
       }
     }
-    if (source === "READER" && destination === "—") {
+    if (readerSources.has(source) && destination === "—") {
       failures.push(`questions/migration-audit.md: ${legacyKey} must map to an answer`);
     }
   }

@@ -82,6 +82,18 @@ test("Core retrieval answers the current Reader-intake concepts", async () => {
     "questions-b4179ee/questions.md"
   ];
   assert.equal(createHash("sha256").update(intake).digest("hex"), configured);
+
+  // Second reader pass, recorded against 4fe4e7e after the first intake was folded in.
+  const secondIntake = await readFile(path.join(root, "questions-4fe4e7e/questions.md"));
+  const secondRows = audit
+    .split(/\r?\n/)
+    .filter((line) => /^\| `READER2` \| `READER2-[0-9]{2}` \|/.test(line));
+  assert.equal(secondRows.length, 7);
+  assert.ok(secondRows.every((line) => /PGBUF-QB-[0-9]{3}/.test(line)));
+  const secondConfigured = JSON.parse(configText).readerQuestionIntakeSha256[
+    "questions-4fe4e7e/questions.md"
+  ];
+  assert.equal(createHash("sha256").update(secondIntake).digest("hex"), secondConfigured);
 });
 
 test("Advanced retrieval has twenty-five paired questions in mechanism order", async () => {

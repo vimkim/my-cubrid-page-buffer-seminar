@@ -12,6 +12,8 @@ test("replacement structures are labelled pinned policy after eligibility", asyn
   for (const term of ["private LRU", "shared LRU", "LRU1", "LRU2", "LRU3", "quota", "candidate queue", "victim hint"]) assert.match(m, new RegExp(term, "i"), term);
   assert.match(m, /implementation policy/i);
   assert.match(m, /eligibility.*before/is);
+  assert.match(m, /LRU3 is the victimization zone/);
+  assert.ok(m.includes("`src/storage/page_buffer.c:185-200`"));
 });
 
 test("direct and background progress retain generation and timing boundaries", async () => {
