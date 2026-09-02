@@ -95,7 +95,7 @@ Results after the pass: `node --test scripts/*.test.mjs` 111/111; `node scripts/
 
 The five Advanced pages carried two visuals between them and three pages had none. This pass added seven, each owned by one page, kept in the root asset seam, and checked against the pinned source before drawing:
 
-- `promotion-outcomes.svg` on the acquisition page, inside "Blocking promotion releases observations": the four outcomes of `pgbuf_promote_read_latch()`, with the blocking path's unfixed window marked (`src/storage/page_buffer.c:2842-3050`).
+- `promotion-outcomes.svg` on the acquisition page, inside "Blocking promotion uses queue priority to preserve page state": the four outcomes of `pgbuf_promote_read_latch()`, with the internal holder gap, successful queue-head continuity, and hard-failure pointer boundary marked (`src/storage/page_buffer.c:2842-3050`).
 - `ordered-watcher-refix.svg` on the acquisition page, inside "Ordered watchers": the conditional attempt, the canonical order of group, rank, and `VPID`, the release of held pages that sort after the request, and the refix with `page_was_unfixed` (`src/storage/page_buffer.c:12193-12240,12268-13531`, `src/storage/page_buffer.h:224-243`).
 - `lru-domains-zones.svg` on the replacement page, inside the pinned-policy section: private and shared domains, the three zones of every list, and the search order of `pgbuf_get_victim()` (`src/storage/page_buffer.c:185-200,9067-9265`).
 - `redo-lsa-gate.svg` on the recovery page, inside the redo section: the page-LSA comparison with a worked example from page LSA 140 (`src/transaction/log_recovery.c:497-536`, `src/transaction/log_recovery_redo.hpp:587-668`).

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">A nested WRITE fix and a dedicated promotion have different ownership contracts</title>
+  <desc id="desc">Two paths begin with one thread holding a page twice under READ. Calling pgbuf_fix for WRITE is another acquisition: an immediate upgrade ends with fix count three, and a blocking request carries the old two fixes plus the new request. Calling pgbuf_promote_read_latch transforms the existing ownership: immediate or blocking success ends with fix count two. The dedicated API also provides only-reader failure, promoter head insertion, and a page-pointer result that exposes a released ownership window.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f9fc}.panel{fill:#fff;stroke:#cbd5e1;stroke-width:2}.start{fill:#eff6ff;stroke:#2563eb;stroke-width:2}.fix{fill:#fff7ed;stroke:#ea580c;stroke-width:2}.promote{fill:#eef2ff;stroke:#6366f1;stroke-width:2}.out{fill:#ecfdf5;stroke:#059669;stroke-width:2}.warn{fill:#fff1f2;stroke:#e11d48;stroke-width:2}.title{font:700 28px system-ui,sans-serif;fill:#0f172a}.head{font:700 20px system-ui,sans-serif;fill:#0f172a}.sub{font:700 16px system-ui,sans-serif;fill:#1e293b}.text{font:15px system-ui,sans-serif;fill:#334155}.small{font:13px system-ui,sans-serif;fill:#475569}.mono{font:600 14px ui-monospace,SFMono-Regular,monospace;fill:#0f172a}.arrow{fill:none;stroke:#64748b;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#64748b"/></marker>
+  </defs>
+  <rect width="1280" height="720" class="bg"/>
+  <text x="40" y="48" class="title">Same starting READ holder, two different operations</text>
+
+  <rect x="40" y="78" width="1200" height="92" rx="14" class="start"/>
+  <text x="60" y="108" class="head">Starting ownership</text>
+  <text x="60" y="136" class="mono">Thread T: READ holder, holder.fix_count=2</text>
+  <text x="525" y="136" class="mono">BCB: READ, global fcnt=2</text>
+  <text x="920" y="136" class="text">T currently owes 2 unfix calls</text>
+
+  <rect x="40" y="205" width="575" height="420" rx="16" class="panel"/>
+  <text x="62" y="239" class="head">A · Nested WRITE fix = acquire one more fix</text>
+  <rect x="65" y="265" width="525" height="68" rx="11" class="fix"/>
+  <text x="85" y="293" class="mono">pgbuf_fix(..., WRITE, ...)</text>
+  <text x="85" y="316" class="text">Success must add one ordinary fix debt.</text>
+  <path d="M327 333 V370" class="arrow"/>
+  <rect x="65" y="372" width="245" height="106" rx="11" class="out"/>
+  <text x="83" y="399" class="sub">T owns every current fix</text>
+  <text x="83" y="424" class="text">Change latch to WRITE now,</text>
+  <text x="83" y="447" class="mono">holder.fix_count: 2 → 3</text>
+  <text x="83" y="468" class="small">T now owes 3 unfix calls.</text>
+  <rect x="345" y="372" width="245" height="106" rx="11" class="fix"/>
+  <text x="363" y="399" class="sub">Another reader exists</text>
+  <text x="363" y="424" class="text">Release T's READ share,</text>
+  <text x="363" y="447" class="mono">queue tail, request count=3</text>
+  <text x="363" y="468" class="small">Grant rebuilds debt count 3.</text>
+  <rect x="65" y="512" width="525" height="82" rx="11" class="warn"/>
+  <text x="85" y="540" class="sub">This is not the dedicated promotion contract.</text>
+  <text x="85" y="562" class="text">It accepts a VPID and performs a fix acquisition;</text>
+  <text x="85" y="582" class="text">ordinary conflict joins the tail.</text>
+
+  <rect x="665" y="205" width="575" height="420" rx="16" class="panel"/>
+  <text x="687" y="239" class="head">B · Dedicated promotion = transform existing fixes</text>
+  <rect x="690" y="265" width="525" height="68" rx="11" class="promote"/>
+  <text x="710" y="293" class="mono">pgbuf_promote_read_latch(&amp;pgptr, condition)</text>
+  <text x="710" y="316" class="text">Success must preserve the existing fix debt.</text>
+  <path d="M952 333 V370" class="arrow"/>
+  <rect x="690" y="372" width="245" height="106" rx="11" class="out"/>
+  <text x="708" y="399" class="sub">T owns every current fix</text>
+  <text x="708" y="424" class="text">Change latch to WRITE now,</text>
+  <text x="708" y="447" class="mono">holder.fix_count: 2 → 2</text>
+  <text x="708" y="468" class="small">T still owes 2 unfix calls.</text>
+  <rect x="970" y="372" width="245" height="106" rx="11" class="promote"/>
+  <text x="988" y="399" class="sub">Another reader exists</text>
+  <text x="988" y="424" class="text">ONLY_READER: retain READ/fail</text>
+  <text x="988" y="447" class="mono">SHARED: queue head, count=2</text>
+  <text x="988" y="468" class="small">Grant rebuilds debt count 2.</text>
+  <rect x="690" y="512" width="525" height="82" rx="11" class="warn"/>
+  <text x="710" y="540" class="sub">The API makes the unfixed window explicit.</text>
+  <text x="710" y="562" class="text">It takes PAGE_PTR* and can null it on failure;</text>
+  <text x="710" y="582" class="text">failure is explicit; successful head handoff preserves state.</text>
+
+  <rect x="40" y="651" width="1200" height="44" rx="10" class="out"/>
+  <text x="60" y="679" class="sub">Why keep the API? “Acquire one more fix” and “strengthen my existing fixes” have different debt, queue, condition, and failure contracts.</text>
+</svg>

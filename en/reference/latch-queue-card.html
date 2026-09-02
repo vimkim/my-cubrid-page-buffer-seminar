@@ -42,8 +42,8 @@
         <li>Scan under BCB protection.</li>
         <li>Skip cancelled requests.</li>
         <li>Leave FLUSH waiters.</li>
-        <li>Head WRITE: grant one.</li>
-        <li>Head READ: grant reader group.</li>
+        <li>First granted WRITE: grant one and stop.</li>
+        <li>First granted READ: keep scanning, leave writers/FLUSH linked, grant later readers.</li>
         <li>Keep <code>waiter_exists</code> if blockers remain.</li>
       </ol>
     </article>

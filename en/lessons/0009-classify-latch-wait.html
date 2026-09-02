@@ -63,15 +63,31 @@
           <thead><tr><th>Current BCB state</th><th>READ request</th><th>WRITE request</th></tr></thead>
           <tbody>
             <tr><td><code>NO_LATCH</code></td><td>Set READ, global <code>fcnt=1</code>, and create a holder.</td><td>Set WRITE, global <code>fcnt=1</code>, and create a holder.</td></tr>
-            <tr><td>READ, no waiter</td><td>Grant immediately. Existing thread holder increments; a new reader gets its own holder.</td><td>Promote immediately only if this thread owns all current fix counts. Otherwise wait.</td></tr>
-            <tr><td>READ, waiter exists</td><td>An existing holder may re-enter. A new reader waits instead of barging.</td><td>Only-reader promotion may still succeed; otherwise wait.</td></tr>
+            <tr><td>READ, no waiter</td><td>Grant immediately. Existing thread holder increments; a new reader gets its own holder.</td><td>A nested <code>pgbuf_fix(..., WRITE, ...)</code> upgrades immediately only if this thread owns all current fixes, then adds one new fix debt. Otherwise it waits.</td></tr>
+            <tr><td>READ, waiter exists</td><td>An existing holder may re-enter. A new reader waits instead of barging.</td><td>The same nested-WRITE-fix rule applies. This is not the dedicated promotion API's contract.</td></tr>
             <tr><td>WRITE</td><td>The current WRITE holder may nest a READ; another thread waits.</td><td>The current WRITE holder may re-enter; another thread waits.</td></tr>
           </tbody>
         </table>
         <img class="diagram" src="../../assets/unconditional-latch-scenarios.svg" alt="State transitions for idle, N-reader, queued-writer, existing-holder, and new-thread unconditional READ and WRITE requests">
         <p class="caption">“One more reader” is incomplete: an existing reader and a new non-holder reader follow different paths when writers are waiting.</p>
-        <p>With <code>N</code> readers and no waiter, another READ is granted immediately. With <code>N</code> readers and queued writers, a new non-holder reader goes behind those writers, but an existing reader may re-enter READ. A new writer also joins the tail. A current reader asking for WRITE either promotes when it owns every fix, releases its own READ share and waits through the general fix path, or uses the dedicated promotion interface that inserts at the head.</p>
-        <p>If a general WRITE fix must wait while this thread already holds READ fixes, the path subtracts this thread's READ contribution from global <code>fcnt</code>, removes its holder, and queues a request carrying the combined count. A dedicated blocking <code>pgbuf_promote_read_latch()</code> is a different interface: it inserts its promoter at the queue head. Ordinary conflicting fixes append at the tail.</p>
+        <p>With <code>N</code> readers and no waiter, another READ is granted immediately. With <code>N</code> readers and queued writers, a new non-holder reader goes behind those writers, but an existing reader may re-enter READ. A new writer also joins the tail. “A current reader asks for WRITE” is incomplete: a nested WRITE fix acquires another debt, while dedicated promotion transforms the fixes the caller already owns.</p>
+        <p>If a general WRITE fix must wait while this thread already holds READ fixes, the path subtracts this thread's READ contribution from global <code>fcnt</code>, removes its holder, and queues a request carrying the old count plus one. A dedicated blocking <code>pgbuf_promote_read_latch()</code> preserves the old count and inserts its promoter at the queue head. Ordinary conflicting fixes append at the tail.</p>
+
+        <h3>Why does a separate READ-to-WRITE promotion API exist?</h3>
+        <img class="diagram" src="../../assets/fix-write-vs-promote.svg" alt="Comparison showing that a nested WRITE fix adds one debt while dedicated promotion preserves existing debt">
+        <p class="caption">Both paths may end with WRITE protection, but they do not promise the same ownership accounting.</p>
+        <table>
+          <thead><tr><th>Difference</th><th>Nested <code>pgbuf_fix(..., WRITE, ...)</code></th><th><code>pgbuf_promote_read_latch()</code></th></tr></thead>
+          <tbody>
+            <tr><td>Intent</td><td>Acquire one more fix with WRITE protection.</td><td>Strengthen the fixes already owned.</td></tr>
+            <tr><td>Starting at holder count 2</td><td>Success ends at count 3, so three unfixes are owed.</td><td>Success stays at count 2, so two unfixes are owed.</td></tr>
+            <tr><td>Blocking path</td><td>Carry old count plus one and append at the ordinary tail.</td><td>Carry the same count and insert the promoter at the head.</td></tr>
+            <tr><td>Promotion-specific choice</td><td>None; this is the general fix condition.</td><td><code>PGBUF_PROMOTE_ONLY_READER</code> can fail while retaining READ; <code>PGBUF_PROMOTE_SHARED_READER</code> may release and wait.</td></tr>
+            <tr><td>Lifetime signal</td><td>Returns the result of another VPID-based fix.</td><td>Takes <code>PAGE_PTR *</code>; a blocking failure can null it, exposing that the old borrowed lifetime ended.</td></tr>
+          </tbody>
+        </table>
+        <p>The immediate upgrade branch inside the general helper is therefore not a replacement for the API. It satisfies a new-acquisition contract. The dedicated function provides a same-debt transformation, promotion-specific policy, queue-head continuity, and an explicit hard-failure pointer boundary. Lesson 10 follows that protocol through representative B-tree callers.</p>
+        <div class="callout warn"><strong>Pinned-source anomaly:</strong> the ordinary immediate branch sets global <code>fcnt=1</code> and then increments the existing holder. Starting from holder count 2 therefore appears to leave global count 1 and holder count 3. This is candidate <code>VS-18</code>, not a proven safe promotion substitute; a focused runtime test is still required.</div>
 
         <h3>Does queueing 100 waiters cost O(N²)?</h3>
         <p><strong>Yes, cumulatively for insertion into a queue that does not drain.</strong> The BCB has only <code>next_wait_thrd</code>, a head pointer. It has no tail pointer. An ordinary append walks from the head to the final <code>THREAD_ENTRY</code>.</p>
@@ -82,7 +98,7 @@
             <tr><td>Append 100 waiters before any dequeue</td><td><code>O(N²)</code> cumulative</td><td>About <code>1+2+...+99=4,950</code> node inspections, or 4,851 actual next-link advances.</td></tr>
             <tr><td>Insert a blocking promoter</td><td><code>O(1)</code></td><td>Insert directly at the head.</td></tr>
             <tr><td>Wake one head WRITE waiter</td><td><code>O(1)</code> list work</td><td>Remove the head and stop; the latch is now WRITE.</td></tr>
-            <tr><td>Wake a READ group</td><td>up to <code>O(W)</code></td><td>Walk and grant compatible readers until the rule stops.</td></tr>
+            <tr><td>Wake a READ group</td><td>up to <code>O(W)</code></td><td>Scan the queue, leave incompatible writers/FLUSH nodes linked, remove cancelled nodes, and grant later compatible READ requests.</td></tr>
             <tr><td>Remove an arbitrary timed-out waiter</td><td><code>O(W)</code> worst case</td><td>Search for its predecessor; many such removals can also accumulate to <code>O(N²)</code>.</td></tr>
           </tbody>
         </table>
@@ -99,20 +115,42 @@
           <li>A current WRITE holder keeps <code>fcnt &gt; 0</code>. Each incompatible unconditional WRITE request appends to the BCB queue; a blocking promoter is the head-insertion exception.</li>
           <li>Each waiter sleeps with a bounded, interrupt-aware wait. A request converted to conditional behavior never queues.</li>
           <li>When the current holder unfixes and global <code>fcnt</code> reaches zero, the releasing thread walks the queue while holding BCB protection.</li>
-          <li>It skips cancelled entries, leaves FLUSH waiters for flush completion, and grants according to the head request.</li>
+          <li>It removes cancelled entries and leaves FLUSH waiters linked. A first granted WRITE stops the scan; a first granted READ lets the scan grant later readers across queued writers.</li>
           <li>The waker installs latch mode and requested fix count; the resumed thread records its per-thread holder before success.</li>
         </ol>
         <p class="source-note"><strong>Verified mechanism:</strong> pinned grant/wait decision is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6278-L6634"><code>page_buffer.c:6278–6634</code></a>; queue/sleep is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7041-L7450"><code>7041–7450</code></a>; zero-crossing wakeup is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7452-L7590"><code>7452–7590</code></a>.</p>
       </section>
 
-      <section class="section" id="head">
-        <div class="eyebrow">05 · Head request controls the batch</div>
-        <h2>Writer: one grant. Reader: reader group.</h2>
+      <section class="section" id="mixed-queue">
+        <div class="eyebrow">05 · Six alternating requests</div>
+        <h2>A READ grant can pass queued writers during the same wakeup scan</h2>
+        <img class="diagram" src="../../assets/alternating-read-write-waiters.svg" alt="Six READ and WRITE requests alternately linked as thread entries behind a WRITE owner">
+        <p class="caption">Assume six new non-holder threads arrive as <code>R1 → W1 → R2 → W2 → R3 → W3</code>.</p>
+        <p>Initially only the owner thread has <code>holder(A, count=1)</code>. All six arrivals conflict with BCB A's WRITE latch, so each appends its own <code>THREAD_ENTRY</code> to <code>A.next_wait_thrd</code>. The nodes carry requested mode and count, but none of the six requesters has a <code>PGBUF_HOLDER</code>, page pointer, or fix debt yet.</p>
+        <p>When the owner unfixes to zero, the wakeup loop grants R1 and changes the tuple to READ. It does not stop at W1: it leaves W1 linked, continues scanning, grants R2, leaves W2, grants R3, and leaves W3. The result is <code>READ, fcnt=3</code> with queue <code>W1 → W2 → W3</code>. Each awakened reader then records <code>holder(A, count=1)</code> in its own thread list. When all three readers later unfix to zero, W1 is granted; later zero-crossings grant W2 and W3 one at a time.</p>
+        <div class="callout warn"><strong>Source-over-comment detail:</strong> the nearby source comment says readers “at the head,” but the executable loop continues past incompatible WRITE and FLUSH nodes while the tuple is READ. It therefore grants later READ nodes in this mixed queue. Review the control flow, not the shorthand comment.</div>
+        <h3>Does every READ arrival scan every waiter?</h3>
+        <p><strong>It scans to the tail once to enqueue; it does not run group wakeup.</strong> While the original WRITE owner remains fixed, every ordinary conflicting request—READ and WRITE alike—walks the singly linked queue to find its tail. Reader grouping runs later, once a zero-crossing selects READ.</p>
         <table>
-          <thead><tr><th>Queue head</th><th>Zero-crossing action</th><th>What remains</th></tr></thead>
+          <thead><tr><th>Alternating workload queued before release</th><th>All append inspections</th><th>READ-arrival share</th><th>Group wakeup</th></tr></thead>
+          <tbody>
+            <tr><td><code>100</code> total = <code>50</code> READ + <code>50</code> WRITE</td><td><code>4,950</code></td><td><code>2,450</code> if READ first; <code>2,500</code> if WRITE first</td><td>One <code>O(100)</code> scan grants all <code>50</code> readers.</td></tr>
+            <tr><td><code>200</code> total = <code>100</code> READ + <code>100</code> WRITE</td><td><code>19,900</code></td><td><code>9,900</code> if READ first; <code>10,000</code> if WRITE first</td><td>One <code>O(200)</code> scan grants all <code>100</code> readers.</td></tr>
+          </tbody>
+        </table>
+        <p>If the queue starts with WRITE, the first zero-crossing grants that one writer and stops. When it releases, the new head is READ and the next scan grants every READ across the remaining writers. Thus the cost is cumulative <code>O(N²)</code> tail-append work plus one <code>O(N)</code> reader scan—not a full group scan for every READ request. The exact sums assume no dequeue while arrivals are building the queue.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> pinned ordinary append is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7041-L7099"><code>page_buffer.c:7041–7099</code></a>; mixed-queue scanning, tuple updates, node removal, and wakeup are <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7452-L7590"><code>7452–7590</code></a>.</p>
+        <p><a href="../../reference/alternating-reader-writer-wakeup-cost.md">Open the complete alternating-queue cost derivation →</a></p>
+      </section>
+
+      <section class="section" id="head">
+        <div class="eyebrow">06 · First granted mode controls the scan</div>
+        <h2>Writer stops the scan; READ keeps searching for readers</h2>
+        <table>
+          <thead><tr><th>Scanned request</th><th>Zero-crossing action</th><th>What remains</th></tr></thead>
           <tbody>
             <tr><td>WRITE</td><td>Grant that writer only, then stop.</td><td>Other readers/writers stay queued.</td></tr>
-            <tr><td>READ</td><td>Grant the consecutive READ run at the head; stop at the first WRITE.</td><td>That writer and everything behind it stay queued.</td></tr>
+            <tr><td>READ</td><td>Grant it, keep scanning, leave incompatible WRITE/FLUSH entries linked, and grant later READ entries.</td><td>Skipped writers and FLUSH waiters remain; granted/cancelled entries are removed.</td></tr>
             <tr><td>Cancelled <code>NO_LATCH</code></td><td>Skip it.</td><td>Continue scanning.</td></tr>
             <tr><td>FLUSH waiter</td><td>Leave it for the flush-completion protocol.</td><td>It is not granted by unfix.</td></tr>
           </tbody>
@@ -121,31 +159,31 @@
       </section>
 
       <section class="section" id="fairness">
-        <div class="eyebrow">06 · Evidence boundary</div>
+        <div class="eyebrow">07 · Evidence boundary</div>
         <h2>“Roughly arrival order” is not FIFO or starvation freedom</h2>
-        <p>One hundred writers are normally served one per zero-crossing in queue order. A head run such as <code>R1 → R2 → W1 → R3</code> grants R1 and R2, then stops at W1; R3 does not jump across W1. But three mechanisms can still reorder the apparent service:</p>
+        <p>One hundred writers are normally served one per zero-crossing in queue order. A mixed queue behaves differently: <code>R1 → R2 → W1 → R3</code> grants R1, R2, and R3 in one READ scan while W1 stays queued. Three mechanisms can therefore reorder apparent service:</p>
         <ul>
           <li><strong>Holder re-entry:</strong> an existing holder can acquire nested ownership past waiters.</li>
           <li><strong>Promotion:</strong> a blocking promoter is inserted at the head.</li>
-          <li><strong>Reader grouping:</strong> the consecutive compatible READ run at the head can be granted as a batch.</li>
+          <li><strong>Reader grouping:</strong> once READ is selected, the scan can grant later READ requests across queued writers.</li>
         </ul>
         <div class="callout warn"><strong>Do not claim:</strong> strict FIFO, starvation freedom, guaranteed wall-clock service, or latch-level deadlock freedom. The timed sleep is the deadlock guard; its exact duration is revision policy.</div>
       </section>
 
       <section class="section" id="failure">
-        <div class="eyebrow">07 · Failed waits leave no debt</div>
+        <div class="eyebrow">08 · Failed waits leave no debt</div>
         <h2>Timeout and interrupt are cleanup paths, not late grants</h2>
         <p>A timeout resets/cancels the request and reports a page-latch timeout that is mapped according to transaction wait policy. An interrupted waiter removes itself. Neither returns a page pointer or creates a holder that the caller must unfix.</p>
         <p>Review both sides of every wakeup: the waker’s tuple transition and the resumed thread’s holder allocation. Lesson 8’s <code>VS-11</code> candidate exists exactly at that post-grant holder-recording seam; queue success is not complete until both ledgers agree.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">08 · Retrieval practice</div>
+        <div class="eyebrow">09 · Retrieval practice</div>
         <h2>Trace one queue without saying “the waiter owns the page”</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="while the current WRITE holder keeps global fcnt above zero, incompatible unconditional writers append and own no fix debt -> waiter_exists prevents a new non-holder reader from barging -> when unfix makes fcnt zero, the releasing thread scans under BCB protection -> if the head is WRITE it grants one writer; if the head is READ it grants the compatible reader group -> the waker updates the latch tuple and the resumed thread records its holder, creating the ordinary success debt -> timeout or interrupt cancels/removes the request and returns without a page pointer or debt -> holder re-entry, promoter head insertion, and reader grouping prevent a strict FIFO or starvation-freedom claim." data-concepts='[{"label":"queued request has no debt","terms":["queued","pending","no debt","not own"]},{"label":"zero-crossing handoff","terms":["fcnt","zero","unfix","protected"]},{"label":"head writer versus reader group","terms":["writer","one","reader","group"]},{"label":"grant completes both ledgers","terms":["tuple","holder","debt","woken"]},{"label":"timeout and interrupt cleanly fail","terms":["timeout","interrupt","remove","no pointer"]},{"label":"no fairness theorem","terms":["fifo","fairness","starvation","re-entry","promoter"]}]'>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="while the current WRITE holder keeps global fcnt above zero, incompatible unconditional requests append as THREAD_ENTRY nodes and own no fix debt -> waiter_exists prevents a newly arriving non-holder reader from bypassing queue insertion -> when unfix makes fcnt zero, the releasing thread scans under BCB protection -> if the first grant is WRITE it grants one writer and stops; if the first grant is READ it leaves writers linked and grants later READ requests across them -> the waker updates the latch tuple and each resumed reader records its holder, creating ordinary success debt -> timeout or interrupt cancels/removes the request and returns without a page pointer or debt -> holder re-entry, promoter head insertion, and cross-writer reader grouping prevent a strict FIFO or starvation-freedom claim." data-concepts='[{"label":"queued request has no debt","terms":["queued","pending","no debt","not own"]},{"label":"zero-crossing handoff","terms":["fcnt","zero","unfix","protected"]},{"label":"writer stop versus READ scan","terms":["writer","one","reader","scan"]},{"label":"grant completes both ledgers","terms":["tuple","holder","debt","woken"]},{"label":"timeout and interrupt cleanly fail","terms":["timeout","interrupt","remove","no pointer"]},{"label":"no fairness theorem","terms":["fifo","fairness","starvation","re-entry","promoter"]}]'>
           <h3>Prompt</h3>
           <p>A WRITE holder has <code>fcnt=1</code>. The queue is <code>R1 → R2 → W1 → R3</code>; another non-holder reader arrives. Then the holder unfixes to zero.</p>
-          <p><strong>Your task:</strong> predict whether the newcomer may barge, which requests are granted, when debt begins, what W1 still owns, and why the result does not prove fairness. Add the timeout result for W1.</p>
+          <p><strong>Your task:</strong> predict where the newcomer queues, which READ requests the scan grants across W1, when debt begins, what W1 still owns, and why the result does not prove fairness. Add the timeout result for W1.</p>
           <textarea aria-label="Your latch queue trace" placeholder="Classify each request as pending, granted, or failed, then name its debt."></textarea>
           <button type="button" data-check>Check queue trace</button>
           <button type="button" class="secondary" data-reveal>Reveal model route</button>
@@ -169,10 +207,11 @@
       <a href="#structures">2. Two linked lists</a>
       <a href="#request-matrix">3. READ/WRITE matrix and cost</a>
       <a href="#queue">4. Queue and handoff</a>
-      <a href="#head">5. Head request</a>
-      <a href="#fairness">6. Fairness boundary</a>
-      <a href="#failure">7. Failed waits</a>
-      <a href="#retrieval">8. Trace it back</a>
+      <a href="#mixed-queue">5. Six alternating requests</a>
+      <a href="#head">6. Wakeup scan rule</a>
+      <a href="#fairness">7. Fairness boundary</a>
+      <a href="#failure">8. Failed waits</a>
+      <a href="#retrieval">9. Trace it back</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/latch-queue-card.html">Latch-queue card</a>

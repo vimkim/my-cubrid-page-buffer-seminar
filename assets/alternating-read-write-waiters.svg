@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 980" role="img" aria-labelledby="title desc">
+  <title id="title">Six alternating requests behind an unconditional WRITE owner</title>
+  <desc id="desc">A current WRITE owner has one holder in its thread holder list. Six other threads arrive in order with unconditional READ, WRITE, READ, WRITE, READ, and WRITE requests. Each request conflicts and is appended as its THREAD_ENTRY to the BCB singly linked wait queue, producing R1 to W1 to R2 to W2 to R3 to W3. The queue contains pending request fields but no new PGBUF_HOLDER and no fix debt. When the owner unfixes to zero, the wakeup scan grants R1, skips W1, grants R2, skips W2, grants R3, and leaves all writers queued. Each following zero-crossing grants one head writer.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f9fc}.panel{fill:#fff;stroke:#cbd5e1;stroke-width:2}.owner{fill:#fff1f2;stroke:#e11d48;stroke-width:2}.read{fill:#eff6ff;stroke:#2563eb;stroke-width:2}.write{fill:#fff7ed;stroke:#ea580c;stroke-width:2}.pending{fill:#f8fafc;stroke:#64748b;stroke-width:2;stroke-dasharray:7 5}.ok{fill:#ecfdf5;stroke:#059669;stroke-width:2}.title{font:700 28px system-ui,sans-serif;fill:#0f172a}.head{font:700 20px system-ui,sans-serif;fill:#0f172a}.sub{font:700 16px system-ui,sans-serif;fill:#1e293b}.text{font:15px system-ui,sans-serif;fill:#334155}.small{font:13px system-ui,sans-serif;fill:#475569}.mono{font:600 14px ui-monospace,SFMono-Regular,monospace;fill:#0f172a}.arrow{fill:none;stroke:#64748b;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#64748b"/></marker>
+  </defs>
+  <rect width="1280" height="980" class="bg"/>
+  <text x="40" y="48" class="title">WRITE owner + six arrivals: R1 → W1 → R2 → W2 → R3 → W3</text>
+
+  <rect x="40" y="76" width="1200" height="150" rx="16" class="panel"/>
+  <text x="62" y="108" class="head">Before the arrivals</text>
+  <rect x="65" y="128" width="305" height="70" rx="11" class="owner"/>
+  <text x="85" y="155" class="mono">BCB A: WRITE, fcnt=1</text>
+  <text x="85" y="179" class="mono">next_wait_thrd = NULL</text>
+  <rect x="450" y="128" width="350" height="70" rx="11" class="owner"/>
+  <text x="470" y="155" class="mono">Owner thread holder anchor</text>
+  <text x="470" y="179" class="mono">thrd_hold_list → holder(A, count=1)</text>
+  <rect x="880" y="128" width="330" height="70" rx="11" class="pending"/>
+  <text x="900" y="155" class="text">Other threads have no holder for A</text>
+  <text x="900" y="179" class="text">and owe no fix debt for A.</text>
+
+  <rect x="40" y="252" width="1200" height="426" rx="16" class="panel"/>
+  <text x="62" y="284" class="head">Each incompatible UNCONDITIONAL request appends its THREAD_ENTRY</text>
+  <text x="65" y="318" class="sub">1 · R1 requests READ</text>
+  <rect x="65" y="336" width="330" height="76" rx="11" class="read"/>
+  <text x="85" y="363" class="mono">THREAD_ENTRY R1</text><text x="85" y="387" class="small">mode=READ, count=1, next=NULL</text>
+  <text x="475" y="318" class="sub">2 · W1 requests WRITE</text>
+  <rect x="475" y="336" width="330" height="76" rx="11" class="write"/>
+  <text x="495" y="363" class="mono">THREAD_ENTRY W1</text><text x="495" y="387" class="small">mode=WRITE, count=1, next=NULL</text>
+  <text x="885" y="318" class="sub">3 · R2 requests READ</text>
+  <rect x="885" y="336" width="330" height="76" rx="11" class="read"/>
+  <text x="905" y="363" class="mono">THREAD_ENTRY R2</text><text x="905" y="387" class="small">mode=READ, count=1, next=NULL</text>
+  <path d="M395 374 H473" class="arrow"/><path d="M805 374 H883" class="arrow"/>
+  <text x="65" y="458" class="sub">4 · W2 requests WRITE</text>
+  <rect x="65" y="476" width="330" height="76" rx="11" class="write"/>
+  <text x="85" y="503" class="mono">THREAD_ENTRY W2</text><text x="85" y="527" class="small">mode=WRITE, count=1, next=NULL</text>
+  <text x="475" y="458" class="sub">5 · R3 requests READ</text>
+  <rect x="475" y="476" width="330" height="76" rx="11" class="read"/>
+  <text x="495" y="503" class="mono">THREAD_ENTRY R3</text><text x="495" y="527" class="small">mode=READ, count=1, next=NULL</text>
+  <text x="885" y="458" class="sub">6 · W3 requests WRITE</text>
+  <rect x="885" y="476" width="330" height="76" rx="11" class="write"/>
+  <text x="905" y="503" class="mono">THREAD_ENTRY W3</text><text x="905" y="527" class="small">mode=WRITE, count=1, next=NULL</text>
+  <path d="M395 514 H473" class="arrow"/><path d="M805 514 H883" class="arrow"/>
+  <rect x="65" y="584" width="1150" height="66" rx="11" class="pending"/>
+  <text x="85" y="612" class="mono">BCB A.next_wait_thrd → R1 → W1 → R2 → W2 → R3 → W3 → NULL</text>
+  <text x="85" y="637" class="text">Six sleeping THREAD_ENTRY nodes; no requester PGBUF_HOLDER and no requester fix debt yet.</text>
+
+  <rect x="40" y="704" width="1200" height="210" rx="16" class="panel"/>
+  <text x="62" y="736" class="head">First zero-crossing scans the whole mixed queue and grants every READ</text>
+  <rect x="65" y="762" width="1150" height="62" rx="11" class="pending"/>
+  <text x="85" y="789" class="mono">scan: grant R1 → keep W1 → grant R2 → keep W2 → grant R3 → keep W3</text>
+  <text x="85" y="812" class="small">Result: BCB READ, fcnt=3; queue = W1 → W2 → W3. Each R thread then records holder(A, count=1).</text>
+  <rect x="65" y="844" width="1150" height="45" rx="10" class="ok"/>
+  <text x="85" y="872" class="text">After all three readers unfix to zero: grant W1. Later zero-crossings grant W2, then W3, one writer at a time.</text>
+
+  <text x="40" y="950" class="small">Assumption: all six requests come from threads that do not already hold BCB A. A zero-wait transaction would be conditional and would not enter this queue.</text>
+</svg>

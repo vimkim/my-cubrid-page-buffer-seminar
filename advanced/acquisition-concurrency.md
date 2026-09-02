@@ -48,15 +48,39 @@ The transition is deliberate. `pgbuf_block_bcb()` writes the request fields into
 | Current BCB state | READ request | WRITE request |
 |---|---|---|
 | `NO_LATCH` | Grant immediately; set READ and `fcnt=1`; create this thread's holder. | Grant immediately; set WRITE and `fcnt=1`; create this thread's holder. |
-| READ, no blocked reader/writer | Grant another reader. Reuse this thread's holder when nested; otherwise create a new holder. | Promote in place only when the requester already holds all current fix counts. Otherwise wait; if this thread was already a reader, the general fix path removes its READ contribution and holder before queueing the combined request. |
-| READ, `waiter_exists` | An existing holder may re-enter. A new reader waits so it does not barge past queued work. | Same only-reader promotion possibility; otherwise wait. |
+| READ, no blocked reader/writer | Grant another reader. Reuse this thread's holder when nested; otherwise create a new holder. | For a nested `pgbuf_fix(..., WRITE, ...)`, change the latch to WRITE immediately only when this thread owns every current fix, then add the newly acquired fix debt. Otherwise wait; if this thread was already a reader, remove its READ contribution and holder before queueing its old count plus the new request. |
+| READ, `waiter_exists` | An existing holder may re-enter. A new reader waits so it does not barge past queued work. | The same nested-WRITE-fix rule applies. This row is not the contract of `pgbuf_promote_read_latch()`. |
 | WRITE | The current holder may make a nested READ request. Any other thread waits. | The current holder may re-enter WRITE. Any other thread waits. |
 
 ![State transitions for idle, N-reader, queued-writer, existing-holder, and new-thread unconditional READ/WRITE scenarios](../assets/unconditional-latch-scenarios.svg)
 
-The visual makes the ambiguous “one more reader” case explicit. With `N` current readers and no waiter, another reader is compatible and joins immediately. With `N` current readers and queued writers, a **new non-holder reader** appends behind the queued writers, while a reader that already owns this BCB may take a nested READ immediately. Likewise, a new WRITE requester appends at the tail; a current reader asking for WRITE must be split into the in-place-only-owner, general fix wait, and dedicated promotion cases.
+The visual makes the ambiguous “one more reader” case explicit. With `N` current readers and no waiter, another reader is compatible and joins immediately. With `N` current readers and queued writers, a **new non-holder reader** appends behind the queued writers, while a reader that already owns this BCB may take a nested READ immediately. Likewise, a new WRITE requester appends at the tail. “A current reader asks for WRITE” is still incomplete: it can mean a nested WRITE fix, which acquires another debt, or the dedicated promotion operation, which transforms the existing debt.
 
 An incompatible **conditional** request returns without queue membership and without new ownership. A dedicated blocking promotion through `pgbuf_promote_read_latch()` differs from the general fix path: it releases the caller's READ ownership and inserts the promoter at the queue head. Ordinary incompatible fix requests append at the tail.
+
+### Why a dedicated READ-to-WRITE promotion API exists
+
+![A nested WRITE fix adds one debt while dedicated promotion preserves the existing debt](../assets/fix-write-vs-promote.svg)
+
+The general fix API and the promotion API answer different caller intentions. Suppose thread T already has a READ holder with `fix_count=2`:
+
+| Question | Nested `pgbuf_fix(..., WRITE, ...)` | `pgbuf_promote_read_latch(&pgptr, condition)` |
+|---|---|---|
+| Caller intention | Acquire the page one more time, requesting WRITE for that new acquisition. | Strengthen the latch protecting the fixes T already owns. |
+| Debt after immediate success | `2 → 3`; every successful ordinary fix adds one matching unfix obligation. | `2 → 2`; no logical fix is added. |
+| If other readers exist and waiting is allowed | Remove T's READ contribution, append an ordinary request at the queue tail, and carry request count `2 + 1 = 3`. | Remove T's READ contribution, insert a promoter at the queue head, and carry the unchanged count `2`. |
+| Caller-selectable condition | The fix condition controls whether an incompatible acquisition may wait. | `PGBUF_PROMOTE_ONLY_READER` preserves READ ownership and reports promotion failure; `PGBUF_PROMOTE_SHARED_READER` may release and wait. |
+| Interface/failure signal | Starts from a VPID and returns the result of another fix acquisition. | Starts from the caller's existing `PAGE_PTR *`; a blocking failure can null that pointer, exposing that the old borrowed lifetime ended. |
+
+That is why the dedicated function is not redundant even though the general latch helper contains an immediate READ-to-WRITE branch. The helper's branch implements the **new fix acquisition** contract. The dedicated API implements an **in-place-or-transferred upgrade of existing ownership**, supplies promotion-specific policy, preserves the old debt count, and makes the possible unfixed window visible to the caller. B-tree and file-manager callers use it after examining a page under READ and later discovering that mutation requires WRITE; on failure they can restart or refix through an explicit WRITE path.
+
+The B-tree source explains the higher-level strategy rather than leaving it as a performance guess. Non-leaf insertion traversal optimistically assumes that no split or maximum-key update is needed, so it starts with READ. After examining the node, an uncommon structural change may require WRITE on that already-fixed page. Promotion preserves the traversal's existing fix debt in the uncontended case. For a current page held alongside related pages, B-tree chooses `PGBUF_PROMOTE_ONLY_READER` so it can fail/restart instead of sleeping in a multi-page latch cycle; the source includes a three-thread dead-latch example. If the optimistic path cannot be preserved, traversal restarts with WRITE latches so the retry does not fail indefinitely. Leaves, which are expected to change almost every time, are fixed WRITE from the start because the source says promotion can perform poorly there. Thus lower uncontended cost is part of the intent, but the decisive difference is the caller-visible ownership and retry protocol.
+
+> **Pinned-source anomaly:** do not infer that the ordinary immediate branch maintains matching global and per-thread counts. At `f799e05`, it sets tuple `fcnt=1` and then increments the existing holder. Starting from holder count 2 appears to leave tuple count 1 and holder count 3. The branch is recorded as candidate `VS-18` in [Unresolved or Version-sensitive Findings](../unresolved-or-version-sensitive-findings.md); it needs a focused runtime test before any stronger safety claim. The debt comparison above states the ordinary API's caller contract and the holder update visible in source, not proof that this branch preserves the two-ledger invariant.
+
+Source: the ordinary fix-family interface and acquisition are at `src/storage/page_buffer.h:277-348` and `src/storage/page_buffer.c:2256-2679`; nested WRITE handling, combined request count, and ordinary holder accounting are at `src/storage/page_buffer.c:6277-6634`; dedicated promotion is at `src/storage/page_buffer.c:2842-3050`. B-tree states the optimistic READ/promotion/restart design and dead-latch constraint at `src/storage/btree.c:28307-28393,28638-28696`; the delete/merge variant is at `src/storage/btree.c:31672-31866`. A file-manager fallback is at `src/storage/file_manager.c:8251-8262`.
+
+Evidence reference: [Why Read-to-Write Promotion Is a Separate Operation](../reference/read-to-write-promotion-rationale.md).
 
 ### List costs: the BCB queue has no tail pointer
 
@@ -69,7 +93,7 @@ Let `W` be the number of current entries in one BCB wait queue and `H` the numbe
 | Add a new holder | `O(1)` list work | Pop the thread free-list head and prepend to the active-list head; holder-pool expansion is a separate exceptional allocation path. |
 | Ordinary wait-queue append | `O(W)` | The BCB stores only the head. `pgbuf_block_bcb()` walks `THREAD_ENTRY.next_wait_thrd` until the tail. |
 | Blocking promoter head insertion | `O(1)` | The promoter links directly before the old head. |
-| Wakeup | `O(S)`, `S ≤ W` | Scan from the head until the grant rule stops; one head WRITE is constant list work, while a READ group or skipped cancelled/FLUSH entries can require a longer scan. |
+| Wakeup | `O(S)`, `S ≤ W` | Scan from the head. A granted head WRITE makes the latch WRITE and stops the scan. A granted READ makes it READ; the scan can skip incompatible WRITE and FLUSH nodes, remove cancelled nodes, and grant later READ nodes, so it may inspect the full queue. |
 | Timeout/interrupt removal | `O(W)` worst case | Removing an arbitrary thread searches for its predecessor in the singly linked queue. |
 
 If 100 ordinary incompatible requests arrive while the queue never drains, their individual append scans grow from 0 to 99 existing nodes. The cumulative work is quadratic: about `1 + 2 + ... + 99 = 4,950` queue-node inspections (`4,851` actual `next_wait_thrd` advances in the loop). Thus the **enqueue phase is `O(N²)` cumulatively**, not `O(N)`, because there is no tail pointer. For 100 pure WRITE waiters, dequeue is not another quadratic pass: each zero-crossing normally removes the head writer with constant list work. Arbitrary mass timeouts can again become quadratic because each removal may search the queue.
@@ -100,32 +124,56 @@ Suppose one thread holds a WRITE latch and one hundred other threads request WRI
 
 1. **Queue.** Each incompatible request is appended to the BCB's `next_wait_thrd` list in arrival order and sets the atomic latch's `waiter_exists` bit. A blocking promoter is the one exception: it is inserted at the head, and the source asserts that at most one promoter waits per BCB.
 2. **Sleep with a bound.** Each waiter sleeps in `pgbuf_timed_sleep()` with a timeout taken from the hidden server parameter `page_latch_timeout_in_msecs` (300 seconds at the pinned revision); a transaction configured for zero wait was already converted to conditional behavior and never queues. The sleep is interrupt-aware for worker threads.
-3. **Hand off at zero.** When the holder unfixes and global `fcnt` reaches zero (a zero-crossing, the only moment at which the queue is walked), the releasing thread sets `NO_LATCH` and calls `pgbuf_wakeup_reader_writer()` while still holding the BCB mutex. It walks the queue from the head, skipping entries whose request mode was reset to `NO_LATCH` by a timeout or interrupt and leaving FLUSH waiters in place. If the head is a reader, it grants the consecutive compatible READ run at the head and stops at the first WRITE; if the head is a writer, it grants only that writer and stops. The waker performs the grant by updating the latch tuple with the waiter's requested mode and fix count; the woken thread then allocates its own holder and returns `NO_ERROR` with the ordinary success postcondition.
+3. **Hand off at zero.** When the holder unfixes and global `fcnt` reaches zero (the zero-crossing that starts a grant scan), the releasing thread sets `NO_LATCH` and calls `pgbuf_wakeup_reader_writer()` while still holding the BCB mutex. It walks from the head, removes entries whose request mode was reset to `NO_LATCH` by timeout/interrupt, and leaves FLUSH waiters in place. If the first grantable reader is selected, the tuple becomes READ; the scan continues through the rest of the list, leaves incompatible WRITE entries linked, and grants later READ entries too. If the first grantable request is WRITE, the tuple becomes WRITE and the scan stops, so only that writer is granted. For each grant the waker adds `request_fix_count` to global `fcnt`, removes that `THREAD_ENTRY`, clears its queue link, and wakes it; the resumed thread then records its own holder.
 4. **Keep newcomers honest.** While blocked readers or writers remain, `waiter_exists` stays set, so a newly arriving non-holder READ blocks even though the latch mode might be compatible. A thread that already holds the BCB may still re-enter.
 5. **Exit without debt.** A timed-out waiter is treated as a page-latch deadlock victim: `ER_PAGE_LATCH_TIMEDOUT` is raised, followed by `ER_LK_UNILATERALLY_ABORTED` for a transaction with infinite lock wait or `ER_LK_PAGE_TIMEOUT` for a finite one. An interrupted waiter removes itself from the queue. Neither outcome creates a fix debt, and neither leaves the caller with a page pointer.
 
-One hundred writers are therefore served one grant per zero-crossing, which is roughly arrival order. Three things reorder service and are the reason fairness is not a contract: holder re-entry (a current holder's nested request is granted past waiters), promoter head insertion, and reader grouping (a wakeup can grant the consecutive READ run at the queue head as a batch). The source also states its own design position in a comment: page latches do not guarantee deadlock freedom, so the timed sleep is the deadlock guard. Treat the timeout as a policy value and the ordering as a Verified mechanism of this revision, not as an Interface contract.
+One hundred writers are therefore served one grant per zero-crossing, which is roughly arrival order. Three things reorder service and are the reason fairness is not a contract: holder re-entry (a current holder's nested request is granted past waiters), promoter head insertion, and reader grouping (after selecting READ, one scan may grant READ requests that appear behind waiting writers). The source also states its own design position in a comment: page latches do not guarantee deadlock freedom, so the timed sleep is the deadlock guard. Treat the timeout as a policy value and the ordering as a Verified mechanism of this revision, not as an Interface contract.
+
+### Worked mixed queue: six alternating requests behind a WRITE owner
+
+![Six alternating READ and WRITE requests linked as thread entries behind a WRITE owner](../assets/alternating-read-write-waiters.svg)
+
+Assume BCB A is held WRITE with `fcnt=1`, and six **new non-holder threads** arrive unconditionally in order: `R1 → W1 → R2 → W2 → R3 → W3`. Every request conflicts with the current WRITE latch. Each request therefore appends its own `THREAD_ENTRY` to `BCB A.next_wait_thrd`; its `request_latch_mode` is READ or WRITE, `request_fix_count=1`, and `next_wait_thrd` links to the next request. None of these six threads has a `PGBUF_HOLDER` or fix debt yet. Only the original owner has `holder(A, count=1)` in its thread-local active list.
+
+When the owner unfixes and `fcnt` reaches zero, the actual loop does **not** stop at W1 after granting R1. Granting R1 changes the tuple to READ. W1 is now incompatible, so the loop leaves W1 linked and continues; R2 is compatible and is granted, W2 is left linked, and R3 is granted. The first scan therefore ends with `READ, fcnt=3`, wakes R1/R2/R3, and leaves `W1 → W2 → W3`. Each woken reader then creates its own holder with count 1. Only after all three readers unfix and the combined `fcnt` returns to zero is W1 granted. Later zero-crossings grant W2 and W3 one at a time.
+
+This distinction matters: the source comment summarizes the case as waking readers “at the head,” but the pinned loop's control flow continues past incompatible WRITE and FLUSH entries while the tuple is READ. The maintainer-facing mechanism here follows the executable control flow, not the looser comment. Source: `src/storage/page_buffer.c:7452-7590`.
+
+The cost has two separate phases; do not multiply them together as though every reader arrival performs a group wakeup:
+
+| Non-draining queue built behind the original WRITE owner | Ordinary tail-append work | Work caused by READ arrivals alone | Reader-group wakeup |
+|---|---:|---:|---:|
+| 100 total alternating requests: 50 READ + 50 WRITE | 4,950 node inspections cumulatively | 2,450 if READ arrives first; 2,500 if WRITE arrives first | One `O(100)` scan grants all 50 readers. If WRITE is first, that writer is granted first and the reader scan happens at its release. |
+| 200 total requests: 100 READ + 100 WRITE | 19,900 node inspections cumulatively | 9,900 if READ arrives first; 10,000 if WRITE arrives first | One `O(200)` scan grants all 100 readers, subject to the same first-WRITE step. |
+
+Why do READ arrivals account for thousands of inspections? It is **ordinary enqueue**, not reader grouping. With no tail pointer, arrival `i` walks the existing singly linked queue from its head to its tail while holding the BCB mutex. The one group wakeup later scans the mixed list once, grants the READ entries, and leaves the WRITE entries linked. It is `O(N²)` cumulative append work plus `O(N)` group-scan work, not `O(N²)` group-wakeup work. These exact sums assume the original WRITE owner remains fixed until every arrival has queued; concurrent dequeue shortens later append walks.
+
+Evidence reference: [Alternating Reader/Writer Wakeup Cost](../reference/alternating-reader-writer-wakeup-cost.md).
 
 The insertion cost is separate from the one-per-zero-crossing handoff. Because the queue has no tail pointer, enqueueing those 100 writers into a non-draining queue performs roughly 4,950 cumulative node inspections, or `O(N²)`. Once they are queued, each pure-WRITE handoff removes the head with constant list work. See the structural diagram and cost table above rather than describing the entire scenario with one complexity label.
 
 Source: grant/wait decision at `src/storage/page_buffer.c:6278-6634`; queue append and timed sleep at `src/storage/page_buffer.c:7041-7450`; zero-crossing wakeup at `src/storage/page_buffer.c:7452-7590`; timeout parameter at `src/base/system_parameter.c:5308-5319`.
 
-## Blocking promotion releases observations
+## Blocking promotion uses queue priority to preserve page state
 
-Promotion is easy only when the caller is the eligible reader. In a blocking path, the implementation can release the current READ ownership, enqueue/wait for WRITE, and later return with different protection. Every observation derived from the old page bytes, latch tuple, waiter set, or related page set becomes stale across that release.
+Promotion is trivial when the caller is the only fixer: latch mode changes in place. The shared-reader path is subtler. It temporarily subtracts the caller's READ fixes and removes its holder, but—while still under the BCB mutex—installs the same thread as the single promoter at the queue **head** before sleeping.
 
-![Four promotion outcomes and the unfixed window of the blocking path](../assets/promotion-outcomes.svg)
+![Four promotion outcomes and the queue-head continuity bridge of the blocking path](../assets/promotion-outcomes.svg)
 
-The decision is source-visible: a caller whose own fix count equals the BCB's global count is the only fixer and is promoted in place, unless the first waiter is already a promoter. Any other reader either fails conditionally, when `PGBUF_PROMOTE_ONLY_READER` was requested or a promoter is already queued, or takes the blocking path: its fixes are subtracted from `fcnt`, its holder is removed, and it queues at the head of the wait list as the promoter. The saved fix count travels with the request and returns in a new holder, so no second debt is created; what is lost is every observation made while the page was held.
+Head placement is not only priority tuning. Existing active owners are READ holders, so they cannot legally modify the page. Ordinary queued writers remain behind the promoter. When the remaining readers drain to zero, the wakeup code grants the head WRITE promoter under the same protected handoff, leaving no writer or victimization gap. A successful first-promoter wait therefore restores the same fix count and preserves page-byte observations made under the original READ latch. Pinned B-tree callers rely on this: they compute `need_split`, `max_key_len`, and retain `node_header` before `PGBUF_PROMOTE_SHARED_READER`, then use those values directly after success rather than re-searching the page.
 
-A promotion caller must therefore distinguish:
+The function still has an **internal ownership gap**: while it is blocked, this thread has no holder and must not access the page. The distinction is the return outcome:
 
-- conditional promotion failure, where the algorithm chooses whether to restart;
-- blocking promotion, where released ownership invalidates page-local observations;
-- error/interrupt, where the pointer/debt result must be audited;
-- success, where the caller revalidates its access-method preconditions.
+- in-place success keeps continuous ownership, the same page state, and the same debt;
+- blocking success transfers the same debt through the head promoter and returns with the protected page state preserved by the intended latch protocol;
+- `ER_PAGE_LATCH_PROMOTE_FAIL` occurs before ownership is surrendered, so READ ownership and the pointer remain valid; B-tree may skip work or restart by policy;
+- a hard blocking failure after ownership was surrendered sets `*pgptr_p = NULL`, so the old pointer must not be used or unfixed;
+- holder-allocation failure after a grant is the separate unresolved `VS-11` seam and must not be collapsed into the clean hard-failure contract.
 
-Source: `src/storage/page_buffer.c:2842-3050`. Representative B-tree restart policy: `src/storage/btree.c:28365-28393` and `src/storage/btree.c:28638-28696`.
+The single-promoter rule is part of the continuity proof. A second promoter is rejected because letting it upgrade while the first waits could change the page before the first returns. The proof also relies on the intended protocol that READ owners do not mutate or bypass the promoter with an ordinary nested WRITE fix; the pinned ordinary immediate-upgrade anomaly is tracked separately as `VS-18`.
+
+Source: promotion transfer and head insertion at `src/storage/page_buffer.c:2842-3050,7041-7099`; zero-crossing handoff at `src/storage/page_buffer.c:7452-7590`. B-tree consumes pre-promotion observations after success at `src/storage/btree.c:28304-28409,28627-28710`; restart policy is at `src/storage/btree.c:28365-28393,28638-28696`.
 
 ## Ordered watchers: multi-page access as an owner protocol
 

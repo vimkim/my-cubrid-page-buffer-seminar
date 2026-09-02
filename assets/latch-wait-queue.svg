@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="670" viewBox="0 0 1180 670" role="img" aria-labelledby="title desc">
   <title id="title">Unconditional incompatible latch requests queue on the BCB and are granted one zero-crossing at a time</title>
-  <desc id="desc">A BCB holds an atomic latch tuple with mode WRITE, fix count one, and the waiter-exists bit set. One hundred unconditional WRITE requesters are appended to the BCB wait queue in arrival order; a blocking promoter is inserted at the head. Each waiter sleeps with a timed wait and honours interrupts. When the holder unfixes and the fix count reaches zero, the releasing thread walks the queue from the head: it skips entries that already gave up, leaves flush waiters in place, grants the consecutive READ run at the head until the first WRITE, or grants only the first WRITE waiter and stops when the head is a writer. The waker updates the latch tuple; the woken waiter records its own holder. Outcomes are grant, timeout treated as a deadlock victim, or interrupt with removal and no debt. This is a serialized handoff, not a fairness theorem.</desc>
+  <desc id="desc">A BCB holds an atomic latch tuple with mode WRITE, fix count one, and the waiter-exists bit set. One hundred unconditional WRITE requesters are appended to the BCB wait queue in arrival order; a blocking promoter is inserted at the head. Each waiter sleeps with a timed wait and honours interrupts. When the holder unfixes and the fix count reaches zero, the releasing thread walks the queue from the head. It removes entries that already gave up and leaves flush waiters in place. If it grants a READ, it continues scanning, leaves incompatible WRITE entries queued, and grants later READ entries. If it grants a WRITE, the latch becomes WRITE and the scan stops. The waker updates the latch tuple; each woken waiter records its own holder. Outcomes are grant, timeout treated as a deadlock victim, or interrupt with removal and no debt. This is a serialized handoff, not a fairness theorem.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
     <style>
@@ -48,7 +48,7 @@
   <text x="56" y="282" class="h">Holder unfixes, fcnt reaches 0, latch mode becomes NO_LATCH: the releasing thread walks the queue from the head</text>
   <text x="56" y="312" class="s">1. Skip entries that already gave up: their request mode was reset to NO_LATCH by timeout or interrupt.</text>
   <text x="56" y="336" class="s">2. Leave FLUSH waiters in place; they are woken by flush completion, not by unfix.</text>
-  <text x="56" y="360" class="s">3. Head is READ: grant the consecutive READ run until the first WRITE. Head is WRITE: grant only that writer, then stop.</text>
+  <text x="56" y="360" class="s">3. First grant is READ: scan onward, keep writers queued, grant later readers. First grant is WRITE: grant it and stop.</text>
   <text x="56" y="384" class="s">4. The waker sets the new latch mode and adds the waiter's requested fix count; the woken waiter only records its own holder.</text>
   <text x="56" y="408" class="s">5. If blocked readers or writers remain, waiter_exists stays set so newcomers keep queueing instead of barging.</text>
 

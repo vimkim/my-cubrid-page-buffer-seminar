@@ -33,10 +33,11 @@
   <text x="780" y="249" text-anchor="middle" class="small">waiter_exists=0</text>
   <text x="900" y="211" class="sub">+ READ, any thread</text>
   <text x="900" y="233" class="text">grant → fcnt=N+1</text>
-  <text x="900" y="272" class="sub">+ WRITE, new thread</text>
-  <text x="900" y="294" class="text">append tail → sleep</text>
-  <text x="900" y="317" class="small">Current reader: promote only if it owns all N fixes;</text>
-  <text x="900" y="333" class="small">otherwise release own READ share, then wait.</text>
+  <text x="900" y="260" class="sub">+ WRITE, new thread</text>
+  <text x="900" y="282" class="text">append tail → sleep</text>
+  <text x="900" y="307" class="small">Current reader + nested WRITE fix:</text>
+  <text x="900" y="323" class="small">sole owner upgrades and adds one debt;</text>
+  <text x="900" y="339" class="small">otherwise queue old count plus one.</text>
 
   <rect x="45" y="370" width="1190" height="260" rx="16" class="panel"/>
   <text x="65" y="402" class="head">C · N current readers + queued writers W1 → W2 → … → Wk</text>
@@ -64,8 +65,8 @@
 
   <rect x="940" y="516" width="265" height="86" rx="11" class="queue"/>
   <text x="960" y="543" class="sub">Current reader requests WRITE</text>
-  <text x="960" y="566" class="small">sole owner: promote now</text>
-  <text x="960" y="587" class="small">else: general → tail; dedicated → head</text>
+  <text x="960" y="566" class="small">nested fix: +1 debt, ordinary tail</text>
+  <text x="960" y="587" class="small">dedicated promote: same debt, promoter head</text>
 
   <rect x="45" y="660" width="575" height="180" rx="16" class="panel"/>
   <text x="65" y="692" class="head">D · Current WRITE owner</text>
@@ -84,7 +85,7 @@
   <text x="782" y="769" text-anchor="middle" class="text">grant one writer</text>
   <rect x="910" y="716" width="295" height="76" rx="10" class="read"/>
   <text x="1057" y="744" text-anchor="middle" class="mono">head = READ → READ → …</text>
-  <text x="1057" y="769" text-anchor="middle" class="text">grant compatible reader group</text>
+  <text x="1057" y="769" text-anchor="middle" class="text">scan onward; grant all compatible READs</text>
   <text x="685" y="811" class="small">Waker updates latch/fcnt, removes each granted THREAD_ENTRY, and wakes it.</text>
   <text x="685" y="830" class="small">Each resumed thread then creates its holder before returning success.</text>
 

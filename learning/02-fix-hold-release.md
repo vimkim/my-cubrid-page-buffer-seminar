@@ -181,7 +181,7 @@ The public wrappers are defined at `src/storage/page_buffer.h:64-92`; normal rel
 
 Nested ownership needs precise language. If one thread has holder `fix_count == 2`, its first unfix consumes one debt but one granted ownership remains; the thread has not yet reached its final ownership boundary. The second matching unfix ends that thread's remaining ownership. The two fixes may have returned the same `PAGE_PTR`; same address does not merge separate acquisition debt.
 
-Blocking promotion and ordered watcher protocols may temporarily release and reacquire ownership, so they require explicit revalidation of page-local observations. This core page names that rule; [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md) owns those mechanisms.
+Temporary release does not have one universal observation rule. A successful first-promoter handoff uses queue-head priority to preserve the page bytes observed under READ, while a hard promotion failure nulls the pointer; ordered watcher refix can instead expose a genuine stale-observation window through `page_was_unfixed`. [Acquisition Concurrency and Multi-page Ownership](../advanced/acquisition-concurrency.md) owns both mechanisms and their distinct proofs.
 
 ## Advanced mechanisms deliberately deferred
 

@@ -13,7 +13,7 @@
   <header class="hero">
     <div class="eyebrow">promotion 리뷰용 요약</div>
     <h1>READ→WRITE promotion</h1>
-    <p>fix debt는 보존하고, blocking 과정에서 기존 hold를 놓았다면 이전에 관찰한 상태는 모두 무효로 본다.</p>
+    <p>성공하면 fix debt와 page state를 보존하고, conditional refusal와 pointer를 null로 만드는 hard failure를 구분한다.</p>
     <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">4가지 outcome</span><span class="pill">Restart 의미</span></div>
   </header>
 
@@ -29,8 +29,8 @@
         <tbody>
           <tr><td>In-place success</td><td>holder/count는 같고 mode만 WRITE가 된다.</td><td>보호가 끊기지 않았다.</td></tr>
           <tr><td>Conditional failure</td><td>READ holder/count가 그대로다.</td><td>여전히 보호 중이며 restart 여부는 caller가 결정한다.</td></tr>
-          <tr><td>Blocking success</td><td>기존 holder를 제거한 후 저장한 count를 새 WRITE holder에 복원한다.</td><td>wait 사이에 page-local 관찰값은 모두 stale이다.</td></tr>
-          <tr><td>Error/interrupt</td><td>null pointer이며 남은 debt가 없다.</td><td>이전 관찰값을 사용하면 안 된다.</td></tr>
+          <tr><td>Blocking success</td><td>기존 holder를 제거한 뒤 저장한 count가 queue head에서 새 WRITE holder로 돌아온다.</td><td>보존된다. Writer나 victim이 promoter를 지나가지 못한다.</td></tr>
+          <tr><td>Hard blocking failure</td><td>null pointer이며 이전 debt는 복구되지 않았다.</td><td>그 pointer로 observation을 사용하거나 unfix하면 안 된다.</td></tr>
         </tbody>
       </table>
     </article>
@@ -46,13 +46,13 @@
       <p>promotion이 성공하면 debt는 N개이지 2N개가 아니다.</p>
     </article>
     <article class="reference-card">
-      <h2>Blocking 후 다시 계산할 항목</h2>
+      <h2>성공한 blocking이 state를 보존하는 이유</h2>
       <ul>
-        <li>record/slot pointer</li>
-        <li>free-space 판단</li>
-        <li>key, range, sibling, child</li>
-        <li>header와 related-page state</li>
-        <li>모든 access-method precondition</li>
+        <li>BCB mutex 아래에서 promoter가 queue head에 linked된다.</li>
+        <li>남은 active holder는 READ-only다.</li>
+        <li>ordinary writer는 promoter를 지나갈 수 없다.</li>
+        <li>zero-crossing이 victim gap 없이 WRITE를 grant한다.</li>
+        <li>첫 observation을 보호하려고 두 번째 promoter는 실패한다.</li>
       </ul>
     </article>
     <article class="reference-card full">
@@ -68,7 +68,7 @@
     </article>
   </section>
 
-  <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. page buffer는 protection을 복원하고, caller는 semantic knowledge를 다시 계산한다.</footer>
+  <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. Successful head handoff는 page state를 보존하며 선택한 failure path에서만 restart한다.</footer>
 </main>
 </body>
 </html>

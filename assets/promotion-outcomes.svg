@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
-  <title id="title">Promotion has four outcomes, and only the blocking one releases ownership</title>
-  <desc id="desc">A holder with a READ latch calls pgbuf_promote_read_latch. If the holder's own fix count equals the BCB's global fix count, it is the only fixer: unless the first waiter is already a promoter, the latch mode becomes WRITE in place with nothing released. Otherwise, if the caller asked for ONLY_READER or the first waiter is already a promoter, the call fails conditionally with ER_PAGE_LATCH_PROMOTE_FAIL and the READ ownership is unchanged. Otherwise the blocking path subtracts the caller's fixes from the global count, removes its holder, sets the waiter-exists bit, queues the request at the head as the promoter, and sleeps; the saved fix count travels with the request. It wakes with a WRITE latch and a new holder carrying the same fix count, or ends in an error or interrupt with a null page pointer and no debt. During the wait the page is not fixed by this thread, so every page-local observation is stale until revalidated.</desc>
+  <title id="title">Promotion has four outcomes, and blocking success protects continuity with queue-head priority</title>
+  <desc id="desc">A holder with a READ latch calls pgbuf_promote_read_latch. If the holder's own fix count equals the BCB's global fix count, it is the only fixer and the latch becomes WRITE in place. If the caller asked for ONLY_READER while other readers exist, or another promoter is already first, the call fails conditionally with READ ownership unchanged. Otherwise the blocking path subtracts the caller's fixes, removes its holder, queues at the head as the sole promoter, and sleeps with the saved fix count. Existing owners are readers and queued writers remain behind the promoter. When those readers drain, the promoter receives WRITE without an intervening writer or victim handoff, so successful promotion preserves the page state observed under READ. A blocking failure nulls the page pointer because ownership was not restored.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
     <style>
@@ -8,7 +8,7 @@
     </style>
   </defs>
 
-  <text x="40" y="44" class="t">Promotion has four outcomes; only the blocking one releases ownership</text>
+  <text x="40" y="44" class="t">Promotion has four outcomes; queue-head priority bridges blocking success</text>
 
   <rect x="40" y="95" width="300" height="80" rx="14" class="start"/>
   <text x="56" y="121" class="h w">Holder with a READ latch</text>
@@ -64,17 +64,18 @@
   <rect x="940" y="400" width="220" height="62" rx="12" class="ok"/>
   <text x="954" y="422" class="h">Woken with WRITE</text>
   <text x="954" y="440" class="tiny">new holder, same fix count;</text>
-  <text x="954" y="455" class="tiny">revalidate preconditions</text>
+  <text x="954" y="455" class="tiny">same protected page state</text>
 
   <path d="M900 501 H938" class="line"/>
   <rect x="940" y="470" width="220" height="62" rx="12" class="none"/>
-  <text x="954" y="492" class="h">Error or interrupt</text>
+  <text x="954" y="492" class="h">Blocking failure</text>
   <text x="954" y="510" class="tiny">*pgptr = NULL: no latch,</text>
   <text x="954" y="525" class="tiny">no debt; audit the caller</text>
 
   <rect x="380" y="542" width="520" height="52" rx="12" class="gap"/>
-  <text x="394" y="564" class="s">Unfixed window: this thread holds no fix on the page while it waits;</text>
-  <text x="394" y="584" class="s">every page-local observation is stale until revalidated after the WRITE grant</text>
+  <text x="394" y="564" class="s">Internal ownership gap: the caller cannot use the page while this call waits;</text>
+  <text x="394" y="584" class="s">head priority prevents writer/victim interleaving before a successful WRITE grant</text>
 
-  <text x="40" y="622" class="s">Restart is access-method policy: B-tree unfixes, switches to WRITE traversal, and retries. Promotion never creates a second debt; the saved fix count moves to the new holder.</text>
+  <text x="40" y="610" class="s">Success preserves page state and debt; conditional failure retains READ.</text>
+  <text x="40" y="628" class="s">Hard blocking failure nulls the pointer; B-tree restarts only when its selected outcome requires it.</text>
 </svg>

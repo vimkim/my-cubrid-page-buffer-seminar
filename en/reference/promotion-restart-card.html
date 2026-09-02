@@ -13,7 +13,7 @@
   <header class="hero">
     <div class="eyebrow">Print for promotion review</div>
     <h1>READ→WRITE promotion card</h1>
-    <p>Conserve the fix debt; invalidate observations whenever blocking releases the old hold.</p>
+    <p>Conserve fix debt and page state on success; distinguish conditional refusal from a hard failure that nulls the pointer.</p>
     <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Four outcomes</span><span class="pill">Restart meaning</span></div>
   </header>
 
@@ -29,8 +29,8 @@
         <tbody>
           <tr><td>In-place success</td><td>Same holder/count; mode becomes WRITE.</td><td>Continuously protected.</td></tr>
           <tr><td>Conditional failure</td><td>READ holder/count unchanged.</td><td>Still protected; caller chooses restart.</td></tr>
-          <tr><td>Blocking success</td><td>Old holder removed; saved count returns in new WRITE holder.</td><td>Everything page-local is stale across wait.</td></tr>
-          <tr><td>Error/interrupt</td><td>Null pointer; no retained debt.</td><td>No observation may be used.</td></tr>
+          <tr><td>Blocking success</td><td>Old holder removed; saved count returns from queue head in a new WRITE holder.</td><td>Preserved: no writer or victim passes the promoter.</td></tr>
+          <tr><td>Hard blocking failure</td><td>Null pointer; old debt was not restored.</td><td>No observation or unfix may use that pointer.</td></tr>
         </tbody>
       </table>
     </article>
@@ -46,13 +46,13 @@
       <p>Successful promotion leaves N debts, never 2N.</p>
     </article>
     <article class="reference-card">
-      <h2>Reconstruct after blocking</h2>
+      <h2>Why successful blocking preserves state</h2>
       <ul>
-        <li>record/slot pointers</li>
-        <li>free-space decisions</li>
-        <li>keys, ranges, siblings, children</li>
-        <li>headers and related-page state</li>
-        <li>all access-method preconditions</li>
+        <li>promoter is linked at queue head under the BCB mutex</li>
+        <li>remaining active holders are READ-only</li>
+        <li>ordinary writers cannot pass the promoter</li>
+        <li>zero-crossing grants WRITE without a victim gap</li>
+        <li>second promoter fails to preserve the first observation</li>
       </ul>
     </article>
     <article class="reference-card full">
@@ -68,7 +68,7 @@
     </article>
   </section>
 
-  <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. The page buffer restores protection; the caller restores semantic knowledge.</footer>
+  <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. Successful head handoff preserves page state; only the selected failure path restarts.</footer>
 </main>
 </body>
 </html>
