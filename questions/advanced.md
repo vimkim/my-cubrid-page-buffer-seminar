@@ -150,15 +150,15 @@ Prerequisite: [Replacement Policy and Background Progress](../advanced/replaceme
 
 Prerequisite: [Recovery, Allocation State, and Module Lifecycle](../advanced/recovery-and-lifecycle.md).
 
-### PGBUF-QB-044 — Who chooses special fetch modes?
+### PGBUF-QB-044 — Who owns special fetch and metadata-mutation protocols?
 
 - **Route:** Advanced
 - **Retrieval mode:** Explain
 - **Prerequisite:** [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md)
-- **Capability tested:** Assign allocation and recovery knowledge to the correct caller owner.
-- **Inspect:** `src/storage/file_manager.c:5420-5590`; `src/storage/page_buffer.c:14896-14921,15133-15303`
+- **Capability tested:** Assign allocation, temporary-page, recovery, and metadata-mutation knowledge to the correct owner.
+- **Inspect:** `src/storage/file_manager.c:5420-5590`; `src/storage/page_buffer.c:4959-5537,14896-15405,17305-17319`
 
-**Question:** Contrast `NEW_PAGE`, `RECOVERY_PAGE`, and deallocated/maybe-deallocated modes without treating any as a general validation bypass.
+**Question:** Contrast `NEW_PAGE`, `RECOVERY_PAGE`, deallocated/maybe-deallocated, and temporary-page protocols. Then classify LSA, temporary-LSA, page-type, and TDE getters/setters by borrowed lifetime, latch/context requirement, dirty/logging side effect, and why none is a general validation or recovery bypass.
 
 ### PGBUF-QB-045 — Why is checkpoint not “flush every page”?
 

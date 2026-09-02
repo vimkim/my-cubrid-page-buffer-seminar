@@ -71,7 +71,7 @@ Existing checkpoint/backup-like observations are bounded evidence. This evidence
 
 ## Related routes
 
-- Practice: [special fetch-mode ownership](../questions/advanced.md#pgbuf-qb-044-who-chooses-special-fetch-modes)
+- Practice: [special fetch and metadata ownership](../questions/advanced.md#pgbuf-qb-044-who-owns-special-fetch-and-metadata-mutation-protocols)
 - Core prerequisite: [Caller Completes Correctness](../learning/03-caller-completes-correctness.md)
 - Core prerequisite: [Flush One Generation](../learning/04-flush-one-generation.md)
 - Identity contract: [Contract and Objects](../learning/01-contract-and-objects.md)

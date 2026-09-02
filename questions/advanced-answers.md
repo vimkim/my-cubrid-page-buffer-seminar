@@ -170,17 +170,17 @@ Use IDs to pair these answers with [Advanced prompts](./advanced.md). Follow the
 
 ## Recovery and lifecycle
 
-### PGBUF-QB-044 — Who chooses special fetch modes?
+### PGBUF-QB-044 — Who owns special fetch and metadata-mutation protocols?
 
 - **Evidence:** Interface contract; Verified mechanism
-- **Canonical guide:** [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md)
-- **Source anchors:** `src/storage/file_manager.c:5420-5590`; `src/storage/page_buffer.c:14896-14921,15133-15303`
-- **Confidence/limit:** Each special mode remains constrained to its owner protocol.
-- **Prompt:** [Attempt this question](./advanced.md#pgbuf-qb-044-who-chooses-special-fetch-modes)
+- **Canonical guide:** [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) and [Specialized Interfaces](../advanced/specialized-interfaces.md)
+- **Source anchors:** `src/storage/file_manager.c:5420-5590`; `src/storage/page_buffer.c:4959-5537,14896-15405,17305-17319`
+- **Confidence/limit:** Each special mode and setter remains constrained to its owner protocol; debug/release defensive behavior is not a substitute for the caller contract.
+- **Prompt:** [Attempt this question](./advanced.md#pgbuf-qb-044-who-owns-special-fetch-and-metadata-mutation-protocols)
 
-**Model answer:** File management chooses `NEW_PAGE` after allocation because it owns materialization. Recovery chooses recovery/deallocated modes because it knows log-time allocation state and idempotence requirements. None is a general way to skip validation for an ordinary reader.
+**Model answer:** File management chooses `NEW_PAGE` after allocation because it owns materialization. Recovery chooses recovery/deallocated modes because it knows log-time allocation state and idempotence requirements; temporary-page owners may use only their narrow relaxed protocol. Metadata getters may return copied values or storage borrowed for the fix lifetime. LSA, temporary-LSA, page-type, and TDE setters mutate recovery-relevant state under the required WRITE/subsystem context; some dirty or log only under defined conditions. `skip_logging` and defensive dirty marking are owner-specific behavior, not general permission to omit recovery work.
 
-**Why:** Absence and allocation semantics require knowledge the page buffer does not possess.
+**Why:** Allocation state, borrowed lifetime, and recovery side effects require knowledge the page buffer cannot infer from an accessor name.
 
 ### PGBUF-QB-045 — Why is checkpoint not “flush every page”?
 

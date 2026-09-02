@@ -44,15 +44,28 @@ const evidenceLabels = [
   "Runtime observation",
   "Historical evidence",
 ];
-const sourceCounts = {
-  TEACH: 38,
-  ADV: 55,
-  HIST: 24,
-  PLAN: 27,
-  EXEC: 17,
-  GRILL: 12,
-  READER: 16,
+function sequentialLegacyIds(prefix, count, width = 2) {
+  return Array.from(
+    { length: count },
+    (_, index) => `${prefix}${String(index + 1).padStart(width, "0")}`,
+  );
+}
+
+const sourceLegacyItems = {
+  TEACH: sequentialLegacyIds("TEACH-", 38),
+  ADV: sequentialLegacyIds("PGBUF-Q", 55, 3),
+  HIST: sequentialLegacyIds("HIST-", 24),
+  PLAN: sequentialLegacyIds("PLAN-", 27),
+  EXEC: sequentialLegacyIds("EXEC-", 17),
+  GRILL: sequentialLegacyIds("GRILL-", 12),
+  READER: sequentialLegacyIds("READER-", 16),
 };
+const sourceCounts = Object.fromEntries(
+  Object.entries(sourceLegacyItems).map(([source, items]) => [source, items.length]),
+);
+const sourceLegacySets = Object.fromEntries(
+  Object.entries(sourceLegacyItems).map(([source, items]) => [source, new Set(items)]),
+);
 const dispositions = new Set([
   "Retained",
   "Merged",
@@ -63,18 +76,6 @@ const dispositions = new Set([
 
 function slash(relativePath) {
   return relativePath.split(path.sep).join("/");
-}
-
-function walkMarkdown(directory) {
-  if (!fs.existsSync(directory)) return [];
-  return fs
-    .readdirSync(directory, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
-    .flatMap((entry) => {
-      const entryPath = path.join(directory, entry.name);
-      if (entry.isDirectory()) return walkMarkdown(entryPath);
-      return entry.isFile() && entry.name.endsWith(".md") ? [entryPath] : [];
-    });
 }
 
 function sections(markdown) {
@@ -116,7 +117,12 @@ function validatePrompt(relativePath, item, failures) {
 
 function validateAnswer(relativePath, item, failures) {
   const evidence = field(item.body, "Evidence");
-  for (const required of ["Canonical guide", "Source anchors", "Confidence/limit"]) {
+  for (const required of [
+    "Canonical guide",
+    "Source anchors",
+    "Confidence/limit",
+    "Prompt",
+  ]) {
     if (!field(item.body, required)) {
       failures.push(`${relativePath}#${item.id}: missing ${required} field`);
     }
@@ -159,6 +165,9 @@ function validateAudit(markdown, canonicalIds, failures) {
     }
     seenLegacy.add(legacyKey);
     counts.set(source, (counts.get(source) ?? 0) + 1);
+    if (source !== "NEW" && !sourceLegacySets[source]?.has(legacy)) {
+      failures.push(`questions/migration-audit.md: unexpected legacy item ${legacyKey}`);
+    }
     if (!dispositions.has(disposition)) {
       failures.push(`questions/migration-audit.md: invalid disposition ${disposition}`);
     }
@@ -181,6 +190,11 @@ function validateAudit(markdown, canonicalIds, failures) {
       failures.push(
         `questions/migration-audit.md: ${source} population is ${counts.get(source) ?? 0}, expected ${expected}`,
       );
+    }
+    for (const legacy of sourceLegacyItems[source]) {
+      if (!seenLegacy.has(`${source}:${legacy}`)) {
+        failures.push(`questions/migration-audit.md: missing legacy item ${source}:${legacy}`);
+      }
     }
   }
   for (const id of canonicalIds) {
@@ -218,9 +232,11 @@ function validateNavigation(root, pageMarkdown, failures) {
 }
 
 export function validateQuestionBank(root, pageMarkdown, config, failures) {
-  const questionRoot = path.join(root, "questions");
-  const actual = walkMarkdown(questionRoot)
+  const actual = [...pageMarkdown.keys()]
     .map((file) => slash(path.relative(root, file)))
+    .filter((relativePath) =>
+      relativePath.startsWith("questions/") && relativePath.endsWith(".md"),
+    )
     .sort();
   for (const expected of questionPagePaths) {
     if (!actual.includes(expected)) {
@@ -251,6 +267,12 @@ export function validateQuestionBank(root, pageMarkdown, config, failures) {
       if (!answerMap.has(id)) failures.push(`${promptPath}: ${id} has no paired answer`);
       else if (answerMap.get(id).title !== item.title) {
         failures.push(`${promptPath}: ${id} prompt/answer titles differ`);
+      } else if (
+        !field(answerMap.get(id).body, "Prompt")?.includes(
+          `./${path.basename(promptPath)}#`,
+        )
+      ) {
+        failures.push(`${answerPath}: ${id} does not link its prompt anchor`);
       }
     }
     for (const id of answerMap.keys()) {

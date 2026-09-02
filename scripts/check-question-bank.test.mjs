@@ -40,6 +40,7 @@ function answer(id = "PGBUF-QB-001", title = "Trace one fix") {
     "- **Canonical guide:** [Contract](../learning/contract.md)",
     "- **Source anchors:** `src/storage/page_buffer.c:2260-2685`",
     "- **Confidence/limit:** Establishes the pinned path, not every caller.",
+    `- **Prompt:** [Attempt this question](./core.md#${id.toLowerCase()}-trace-one-fix)`,
     "",
     "**Model answer:** Both paths return only after identity and ownership converge.",
     "",
@@ -61,7 +62,10 @@ function migrationRows() {
   const rows = [];
   for (const [source, count] of Object.entries(counts)) {
     for (let index = 1; index <= count; index += 1) {
-      const legacy = `${source}-${String(index).padStart(3, "0")}`;
+      const legacy =
+        source === "ADV"
+          ? `PGBUF-Q${String(index).padStart(3, "0")}`
+          : `${source}-${String(index).padStart(2, "0")}`;
       const retained = source === "TEACH" && index === 1;
       const reader = source === "READER";
       rows.push(
@@ -144,7 +148,7 @@ test("the complete migration audit enforces source populations", async () => {
   const { root, pageMarkdown } = await createCompleteFixture();
   const auditPath = path.join(root, "questions/migration-audit.md");
   const audit = (await readFile(auditPath, "utf8")).replace(
-    /^\| `READER` \| `READER-016` .*\n/m,
+    /^\| `READER` \| `READER-16` .*\n/m,
     "",
   );
   await writeFile(auditPath, audit, "utf8");
@@ -155,6 +159,27 @@ test("the complete migration audit enforces source populations", async () => {
 
   assert.ok(
     failures.some((failure) => failure.includes("READER population is 15, expected 16")),
+  );
+});
+
+test("the complete migration audit enforces stable legacy identities", async () => {
+  const { root, pageMarkdown } = await createCompleteFixture();
+  const auditPath = path.join(root, "questions/migration-audit.md");
+  const audit = (await readFile(auditPath, "utf8")).replace(
+    "`PGBUF-Q055`",
+    "`ADV-55`",
+  );
+  await writeFile(auditPath, audit, "utf8");
+  pageMarkdown.set(auditPath, audit);
+  const failures = [];
+
+  validateQuestionBank(root, pageMarkdown, {}, failures);
+
+  assert.ok(
+    failures.some((failure) => failure.includes("unexpected legacy item ADV:ADV-55")),
+  );
+  assert.ok(
+    failures.some((failure) => failure.includes("missing legacy item ADV:PGBUF-Q055")),
   );
 });
 
