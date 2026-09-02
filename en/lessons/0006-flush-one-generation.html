@@ -45,10 +45,10 @@
         <table>
           <thead><tr><th>Page-buffer daemon</th><th>Job</th><th>Starts dirty-page I/O?</th></tr></thead>
           <tbody>
-            <tr><td><code>pgbuf-maintain</code></td><td>Adjust quotas and maintain direct-victim progress.</td><td>No.</td></tr>
+            <tr><td><code>pgbuf-maintain</code></td><td>Adjust quotas, then call an intended direct-victim backup whose pinned loops are blocked as written (<code>VS-20</code>).</td><td>No.</td></tr>
             <tr><td><code>pgbuf-page-flush</code></td><td>Select dirty LRU3 victim candidates under background/pressure policy and flush them.</td><td><strong>Yes.</strong></td></tr>
             <tr><td><code>pgbuf-page-post-flush</code></td><td>Finish BCB state and victim handoff for an already-submitted flush.</td><td>No new page write.</td></tr>
-            <tr><td><code>pgbuf-flush-control</code></td><td>Replenish file-I/O pacing tokens; it may be absent if initialization fails.</td><td>No.</td></tr>
+            <tr><td><code>pgbuf-flush-control</code></td><td>Refresh the post-write soft-pacing token budget; it may be absent if initialization fails.</td><td>No.</td></tr>
           </tbody>
         </table>
         <h3>The daemon is only one selection path</h3>
@@ -60,6 +60,7 @@
         </ul>
         <p>These paths converge on the same generation mechanism: claim <code>FLUSHING</code>, copy stable G, force WAL, submit via DWB or direct I/O, then complete or restore retryable state. DWB has two separate downstream helper daemons; they are not part of the four page-buffer roles. With DWB disabled, the selected page-buffer actor calls <code>fileio_write()</code> itself.</p>
         <p class="source-note"><strong>Verified mechanism; revision-bound topology:</strong> daemon tasks and creation are pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16972-L17255"><code>page_buffer.c:16972–17255</code></a>; checkpoint selection is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4173-L4610"><code>4173–4610</code></a>; deferred-owner flush is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6815-L6890"><code>6815–6890</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8810-L8901"><code>8810–8901</code></a>; stand-alone fallback is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11678-L11702"><code>11678–11702</code></a>.</p>
+        <p><a href="0006a-understand-page-buffer-daemons.html">Continue to Lesson 6A for every daemon's trigger, shared state, handoff, and cost →</a></p>
         <p><a href="../../reference/dirty-page-flush-actors.md">Open the complete actor and lifecycle research note →</a></p>
       </section>
 
@@ -238,6 +239,7 @@
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/flush-generation-card.html">Flush-generation card</a>
+      <a href="0006a-understand-page-buffer-daemons.html">Daemon control loops</a>
       <a href="../../learning/04-flush-one-generation.md">Canonical Core page</a>
       <a href="0007-replace-one-frame.html">Next lesson →</a>
       <a href="../index.html">Course home</a>

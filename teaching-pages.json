@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "expectedPageCount": 43,
+  "expectedPageCount": 44,
   "canonicalLanguage": "en",
   "legacyRedirectMinimumDays": 90,
   "pages": [
@@ -12,6 +12,7 @@
     { "path": "lessons/0004a-understand-holder-anchor.html", "en": "en/lessons/0004a-understand-holder-anchor.html", "ko": "ko/lessons/0004a-understand-holder-anchor.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0005-audit-a-logged-mutation.html", "en": "en/lessons/0005-audit-a-logged-mutation.html", "ko": "ko/lessons/0005-audit-a-logged-mutation.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0006-flush-one-generation.html", "en": "en/lessons/0006-flush-one-generation.html", "ko": "ko/lessons/0006-flush-one-generation.html", "review": { "state": "pending" }, "fingerprints": {} },
+    { "path": "lessons/0006a-understand-page-buffer-daemons.html", "en": "en/lessons/0006a-understand-page-buffer-daemons.html", "ko": "ko/lessons/0006a-understand-page-buffer-daemons.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0007-replace-one-frame.html", "en": "en/lessons/0007-replace-one-frame.html", "ko": "ko/lessons/0007-replace-one-frame.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0008-defend-a-safe-change.html", "en": "en/lessons/0008-defend-a-safe-change.html", "ko": "ko/lessons/0008-defend-a-safe-change.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0009-classify-latch-wait.html", "en": "en/lessons/0009-classify-latch-wait.html", "ko": "ko/lessons/0009-classify-latch-wait.html", "review": { "state": "pending" }, "fingerprints": {} },

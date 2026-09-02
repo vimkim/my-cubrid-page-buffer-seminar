@@ -330,7 +330,8 @@
         <details>
           <summary>Show direct answer</summary>
           <div class="model-answer">
-            <p><strong>Answer:</strong> Server mode nominally registers four: maintenance every 100 ms for quota/direct-victim work; page flush on demand or at the 1,000 ms default interval; post-flush with adaptive 1/10/100 ms waits; and flush control every 50 ms for I/O tokens. Recovery gating, configuration, and failed flush-control initialization qualify that count. Stand-alone mode has no page-buffer daemons and uses synchronous progress.</p>
+            <p><strong>Answer:</strong> Server mode nominally registers four: maintenance every 100 ms for quota work plus a call to an intended direct-victim backup; page flush on demand or at the 1,000 ms default interval; post-flush with adaptive 1/10/100 ms waits and then wake-only; and flush control every 50 ms for post-write soft pacing. The pinned maintenance backup loops do not enter as written (<code>VS-20</code>). Recovery gating, configuration, and failed flush-control initialization qualify the count. Stand-alone mode has no page-buffer daemons and uses synchronous progress.</p>
+            <p><a href="../lessons/0006a-understand-page-buffer-daemons.html">Trace every daemon's trigger, shared state, handoff, and cost in Lesson 6A →</a></p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:16972-17255</code></p>
             <p class="answer-route"><a href="../../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive">Canonical daemon table</a></p>
           </div>

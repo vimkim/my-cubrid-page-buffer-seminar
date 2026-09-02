@@ -330,7 +330,8 @@
         <details>
           <summary>직접 답변 보기</summary>
           <div class="model-answer">
-            <p><strong>답변:</strong> server mode는 명목상 네 개를 등록합니다. maintenance는 100 ms마다 quota/direct-victim 작업을 하고, page flush는 요청 시 또는 기본 1,000 ms 간격으로 실행하며, post-flush는 1/10/100 ms adaptive wait를 사용하고, flush control은 50 ms마다 I/O token을 공급합니다. recovery gate, 설정, flush-control initialization 실패에 따라 실제 개수는 달라질 수 있습니다. stand-alone mode에는 page-buffer daemon이 없고 동기식 progress를 사용합니다.</p>
+            <p><strong>답변:</strong> server mode는 명목상 네 개를 등록합니다. Maintenance는 100 ms마다 quota 작업과 의도상 direct-victim backup 호출을 수행하고, page flush는 요청 시 또는 기본 1,000 ms 간격으로 실행하며, post-flush는 1/10/100 ms adaptive wait 뒤 wake-only로 전환하고, flush control은 50 ms마다 post-write soft pacing을 갱신합니다. Pinned maintenance backup loop는 작성된 그대로라면 실행되지 않습니다(<code>VS-20</code>). Recovery gate, 설정, flush-control initialization 실패에 따라 실제 개수는 달라질 수 있습니다. Stand-alone mode에는 page-buffer daemon이 없고 synchronous progress를 사용합니다.</p>
+            <p><a href="../lessons/0006a-understand-page-buffer-daemons.html">각 daemon의 trigger, shared state, handoff, cost는 Lesson 6A에서 추적 →</a></p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:16972-17255</code></p>
             <p class="answer-route"><a href="../../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive">Canonical daemon 표</a></p>
           </div>

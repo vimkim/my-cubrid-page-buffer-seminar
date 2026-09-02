@@ -24,12 +24,18 @@ In server mode, the pinned `pgbuf_daemons_init()` attempts to create four daemon
 
 | Page-buffer daemon | What it owns | Does it initiate a page-image write? |
 |---|---|---|
-| `pgbuf-maintain` | Periodic quota adjustment and direct-victim progress. | No. |
+| `pgbuf-maintain` | Periodic quota adjustment, followed by a call to an intended direct-victim backup whose pinned loop bodies are not entered as written (`VS-20`). | No. |
 | `pgbuf-page-flush` | Select dirty LRU3 victim candidates under background/replacement-pressure policy and flush them. | **Yes. This is the page-buffer background flusher.** |
-| `pgbuf-page-post-flush` | Finish BCB state and direct-victim handoff for pages the page-flush daemon already submitted. | No new page write; it processes completed submissions. |
-| `pgbuf-flush-control` | Replenish file-I/O pacing tokens. Initialization can leave this daemon absent. | No; it controls rate rather than selecting a page. |
+| `pgbuf-page-post-flush` | Finish BCB state and direct-victim handoff after the page-flush daemon successfully crosses its DWB/direct submission boundary. | No new page write; DWB submission does not imply home-page completion. |
+| `pgbuf-flush-control` | Refresh the post-write soft-pacing token budget. Initialization can leave this daemon absent. | No; it controls later progress rather than selecting or writing a page. |
 
 The objects are created before log recovery, but their tasks return while the boot-level flush-daemon gate is closed; boot enables them after recovery. Stand-alone builds do not create these page-buffer daemons. Counts, periods, thresholds, and batching are revision-bound **Implementation policy**, not a fix/unfix Interface contract.
+
+The exact trigger, shared-state, output, and structural-cost ledger belongs in
+the [Dirty-page Flush Actors evidence reference](../reference/dirty-page-flush-actors.md#four-independent-control-loops).
+That reference also keeps `VS-20` separate from the verified quota work; do not
+turn the helper's comment into a claim that maintenance-owned direct assignment
+actually runs at the pinned revision.
 
 ### The background flusher is not the only flusher
 

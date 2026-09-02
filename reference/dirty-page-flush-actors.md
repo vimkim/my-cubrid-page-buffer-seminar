@@ -14,12 +14,73 @@ In a normally initialized server, CUBRID attempts to create **four page-buffer d
 
 | Daemon name | Role | Selects or writes dirty page images? |
 |---|---|---|
-| `pgbuf-maintain` | Adjust private-LRU quotas and search for clean direct victims | No |
+| `pgbuf-maintain` | Adjust private-LRU quotas, then call a backup routine intended to search for clean direct victims | No |
 | `pgbuf-page-flush` | Select cold dirty victim candidates and execute their page-buffer flush path | **Yes** |
 | `pgbuf-page-post-flush` | Finish BCB bookkeeping and try to hand a BCB whose page-buffer flush generation was already submitted to a thread waiting for a victim | No |
 | `pgbuf-flush-control` | Refill/measure file-I/O flush-control tokens | No |
 
 The four pointers and the four one-thread initializers are explicit in the pinned source. The flush-control initializer is the one qualified case: it returns without creating its daemon if `fileio_flush_control_initialize()` fails. `cubthread::manager::create_daemon()` reserves one thread entry, and a `cubthread::daemon` constructor starts one `std::thread`; no page-buffer worker pool is attached to the page-flush daemon. [Page-buffer daemon pointers](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1391-L1398), [four page-buffer initializers and flush-control failure exit](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17146-L17255), [`create_daemon()` reserves one entry](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_manager.cpp#L125-L141), [daemon starts one `std::thread`](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_daemon.cpp#L53-L73).
+
+## Four independent control loops
+
+![The trigger, shared state, work, and output of each page-buffer daemon](../assets/page-buffer-daemon-control-loops.svg)
+
+Every daemon is one task executed by its own generic daemon loop. The loop runs
+the task, pauses according to its `cubthread::looper`, and repeats until stopped.
+There is no scheduler that dispatches one dirty-page job to whichever of four
+workers is idle. Their names identify four different control loops:
+
+| Daemon | Trigger or cadence | Shared input | Work and output | Structural cost before I/O |
+|---|---|---|---|---|
+| `pgbuf-maintain` | Fixed 100 ms looper; there is no explicit wake site. | Per-thread unfix-counter shards, per-LRU hit/activity counters, quota descriptors, LRU zone boundaries, and direct-victim wait state. | Calls `pgbuf_adjust_quotas()`, then calls `pgbuf_direct_victims_maintenance()` as an intended low-activity backup. Quota adjustment consumes hit samples, updates private/shared targets, demotes over-threshold zones, and republishes victim-bearing lists. It does not flush a page. | Quota work scans managed thread counters and all `S + P` LRU descriptors, then any BCBs demoted by zone adjustment: O(T + S + P + D). The intended direct-victim backup has a source anomaly described below. |
+| `pgbuf-page-flush` | Dynamic looper: timed by `page_bg_flush_interval_msecs` when positive (1,000 ms default at the pinned baseline), otherwise wake-only. Allocation pressure and dirty victim-bottom paths call `wakeup()`. A demand wake guarantees at least one victim-flush iteration. A timer wake can do zero iterations unless a direct-victim waiter exists or the hit ratio is low; once running, the same predicate can keep it looping. | Per-thread fix samples, per-LRU flush priorities, LRU3 chains, BCB flags, log state, and direct-victim wait state. | Computes a weighted scan budget, collects dirty cold candidates across LRUs, optionally sorts them by VPID, rechecks identity/dirty/FLUSHING/hot/fixed/WAL predicates, and calls the generation-flush mechanism, optionally with neighbors. It may complete the BCB itself or enqueue its pointer for post-flush work. | O(T + S + P + K + C log C + C·N) before storage latency: K inspected LRU nodes, C candidates, and up to N neighbor checks/pages per candidate. The base budget is capped at 200 MiB worth of pages, but each positive-priority LRU receives a minimum check of one, so K can exceed that base by up to the positive-LRU count. The actual flush is I/O-latency bound. |
+| `pgbuf-page-post-flush` | Increasing idle periods of 1, 10, and 100 ms, then wake-only; the page-flush producer explicitly wakes it after enqueue. Finding work resets the looper to its fast interval. | The lock-free `flushed_bcbs` circular queue (capacity 8,192), individual BCB mutex/state, BCB flush-waiter lists, and direct-victim waiter queues. | Drains queued BCB pointers. Under each BCB mutex it rechecks flags, fix count, LRU3 membership, and private quota; it may reserve an eligible clean BCB for a waiting allocator. It always finishes the old FLUSHING state and wakes flush waiters. It does not submit another page write. | O(Q + stale direct waiters + sum of BCB flush waiters), plus lock/CAS contention. Capacity 8,192 bounds instantaneous backlog, not total work in one drain while a producer refills the queue. |
+| `pgbuf-flush-control` | Fixed 50 ms looper with no explicit wake site, after successful token-bucket initialization. The first task run only establishes its time origin. | One file-I/O token bucket, elapsed time, pages/log-pages observed, tokens consumed, and adaptive/configured rate. | Computes a new token budget, replaces the bucket's available tokens, records statistics, and broadcasts the bucket condition variable. File writers consume these tokens in the post-write `fileio_compensate_flush()` path, so waiting paces subsequent progress rather than granting permission for the OS write that just completed. A non-log caller stops waiting after ten broadcasts/retries, and a caller holding the log critical section does not wait for missing tokens. The daemon neither chooses a BCB nor writes one. | O(1) protected accounting plus condition-variable broadcast cost proportional to the number of waiters the OS wakes. |
+
+`T` denotes managed thread-counter shards, `S` and `P` the configured shared
+and private LRU counts, `D` the number of BCBs demoted during zone adjustment,
+`K` the inspected LRU nodes, `C` the dirty candidates, and `N` the neighbor
+span. These are structural bounds; mutex wait,
+cache coherence, scheduling, WAL, DWB, and storage latency are not represented
+by the Big-O labels.
+
+Primary anchors: [daemon tasks and
+loopers](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16972-L17255),
+[thread-counter sampling and quota
+adjustment](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2205-L2243),
+[quota calculation and zone
+work](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14251-L14511),
+[victim-flush selection and
+submission](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3826-L4165),
+[post-flush production and
+consumption](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952),
+[post-flush recheck and
+handoff](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15489-L15556),
+and [file-I/O token-bucket
+control](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L671-L929).
+Post-write call order is visible in [`fileio_write()` and the multi-page write
+path](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L4123-L4370).
+
+### Pinned maintenance-loop anomaly
+
+The direct-victim half of `pgbuf-maintain` must be separated into **intended
+role** and **verified executable control flow**. The function comment says
+`pgbuf_direct_victims_maintenance()` is a low-activity backup and initializes
+an outer continuation budget to five. That value is not a strict assignment
+maximum: one helper call can scan up to 1,000 LRU3 entries and assign multiple
+eligible BCBs before returning. But both outer `for` loops initialize `index` to the saved
+start index and immediately require `index != start_index`; that condition is
+false on the first test, so neither loop body is entered as written. Quota
+adjustment still runs every maintenance iteration. The absence of direct
+assignment from this one routine does not remove other producers: victim scan,
+page/post-flush, and LRU unfix paths can still hand BCBs to waiting allocators.
+
+This is static source evidence, not proof of a production stall or its impact.
+The uncertainty registry owns the status as `VS-20`; validation requires a
+pressure probe that distinguishes assignments by producer and confirms whether
+generated code, a supported build variant, or another path changes this
+control flow. [Pinned loop
+conditions](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9608-L9648).
 
 Dirtying a page does **not** assign it to a particular flusher. `pgbuf_set_dirty_buffer_ptr()` only sets the BCB dirty flag, records which holder dirtied it for statistics, and increments statistics. The dirty BCB remains resident until one of several policies selects it. [Dirty transition](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11656-L11675), [dirty-flag update](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16020-L16061).
 
@@ -119,7 +180,7 @@ Standalone mode compiles out daemon creation. `pgbuf_is_page_flush_daemon_availa
 
 ## Maintainer conclusions
 
-1. “Four page-buffer daemons” describes the normal pinned server initialization (with the flush-control initialization caveat), but “one master plus four flush slaves” is false. There are four single-thread daemons with orthogonal roles, and only `pgbuf-page-flush` selects and submits dirty victim candidates through the page-buffer flush mechanism.
+1. “Four page-buffer daemons” describes the normal pinned server initialization (with the flush-control initialization caveat), but “one master plus four flush slaves” is false. There are four single-thread daemons with orthogonal roles, and only `pgbuf-page-flush` selects and submits dirty victim candidates through the page-buffer flush mechanism. The maintenance daemon's direct-victim backup is intended by comment but its pinned loop bodies are not entered as written; route status through `VS-20`.
 2. A dirty page has no permanently assigned flusher. The thread that selects it and the thread that executes its safe flush can differ when a WRITE owner must service an asynchronous request.
 3. Victim cleaning and checkpoint flushing share the generation-flush mechanism but implement different policies: replacement progress versus recovery-boundary progress.
 4. Archive removal is not a server-mode page-flush worker. It relies on checkpoint progress; only the standalone archive-removal path invokes checkpoint flushing directly.

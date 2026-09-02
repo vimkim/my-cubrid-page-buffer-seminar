@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 960" role="img" aria-labelledby="title desc">
+  <title id="title">Four independent page-buffer daemon control loops</title>
+  <desc id="desc">The boot gate controls four one-thread daemons. Maintenance adjusts replacement policy, page flush selects and submits dirty victims, post-flush consumes completed BCBs and may hand them to allocators, and flush control refills a file I/O token bucket. Only page flush starts a page-buffer flush submission.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#365362"/>
+    </marker>
+    <style>
+      .bg{fill:#fbfcfe}.title{font:700 28px system-ui,sans-serif;fill:#173746}.sub{font:16px system-ui,sans-serif;fill:#526b78}.gate{fill:#173746}.gateText{font:700 18px system-ui,sans-serif;fill:#fff}.row{stroke-width:2}.maint{fill:#edf0ff;stroke:#6172d9}.flush{fill:#e7f7f5;stroke:#159b94}.post{fill:#fff4df;stroke:#dd8a15}.control{fill:#f4edfa;stroke:#8a5bb4}.name{font:700 17px ui-monospace,monospace;fill:#173746}.label{font:700 15px system-ui,sans-serif;fill:#294b5b}.body{font:15px system-ui,sans-serif;fill:#4e6875}.small{font:13px system-ui,sans-serif;fill:#607885}.box{fill:#fff;stroke:#cad7de;stroke-width:1.5}.flow{fill:none;stroke:#365362;stroke-width:2.5;marker-end:url(#arrow)}.io{fill:#ffe7e3;stroke:#dc5b4d;stroke-width:2}.ioText{font:700 15px system-ui,sans-serif;fill:#9c3026}.note{fill:#fff;stroke:#93a7b2;stroke-width:1.5}.foot{font:700 17px system-ui,sans-serif;fill:#173746}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="960" rx="24"/>
+  <text class="title" x="700" y="48" text-anchor="middle">Four peers, four control loops — not a master and worker pool</text>
+  <text class="sub" x="700" y="78" text-anchor="middle">Pinned server-mode topology at f799e05; every task returns while the boot flush-daemon gate is closed</text>
+
+  <rect class="gate" x="110" y="102" width="1180" height="54" rx="14"/>
+  <text class="gateText" x="700" y="136" text-anchor="middle">BO_IS_FLUSH_DAEMON_AVAILABLE() — enabled only after recovery</text>
+
+  <rect class="row maint" x="40" y="184" width="1320" height="150" rx="20"/>
+  <text class="name" x="68" y="219">pgbuf-maintain</text>
+  <text class="small" x="68" y="244">periodic · 100 ms</text>
+  <rect class="box" x="300" y="204" width="300" height="104" rx="14"/>
+  <text class="label" x="450" y="231" text-anchor="middle">Reads</text>
+  <text class="body" x="450" y="258" text-anchor="middle">LRU hits, activity, quotas</text>
+  <text class="body" x="450" y="282" text-anchor="middle">direct-victim wait queues</text>
+  <path class="flow" d="M 610 256 H 650"/>
+  <rect class="box" x="660" y="204" width="330" height="104" rx="14"/>
+  <text class="label" x="825" y="231" text-anchor="middle">Runs</text>
+  <text class="body" x="825" y="258" text-anchor="middle">adjust quotas and LRU zones</text>
+  <text class="body" x="825" y="282" text-anchor="middle">call backup direct-victim routine</text>
+  <path class="flow" d="M 1000 256 H 1070"/>
+  <rect class="box" x="1080" y="204" width="250" height="104" rx="14"/>
+  <text class="label" x="1205" y="231" text-anchor="middle">Output</text>
+  <text class="body" x="1205" y="258" text-anchor="middle">policy thresholds</text>
+  <text class="body" x="1205" y="282" text-anchor="middle">no page write</text>
+
+  <rect class="row flush" x="40" y="354" width="1320" height="178" rx="20"/>
+  <text class="name" x="68" y="389">pgbuf-page-flush</text>
+  <text class="small" x="68" y="414">timed or demand wakeup</text>
+  <text class="small" x="68" y="435">default period · 1000 ms</text>
+  <rect class="box" x="300" y="377" width="300" height="126" rx="14"/>
+  <text class="label" x="450" y="404" text-anchor="middle">Selects</text>
+  <text class="body" x="450" y="431" text-anchor="middle">weighted LRU3 dirty candidates</text>
+  <text class="body" x="450" y="455" text-anchor="middle">pressure and miss-rate signals</text>
+  <text class="body" x="450" y="479" text-anchor="middle">protected eligibility recheck</text>
+  <path class="flow" d="M 610 440 H 650"/>
+  <rect class="io" x="660" y="377" width="330" height="126" rx="14"/>
+  <text class="ioText" x="825" y="404" text-anchor="middle">Only daemon that submits a page flush</text>
+  <text class="body" x="825" y="431" text-anchor="middle">stable generation → WAL gate</text>
+  <text class="body" x="825" y="455" text-anchor="middle">→ DWB or direct file I/O</text>
+  <text class="body" x="825" y="479" text-anchor="middle">may loop while pressure remains</text>
+  <path class="flow" d="M 1000 440 H 1070"/>
+  <rect class="box" x="1080" y="377" width="250" height="126" rx="14"/>
+  <text class="label" x="1205" y="404" text-anchor="middle">Completion route</text>
+  <text class="body" x="1205" y="431" text-anchor="middle">finish BCB itself</text>
+  <text class="body" x="1205" y="455" text-anchor="middle">or produce BCB pointer</text>
+  <text class="body" x="1205" y="479" text-anchor="middle">to flushed_bcbs[8192]</text>
+
+  <rect class="row post" x="40" y="552" width="1320" height="150" rx="20"/>
+  <text class="name" x="68" y="587">pgbuf-page-post-flush</text>
+  <text class="small" x="68" y="612">1 / 10 / 100 ms, then wake-only</text>
+  <rect class="box" x="300" y="572" width="300" height="104" rx="14"/>
+  <text class="label" x="450" y="599" text-anchor="middle">Consumes</text>
+  <text class="body" x="450" y="626" text-anchor="middle">circular queue, capacity 8,192</text>
+  <text class="body" x="450" y="650" text-anchor="middle">successful-submission BCB pointers</text>
+  <path class="flow" d="M 610 624 H 650"/>
+  <rect class="box" x="660" y="572" width="330" height="104" rx="14"/>
+  <text class="label" x="825" y="599" text-anchor="middle">Rechecks under each BCB mutex</text>
+  <text class="body" x="825" y="626" text-anchor="middle">clean, unfixed, cold, quota-eligible</text>
+  <text class="body" x="825" y="650" text-anchor="middle">then try direct-victim handoff</text>
+  <path class="flow" d="M 1000 624 H 1070"/>
+  <rect class="box" x="1080" y="572" width="250" height="104" rx="14"/>
+  <text class="label" x="1205" y="599" text-anchor="middle">Output</text>
+  <text class="body" x="1205" y="626" text-anchor="middle">always finish FLUSHING</text>
+  <text class="body" x="1205" y="650" text-anchor="middle">wake; optionally reserve BCB</text>
+
+  <rect class="row control" x="40" y="722" width="1320" height="150" rx="20"/>
+  <text class="name" x="68" y="757">pgbuf-flush-control</text>
+  <text class="small" x="68" y="782">periodic · 50 ms</text>
+  <text class="small" x="68" y="803">optional after init failure</text>
+  <rect class="box" x="300" y="742" width="300" height="104" rx="14"/>
+  <text class="label" x="450" y="769" text-anchor="middle">Measures</text>
+  <text class="body" x="450" y="796" text-anchor="middle">elapsed time and consumed tokens</text>
+  <text class="body" x="450" y="820" text-anchor="middle">adaptive or configured rate</text>
+  <path class="flow" d="M 610 794 H 650"/>
+  <rect class="box" x="660" y="742" width="330" height="104" rx="14"/>
+  <text class="label" x="825" y="769" text-anchor="middle">Updates one token bucket</text>
+  <text class="body" x="825" y="796" text-anchor="middle">replace available token budget</text>
+  <text class="body" x="825" y="820" text-anchor="middle">wake writers delayed after a write</text>
+  <path class="flow" d="M 1000 794 H 1070"/>
+  <rect class="box" x="1080" y="742" width="250" height="104" rx="14"/>
+  <text class="label" x="1205" y="769" text-anchor="middle">Output</text>
+  <text class="body" x="1205" y="796" text-anchor="middle">post-write soft-pacing budget</text>
+  <text class="body" x="1205" y="820" text-anchor="middle">no page selection or write</text>
+
+  <rect class="note" x="110" y="895" width="1180" height="44" rx="12"/>
+  <text class="foot" x="700" y="923" text-anchor="middle">DIRTY is not queued to a permanent owner. These loops cooperate through policy state, BCBs, and bounded queues.</text>
+</svg>

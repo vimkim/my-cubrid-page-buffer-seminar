@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0006A — Understand the page-buffer daemons</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0006a-understand-page-buffer-daemons.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · Lesson 0006A</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Core deep dive · background control</div>
+    <h1>Four daemons are four loops, not four page writers</h1>
+    <p>For each daemon, identify what wakes it, which shared state it reads, what progress it owns, and whether it starts a page-buffer flush.</p>
+    <div class="pills"><span class="pill">Trigger</span><span class="pill">Input</span><span class="pill">Work</span><span class="pill">Output</span><span class="pill">Cost</span><span class="pill">Lifecycle</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="map">
+        <div class="eyebrow">01 · Topology</div>
+        <h2>One process, four peer threads, four different jobs</h2>
+        <img class="diagram" src="../../assets/page-buffer-daemon-control-loops.svg" alt="Four independent page-buffer daemon control loops with their triggers, shared inputs, work, and outputs">
+        <p class="caption">The boot gate covers all four tasks. Only the green page-flush row enters the page-generation flush mechanism.</p>
+        <p class="big-claim">A dirty page is not assigned to one of four workers. <code>DIRTY</code> remains BCB state until a selection policy or explicit caller acts.</p>
+        <ul>
+          <li><code>pgbuf_daemons_init()</code> creates one daemon object per role. Each object owns one <code>std::thread</code>.</li>
+          <li>The task executes, pauses according to its own <code>cubthread::looper</code>, then executes again. There is no common dirty-page work queue shared by four workers.</li>
+          <li>The objects are created around restart, but their tasks return while <code>BO_IS_FLUSH_DAEMON_AVAILABLE()</code> is false. Boot opens the gate only after recovery.</li>
+          <li><code>pgbuf-flush-control</code> is optional: token-bucket initialization failure leaves that daemon pointer null. Stand-alone mode creates none of the four.</li>
+        </ul>
+      </section>
+
+      <section class="section" id="ledger">
+        <div class="eyebrow">02 · Responsibility ledger</div>
+        <h2>Ask trigger → input → work → output</h2>
+        <table>
+          <thead><tr><th>Daemon</th><th>When it runs</th><th>What it touches</th><th>Result</th><th>Starts a page flush?</th></tr></thead>
+          <tbody>
+            <tr><td><code>pgbuf-maintain</code></td><td>Every 100 ms</td><td>LRU hit/activity samples, quotas, zone boundaries, direct-victim state</td><td>Updates replacement-policy targets; calls an intended backup assignment routine</td><td>No</td></tr>
+            <tr><td><code>pgbuf-page-flush</code></td><td>On demand or at <code>page_bg_flush_interval_msecs</code>; 1,000 ms by default</td><td>LRU3 candidates, flush priorities, BCB state, WAL state, pressure signals</td><td>A demand wake forces one iteration; a timer wake may do none. Submits dirty cold generations and may continue while pressure remains</td><td><strong>Yes</strong></td></tr>
+            <tr><td><code>pgbuf-page-post-flush</code></td><td>Wake from page-flush handoff; idle pauses grow 1/10/100 ms, then wake-only</td><td><code>flushed_bcbs</code>, BCB state, direct-victim and BCB flush-waiter queues</td><td>Finishes old FLUSHING state, wakes flush waiters, and may reserve a now-clean BCB for an allocator</td><td>No new write</td></tr>
+            <tr><td><code>pgbuf-flush-control</code></td><td>Every 50 ms after successful initialization</td><td>File-I/O token bucket, elapsed time, observed/consumed-token statistics</td><td>Replaces the token budget and wakes rate-control waiters</td><td>No</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>Name the boundary:</strong> <code>pgbuf-page-flush</code> starts a page-buffer flush submission. With DWB enabled, that may mean enqueueing a stable image for downstream DWB work rather than completing its home-volume write in the same thread.</div>
+      </section>
+
+      <section class="section" id="flush-post">
+        <div class="eyebrow">03 · The only producer–consumer pair</div>
+        <h2>Page flush may hand completion to post-flush</h2>
+        <pre><code>allocation pressure / timed wake
+  → pgbuf-page-flush
+      → choose dirty LRU3 candidates
+      → recheck identity + dirty + cold + unfixed + WAL
+      → copy generation and submit DWB/direct I/O
+      → if a direct-victim waiter exists and flushed_bcbs accepts the pointer:
+           produce BCB* → wake pgbuf-page-post-flush
+        else:
+           complete FLUSHING state in this thread
+
+pgbuf-page-post-flush
+  → drain flushed_bcbs (capacity 8,192)
+  → lock each BCB and recheck clean + unfixed + LRU3 + quota
+  → reserve for one waiting allocator when still eligible
+  → clear old FLUSHING state and wake flush waiters</code></pre>
+        <p>Post-flush does not perform “the second half of every flush.” The handoff happens only on the page-flush path, only when a direct-victim waiter exists, only when the post-flush daemon exists, and only when the bounded queue accepts the pointer. Otherwise the submitting thread completes the BCB itself.</p>
+        <p>The protected recheck is essential. Between I/O submission and post-processing, another thread may fix the BCB, move it out of LRU3, or create a newer DIRTY generation. Old-generation completion cannot authorize reuse of those newer resident bytes.</p>
+      </section>
+
+      <section class="section" id="maintain">
+        <div class="eyebrow">04 · Maintenance is policy, not I/O</div>
+        <h2>Quota adjustment is real; the backup assignment loop is anomalous</h2>
+        <p>Every maintenance execution first calls <code>pgbuf_adjust_quotas()</code>. It consumes per-LRU hit samples, estimates private activity, updates private/shared thresholds, demotes zones that exceed those thresholds, republishes candidate-bearing LRUs, and updates the approximate “victim rich” signal.</p>
+        <p>It then calls <code>pgbuf_direct_victims_maintenance()</code>, whose comment describes a low-activity backup. Its initial value 5 is only an outer continuation budget, not a strict assignment cap: one helper call can inspect up to 1,000 LRU3 entries and assign multiple BCBs. However, both pinned outer <code>for</code> loops initialize <code>index</code> to the saved start index and immediately require <code>index != start_index</code>. The condition is false on the first test, so neither body is entered as written.</p>
+        <div class="callout warn"><strong>Evidence boundary — VS-20:</strong> teach quota adjustment as verified. Teach direct-victim maintenance as intended by the comment but blocked by a source-visible loop condition. Other producers still assign direct victims, so this source anomaly alone does not prove a production stall or starvation.</div>
+      </section>
+
+      <section class="section" id="control">
+        <div class="eyebrow">05 · Flush control controls rate</div>
+        <h2>It manages tokens, not BCBs</h2>
+        <p>The flush-control task lives beside page-buffer daemons, but its state is in <code>file_io.c</code>. The first execution records a time origin. Later 50 ms executions calculate an adaptive or configured token rate, replace the shared token budget, reset interval statistics, and broadcast the token-bucket condition variable. A non-log caller stops waiting after ten broadcasts/retries, while a caller holding the log critical section does not wait for missing tokens; this is a soft limiter.</p>
+        <p>File-I/O paths consume that budget through <code>fileio_compensate_flush()</code> after the OS write call. Waiting therefore delays subsequent progress; these are not permission tokens granted before the write that just completed. This pacing path does not select a dirty page, set <code>FLUSHING</code>, copy bytes, force WAL, or call the page-generation flush mechanism. If initialization fails and the daemon is absent, token acquisition becomes a no-op because the bucket pointer is null; page flushing still exists.</p>
+      </section>
+
+      <section class="section" id="cost">
+        <div class="eyebrow">06 · Structural cost</div>
+        <h2>Only the page-flush loop is intentionally I/O-bound</h2>
+        <table>
+          <thead><tr><th>Loop</th><th>CPU-side bound before waiting/I/O</th><th>What can dominate wall time</th></tr></thead>
+          <tbody>
+            <tr><td>Maintenance</td><td>O(T + S + P + D) for thread counter shards, all LRU descriptors, and zone demotions</td><td>LRU mutex contention; <code>VS-20</code> means the intended assignment scan is not counted as executed</td></tr>
+            <tr><td>Page flush</td><td>O(T + S + P + K + C log C + C·N). The base scan budget is capped at 200 MiB worth of pages, but minimum one check per positive-priority LRU can add up to that LRU count</td><td>BCB contention, WAL wait, DWB, file I/O, and scheduling</td></tr>
+            <tr><td>Post-flush</td><td>O(Q + stale direct waiters + all BCB flush waiters scanned). Capacity 8,192 bounds backlog, not a drain under concurrent refill</td><td>BCB/thread mutex and queue CAS contention</td></tr>
+            <tr><td>Flush control</td><td>O(1) accounting, plus condition broadcast</td><td>Number of awakened waiters and scheduler behavior</td></tr>
+          </tbody>
+        </table>
+        <p><code>T</code> is the managed thread count, <code>S</code>/<code>P</code> are shared/private LRU counts, <code>D</code> is zone demotions, <code>K</code> inspected LRU nodes, <code>C</code> candidates, <code>N</code> neighbor span, and <code>Q</code> drained post-flush entries. Big-O describes structure traversal, not elapsed latency.</p>
+      </section>
+
+      <section class="section" id="not-daemon">
+        <div class="eyebrow">07 · What is outside these four?</div>
+        <h2>Checkpoint, WRITE-owner, explicit caller, and DWB are separate actors</h2>
+        <ul>
+          <li>The log-checkpoint thread selects pages by <code>oldest_unflush_lsa</code> and calls <code>pgbuf_flush_checkpoint()</code> itself.</li>
+          <li>A foreground storage, recovery, shutdown, or volume operation may synchronously call a page or whole-pool flush.</li>
+          <li>A foreign WRITE owner may receive <code>PGBUF_BCB_ASYNC_FLUSH_REQ</code> and perform the safe copy at unfix.</li>
+          <li>DWB's optional flush-block and file-sync daemons are downstream storage-integrity helpers, not page-buffer daemon workers.</li>
+        </ul>
+        <p class="big-claim">When debugging, ask two questions: who selected this generation, and which thread executed or completed its configured persistence boundary?</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">08 · Retrieval practice</div>
+        <h2>Route four symptoms to four owners</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="four daemon objects mean four peer loops, not four flush workers -> maintain periodically adjusts quota and calls an intended backup whose pinned loops are blocked by VS-20 -> page-flush alone selects dirty cold candidates and submits a page generation -> post-flush drains flushed_bcbs and rechecks BCBs for completion/direct handoff without new I/O -> flush-control updates the file-I/O token bucket and wakes pacing waiters without selecting pages -> all tasks are recovery-gated -> checkpoint, explicit callers, WRITE owners, and DWB helpers are separate actors -> structural cost is descriptor/candidate/queue traversal while actual page flush is WAL and I/O bound." data-concepts='[{"label":"peer loops","terms":["four","peer","loop","not workers"]},{"label":"maintenance role and boundary","terms":["quota","vs-20","backup"]},{"label":"page-flush role","terms":["dirty","lru3","submit"]},{"label":"post-flush role","terms":["flushed_bcbs","recheck","handoff"]},{"label":"flush-control role","terms":["token","pacing","no page"]},{"label":"lifecycle gate","terms":["recovery","gate"]},{"label":"other actors","terms":["checkpoint","write owner","dwb"]},{"label":"cost boundary","terms":["candidate","queue","i/o"]}]'>
+          <h3>Prompt</h3>
+          <p>A server shows many allocator waits, frequent dirty-page writes, and file-I/O pacing waits. Explain which daemon owns each kind of progress, how page-flush and post-flush connect, and why waking all four is not a valid fix.</p>
+          <textarea aria-label="Your page-buffer daemon explanation" placeholder="Topology → maintain → page-flush → flushed_bcbs → post-flush → token control → other actors → cost and evidence boundary."></textarea>
+          <button type="button" data-check>Check daemon coverage</button>
+          <button type="button" class="secondary" data-reveal>Reveal model route</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Trace each loop from its initializer</h2>
+        <ul>
+          <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16972-L17255">Daemon tasks, periods, initialization, and destruction</a>.</li>
+          <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3826-L4165">Victim candidate collection and page-flush submission</a>.</li>
+          <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9608-L9648">Maintenance direct-victim loop conditions</a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15489-L15556">post-flush recheck/handoff</a>.</li>
+          <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L671-L929">File-I/O token-bucket control</a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L4123-L4370">post-write call order</a>.</li>
+        </ul>
+        <p><a href="../../reference/dirty-page-flush-actors.md">Open the complete pinned-source research note →</a></p>
+        <p><a href="0006-flush-one-generation.html">← Return to Lesson 0006</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#map">1. Four loops</a>
+      <a href="#ledger">2. Responsibility ledger</a>
+      <a href="#flush-post">3. Flush → post-flush</a>
+      <a href="#maintain">4. Maintenance and VS-20</a>
+      <a href="#control">5. Token control</a>
+      <a href="#cost">6. Structural cost</a>
+      <a href="#not-daemon">7. Other actors</a>
+      <a href="#retrieval">8. Route symptoms</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="0006-flush-one-generation.html">Flush generation</a>
+      <a href="0012-prove-replacement-progress.html">Replacement progress</a>
+      <a href="../../unresolved-or-version-sensitive-findings.md">Uncertainty registry</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Ask the teaching agent whenever a daemon name hides its trigger, shared state, completion boundary, or cost.</footer>
+</main>
+</body>
+</html>

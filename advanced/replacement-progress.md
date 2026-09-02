@@ -221,16 +221,16 @@ In server mode, the pinned module attempts to create four independent, single-th
 
 | Daemon | Pinned work and wake cadence |
 |---|---|
-| Maintenance | Adjusts private/shared quotas and maintains direct-victim progress every 100 ms. It does not write page images. |
+| Maintenance | Adjusts private/shared quotas every 100 ms, then calls a low-activity direct-victim backup. At the pinned revision both backup loops fail their first condition and do not enter as written (`VS-20`). It does not write page images. |
 | Page flush | The one page-buffer background flusher: wakes on demand or after `page_bg_flush_interval` (1,000 ms by default), selects dirty LRU3 victim candidates, and may loop while pressure still calls for victim flushing. A nonpositive interval makes it event-driven. |
-| Post-flush | Rechecks already-submitted flush candidates and hands eligible ones to waiters; adaptive waits are 1, 10, or 100 ms, returning to the fast interval when assignment work is found. It does not initiate another page write. |
-| Flush control | Adds I/O tokens from elapsed time every 50 ms. It does not select dirty pages, and its daemon can be absent when flush-control initialization is unavailable. |
+| Post-flush | Rechecks BCBs after successful page-buffer submission and hands eligible ones to waiters; idle waits grow through 1, 10, and 100 ms and then become wake-only, returning to the fast interval when work is found. It does not initiate another page write, and DWB submission does not prove home-page completion. |
+| Flush control | Replaces a post-write soft-pacing token budget from elapsed time every 50 ms. It does not select dirty pages, and its daemon can be absent when flush-control initialization is unavailable. |
 
 The page-flush daemon is not the only thread that can flush a dirty page. Checkpoint, explicit page/volume/lifecycle operations, and a WRITE owner servicing a deferred request execute the same generation mechanism from their own threads. The separate DWB subsystem may then use its own two daemons for downstream block writing and volume synchronization. See the canonical [flush-actor explanation](../learning/04-flush-one-generation.md#who-actually-performs-a-flush) and [primary-source research note](../reference/dirty-page-flush-actors.md).
 
 Daemon count, ownership, and cadence are version-sensitive implementation policy, not caller guarantees. Wake thresholds, periods, priorities, batch sizes, and quota formulas must be rechecked on the target revision and configuration. Do not encode them into the fix/unfix contract.
 
-Source: `src/storage/page_buffer.c:16972-17255`; lifecycle gate at `src/transaction/boot_sr.c:2405-2441`; default page-flush interval at `src/base/system_parameter.c:1806-1829`; DWB daemons at `src/storage/double_write_buffer.cpp:4017-4152`.
+Source: `src/storage/page_buffer.c:9549-9648,16972-17255`; lifecycle gate at `src/transaction/boot_sr.c:2405-2441`; default page-flush interval at `src/base/system_parameter.c:1806-1829`; DWB daemons at `src/storage/double_write_buffer.cpp:4017-4152`. Detailed control-loop ledger: [Dirty-page Flush Actors](../reference/dirty-page-flush-actors.md#four-independent-control-loops).
 
 ## AOUT caveat: structures present, analyzed default disabled
 

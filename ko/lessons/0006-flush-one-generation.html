@@ -45,10 +45,10 @@
         <table>
           <thead><tr><th>Page-buffer daemon</th><th>역할</th><th>Dirty-page I/O 시작?</th></tr></thead>
           <tbody>
-            <tr><td><code>pgbuf-maintain</code></td><td>Quota를 조정하고 direct-victim progress를 유지합니다.</td><td>아니요.</td></tr>
+            <tr><td><code>pgbuf-maintain</code></td><td>Quota를 조정한 뒤 의도상 direct-victim backup을 호출하지만 pinned loop는 작성된 그대로라면 실행되지 않습니다(<code>VS-20</code>).</td><td>아니요.</td></tr>
             <tr><td><code>pgbuf-page-flush</code></td><td>Background/pressure policy로 dirty LRU3 victim candidate를 골라 flush합니다.</td><td><strong>예.</strong></td></tr>
             <tr><td><code>pgbuf-page-post-flush</code></td><td>이미 제출된 flush의 BCB state와 victim handoff를 마무리합니다.</td><td>새 page write는 시작하지 않습니다.</td></tr>
-            <tr><td><code>pgbuf-flush-control</code></td><td>File-I/O pacing token을 보충합니다. 초기화 실패 시 없을 수 있습니다.</td><td>아니요.</td></tr>
+            <tr><td><code>pgbuf-flush-control</code></td><td>Post-write soft-pacing token budget을 갱신합니다. 초기화 실패 시 없을 수 있습니다.</td><td>아니요.</td></tr>
           </tbody>
         </table>
         <h3>Daemon은 여러 selection path 중 하나일 뿐입니다</h3>
@@ -60,6 +60,7 @@
         </ul>
         <p>모든 경로는 같은 generation mechanism으로 합류합니다. <code>FLUSHING</code>을 claim하고, stable G를 복사하고, WAL을 force하고, DWB 또는 direct I/O로 제출한 뒤, 완료하거나 retryable state를 복원합니다. DWB에는 별도의 downstream helper daemon 두 개가 있으며 위 네 page-buffer 역할에 포함되지 않습니다. DWB가 꺼져 있으면 선택된 page-buffer actor가 직접 <code>fileio_write()</code>를 호출합니다.</p>
         <p class="source-note"><strong>검증된 mechanism; revision-bound topology:</strong> daemon task와 생성은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16972-L17255"><code>page_buffer.c:16972–17255</code></a>, checkpoint selection은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4173-L4610"><code>4173–4610</code></a>, deferred-owner flush는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6815-L6890"><code>6815–6890</code></a> 및 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8810-L8901"><code>8810–8901</code></a>, stand-alone fallback은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11678-L11702"><code>11678–11702</code></a>입니다.</p>
+        <p><a href="0006a-understand-page-buffer-daemons.html">각 daemon의 trigger, shared state, handoff, cost는 Lesson 6A에서 계속 →</a></p>
         <p><a href="../../reference/dirty-page-flush-actors.md">Actor와 lifecycle 전체 research note 열기 →</a></p>
       </section>
 
@@ -238,6 +239,7 @@
       <a href="#primary-reading">필수 읽기</a>
       <hr>
       <a href="../reference/flush-generation-card.html">Flush-generation card</a>
+      <a href="0006a-understand-page-buffer-daemons.html">Daemon control loop</a>
       <a href="../../learning/04-flush-one-generation.md">Canonical Core page</a>
       <a href="0007-replace-one-frame.html">다음 lesson →</a>
       <a href="../index.html">강의 홈</a>

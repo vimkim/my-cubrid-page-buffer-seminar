@@ -148,3 +148,23 @@ The detailed evidence lives in
 to CUBRID `f799e05`, PostgreSQL `fd2b898`, and MySQL/InnoDB `06a5c1c`. Two
 English-only visuals distinguish the responsibility seams and the three
 replacement paths. The bilingual inventory now contains 43 paired pages.
+
+## Page-buffer daemon follow-up
+
+Reader question 9 promoted the four page-buffer daemon roles from a compact
+Lesson 0006 table into paired Lesson 0006A pages. The new lesson traces each
+single-thread daemon by trigger, shared input, work loop, output, lock shape,
+structural cost, and persistence boundary. It also visualizes that page-flush
+and post-flush form a conditional producer/consumer pair, while maintenance and
+flush-control operate independent policy and post-write pacing loops. The
+bilingual inventory now contains 44 paired pages.
+
+The primary-source re-audit corrected two tempting summaries. Flush-control
+tokens are consumed after the OS write and act as a soft throttle on subsequent
+progress, not pre-write permission. More importantly, the pinned
+`pgbuf_direct_victims_maintenance()` private/shared loops fail their first
+condition and do not enter as written; `nassigns = 5` is an outer continuation
+budget, not a strict assignment cap. The uncertainty registry owns this
+source-visible, runtime-unproven condition as `VS-20`. Existing Core, Advanced,
+source-inventory, and expected-team-question routes were corrected so intended
+maintenance behavior is not presented as verified execution.

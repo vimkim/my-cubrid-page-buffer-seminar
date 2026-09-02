@@ -30,7 +30,7 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | `src/storage/page_buffer.c:10723-10962` | one snapshot/WAL/write generation | [Flush One Generation](../learning/04-flush-one-generation.md) |
 | `src/storage/page_buffer.c:12186-13531` | ordered comparison, fix input/output, reordering, callback, and ordered unfix | [Acquisition Concurrency](../advanced/acquisition-concurrency.md#ordered-fix-input-and-output-contract) |
 | `src/storage/page_buffer.c:15420-15627` | direct-victim assignment and revocation | [Replacement Progress](../advanced/replacement-progress.md) |
-| `src/storage/page_buffer.c:16972-17255` | maintenance, page-flush, post-flush, and flush-control daemons | [Replacement Progress](../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive) |
+| `src/storage/page_buffer.c:16972-17255` | maintenance, page-flush, post-flush, and flush-control daemons | [Flush-actor control loops](./dirty-page-flush-actors.md#four-independent-control-loops), then [Replacement Progress](../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive) |
 
 ## Representative callers
 

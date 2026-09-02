@@ -32,6 +32,7 @@ export const canonicalVisualOwners = Object.freeze({
   "oldest-unflush-checkpoint.svg": "learning/04-flush-one-generation.md",
   "ordered-watcher-refix.svg": "advanced/acquisition-concurrency.md",
   "ownership-ledgers.svg": "learning/02-fix-hold-release.md",
+  "page-buffer-daemon-control-loops.svg": "reference/dirty-page-flush-actors.md",
   "promotion-outcomes.svg": "advanced/acquisition-concurrency.md",
   "redo-lsa-gate.svg": "advanced/recovery-and-lifecycle.md",
   "repeated-read-lru-effects.svg": "advanced/replacement-progress.md",
