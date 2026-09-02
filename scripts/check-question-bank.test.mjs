@@ -144,6 +144,26 @@ test("prompt and answer schema, pairing, and global IDs are enforced", async () 
   assert.ok(failures.some((failure) => failure.includes("duplicate canonical ID")));
 });
 
+test("each answer must link its own exact prompt anchor", async () => {
+  const { root, pageMarkdown } = await createCompleteFixture();
+  const answerPath = path.join(root, "questions/core-answers.md");
+  const wrongAnchor = (await readFile(answerPath, "utf8")).replace(
+    "#pgbuf-qb-001-trace-one-fix",
+    "#another-valid-prompt",
+  );
+  await writeFile(answerPath, wrongAnchor, "utf8");
+  pageMarkdown.set(answerPath, wrongAnchor);
+  const failures = [];
+
+  validateQuestionBank(root, pageMarkdown, {}, failures);
+
+  assert.ok(
+    failures.some((failure) =>
+      failure.includes("PGBUF-QB-001 does not link its exact prompt anchor"),
+    ),
+  );
+});
+
 test("the complete migration audit enforces source populations", async () => {
   const { root, pageMarkdown } = await createCompleteFixture();
   const auditPath = path.join(root, "questions/migration-audit.md");
