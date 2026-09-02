@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="720" viewBox="0 0 1240 720" role="img" aria-labelledby="title desc">
+  <title id="title">A startup cold miss claims an invalid BCB whose frame pairing stays fixed</title>
+  <desc id="desc">At pool initialization BCB zero, one, and two are permanently paired with frames zero, one, and two and linked on the invalid list. A cold miss pops the current invalid-list head, binds the requested VPID, reads the old page into that BCB's paired frame, publishes the BCB in the hash table, and after final unfix places it in an LRU. Later victimization may replace the VPID and bytes but does not change the BCB to frame pointer pairing.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .pool{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.bcb{fill:#eef0ff;stroke:#5968bd;stroke-width:2.5}.frame{fill:#e9f4f3;stroke:#16847d;stroke-width:2.5}.action{fill:#fff6e8;stroke:#b86b22;stroke-width:2.5}.done{fill:#fde9e5;stroke:#b74b3c;stroke-width:2}.t{font:700 23px Inter,Arial,sans-serif;fill:#173443}.h{font:700 17px Inter,Arial,sans-serif;fill:#173443}.s{font:14px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.code{font:14px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#173443}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}.pair{fill:none;stroke:#16847d;stroke-width:3}.dash{fill:none;stroke:#6b7780;stroke-width:2;stroke-dasharray:7 5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <text x="620" y="38" text-anchor="middle" class="t">Pool slot lifetime: identity changes; the BCB ↔ frame pairing does not</text>
+
+  <rect x="28" y="66" rx="18" width="490" height="410" class="pool"/>
+  <text x="52" y="99" class="h">1. Page-buffer initialization</text>
+  <text x="52" y="125" class="s">Arrays are allocated once; every BCB starts identity-free.</text>
+
+  <rect x="55" y="155" rx="12" width="190" height="75" class="bcb"/>
+  <text x="150" y="184" text-anchor="middle" class="h">BCB[0]</text><text x="150" y="210" text-anchor="middle" class="code">vpid = NULL</text>
+  <rect x="300" y="155" rx="12" width="190" height="75" class="frame"/>
+  <text x="395" y="184" text-anchor="middle" class="h">Frame[0]</text><text x="395" y="210" text-anchor="middle" class="code">header = invalid</text>
+  <path d="M245 192 H300" class="pair"/>
+
+  <rect x="55" y="255" rx="12" width="190" height="75" class="bcb"/>
+  <text x="150" y="284" text-anchor="middle" class="h">BCB[1]</text><text x="150" y="310" text-anchor="middle" class="code">vpid = NULL</text>
+  <rect x="300" y="255" rx="12" width="190" height="75" class="frame"/>
+  <text x="395" y="284" text-anchor="middle" class="h">Frame[1]</text><text x="395" y="310" text-anchor="middle" class="code">header = invalid</text>
+  <path d="M245 292 H300" class="pair"/>
+
+  <rect x="55" y="355" rx="12" width="190" height="75" class="bcb"/>
+  <text x="150" y="384" text-anchor="middle" class="h">BCB[2] …</text><text x="150" y="410" text-anchor="middle" class="code">vpid = NULL</text>
+  <rect x="300" y="355" rx="12" width="190" height="75" class="frame"/>
+  <text x="395" y="384" text-anchor="middle" class="h">Frame[2] …</text><text x="395" y="410" text-anchor="middle" class="code">header = invalid</text>
+  <path d="M245 392 H300" class="pair"/>
+  <text x="55" y="458" class="code">invalid_top → BCB[0] → BCB[1] → BCB[2] → …</text>
+
+  <rect x="565" y="85" rx="16" width="640" height="160" class="action"/>
+  <text x="590" y="119" class="h">2. OLD_PAGE cold miss for VPID 3|812</text>
+  <text x="590" y="151" class="s">Pop the current invalid-list head under its mutex.</text>
+  <text x="590" y="180" class="code">BCB[0].vpid = 3|812</text>
+  <text x="590" y="207" class="code">read old bytes → BCB[0].iopage_buffer = Frame[0]</text>
+  <path d="M518 192 H557" class="line"/>
+
+  <rect x="565" y="282" rx="16" width="640" height="170" class="bcb"/>
+  <text x="590" y="317" class="h">3. Publish, grant, then release</text>
+  <text x="590" y="350" class="s">Publish BCB[0] in the VPID hash chain; grant latch and fix debt.</text>
+  <text x="590" y="380" class="s">At final unfix, the resident slot enters replacement policy:</text>
+  <text x="590" y="408" class="code">assigned private LRU → LRU1 top</text>
+  <text x="590" y="435" class="code">otherwise → shared LRU middle</text>
+  <path d="M885 245 V274" class="line"/>
+
+  <rect x="80" y="535" rx="16" width="1080" height="130" class="done"/>
+  <text x="620" y="570" text-anchor="middle" class="h">4. Later safe victimization rebinds the slot</text>
+  <text x="620" y="603" text-anchor="middle" class="code">BCB[0] ↔ Frame[0] remains · VPID 3|812 and its bytes are replaced by another page identity</text>
+  <text x="620" y="635" text-anchor="middle" class="s">Which index a request gets is not a VPID rule: it gets the invalid head available when that thread wins the list mutex.</text>
+  <path d="M885 452 V527" class="dash"/>
+</svg>

@@ -1131,9 +1131,9 @@ function manifestPaths (manifest, failures)
     {
       failures.push ("teaching-pages.json: version must be 1");
     }
-  if (manifest.expectedPageCount !== 41)
+  if (manifest.expectedPageCount !== 42)
     {
-      failures.push ("teaching-pages.json: expectedPageCount must be exactly 41");
+      failures.push ("teaching-pages.json: expectedPageCount must be exactly 42");
     }
   if (!Array.isArray (manifest.pages))
     {

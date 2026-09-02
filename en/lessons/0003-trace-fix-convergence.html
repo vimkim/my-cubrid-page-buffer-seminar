@@ -80,6 +80,32 @@
         <p class="source-note"><strong>Verified mechanism:</strong> load owner/waiter registration and retry are at <code>page_buffer.c:7981–8178</code>; provisional BCB allocation and DWB/data-volume or NEW_PAGE materialization are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8634"><code>8392–8634</code></a>.</p>
       </section>
 
+      <section class="section" id="startup-slot">
+        <div class="eyebrow">04A · Before victimization</div>
+        <h2>An early cold miss pops the current invalid-list head</h2>
+        <img class="diagram" src="../../assets/startup-bcb-lifetime.svg" alt="Startup BCB and frame arrays, invalid-list allocation for an old-page miss, and later identity reuse without changing the pair">
+        <p class="caption">“Allocate a BCB” means claim an existing pool slot, not heap-create a descriptor for this VPID.</p>
+        <p>At initialization the pool allocates exactly <code>num_buffers</code> BCBs and the same number of frames. For every index <code>i</code>, it permanently wires <code>BCB[i].iopage_buffer</code> to <code>Frame[i]</code> and the frame back to that BCB. It then starts the invalid list at <code>BCB[0]</code>; initialization has already linked <code>BCB[0] → BCB[1] → …</code>.</p>
+        <p>Therefore, in the simplest no-prior-use and no-concurrency example, the first cold <code>OLD_PAGE</code> miss claims <code>BCB[0] + Frame[0]</code>, the next claims index 1, and so on. In a real boot, startup work and concurrent misses may already have popped or returned entries. The rule is not “VPID hashes to BCB index N”; the winning thread takes whichever BCB is the protected invalid-list head at that moment.</p>
+        <ol>
+          <li><code>pgbuf_allocate_bcb()</code> asks <code>pgbuf_get_bcb_from_invalid_list()</code> first.</li>
+          <li>The helper locks the invalid-list mutex, pops <code>invalid_top</code>, locks that BCB, and changes its replacement zone from INVALID to VOID.</li>
+          <li>The load owner assigns the requested VPID and reads the old image from DWB or the data volume into that BCB's already-paired frame.</li>
+          <li>After identity convergence, the BCB is published in the VPID hash chain and ownership is granted.</li>
+          <li>At final unfix, a newly materialized page enters the top of its assigned private LRU when it has one; otherwise it enters the middle of a selected shared LRU. Lesson 7 owns the later victim decision.</li>
+        </ol>
+        <table>
+          <thead><tr><th>Lifetime</th><th>What stays stable</th><th>What can change</th></tr></thead>
+          <tbody>
+            <tr><td>Pool lifetime</td><td>BCB storage, frame storage, and the one-to-one BCB ↔ frame pointer pairing.</td><td>List membership, current VPID, latch/flags, LSAs, and page bytes.</td></tr>
+            <tr><td>Resident-identity lifetime</td><td>One VPID ↔ BCB/frame mapping while that resident generation remains valid.</td><td>Safe invalidation or victimization ends it; the same pair may then represent another VPID.</td></tr>
+            <tr><td>One fix lifetime</td><td>The caller's borrowed access while its debt remains.</td><td>Matching unfix ends permission but need not end residency.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>Answer:</strong> the <em>BCB + frame pair is stable</em> from pool initialization to finalization. The <em>BCB/frame + VPID binding is not</em>; replacement exists precisely to reuse that same physical pool pair for another logical page.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> table allocation and pairing are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5667"><code>page_buffer.c:5559–5667</code></a>; invalid-list initialization and top removal are at <code>5911–5918,8905–8951</code>; invalid-first allocation is at <code>8181–8244</code>; materialization is at <code>8470–8634</code>. The first-release LRU destination is an implementation policy described in Lesson 7.</p>
+      </section>
+
       <section class="section" id="identity">
         <div class="eyebrow">05 · Three checks, three gaps</div>
         <h2>Do not collapse identity validation into one check</h2>
@@ -141,6 +167,7 @@
       <a href="#convergence">2. Two paths, one contract</a>
       <a href="#hit">3. Protected hit</a>
       <a href="#miss">4. Serialized miss</a>
+      <a href="#startup-slot">4A. Startup pool slot</a>
       <a href="#identity">5. Three identity checks</a>
       <a href="#contract">6. Shared postcondition</a>
       <a href="#retrieval">7. Teach it back</a>

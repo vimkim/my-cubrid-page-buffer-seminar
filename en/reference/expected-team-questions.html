@@ -385,7 +385,7 @@
             <p><strong>Answer:</strong> Initialization reserves seven entries per thread; exhaustion grows storage in sets of ten. First fix binds one free entry to one BCB and prepends it to that thread’s hold list. Nested fixes reuse it by increasing <code>fix_count</code>. Final matching unfix removes the binding and returns the entry to that thread’s free list, but backing memory remains until page-buffer finalization.</p>
             <p><strong>Performance judgment:</strong> a bottleneck is plausible, not automatic. Find is linear in the distinct BCBs held by that thread, and final removal may walk the singly linked list again. Small or LIFO hold sets are cheap; unfavorable order can accumulate quadratic traversal. Many threads on one BCB can instead contend on its shared atomic latch, while nested fixes of one page by one thread do not lengthen the holder list. Profile these separately from zero-count LRU work, wakeups, and flush.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:86-94,438-500,5922-6275,6298-6634,7807-7835</code></p>
-            <p class="answer-route"><a href="../../advanced/holder-entry-lifecycle.md">Canonical holder lifecycle and cost analysis</a> · <a href="../lessons/0004-repay-fix-debt.html#holder-lifecycle">Bilingual lesson section</a></p>
+            <p class="answer-route"><a href="../../advanced/holder-entry-lifecycle.md">Canonical holder lifecycle and cost analysis</a> · <a href="../lessons/0004a-understand-holder-anchor.html">Bilingual Lesson 4A</a></p>
           </div>
         </details>
       </article>

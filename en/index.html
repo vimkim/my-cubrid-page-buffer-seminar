@@ -53,6 +53,12 @@
         <p><a href="lessons/0004-repay-fix-debt.html">Preview Lesson 4 →</a></p>
       </article>
       <article class="reference-card full">
+        <span class="status waiting">Core deep dive</span>
+        <h3>Lesson 4A · Understand the holder anchor</h3>
+        <p>Separate the per-thread anchor from reusable holder entries, then trace how a linear <code>bufptr</code> lookup recognizes repeated fixes of one BCB.</p>
+        <p><a href="lessons/0004a-understand-holder-anchor.html">Preview Lesson 4A →</a></p>
+      </article>
+      <article class="reference-card full">
         <span class="status waiting">Read reported</span>
         <h3>Lesson 5 · Audit a logged mutation</h3>
         <p>Take this after ownership accounting. Trace one heap insert through logical locking, destination validation, physical mutation, recovery logging, page LSA, dirtying, and all-exit watcher cleanup.</p>
@@ -147,6 +153,7 @@
       <article class="course-item"><span class="step">2</span><div><span class="status">Ready</span><h3>Objects and state axes</h3><p><code>VPID → BCB ↔ frame → PAGE_PTR</code>, ownership ledgers, lifetimes, and counterexamples.</p></div><a href="lessons/0002-separate-objects-from-state.html">Open →</a></article>
       <article class="course-item"><span class="step">3</span><div><span class="status">Ready</span><h3>Fix convergence</h3><p>Caller intent, protected hit, serialized cold miss, identity checks, and the shared ownership postcondition.</p></div><a href="lessons/0003-trace-fix-convergence.html">Open →</a></article>
       <article class="course-item"><span class="step">4</span><div><span class="status">Ready</span><h3>Ownership debt</h3><p>Global <code>fcnt</code>, per-thread nested holders, one debt per successful call, and matching release.</p></div><a href="lessons/0004-repay-fix-debt.html">Open →</a></article>
+      <article class="course-item"><span class="step">4A</span><div><span class="status">Ready</span><h3>Holder anchor and entry</h3><p>Per-thread list heads, linear BCB lookup, nested-count reuse, entry recycling, and cost boundary.</p></div><a href="lessons/0004a-understand-holder-anchor.html">Open →</a></article>
       <article class="course-item"><span class="step">5</span><div><span class="status">Ready</span><h3>Caller completes correctness</h3><p>Logical lock, validation, mutation, recovery logging, page LSA, dirty transition, and all-exit cleanup.</p></div><a href="lessons/0005-audit-a-logged-mutation.html">Open →</a></article>
       <article class="course-item"><span class="step">6</span><div><span class="status">Ready</span><h3>Flush one generation</h3><p>Copied generation, WAL gate, DWB/direct-write boundary, two LSAs, retryable failure, and concurrent re-dirty.</p></div><a href="lessons/0006-flush-one-generation.html">Open →</a></article>
       <article class="course-item"><span class="step">7</span><div><span class="status">Ready</span><h3>Replace one frame</h3><p>Hard safety predicates before LRU selection and allocation-progress policy.</p></div><a href="lessons/0007-replace-one-frame.html">Open →</a></article>

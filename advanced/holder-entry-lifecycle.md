@@ -29,6 +29,16 @@ At the pinned revision, `PGBUF_HOLDER` contains:
 
 Each thread index also owns one cache-line-sized `PGBUF_HOLDER_ANCHOR`: counters plus `thrd_free_list` and `thrd_hold_list` heads. The anchor is padded to 64 bytes because these fields are hot and adjacent thread anchors must not false-share. Source: constants and structure definitions at `src/storage/page_buffer.c:86-94,127-132,438-500`; pool ownership at `src/storage/page_buffer.c:783-804`.
 
+### How a repeated fix finds the existing entry
+
+![One per-thread holder anchor organizing active and reusable holder entries](../assets/holder-anchor-vs-entry.svg)
+
+The anchor does not remember an entry's numeric position. `pgbuf_find_thrd_holder(thread_p, bufptr)` lazily caches the current thread's array-selected anchor in `thread_p->m_holder_anchor`, starts at that anchor's `thrd_hold_list`, compares each active `holder->bufptr` with the requested BCB address, and follows `thrd_link` until it finds a match or reaches `NULL`.
+
+A successful same-thread fix of the same BCB increments the matching entry's `fix_count`; it does not create another entry or change `num_hold_cnt`. A fix of a different BCB creates a new active entry and prepends it to the list. Consequently, `num_hold_cnt` counts distinct active thread–BCB records, not the sum of nested fix debts. Another thread fixing the same BCB uses its own anchor and its own holder, while the BCB's global `fcnt` combines both threads.
+
+There is no per-thread holder hash table or BCB-owned reverse holder list in this path, so lookup is O(`H`) in the number of distinct BCBs held by that thread. Source: exact traversal at `src/storage/page_buffer.c:6090-6126`; normal match/allocate branches at `6494-6531`; resident READ fast path at `7753-7782`.
+
 ## Two lifetimes must be distinguished
 
 ### Backing-storage lifetime

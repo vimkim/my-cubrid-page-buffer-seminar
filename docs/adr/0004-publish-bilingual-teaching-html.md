@@ -6,4 +6,4 @@ The root `index.html` becomes a language selector, every paired page has a direc
 
 ## Consequences
 
-The teaching site has 41 pages in each language tree. Reader-facing JavaScript messages must be localized without duplicating interaction logic. Existing lesson and HTML-reference URLs redirect to their English counterparts for at least 90 days after cutover. A Korean-capable human review, recorded against exact EN/KO fingerprints, is required before a pair is current.
+The teaching site has 42 pages in each language tree. Reader-facing JavaScript messages must be localized without duplicating interaction logic. Existing lesson and HTML-reference URLs redirect to their English counterparts for at least 90 days after cutover. A Korean-capable human review, recorded against exact EN/KO fingerprints, is required before a pair is current.

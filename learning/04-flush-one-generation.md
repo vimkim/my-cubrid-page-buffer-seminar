@@ -6,6 +6,12 @@
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
 **Evidence used:** Interface contract, Verified mechanism, Implementation policy, Inference, and Runtime observation from the [pinned-source inventory](../source-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and exact source ranges below.
 
+## What flushing is and why the page buffer does it
+
+**Flushing** captures a stable image of a resident page and sends that image through the required WAL gate toward persistent page storage. Database mutation happens first in a volatile in-memory frame; setting `DIRTY` records that the resident image has propagation work that is not yet discharged. Flush processes that work so page changes can move beyond volatile buffer memory, checkpoint and shutdown can progress, and a clean unfixed frame can later become eligible for replacement.
+
+Flush is not commit, unfix, eviction, or page deallocation. A successful flush may leave the page resident. The `FLUSHING` flag is likewise not a command: it says a previously captured image is currently owned by an in-progress flush operation.
+
 ## Four moments that must not collapse into “written”
 
 | Moment | What it establishes | What it does not establish |
@@ -60,6 +66,14 @@ Successful completion of G clears only `FLUSHING`; it does not clear the newer `
 
 **Implementation policy:** `pgbuf_bcb_mark_is_flushing()` clears the old `DIRTY`; `pgbuf_bcb_mark_was_flushed()` clears only `FLUSHING`. Source: `src/storage/page_buffer.c:16077-16112`.
 
+### Why DIRTY alone is insufficient
+
+Two facts can be true at once: copied generation G is already in flight, and a writer has created resident generation G+1 that needs another flush. `FLUSHING` records the first fact while `DIRTY` remains available to record the second.
+
+The split also coordinates flush ownership. `pgbuf_bcb_safe_flush_internal()` refuses to start a competing flush while `FLUSHING` is set. The source explains why: if G and G+1 were submitted concurrently and storage completions reordered, old G could overwrite newer G+1. A synchronous caller that finds an existing flush joins the BCB wait path; success or ordinary failure clears `FLUSHING` and wakes flush waiters. Thus the flag does not freeze writers. It prevents unsafe overlapping flush ownership, preserves a newer dirty publication, and provides an explicit wait/completion state.
+
+Source: concurrent-flush decision and waiting at `src/storage/page_buffer.c:8809-8901`, including the out-of-order overwrite rationale at `8839-8847`; completion/failure wakeups at `10908-10951`.
+
 ## Ordinary failure restores retryable state
 
 If DWB addition or direct I/O fails after BCB protection was released, the ordinary error path reacquires it, clears `FLUSHING`, restores `DIRTY` when the captured generation had been dirty, restores the copied `oldest_unflush_lsa`, wakes waiters, and returns failure. That rollback preserves the dirty generation and its checkpoint lower bound for retry.
@@ -78,6 +92,10 @@ Source: `src/storage/page_buffer.c:10908-10923` and `src/storage/page_buffer.c:1
 - **Home-page persistence** must not be inferred from a generic page-buffer trace event when the configured path may have completed at DWB-slot acceptance.
 
 Use the wording: “the page-buffer flush path completed at its configured DWB/direct-write boundary” unless evidence observes a later home-volume event.
+
+The private stable-image copy is not itself a DWB write. `pgbuf_bcb_flush_with_wal()` first copies or encrypts the resident image into local aligned storage. For a non-temporary page it uses DWB only when `dwb_is_created()` is true. Otherwise, after any required WAL force, it calls `fileio_write()` for the home data-volume location. Disabling DWB therefore does not disable flush: it selects direct write and removes DWB's torn/incomplete-page protection and startup repair source, while WAL keeps its separate ordering and recovery role. Temporary pages bypass DWB on this path even when DWB exists.
+
+Source: stable copy and `uses_dwb` decision at `src/storage/page_buffer.c:10735-10834`; DWB/direct submission at `10836-10899`. The runtime-disable retry in that range is test-oriented; the source says live activation/deactivation needs additional work.
 
 ## Runtime evidence card: dirty generation and backup boundary
 

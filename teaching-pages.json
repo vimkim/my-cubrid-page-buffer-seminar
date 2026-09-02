@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "expectedPageCount": 41,
+  "expectedPageCount": 42,
   "canonicalLanguage": "en",
   "legacyRedirectMinimumDays": 90,
   "pages": [
@@ -9,6 +9,7 @@
     { "path": "lessons/0002-separate-objects-from-state.html", "en": "en/lessons/0002-separate-objects-from-state.html", "ko": "ko/lessons/0002-separate-objects-from-state.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0003-trace-fix-convergence.html", "en": "en/lessons/0003-trace-fix-convergence.html", "ko": "ko/lessons/0003-trace-fix-convergence.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0004-repay-fix-debt.html", "en": "en/lessons/0004-repay-fix-debt.html", "ko": "ko/lessons/0004-repay-fix-debt.html", "review": { "state": "pending" }, "fingerprints": {} },
+    { "path": "lessons/0004a-understand-holder-anchor.html", "en": "en/lessons/0004a-understand-holder-anchor.html", "ko": "ko/lessons/0004a-understand-holder-anchor.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0005-audit-a-logged-mutation.html", "en": "en/lessons/0005-audit-a-logged-mutation.html", "ko": "ko/lessons/0005-audit-a-logged-mutation.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0006-flush-one-generation.html", "en": "en/lessons/0006-flush-one-generation.html", "ko": "ko/lessons/0006-flush-one-generation.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0007-replace-one-frame.html", "en": "en/lessons/0007-replace-one-frame.html", "ko": "ko/lessons/0007-replace-one-frame.html", "review": { "state": "pending" }, "fingerprints": {} },

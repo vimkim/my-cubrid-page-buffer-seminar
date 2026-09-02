@@ -66,6 +66,12 @@ Pinned-source evidence:
 
 A miss therefore **claims and rebinds an existing pool slot**. `pgbuf_allocate_bcb()` first removes an identity-free BCB from the invalid list; if none exists, it runs the replacement progress protocol to reuse a safe victim. The source legitimately calls this “allocating a BCB,” but “creating a new BCB” is misleading unless the pool itself is being initialized.
 
+Initialization links the invalid population from `BCB[0]` through increasing table indices and sets `invalid_top` to `BCB[0]`. In a deliberately simplified run with no earlier page-buffer work and no competing misses, the first cold miss therefore claims `BCB[0]` with its permanently paired `Frame[0]`, then index 1, and so on. Real startup activity and concurrency make a later request's exact index nondeterministic: the rule is to pop the protected invalid-list head, not to derive a BCB index from the requested VPID. When the invalid list is empty, victim policy selects a reusable resident slot instead.
+
+![Startup invalid-list allocation and the stable BCB-to-frame pairing](../assets/startup-bcb-lifetime.svg)
+
+The one-to-one **BCB ↔ frame pointer pairing is stable for the pool lifetime**. What victimization replaces is the shorter-lived VPID identity and page bytes associated with that pair. At the first final unfix after materialization, the analyzed policy places the BCB at its assigned private LRU's top when such an assignment exists, otherwise at a selected shared LRU's middle. [Replacement Policy and Background Progress](../advanced/replacement-progress.md) owns that mutable membership policy.
+
 The BCB/frame array is only the storage core. These supporting structures make lookup, ownership, replacement, and background progress possible:
 
 | Structure | Purpose |

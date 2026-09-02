@@ -20,6 +20,24 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+      <section class="section" id="flush-purpose">
+        <div class="eyebrow">여기서 시작 · operation과 목적</div>
+        <h2>Flush는 volatile buffer memory 밖으로 page image 하나를 propagate합니다</h2>
+        <p class="big-claim"><strong>Flushing</strong>은 resident page의 안정적인 image를 capture하여, 필요한 WAL gate를 거쳐 persistent page storage 쪽으로 보내는 page-buffer operation입니다.</p>
+        <p>Database는 먼저 in-memory frame을 변경합니다. 이 resident image는 빠르게 접근할 수 있지만 volatile합니다. 이것만으로는 data volume에 있는 page의 home location이 갱신되지 않습니다. BCB에 <code>DIRTY</code>를 표시하는 것은 아직 끝나지 않은 propagation work를 기록하는 일이며, 이후 flush가 이 debt를 처리합니다.</p>
+        <table>
+          <thead><tr><th>질문</th><th>답</th></tr></thead>
+          <tbody>
+            <tr><td>무엇을 복사하나요?</td><td>현재 resident page bytes를 안정적인 private image로 capture합니다. 그래서 이후 writer가 이미 submit 중인 bytes를 바꾸지 못합니다.</td></tr>
+            <tr><td>왜 flush하나요?</td><td>Page change를 volatile buffer memory 바깥으로 propagate하고, checkpoint와 shutdown의 진행을 지원하며, clean하고 unfixed인 frame이 나중에 replacement 후보가 될 수 있게 합니다.</td></tr>
+            <tr><td><code>FLUSHING</code>은 무엇인가요?</td><td>앞서 capture한 image 하나가 현재 flush path에 있다는 in-progress state입니다. Command가 아니며 현재 resident bytes가 clean하다는 증거도 아닙니다.</td></tr>
+            <tr><td>무엇이 아닌가요?</td><td>Flush는 transaction commit, unfix, eviction, page deallocation이 아닙니다. 이들은 서로 다른 lifecycle event입니다.</td></tr>
+          </tbody>
+        </table>
+        <p>WAL rule은 ordering 질문에 답합니다. Logged non-temporary page라면 copied image를 포함하는 recovery log가 필요한 boundary에 먼저 도달한 뒤 page image를 submit해야 합니다. DWB가 enabled라면 incomplete/torn page write라는 별도의 integrity 질문에 답합니다. 어느 개념도 flush 자체의 정의는 아닙니다.</p>
+        <div class="callout"><strong>구체적인 결과:</strong> image capture 뒤 resident page를 바꾼 writer가 없고 submission이 성공하면, BCB는 DIRTY와 FLUSHING이 모두 꺼진 상태로 끝날 수 있습니다. Page는 여전히 resident이며, 이후 replacement 판단이 그 frame을 재사용할 수 있습니다.</div>
+      </section>
+
       <section class="section" id="generation-meaning">
         <div class="eyebrow">00 · 표기법 이해하기</div>
         <h2><code>G</code>는 복사된 page image에 붙인 이름이며 stored counter가 아닙니다</h2>
@@ -47,6 +65,41 @@
         </table>
         <p><strong>DIRTY는 to-do flag입니다.</strong> 현재 resident bytes에 완료된 propagation으로 아직 처리하지 못한 change가 있다는 뜻입니다. <strong>FLUSHING은 in-progress flag입니다.</strong> 앞서 capture한 copy가 아직 flush path를 지나고 있다는 뜻입니다. FLUSHING이 resident page를 고정시키는 것은 아닙니다.</p>
         <div class="callout"><strong>FLUSHING을 설정할 때 DIRTY를 지우는 이유는?</strong> G의 기존 debt는 in-flight operation으로 옮겨 갔습니다. DIRTY를 지우면 깨끗한 signal slot이 생깁니다. writer가 resident page를 바꾸면 DIRTY를 다시 설정합니다. 그러면 <code>DIRTY + FLUSHING</code>은 “이전 copy는 in flight이고, 더 새로운 resident work가 대기 중”이라는 뜻이 됩니다.</div>
+      </section>
+
+      <section class="section" id="why-flushing">
+        <div class="eyebrow">00A · 두 번째 flag가 필요한 이유</div>
+        <h2>DIRTY는 pending resident work를, FLUSHING은 captured work를 조정합니다</h2>
+        <p class="big-claim">“copy G가 in flight”와 “resident G+1을 다시 flush해야 함”은 동시에 참일 수 있습니다. Bit 하나로는 두 사실을 정확히 나타낼 수 없습니다.</p>
+        <table>
+          <thead><tr><th><code>FLUSHING</code>이 필요한 이유</th><th><code>DIRTY</code>만 있을 때 생기는 문제</th></tr></thead>
+          <tbody>
+            <tr><td>Concurrent re-dirty 보존</td><td>Completion이 DIRTY를 단순히 지우면 writer가 더 새롭게 publish한 dirty state를 지울 수 있습니다. Flag가 둘이면 G completion은 FLUSHING만 지우고 G+1 DIRTY를 남깁니다.</td></tr>
+            <tr><td>Overlapping flush 배제</td><td>두 번째 flusher가 새로 DIRTY가 된 G+1을 보고, 더 오래된 G가 in flight인 동안 submit할 수 있습니다. Storage completion 순서가 바뀌면 old G가 newer G+1을 덮어쓸 수 있습니다.</td></tr>
+            <tr><td>Synchronous caller 조정</td><td>반드시 기다려야 하는 caller가 “propagation이 없음”과 “다른 thread가 이미 propagation을 소유함”을 구분할 수 없습니다. FLUSHING을 보면 새 flush를 시작하지 않고 BCB wait queue에서 기다립니다.</td></tr>
+            <tr><td>Success 또는 failure의 명시적 종료</td><td>Completion 때 지울 state와 깨울 waiter가 필요합니다. Failure는 FLUSHING을 지우고 captured dirty debt/lower bound를 복구하여 retry 가능하게 만듭니다.</td></tr>
+          </tbody>
+        </table>
+        <p>다음 thought experiment를 사용하세요. <code>DIRTY=1, FLUSHING=0</code>에서 시작합니다. Flusher F가 G를 capture하고 <code>DIRTY=0, FLUSHING=1</code>을 publish합니다. 이제 old debt는 F가 소유합니다. Writer W가 resident bytes를 변경하여 <code>DIRTY=1, FLUSHING=1</code>을 publish합니다. G는 여전히 F가 소유하고 G+1은 새 work입니다. 성공하면 F는 FLUSHING만 0으로 바꿉니다. 남은 DIRTY는 여전히 G+1을 flush해야 한다는 뜻입니다.</p>
+        <div class="callout warn"><strong>FLUSHING은 writer를 freeze하지 않습니다.</strong> Unsafe competing flush ownership을 막고 wait/completion을 보이게 하면서, DIRTY는 이후 resident generation을 기록할 수 있게 비워 둡니다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> safe flush가 concurrent flush를 거절하고 필요한 경우 synchronous waiter를 queue하는 동작은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8809-L8901"><code>page_buffer.c:8809–8901</code></a>에 있습니다. Source는 <code>8839–8847</code>에서 out-of-order old-over-new write를 명시합니다. Flag transition은 <code>16077–16137</code>, completion/failure wakeup은 <code>10908–10951</code>에 있습니다.</p>
+      </section>
+
+      <section class="section" id="copy-versus-dwb">
+        <div class="eyebrow">00B · copy와 destination 구분</div>
+        <h2>Resident page를 복사한다는 말은 “DWB에 쓴다”는 뜻이 아닙니다</h2>
+        <p class="big-claim">Flush는 먼저 private memory에 안정적인 page image를 만듭니다. DWB는 그 copied image가 갈 수 있는 destination 하나이지 copy operation 자체가 아닙니다.</p>
+        <p><code>pgbuf_bcb_flush_with_wal()</code>의 <code>page_buf</code>는 local aligned buffer입니다. TDE가 필요하면 resident page를 이 buffer로 encrypt하고, 아니면 <code>memcpy</code>로 복사합니다. 이렇게 하면 BCB protection을 놓은 뒤 resident bytes가 G+1으로 바뀌어도 in-flight bytes G는 분리되어 있습니다.</p>
+        <table>
+          <thead><tr><th>Configuration 판단</th><th>공통으로 일어나는 일</th><th>WAL gate 뒤 copied G가 가는 곳</th></tr></thead>
+          <tbody>
+            <tr><td>DWB가 created 상태이고 non-temporary page</td><td>Stable image copy, LSA capture, 필요한 WAL force.</td><td><code>dwb_add_page()</code>가 image를 DWB slot에 받아들이고, 이후 DWB가 보호된 home-volume propagation을 조정합니다.</td></tr>
+            <tr><td>DWB가 disabled/not created이거나 temporary page</td><td>Stable-image 분리는 그대로 일어납니다. Logged non-temporary page는 여전히 WAL gate를 지킵니다.</td><td>Page-buffer path가 page의 home data-volume location에 <code>fileio_write()</code>를 직접 호출합니다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>DWB가 disabled라면:</strong> flush가 멈추는 것도 아니고 이 DWB mechanism에 의해 page를 두 번 쓰는 것도 아닙니다. 대신 direct-write branch를 탑니다. 없어지는 것은 DWB의 torn/incomplete page-image protection과 startup repair source입니다. WAL은 별개의 ordering과 recovery 역할을 계속 가집니다.</div>
+        <p>Pinned code는 BCB protection을 놓기 전에 <code>uses_dwb = dwb_is_created() &amp;&amp; !is_temp</code>로 판단합니다. DWB에 page를 추가하는 동안 DWB가 사라지면 BCB protection을 다시 얻고 resident page를 다시 복사한 뒤 DWB 없이 retry하는 test-oriented runtime transition도 있습니다. Source comment는 live activation/deactivation에 추가 작업이 필요하다고 명시하므로 runtime toggling을 지원되는 monitoring 또는 administration protocol처럼 설명하면 안 됩니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> local copy와 branch selection은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>, WAL gating과 DWB/direct submission은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>에 있습니다. DWB recovery behavior는 별도의 startup mechanism입니다.</p>
       </section>
 
       <section class="section" id="moments">
@@ -175,7 +228,10 @@
 
     <nav class="lesson-nav" aria-label="강의 목차">
       <strong>강의 지도</strong>
+      <a href="#flush-purpose">시작. 무엇을 왜 하나</a>
       <a href="#generation-meaning">0. G, DIRTY, FLUSHING</a>
+      <a href="#why-flushing">0A. FLUSHING이 필요한 이유</a>
+      <a href="#copy-versus-dwb">0B. Copy와 DWB</a>
       <a href="#moments">1. 네 moment</a>
       <a href="#lsas">2. 두 LSA</a>
       <a href="#generation">3. Ordinary path</a>

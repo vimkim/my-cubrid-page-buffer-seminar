@@ -385,7 +385,7 @@
             <p><strong>답변:</strong> initialization은 thread마다 entry 일곱 개를 예약하고, 모두 쓰면 열 개 단위 set으로 storage를 늘립니다. 첫 fix는 free entry 하나를 한 BCB에 binding해 해당 thread hold list의 앞에 붙입니다. Nested fix는 <code>fix_count</code>를 늘려 같은 entry를 재사용합니다. 마지막 matching unfix는 binding을 제거하고 entry를 해당 thread free list로 돌려보내지만, backing memory는 page-buffer finalization까지 남습니다.</p>
             <p><strong>Performance 판단:</strong> bottleneck은 가능하지만 자동으로 성립하지는 않습니다. Find는 그 thread가 hold한 서로 다른 BCB 수에 선형이고, final removal은 singly linked list를 다시 걸을 수 있습니다. 작거나 LIFO인 hold set은 저렴하지만 불리한 순서는 quadratic traversal을 누적할 수 있습니다. 여러 thread가 한 BCB를 사용하면 대신 공유 atomic latch에서 contend할 수 있고, 한 thread가 한 page를 nested fix하는 경우에는 holder list가 길어지지 않습니다. 이를 zero-count LRU work, wakeup, flush와 분리해서 profile해야 합니다.</p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:86-94,438-500,5922-6275,6298-6634,7807-7835</code></p>
-            <p class="answer-route"><a href="../../advanced/holder-entry-lifecycle.md">Canonical holder lifetime과 cost 분석</a> · <a href="../lessons/0004-repay-fix-debt.html#holder-lifecycle">Bilingual lesson section</a></p>
+            <p class="answer-route"><a href="../../advanced/holder-entry-lifecycle.md">Canonical holder lifetime과 cost 분석</a> · <a href="../lessons/0004a-understand-holder-anchor.html">Bilingual Lesson 4A</a></p>
           </div>
         </details>
       </article>

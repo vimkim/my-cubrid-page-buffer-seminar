@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="760" viewBox="0 0 1240 760" role="img" aria-labelledby="title desc">
+  <title id="title">One per-thread holder anchor organizes many reusable holder entries</title>
+  <desc id="desc">Thread 17 has one PGBUF HOLDER ANCHOR. Its hold-list head points to two active PGBUF HOLDER entries: one records three nested fixes of BCB X and one records one fix of BCB Y. Its free-list head points to five reusable entries. The anchor counts two active holder entries, not four fix debts. Thread 18 has its own anchor and holder when it fixes the same BCB X. The BCB global fix count combines debts across threads.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#435d69"/>
+    </marker>
+    <style>
+      .thread{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.anchor{fill:#eef0ff;stroke:#5968bd;stroke-width:2.5}.holder{fill:#fff6e8;stroke:#b86b22;stroke-width:2.5}.free{fill:#fff;stroke:#9aa8af;stroke-width:2}.bcb{fill:#e9f4f3;stroke:#16847d;stroke-width:2.5}.note{fill:#fde9e5;stroke:#b74b3c;stroke-width:2}.t{font:700 24px Inter,Arial,sans-serif;fill:#173443}.h{font:700 18px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.code{font:14px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#173443}.line{fill:none;stroke:#435d69;stroke-width:2.5;marker-end:url(#arrow)}.dash{fill:none;stroke:#6b7780;stroke-width:2;stroke-dasharray:7 5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="620" y="38" text-anchor="middle" class="t">Anchor = one thread’s directory · Holder = one thread–BCB debt record</text>
+
+  <rect x="30" y="70" rx="18" width="865" height="515" class="thread"/>
+  <text x="58" y="105" class="h">Thread 17</text>
+
+  <rect x="65" y="135" rx="16" width="300" height="220" class="anchor"/>
+  <text x="215" y="170" text-anchor="middle" class="h">one PGBUF_HOLDER_ANCHOR</text>
+  <text x="91" y="208" class="code">num_hold_cnt = 2</text>
+  <text x="91" y="238" class="code">num_free_cnt = 5</text>
+  <text x="91" y="278" class="code">thrd_hold_list ──────┐</text>
+  <text x="91" y="311" class="code">thrd_free_list ────┐ │</text>
+  <text x="215" y="342" text-anchor="middle" class="tiny">No BCB pointer · no fix_count</text>
+
+  <rect x="470" y="125" rx="16" width="350" height="140" class="holder"/>
+  <text x="645" y="158" text-anchor="middle" class="h">PGBUF_HOLDER A · active entry</text>
+  <text x="494" y="194" class="code">bufptr → BCB X</text>
+  <text x="494" y="224" class="code">fix_count = 3</text>
+  <text x="665" y="224" class="code">thrd_link → B</text>
+
+  <rect x="470" y="292" rx="16" width="350" height="140" class="holder"/>
+  <text x="645" y="325" text-anchor="middle" class="h">PGBUF_HOLDER B · active entry</text>
+  <text x="494" y="361" class="code">bufptr → BCB Y</text>
+  <text x="494" y="391" class="code">fix_count = 1</text>
+  <text x="665" y="391" class="code">thrd_link → NULL</text>
+
+  <rect x="470" y="470" rx="16" width="350" height="82" class="free"/>
+  <text x="645" y="500" text-anchor="middle" class="h">five reusable PGBUF_HOLDER entries</text>
+  <text x="645" y="530" text-anchor="middle" class="code">next_holder → next free entry → …</text>
+
+  <path d="M365 275 C420 275 415 195 462 195" class="line"/>
+  <path d="M645 265 V284" class="line"/>
+  <path d="M365 308 C420 308 415 511 462 511" class="line"/>
+
+  <rect x="935" y="125" rx="16" width="270" height="175" class="bcb"/>
+  <text x="1070" y="160" text-anchor="middle" class="h">BCB X · global state</text>
+  <text x="960" y="202" class="code">atomic_latch.fcnt = 4</text>
+  <text x="960" y="235" class="s">Thread 17 owes 3</text>
+  <text x="960" y="263" class="s">Thread 18 owes 1</text>
+  <path d="M820 195 H927" class="line"/>
+
+  <rect x="935" y="345" rx="16" width="270" height="175" class="anchor"/>
+  <text x="1070" y="378" text-anchor="middle" class="h">Thread 18’s own anchor</text>
+  <text x="960" y="416" class="code">thrd_hold_list → Holder C</text>
+  <text x="960" y="449" class="code">C.bufptr → BCB X</text>
+  <text x="960" y="482" class="code">C.fix_count = 1</text>
+  <path d="M1070 345 V308" class="dash"/>
+
+  <rect x="70" y="620" rx="16" width="1100" height="105" class="note"/>
+  <text x="620" y="653" text-anchor="middle" class="h">Read the counts at the right level</text>
+  <text x="620" y="683" text-anchor="middle" class="s">Anchor num_hold_cnt = distinct BCB records held by this thread (2), not nested debts (3 + 1 = 4).</text>
+  <text x="620" y="709" text-anchor="middle" class="s">BCB fcnt = granted fixes across every thread. Each thread contributes through its own holder entry.</text>
+</svg>
