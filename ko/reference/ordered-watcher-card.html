@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID ordered watcher 요약 · 한국어</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/ordered-watcher-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">multi-page 리뷰용 요약</div>
+    <h1>Ordered watcher와 refix</h1>
+    <p>caller의 canonical order를 지키고, 놓았던 watcher에 의존하는 상태를 모두 다시 계산한다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Group-rank-VPID</span><span class="pill">Selective release</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Ordered refix 흐름</h2>
+      <img class="diagram" src="../../assets/ordered-watcher-refix.svg" alt="Ordered watcher의 conditional fix, selective release, sorted refix 흐름">
+    </article>
+    <article class="reference-card">
+      <h2>정렬 기준</h2>
+      <ol>
+        <li>access-method group</li>
+        <li>rank: header &lt; normal &lt; overflow</li>
+        <li>group/rank가 같으면 VPID</li>
+        <li>group을 알 수 없으면 마지막</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Conditional fix 실패 규칙</h2>
+      <ul>
+        <li>held H가 request R보다 앞이면 → fixed 상태를 유지한다.</li>
+        <li>held H가 R보다 뒤이면 → 완전히 unfix하고 watcher에 표시한다.</li>
+        <li>request group을 알 수 없으면 → protocol이 요구하는 held set을 release한다.</li>
+        <li>R은 unconditional fix하고, release한 page는 정렬 순서대로 refix한다.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2><code>page_was_unfixed</code></h2>
+      <p>다시 계산할 항목:</p>
+      <ul>
+        <li>record/slot pointer</li>
+        <li>free-space 선택</li>
+        <li>header와 type state</li>
+        <li>page 간 관계</li>
+        <li>access-method precondition</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Partial failure ledger</h2>
+      <ol>
+        <li>현재 held 상태인 watcher는 무엇인가?</li>
+        <li>각 watcher의 fix count는 얼마인가?</li>
+        <li>release 상태로 남은 watcher는 무엇인가?</li>
+        <li>남아 있는 avoid-deallocation debt는 무엇인가?</li>
+        <li>이 exit에서 각 debt를 누가 소비하는가?</li>
+      </ol>
+    </article>
+    <article class="reference-card full">
+      <h2>Source 탐색 경로</h2>
+      <table>
+        <thead><tr><th>책임</th><th>Pinned range</th></tr></thead>
+        <tbody>
+          <tr><td>ordered helper, callback, refix, unwind</td><td><code>page_buffer.c:12268–13531</code></td></tr>
+          <tr><td>heap destination/watcher owner</td><td><code>heap_file.c:20493–20664</code></td></tr>
+          <tr><td>B-tree promotion/restart owner</td><td><code>btree.c:28365–28393</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. pointer를 복원하는 것은 revalidation이 아니다.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID change defense 참고 카드</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/change-defense-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 빠른 참고</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">change review용 인쇄 카드</div>
+    <h1>evidence 범위를 지키는 change defense</h1>
+    <p>control flow는 정확히 추적하고, risk boundary에서 test하며, 모든 결론은 증명된 수준까지만 말합니다.</p>
+    <div class="pills"><span class="pill">Pinned source</span><span class="pill">Fault seam</span><span class="pill">Postcondition</span><span class="pill">Uncertainty</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>label부터 정확히 읽기</h2>
+      <table>
+        <thead><tr><th>Label</th><th>뜻</th><th>혼동하면 안 되는 것</th></tr></thead>
+        <tbody>
+          <tr><td><code>VS-*</code></td><td>guide의 unresolved/version-sensitive findings registry에서 쓰는 stable ID입니다.</td><td>source symbol이나 error code가 아닙니다.</td></tr>
+          <tr><td>Case packet</td><td>source range, registry entry, worksheet, model answer를 한데 묶은 범위가 명확한 review exercise입니다.</td><td>network packet이나 page-buffer object가 아닙니다.</td></tr>
+          <tr><td>Candidate</td><td>source에서 우려되는 지점은 확인했지만 reachability와 impact는 아직 증명하지 못한 상태입니다.</td><td>검증된 production defect가 아닙니다.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card full">
+      <h2>다섯 단계 proof level</h2>
+      <table>
+        <thead><tr><th>Level</th><th>증명 대상</th><th>필요한 evidence</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>source에서 보이는 control flow</td><td>pinned symbol, range, transition, callee, exit</td></tr>
+          <tr><td>2</td><td>Reachability</td><td>지원 대상에서 수행한 controlled injection/schedule</td></tr>
+          <tr><td>3</td><td>Surviving state</td><td>모든 cleanup이 끝난 뒤 post-return inspection</td></tr>
+          <tr><td>4</td><td>Production impact</td><td>consumer가 관찰할 수 있는 consequence 재현</td></tr>
+          <tr><td>5</td><td>Current-branch status</td><td>정확한 branch commit에서 다시 trace하고 rerun</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card full">
+      <h2>아홉 항목 change-impact plan</h2>
+      <table>
+        <tbody>
+          <tr><th>Behavior</th><td>달라질 수 있는 observable behavior</td><th>Owners</th><td>Thread, Module, caller, consumer</td></tr>
+          <tr><th>State</th><td>field, flag, counter, pointer, queue, LSA</td><th>Guards</th><td>Latch, mutex, atomic order, logical lock, precondition</td></tr>
+          <tr><th>Invariants</th><td>전후에 반드시 만족해야 할 condition</td><th>Unwind</th><td>Restore, transfer, consume, wake, retry</td></tr>
+          <tr><th>Caller impact</th><td>return, ownership, timing, retry, contract</td><th>Evidence seam</th><td>source가 말해 주는 한계와 risk-matched probe</td></tr>
+          <tr><th>Remaining uncertainty</th><td colspan="3">inference, version sensitivity, unreachable condition 또는 아직 관찰하지 못한 것</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card full">
+      <h2>공통 exceptional-return 구조</h2>
+      <img class="diagram" src="../../assets/exceptional-return-gaps.svg" alt="VS-11과 VS-12의 exceptional-return source 구조">
+    </article>
+    <article class="reference-card">
+      <h2><code>VS-11</code> probe ledger</h2>
+      <ul>
+        <li>normal hit, lock-free hit, awakened waiter에 각각 holder extension failure를 inject합니다.</li>
+        <li>atomic latch tuple, global <code>fcnt</code>, per-thread holder, waiter grant, return, 이후 release를 확인합니다.</li>
+        <li>Registry status: Candidate.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2><code>VS-12</code> probe ledger</h2>
+      <ul>
+        <li>TDE-copy failure와 DWB-slot failure를 따로 inject합니다.</li>
+        <li>DIRTY, FLUSHING, oldest-unflush LSA, waiter, retry, victim eligibility, restart를 확인합니다.</li>
+        <li>concurrent re-dirty도 별도로 test합니다.</li>
+        <li>Registry status: Candidate.</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>review에서 쓸 표현</h2>
+      <table>
+        <thead><tr><th>권장 표현</th><th>증명 전에는 피할 표현</th></tr></thead>
+        <tbody>
+          <tr><td>“pinned commit X에서 source는 …을 보여 줍니다.”</td><td>“현재 CUBRID는 언제나 …합니다.”</td></tr>
+          <tr><td>“이 내용은 control-flow concern을 뒷받침합니다.”</td><td>“이것으로 production defect가 증명됩니다.”</td></tr>
+          <tr><td>“이 callee에서 inject하고 다음 postcondition을 확인합니다.”</td><td>“cleanup이 빠져 보이니 여기에 추가하면 됩니다.”</td></tr>
+          <tr><td>“Candidate status의 owner는 uncertainty registry입니다.”</td><td>변할 수 있는 defect status를 여러 페이지에 복사</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical exercise: <a href="../../learning/06-maintainer-capstone.md">Maintainer Capstone</a>. 문서 위의 논증은 risk-matched probe와 maintainer review를 거쳐야 readiness evidence가 됩니다.</footer>
+</main>
+</body>
+</html>

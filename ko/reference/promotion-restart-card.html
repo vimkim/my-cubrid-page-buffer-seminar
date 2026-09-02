@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID promotion/restart 요약 · 한국어</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/promotion-restart-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">promotion 리뷰용 요약</div>
+    <h1>READ→WRITE promotion</h1>
+    <p>fix debt는 보존하고, blocking 과정에서 기존 hold를 놓았다면 이전에 관찰한 상태는 모두 무효로 본다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">4가지 outcome</span><span class="pill">Restart 의미</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Promotion 판단</h2>
+      <img class="diagram" src="../../assets/promotion-outcomes.svg" alt="READ-to-WRITE promotion의 4가지 outcome">
+    </article>
+    <article class="reference-card full">
+      <h2>Outcome ledger</h2>
+      <table>
+        <thead><tr><th>Outcome</th><th>Ownership</th><th>관찰 규칙</th></tr></thead>
+        <tbody>
+          <tr><td>In-place success</td><td>holder/count는 같고 mode만 WRITE가 된다.</td><td>보호가 끊기지 않았다.</td></tr>
+          <tr><td>Conditional failure</td><td>READ holder/count가 그대로다.</td><td>여전히 보호 중이며 restart 여부는 caller가 결정한다.</td></tr>
+          <tr><td>Blocking success</td><td>기존 holder를 제거한 후 저장한 count를 새 WRITE holder에 복원한다.</td><td>wait 사이에 page-local 관찰값은 모두 stale이다.</td></tr>
+          <tr><td>Error/interrupt</td><td>null pointer이며 남은 debt가 없다.</td><td>이전 관찰값을 사용하면 안 된다.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Debt 보존</h2>
+      <p>nested count가 N일 때:</p>
+      <ol>
+        <li>global <code>fcnt</code>에서 N을 뺀다.</li>
+        <li>READ holder를 제거한다.</li>
+        <li>promoter request가 N을 인계한다.</li>
+        <li>WRITE를 grant하고 count N인 holder를 만든다.</li>
+      </ol>
+      <p>promotion이 성공하면 debt는 N개이지 2N개가 아니다.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Blocking 후 다시 계산할 항목</h2>
+      <ul>
+        <li>record/slot pointer</li>
+        <li>free-space 판단</li>
+        <li>key, range, sibling, child</li>
+        <li>header와 related-page state</li>
+        <li>모든 access-method precondition</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>Source 탐색 경로</h2>
+      <table>
+        <thead><tr><th>책임</th><th>Pinned range</th></tr></thead>
+        <tbody>
+          <tr><td>promotion mechanism</td><td><code>page_buffer.c:2842–3050</code></td></tr>
+          <tr><td>B-tree conditional restart</td><td><code>btree.c:28365–28393</code></td></tr>
+          <tr><td>B-tree WRITE traversal retry</td><td><code>btree.c:28638–28696</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. page buffer는 protection을 복원하고, caller는 semantic knowledge를 다시 계산한다.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID specialized interface 참조 카드</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/specialized-interface-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 빠른 참조</span><a href="../index.html">Course 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">interface review용 인쇄 자료</div>
+    <h1>Specialized interface 카드</h1>
+    <p>Return type이 익숙해 보여도 다른 protocol의 ownership, guard, permission, cleanup이 함께 따라오는 것은 아닙니다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Owner</span><span class="pill">Location</span><span class="pill">Guard</span><span class="pill">Accounting</span><span class="pill">Cleanup</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>세 가지 access form</h2>
+      <img class="diagram" src="../../assets/access-forms-compared.svg" alt="Normal fix, simple fix, heap scan-copy의 ownership과 synchronization 비교">
+    </article>
+    <article class="reference-card">
+      <h2>대체 가능성 확인 gate</h2>
+      <ol>
+        <li>권한을 가진 owner가 누구인지 적습니다.</li>
+        <li>반환된 byte가 어디에 있는지 확인합니다.</li>
+        <li>변경을 막는 guard가 무엇인지 적습니다.</li>
+        <li><code>fcnt</code>와 holder state를 빠짐없이 계산합니다.</li>
+        <li>정확히 짝을 이루는 cleanup을 적습니다.</li>
+        <li>허용되는 operation을 나열합니다.</li>
+        <li>Evidence와 revision을 표시합니다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Permission 요약</h2>
+      <table>
+        <thead><tr><th>Value</th><th>올바른 취급 방법</th></tr></thead>
+        <tbody>
+          <tr><td>Normal fixed <code>PAGE_PTR</code></td><td>Grant된 latch/fix lifetime 안에서 사용하고, 일반 unfix로 debt를 갚습니다.</td></tr>
+          <tr><td>Simple-fixed <code>PAGE_PTR</code></td><td>임시 read-only owner만 허용됩니다. simple unfix를 사용하며 writer가 되어서는 안 됩니다.</td></tr>
+          <tr><td>Scan-copy <code>PAGE_PTR</code> 형태</td><td>Private snapshot입니다. Handle을 free하며 dirty, flush, unfix를 호출하지 않습니다.</td></tr>
+          <tr><td>Approximate metric</td><td>가설을 세우는 데만 사용하고, 실제로 행동하기 전에는 protected path에 다시 들어가 확인합니다.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card full">
+      <h2>Pinned uncertainty 안내표</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Pinned status</th><th>Maintainer 대응</th></tr></thead>
+        <tbody>
+          <tr><td><code>VS-01</code></td><td>Declaration과 macro mapping은 있으나 definition이나 caller를 찾지 못했습니다.</td><td>사용할 수 없는 상태이며, optimization 선택지가 아닙니다.</td></tr>
+          <tr><td><code>VS-02</code></td><td><code>copy_to_area</code>의 설명과 실행되는 <code>do_fetch</code> 사이에 drift가 있습니다.</td><td>Existing owner만 사용합니다. Miss에서 false이면 area가 바뀌지 않은 채 반환될 수 있습니다.</td></tr>
+          <tr><td><code>VS-03</code></td><td><code>copy_from_area</code>의 normal path는 <code>do_fetch</code>를 무시합니다.</td><td>WAL-aware 범용 page writer가 아닙니다.</td></tr>
+          <tr><td><code>VS-04</code></td><td><code>pgbuf_peek_stats</code>의 prototype name에 drift가 있습니다.</td><td>이름만 보지 말고 executable semantics를 기준으로 output을 연결합니다.</td></tr>
+          <tr><td><code>VS-05</code></td><td>일부 diagnostic 값은 approximate snapshot입니다.</td><td>Mutation/deallocation을 허가하는 근거로 사용하지 않습니다.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Owner family별 경로</h2>
+      <ul>
+        <li>Recovery: allocation knowledge와 LSA gate.</li>
+        <li>Invalidation: logical state와 residency coherence의 관계.</li>
+        <li>Daemon: lifecycle gate와 timing policy의 구분.</li>
+        <li>Diagnostic: increment site와 synchronization.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Source 경로</h2>
+      <ul>
+        <li>Simple fix: <code>page_buffer.c:2688–2811</code></li>
+        <li>Scan-copy: <code>page_buffer.c:908–981</code></li>
+        <li>Area-copy: <code>page_buffer.c:4701–4912</code></li>
+        <li>Approximate stat: <code>page_buffer.c:14748–14847</code></li>
+        <li>SHOW snapshot: <code>page_buffer.c:17323–17530</code></li>
+        <li>사용되지 않는 declaration: <code>page_buffer.h:320–326</code></li>
+      </ul>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical 설명: <a href="../../advanced/specialized-interfaces.md">Specialized Interfaces and Approximate Observability</a>. 다른 revision에서는 모든 <code>VS-*</code> status를 다시 확인하세요.</footer>
+</main>
+</body>
+</html>

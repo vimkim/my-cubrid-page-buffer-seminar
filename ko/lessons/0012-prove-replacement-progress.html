@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0012 — replacement progress 증명하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0012-prove-replacement-progress.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0012</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced 역량 · replacement progress</div>
+    <h1>fairness를 약속하지 않고 모든 exit를 trace한다</h1>
+    <p>이 lesson을 마치면 free BCB가 없을 때 allocator가 무엇을 하는지, direct victim을 왜 revoke할 수 있는지, source evidence가 liveness theorem에 미치지 못하는 경계를 설명할 수 있다.</p>
+    <div class="pills"><span class="pill">Invalid list</span><span class="pill">LRU search</span><span class="pill">Quota</span><span class="pill">Direct victim</span><span class="pill">Revocation</span><span class="pill">Bounded exit</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="boundary">
+        <div class="eyebrow">01 · layer 유지하기</div>
+        <h2>Policy는 candidate를 찾고 eligibility는 재사용을 허가한다</h2>
+        <p>Replacement progress는 어디를 search할지, 누가 flush할지, allocator가 기다릴지, candidate가 어떻게 전달될지를 결정한다. 어느 선택도 Lesson 7의 hard gate를 약화하지 않는다. stable identity, owner/waiter conflict 없음, DIRTY/FLUSHING debt 없음, protected final revalidation이 모두 필요하다.</p>
+        <p class="big-claim">빠른 candidate hint와 direct reservation은 search 결과이지 frame rebind 허가가 아니다.</p>
+      </section>
+
+      <section class="section" id="domains">
+        <div class="eyebrow">02 · Pinned search policy</div>
+        <h2>domain에는 list가, list에는 세 zone이 있다</h2>
+        <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private/shared LRU domain 안의 LRU1, LRU2, LRU3 zone과 victim search order">
+        <p class="caption">LRU3은 victimization zone이다. victim hint는 scan을 빠르게 할 뿐 현재 ownership을 증명하지 않는다.</p>
+        <table>
+          <thead><tr><th>Mechanism</th><th>Pinned revision에서의 의미</th><th>Evidence label</th></tr></thead>
+          <tbody>
+            <tr><td>Private LRU와 shared LRU</td><td>서로 대안인 resident domain이며 private list에는 context quota policy가 있다.</td><td>Implementation policy.</td></tr>
+            <tr><td>LRU1 / LRU2 / LRU3</td><td>이 revision의 hot, buffer/boost, victim-search zone이다.</td><td>Implementation policy.</td></tr>
+            <tr><td>Quota와 search order</td><td>over-quota context는 자기 list를 먼저 search하고, under-quota ownership은 이후 fallback까지 보호받는다.</td><td>Implementation policy.</td></tr>
+            <tr><td>Victim hint/count/queue</td><td>scan 작업을 줄이거나 candidate를 전달한다.</td><td>Verified mechanism이며 eligibility proof는 아니다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Pinned source:</strong> zone semantics <code>page_buffer.c:185–200</code>, structure <code>560–773</code>, ordinary selection <code>9293–9538</code>, quota policy <code>13942–14440</code>.</p>
+      </section>
+
+      <section class="section" id="loop">
+        <div class="eyebrow">03 · free BCB가 없을 때</div>
+        <h2>allocator는 exit가 명확한 progress loop에 들어간다</h2>
+        <img class="diagram" src="../../assets/allocation-progress.svg" alt="invalid list에서 victim search, direct wait, revalidation, retry, error exit로 이어지는 allocation progress loop">
+        <ol>
+          <li><strong>invalid/free BCB 가져오기:</strong> 즉시 재사용할 storage다. resident mapping에 대한 flush나 victim proof가 필요 없다.</li>
+          <li><strong>LRU search:</strong> pinned private/shared/quota 순서를 따른다. 선택한 모든 resident candidate는 여전히 protected eligibility를 통과해야 한다.</li>
+          <li><strong>direct victim 기다리기:</strong> flush daemon이 있는 server mode라면 allocator를 enqueue하고 producer를 깨운 뒤 bounded/interrupt-aware wait로 sleep한다.</li>
+          <li><strong>assignment revalidate:</strong> 할당된 BCB를 lock한다. worker가 다시 fix했다면 reservation을 revoke하고 보통 더 높은 priority로 retry한다.</li>
+          <li><strong>daemon 없음:</strong> stand-alone/recovery 조건에서는 동기식으로 flush하고 다시 search한다.</li>
+          <li><strong>종료:</strong> frame을 반환하거나 retry하고, interrupt/timeout을 보고하거나 명시적인 no-buffer error를 낸다. 실패 시 page pointer는 반환하지 않는다.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> allocation loop은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403"><code>page_buffer.c:8181–8403</code></a>, victim search order는 <code>9067–9265</code>, direct-victim consumption/revocation은 <code>15592–15660</code>이다.</p>
+      </section>
+
+      <section class="section" id="reservation">
+        <div class="eyebrow">04 · revoke 가능한 direct victim</div>
+        <h2>새 ownership이 생기면 reservation은 물러난다</h2>
+        <p>producer는 기다리는 allocator를 위해 eligible BCB를 reserve할 수 있다. assignment와 consumption 사이에 다른 active worker가 resident page를 fix할 수 있으며, 이 새 ownership은 reservation을 무효로 만든다.</p>
+        <table>
+          <thead><tr><th>시점</th><th>사실</th><th>allocator가 할 수 있는 일</th></tr></thead>
+          <tbody>
+            <tr><td>Producer가 assign</td><td>producer의 protected check 시점에는 candidate가 eligible했다.</td><td>reservation과 함께 waiter를 깨운다.</td></tr>
+            <tr><td>consumption 전 worker가 fix</td><td>candidate에 ownership이 생겨 재사용이 안전하지 않다.</td><td>direct assignment를 mark/revoke한다.</td></tr>
+            <tr><td>Allocator가 consume</td><td>protected revalidation이 invalid assignment를 감지한다.</td><td>reservation state를 release하고 다른 candidate를 요청한다.</td></tr>
+          </tbody>
+        </table>
+        <p>재사용을 강제하면 fix contract를 위반한다. retry는 correctness의 낭비가 아니라 더 새롭고 강한 사실을 존중하는 mechanism이다.</p>
+      </section>
+
+      <section class="section" id="generation">
+        <div class="eyebrow">05 · Flush coordination</div>
+        <h2>old-generation completion은 G+1을 victim으로 만들 수 없다</h2>
+        <p>pressure 상황에서 victim flush는 copy된 generation G를 전파하고 BCB를 post-flush assignment로 넘길 수 있다. Post-flush는 resident page가 여전히 clean, unfixed, victim zone, policy-eligible 상태인지 다시 확인해야 한다.</p>
+        <p>G가 in flight인 동안 writer가 DIRTY generation G+1을 만들었다면 direct-victim handoff는 실패해야 한다. 과거 byte를 완료했다고 더 새로운 resident byte를 버릴 권한이 생기지는 않는다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> flush handoff는 <code>page_buffer.c:10925–10952</code>, post-flush assignment는 <code>15489–15556</code>이다.</p>
+      </section>
+
+      <section class="section" id="limits">
+        <div class="eyebrow">06 · Evidence 경계</div>
+        <h2>bounded exit가 곧 starvation freedom은 아니다</h2>
+        <table>
+          <thead><tr><th>Source가 뒷받침하는 것</th><th>Source/runtime이 입증하지 못한 것</th></tr></thead>
+          <tbody>
+            <tr><td>구체적인 search, wait, retry, timeout, interrupt, error branch.</td><td>성공 전 revocation/retry 횟수의 상한.</td></tr>
+            <tr><td>pinned revision의 maintenance, page-flush, post-flush, flush-control daemon ownership.</td><td>안정적인 cadence, priority, batch size 또는 target-branch formula.</td></tr>
+            <tr><td>AOUT structure와 code가 존재한다.</td><td>현재/default 동작이 2Q를 사용한다는 것. 분석한 pinned default는 ratio를 0으로 강제한다.</td></tr>
+            <tr><td>기존 workload가 reuse/counter를 관찰했다.</td><td>실제 eviction, victim order, direct assignment, daemon timing, fairness. physical victim을 유발하지 못했다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Liveness 한계:</strong> source는 timeout으로 빠져나와야 하는 forgotten waiter 가능성을 인정한다. Queue priority와 producer는 progress를 그럴듯하게 만들지만 starvation freedom을 증명하지는 않는다.</div>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval 연습</div>
+        <h2>revoke된 assignment가 도달할 수 있는 legal exit를 trace한다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="invalid list가 빈 under-quota allocator는 pinned LRU search policy를 따르지만 모든 resident candidate는 여전히 hard eligibility gate가 필요하다 -> server mode에서 candidate가 없으면 direct-victim wait queue에 들어가 flush daemon을 깨울 수 있다 -> producer의 assignment는 이전 시점의 eligibility를 바탕으로 한 reservation일 뿐이다 -> consumption 전에 다른 worker가 BCB를 fix하면 protected revalidation이 assignment를 revoke하고 allocator는 보통 high priority로 다른 candidate를 요청한다 -> 다음 wait가 timeout이면 error와 함께 frame/page pointer 없이 종료한다 -> 이 branch는 verified mechanism이고 domain/quota/search priority와 daemon cadence는 implementation policy다 -> retry와 timeout exit는 starvation freedom을 증명하지 않으며 기존 runtime evidence는 eviction을 유발하지 못했다." data-concepts='[{"label":"policy는 eligibility를 우회하지 않음","terms":["policy","eligibility","hard","recheck"]},{"label":"빈 free list는 direct wait로 진입","terms":["invalid","empty","direct victim","queue","daemon"]},{"label":"assignment는 revoke 가능한 reservation","terms":["reservation","fixed","revoke","revalidate"]},{"label":"timeout은 frame 없이 반환","terms":["timeout","error","no frame","no pointer"]},{"label":"mechanism과 policy 구분","terms":["verified mechanism","implementation policy","quota","cadence"]},{"label":"fairness나 eviction 증명 없음","terms":["starvation","fairness","no eviction","runtime"]}]'>
+          <h3>문제</h3>
+          <p>under-quota thread에 BCB가 필요하다. invalid list는 비었고 모든 scan이 실패하여 direct victim을 기다린다. candidate를 assign받았지만 consumption 전에 다른 worker가 fix했고, 다음 wait는 timeout된다.</p>
+          <p><strong>과제:</strong> 모든 protected decision과 최종 결과를 trace하고 mechanism과 policy를 구분하라. 이것이 infinite wait도 starvation freedom도 증명하지 않는 이유를 정확히 설명하라.</p>
+          <textarea aria-label="replacement progress trace 입력" placeholder="candidate, reservation, revocation, retry, timeout, caller 결과를 차례로 trace해 보세요."></textarea>
+          <button type="button" data-check>progress 논증 확인</button>
+          <button type="button" class="secondary" data-reveal>model 경로 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답을 chat에 붙여 넣어 보자. eligibility/policy 구분, revocation, exit, liveness 표현을 확인한 뒤 Advanced 진도를 기록한다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">핵심 읽을거리</div>
+        <h2>allocation의 모든 terminal edge를 표시한다</h2>
+        <p>pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403"><code>page_buffer.c:8181–8403</code></a>과 <code>15592–15660</code>의 direct-victim consumption을 함께 읽어라. success, retry, revocation, interrupt, timeout, no-daemon, explicit-error 결과를 표시하자.</p>
+        <p><a href="../reference/replacement-progress-card.html">인쇄용 replacement-progress card 열기 →</a></p>
+        <p><a href="0011-rebuild-after-ordered-refix.html">← Lesson 0011로</a> · <a href="0013-gate-redo-by-page-lsa.html">Lesson 0013으로 계속 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson 목차">
+      <strong>Lesson map</strong>
+      <a href="#boundary">1. Policy 경계</a>
+      <a href="#domains">2. Domain과 zone</a>
+      <a href="#loop">3. Allocation loop</a>
+      <a href="#reservation">4. revoke 가능한 victim</a>
+      <a href="#generation">5. G+1 coordination</a>
+      <a href="#limits">6. Liveness 한계</a>
+      <a href="#retrieval">7. 직접 trace하기</a>
+      <a href="#primary-reading">핵심 읽을거리</a>
+      <hr>
+      <a href="../reference/replacement-progress-card.html">Replacement-progress card</a>
+      <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a>
+      <a href="0013-gate-redo-by-page-lsa.html">다음 lesson →</a>
+      <a href="../index.html">과정 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">victim eligibility, search policy, direct reservation, daemon ownership, liveness 표현이 모호하면 언제든 teaching agent에게 질문하자.</footer>
+</main>
+</body>
+</html>

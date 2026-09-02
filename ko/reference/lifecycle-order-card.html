@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID lifecycle order 요약 · 한국어</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/lifecycle-order-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">lifecycle 리뷰용 요약</div>
+    <h1>Page buffer lifecycle</h1>
+    <p>work를 허용하기 전에 dependency를 만들고, service를 파괴하기 전에 그 service의 consumer를 모두 멈춘다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Last use</span><span class="pill">resource보다 consumer 먼저</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Startup/shutdown order</h2>
+      <img class="diagram" src="../../assets/lifecycle-order.svg" alt="startup, recovery, shutdown에서 page buffer pool의 dependency order">
+    </article>
+    <article class="reference-card">
+      <h2>Structural invariant</h2>
+      <ul>
+        <li>daemon destruction/pool finalization 후에는 어떤 daemon도 pool을 만지지 않는다.</li>
+        <li><code>log_final()</code>은 page propagation이 가능한 상태에서 실행된다.</li>
+        <li>DWB는 마지막 page-write dependency가 끝날 때까지 유지된다.</li>
+        <li>file management는 page buffer finalization이 끝날 때까지 유지된다.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Identity owner boundary</h2>
+      <ul>
+        <li>file/disk/recovery가 logical allocation을 결정한다.</li>
+        <li>caller가 special fetch semantics를 선택한다.</li>
+        <li>page buffer가 resident coherence를 보장한다.</li>
+        <li>raw overwrite 전에 flush/invalidation이 필요하다.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Startup 순서 요약</h2>
+      <ol>
+        <li>lock manager</li>
+        <li>page buffer pool</li>
+        <li>file manager</li>
+        <li>DWB/metadata ready</li>
+        <li>daemon을 생성하되 gate한다.</li>
+        <li>log recovery</li>
+        <li>flush work를 허용한다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Shutdown 순서 요약</h2>
+      <ol>
+        <li>vacuum/background work를 멈춘다.</li>
+        <li>page buffer daemon을 파괴한다.</li>
+        <li>pool이 살아 있을 때 <code>log_final()</code>을 실행한다.</li>
+        <li>page propagation 후 DWB를 파괴한다.</li>
+        <li><code>pgbuf_finalize()</code></li>
+        <li>file-manager finalization</li>
+      </ol>
+    </article>
+    <article class="reference-card full">
+      <h2>Source 탐색 경로</h2>
+      <table>
+        <thead><tr><th>책임</th><th>Pinned range</th></tr></thead>
+        <tbody>
+          <tr><td>transaction-table initialization</td><td><code>log_tran_table.c:468–512</code></td></tr>
+          <tr><td>boot, recovery, restart cleanup</td><td><code>boot_sr.c:1974–2801</code></td></tr>
+          <tr><td>normal shutdown</td><td><code>boot_sr.c:3055–3113</code></td></tr>
+          <tr><td>daemon gating/destruction</td><td><code>page_buffer.c:16996–17136,17244–17255</code></td></tr>
+          <tr><td>transaction-table teardown</td><td><code>log_tran_table.c:580–594</code></td></tr>
+          <tr><td>raw/bypass coherence</td><td><code>disk_manager.c:721–811</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../advanced/recovery-and-lifecycle.md">Recovery, Allocation State, and Module Lifecycle</a>. finalizer order를 바꾸기 전에 last use를 검토한다.</footer>
+</main>
+</body>
+</html>

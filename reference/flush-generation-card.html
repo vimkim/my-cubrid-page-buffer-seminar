@@ -2,107 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID flush-generation reference card</title>
-  <link rel="stylesheet" href="../assets/teach-course.css">
+  <meta http-equiv="refresh" content="0; url=../en/reference/flush-generation-card.html">
+  <link rel="canonical" href="../en/reference/flush-generation-card.html">
+  <title>Page moved · CUBRID page buffer course</title>
 </head>
-<body>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
-  <header class="hero">
-    <div class="eyebrow">Print for flush review</div>
-    <h1>One-generation flush card</h1>
-    <p>Track copied generation G independently from any newer resident generation G+1.</p>
-    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">WAL before data</span><span class="pill">Retryable failure</span></div>
-  </header>
-
-  <section class="reference-grid">
-    <article class="reference-card full">
-      <h2>Decode the symbols first</h2>
-      <table>
-        <thead><tr><th>Symbol</th><th>Meaning</th><th>Stored in CUBRID?</th></tr></thead>
-        <tbody>
-          <tr><td>G</td><td>The page-image copy captured for the current flush.</td><td>No—reasoning label.</td></tr>
-          <tr><td>G+1</td><td>Resident bytes changed after G was captured.</td><td>No—reasoning label.</td></tr>
-          <tr><td>Page LSA</td><td>Latest logged change included in particular page bytes.</td><td>Yes—real recovery coordinate.</td></tr>
-        </tbody>
-      </table>
-    </article>
-    <article class="reference-card full">
-      <h2>Flag truth table</h2>
-      <table>
-        <thead><tr><th>DIRTY</th><th>FLUSHING</th><th>Interpretation</th></tr></thead>
-        <tbody>
-          <tr><td>0</td><td>0</td><td>No resident propagation debt; no copy in flight.</td></tr>
-          <tr><td>1</td><td>0</td><td>Resident bytes need a flush.</td></tr>
-          <tr><td>0</td><td>1</td><td>G is in flight; no post-copy change yet.</td></tr>
-          <tr><td>1</td><td>1</td><td>G is in flight; newer resident G+1 also needs a flush.</td></tr>
-        </tbody>
-      </table>
-      <p><strong>DIRTY = work waiting.</strong> <strong>FLUSHING = copied work in progress.</strong></p>
-    </article>
-    <article class="reference-card full">
-      <h2>Durability vocabulary</h2>
-      <img class="diagram" src="../assets/durability-chain.svg" alt="Write permission, recoverability, transaction durability, and page propagation boundaries">
-    </article>
-    <article class="reference-card full">
-      <h2>Two-generation worked example</h2>
-      <img class="diagram" src="../assets/two-lsa-timeline.svg" alt="Page LSA and oldest-unflush LSA across copied G and resident G plus one">
-    </article>
-    <article class="reference-card">
-      <h2>Two LSA roles</h2>
-      <ul>
-        <li><strong>Page LSA:</strong> latest logged change included in the image; copied value is the WAL force target.</li>
-        <li><strong>Oldest-unflush LSA:</strong> oldest logged change unpropagated in the generation; checkpoint lower-bound material.</li>
-      </ul>
-    </article>
-    <article class="reference-card">
-      <h2>Flag algebra</h2>
-      <ul>
-        <li>Open G: set FLUSHING; clear old DIRTY.</li>
-        <li>Writer creates G+1: set DIRTY again.</li>
-        <li>G success: clear only FLUSHING.</li>
-        <li>Ordinary G failure: restore retryable state; wake waiters.</li>
-      </ul>
-    </article>
-    <article class="reference-card">
-      <h2>Ordinary success route</h2>
-      <ol>
-        <li>Validate BCB identity.</li>
-        <li>Set FLUSHING; clear captured DIRTY.</li>
-        <li>Copy stable bytes and LSAs.</li>
-        <li>Release BCB protection.</li>
-        <li>Force WAL through copied page LSA.</li>
-        <li>Submit via DWB or direct write.</li>
-        <li>Reprotect, clear FLUSHING, wake/handoff.</li>
-      </ol>
-    </article>
-    <article class="reference-card">
-      <h2>Review questions</h2>
-      <ol>
-        <li>Which generation does each byte/LSA/flag describe?</li>
-        <li>What exact persistence boundary was observed?</li>
-        <li>Can a writer publish G+1 while G is in flight?</li>
-        <li>Does failure preserve retryable debt and wake waiters?</li>
-        <li>Is a source concern being promoted beyond its evidence?</li>
-      </ol>
-    </article>
-    <article class="reference-card full">
-      <h2>Source route and claim boundary</h2>
-      <table>
-        <thead><tr><th>Responsibility</th><th>Pinned source</th><th>Evidence use</th></tr></thead>
-        <tbody>
-          <tr><td>Page-LSA coupling</td><td><code>page_buffer.c:4983–5055</code></td><td>Verified mechanism</td></tr>
-          <tr><td>Ordinary flush and rollback</td><td><code>page_buffer.c:10723–10962</code></td><td>Verified mechanism</td></tr>
-          <tr><td>DIRTY / FLUSHING helpers</td><td><code>page_buffer.c:16077–16126</code></td><td>Verified mechanism</td></tr>
-          <tr><td>WAL force gate</td><td><code>transaction/log_page_buffer.c:4150–4189</code></td><td>Verified mechanism</td></tr>
-          <tr><td>Early TDE/DWB preparation concern</td><td><code>page_buffer.c:10809–10828</code></td><td>Open finding VS-12; requires fault injection</td></tr>
-        </tbody>
-      </table>
-    </article>
-  </section>
-
-  <footer class="footer">Canonical explanation: <a href="../learning/04-flush-one-generation.md">Flush One Generation</a>. Ask the teaching agent when a generation or persistence boundary is ambiguous.</footer>
-</main>
+<body data-legacy-redirect>
+  <p>This course page moved to <a href="../en/reference/flush-generation-card.html">../en/reference/flush-generation-card.html</a>.</p>
 </body>
 </html>

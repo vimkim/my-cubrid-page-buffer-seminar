@@ -2,99 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID failure-proof ledger reference card</title>
-  <link rel="stylesheet" href="../assets/teach-course.css">
+  <meta http-equiv="refresh" content="0; url=../en/reference/failure-proof-ledger-card.html">
+  <link rel="canonical" href="../en/reference/failure-proof-ledger-card.html">
+  <title>Page moved · CUBRID page buffer course</title>
 </head>
-<body>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
-  <header class="hero">
-    <div class="eyebrow">Print for exceptional-path review</div>
-    <h1>Failure-proof ledger</h1>
-    <p>Reach the real branch, wait for the owner protocol to settle, inspect every debt, and stop the claim where the evidence stops.</p>
-    <div class="pills"><span class="pill">Pinned source</span><span class="pill">Exact injection</span><span class="pill">After unwind</span><span class="pill">Retry</span><span class="pill">Impact</span></div>
-  </header>
-
-  <section class="reference-grid">
-    <article class="reference-card full">
-      <h2>Claim ladder</h2>
-      <img class="diagram" src="../assets/claim-levels-ladder.svg" alt="Five claim levels and the evidence needed to close each one">
-    </article>
-    <article class="reference-card">
-      <h2>Acquisition/load ledger</h2>
-      <ul>
-        <li>Global <code>fcnt</code></li>
-        <li>Latch mode/count/waiter tuple</li>
-        <li>Per-thread holder debt</li>
-        <li>Wait request removal/grant/wakeup</li>
-        <li>Hash, VPID, BCB, load-owner identity</li>
-        <li>Later fix/unfix retry progress</li>
-      </ul>
-      <p>Routes: <code>VS-10</code>, <code>VS-11</code>.</p>
-    </article>
-    <article class="reference-card">
-      <h2>Flush-generation ledger</h2>
-      <ul>
-        <li>DIRTY / FLUSHING for G</li>
-        <li>Independent G+1 re-dirty</li>
-        <li><code>oldest_unflush_lsa</code> floor</li>
-        <li>Copied image / DWB-slot ownership</li>
-        <li>Flush-waiter wakeup or retry owner</li>
-        <li>Later flush/victim/checkpoint progress</li>
-      </ul>
-      <p>Route: <code>VS-12</code>.</p>
-    </article>
-    <article class="reference-card full">
-      <h2>Highest relevant seam</h2>
-      <table>
-        <thead><tr><th>Risk</th><th>Verification seam</th></tr></thead>
-        <tbody>
-          <tr><td>Allocator/read/crypto/write unwind</td><td>Exact dependency injection inside the real owner path, with state assertions.</td></tr>
-          <tr><td>Waiter/promotion/load/identity race</td><td>Controlled schedule at the competing transition plus memory-order argument.</td></tr>
-          <tr><td>Victim progress</td><td>Actual pressure with observed candidate, rejection, and eventual victim.</td></tr>
-          <tr><td>Durability/recovery</td><td>Crash/recovery at a named WAL, DWB, or home-page boundary.</td></tr>
-        </tbody>
-      </table>
-    </article>
-    <article class="reference-card">
-      <h2>Receipt fields</h2>
-      <ol>
-        <li>Revision/build/configuration</li>
-        <li>Owner path and exact branch</li>
-        <li>Injection/schedule evidence</li>
-        <li>Before/after settled ledger</li>
-        <li>Retry/liveness/impact result</li>
-        <li>Supported and unsupported claims</li>
-        <li>Reproducer and registry ID</li>
-      </ol>
-    </article>
-    <article class="reference-card">
-      <h2>Pinned source route</h2>
-      <ul>
-        <li><code>VS-10</code>: <code>page_buffer.c:8510–8515</code></li>
-        <li>Holder allocator: <code>6000–6055</code></li>
-        <li><code>VS-12</code> setup/exits: <code>10795–10828</code></li>
-        <li>Later rollback: <code>10908–10923</code></li>
-      </ul>
-      <p>Trace each normal-hit, lock-free-hit, and waiter grant site separately.</p>
-    </article>
-    <article class="reference-card full">
-      <h2>Review language</h2>
-      <table>
-        <thead><tr><th>Evidence obtained</th><th>Strongest defensible statement</th></tr></thead>
-        <tbody>
-          <tr><td>Source order only</td><td>“The pinned source exposes this proof obligation.”</td></tr>
-          <tr><td>Injected branch, no surviving debt</td><td>“The branch is reachable here; this run observed complete cleanup.”</td></tr>
-          <tr><td>Injected branch and surviving debt</td><td>“This target/configuration leaves this exact state after unwind.”</td></tr>
-          <tr><td>Consumer-visible consequence</td><td>“This reproduced impact follows from the surviving state under this setup.”</td></tr>
-          <tr><td>Re-established on target branch</td><td>“The registry can now be reviewed for a status update with this receipt.”</td></tr>
-        </tbody>
-      </table>
-    </article>
-  </section>
-
-  <footer class="footer">Canonical explanation: <a href="../advanced/failure-and-proof-obligations.md">Failure Unwind and Open Proof Obligations</a>. Mutable status remains solely in the uncertainty registry.</footer>
-</main>
+<body data-legacy-redirect>
+  <p>This course page moved to <a href="../en/reference/failure-proof-ledger-card.html">../en/reference/failure-proof-ledger-card.html</a>.</p>
 </body>
 </html>

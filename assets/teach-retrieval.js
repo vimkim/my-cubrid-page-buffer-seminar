@@ -7,6 +7,10 @@ document.addEventListener ("DOMContentLoaded", function ()
     const answer = quiz.querySelector ("textarea");
     const feedback = quiz.querySelector (".feedback");
     const concepts = JSON.parse (quiz.dataset.concepts);
+    const coverageTemplate = quiz.dataset.coverageTemplate;
+    const completeMessage = quiz.dataset.completeMessage;
+    const revisitLabel = quiz.dataset.revisitLabel;
+    const modelLabel = quiz.dataset.modelLabel;
 
     quiz.querySelector ("[data-check]").addEventListener ("click", function ()
     {
@@ -23,16 +27,19 @@ document.addEventListener ("DOMContentLoaded", function ()
         return !found.includes (concept);
       });
 
-      feedback.innerHTML = "<strong>" + found.length + "/" + concepts.length + " presentation moves detected.</strong>" +
+      const coverage = coverageTemplate
+        .replace ("{found}", String (found.length))
+        .replace ("{total}", String (concepts.length));
+      feedback.innerHTML = "<strong>" + coverage + "</strong>" +
         (missing.length === 0
-          ? " <span>Good coverage. Now deliver it aloud without reading.</span>"
-          : "<ul>" + missing.map (function (concept) { return "<li>Revisit: " + concept.label + "</li>"; }).join ("") + "</ul>");
+          ? " <span>" + completeMessage + "</span>"
+          : "<ul>" + missing.map (function (concept) { return "<li>" + revisitLabel + " " + concept.label + "</li>"; }).join ("") + "</ul>");
     });
 
     quiz.querySelector ("[data-reveal]").addEventListener ("click", function ()
     {
-      const model = quiz.dataset.model || "boundary -> six objects -> fix/release debt -> caller completes correctness -> flush one generation -> eligibility before replacement policy -> evidence label before every strong claim.";
-      feedback.innerHTML = "<strong>Model spine:</strong> " + model;
+      const model = quiz.dataset.model;
+      feedback.innerHTML = "<strong>" + modelLabel + "</strong> " + model;
     });
   });
 });

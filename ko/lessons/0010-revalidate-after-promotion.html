@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0010 — promotion 뒤 revalidate하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0010-revalidate-after-promotion.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0010</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced 역량 · latch promotion</div>
+    <h1>debt는 보존하고 stale observation은 버린다</h1>
+    <p>이 lesson을 마치면 in-place, conditional, blocking, failed READ→WRITE promotion을 구분하고 언제 restart해야 하는지 정확히 알 수 있다.</p>
+    <div class="pills"><span class="pill">READ</span><span class="pill">WRITE</span><span class="pill">Only fixer</span><span class="pill">Unfixed window</span><span class="pill">Same debt</span><span class="pill">Revalidate</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="meaning">
+        <div class="eyebrow">01 · promotion 정의하기</div>
+        <h2>READ holder가 WRITE protection을 요청한다</h2>
+        <p><strong>Latch promotion</strong>은 현재 thread가 resident page 하나에 가진 protection을 READ에서 WRITE로 바꾸려는 시도다. page-buffer protocol이 안전하게 upgrade할 수 있을 때 caller가 직접 전체 unfix/refix sequence를 수행하지 않게 하는 것이 목적이다.</p>
+        <p>Promotion은 transaction-level ownership을 주거나, B-tree search 결과를 마법처럼 보존하거나, 새로운 logical fix를 만들지 않는다. 같은 page-buffer ownership을 더 강한 byte protection 아래 다시 구성할 뿐이다.</p>
+      </section>
+
+      <section class="section" id="outcomes">
+        <div class="eyebrow">02 · 네 가지 outcome</div>
+        <h2>unfixed window를 여는 경로는 하나뿐이다</h2>
+        <img class="diagram" src="../../assets/promotion-outcomes.svg" alt="READ-to-WRITE latch promotion의 in-place, conditional, blocking, error outcome">
+        <p class="caption">blocking 경로는 저장한 fix count를 queue로 옮기지만, 기다리는 동안 이 thread의 protection은 내려놓는다.</p>
+        <table>
+          <thead><tr><th>Outcome</th><th>Ownership transition</th><th>이전 관찰값</th></tr></thead>
+          <tbody>
+            <tr><td>In-place success</td><td>caller가 유일한 fixer라서 release 없이 latch가 WRITE가 된다.</td><td>caller invariant 범위에서 계속 보호된다.</td></tr>
+            <tr><td>Conditional failure</td><td>READ ownership과 debt가 그대로 유지된다.</td><td>READ로 계속 보호되며 algorithm상 restart 여부는 caller가 결정한다.</td></tr>
+            <tr><td>Blocking success</td><td>caller의 fix가 global <code>fcnt</code>에서 빠지고 holder가 제거된다. 저장한 count는 기다린 뒤 새 WRITE holder로 돌아온다.</td><td>unfixed window를 지나는 동안 stale해진다. 다시 구성하고 revalidate해야 한다.</td></tr>
+            <tr><td>Error 또는 interrupt</td><td>null page pointer와 함께 반환하며 promotion debt는 남지 않는다.</td><td>사용할 수 없다. caller의 모든 exit를 audit해야 한다.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="decision">
+        <div class="eyebrow">03 · Decision rule</div>
+        <h2>“내가 유일한 fixer인가?”가 쉬운 경로를 결정한다</h2>
+        <ol>
+          <li>이 holder의 nested <code>fix_count</code>가 BCB의 global <code>fcnt</code>와 같으면 모든 fix가 이 thread의 것이다. 이미 기다리는 promoter가 없다면 latch mode를 in place로 바꿀 수 있다.</li>
+          <li>다른 reader가 있고 caller가 <code>PGBUF_PROMOTE_ONLY_READER</code>를 요청했다면 READ ownership을 release하지 않은 채 conditional failure로 끝난다.</li>
+          <li>다른 promoter가 이미 queue 맨 앞에 있으면 새 promotion도 conditional failure다. BCB 하나에는 promoter 하나만 기다릴 수 있다.</li>
+          <li>그 밖의 shared-reader 경로에서는 이 thread의 fix를 release하고 holder를 제거하며 promoter를 queue head에 넣고 WRITE를 기다린다.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> pinned promotion은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2842-L3050"><code>page_buffer.c:2842–3050</code></a>에 있다.</p>
+      </section>
+
+      <section class="section" id="debt">
+        <div class="eyebrow">04 · Ownership accounting</div>
+        <h2>저장한 fix count는 이동할 뿐 늘어나지 않는다</h2>
+        <p>caller의 nested-fix count가 2라고 하자. Blocking promotion은 다음과 같이 동작한다.</p>
+        <ol>
+          <li>BCB의 global <code>fcnt</code>에서 2를 뺀다.</li>
+          <li>이 thread의 READ holder를 제거한다.</li>
+          <li>요청한 fix count 2를 queued promotion request와 함께 저장한다.</li>
+          <li>grant되면 global tuple에 2를 복구하고 count 2인 새 WRITE holder를 만든다.</li>
+        </ol>
+        <p class="big-claim">promotion 성공 전후에 caller가 갚아야 할 release는 4가 아니라 2다. wait 중에는 page pointer를 전혀 소유하지 않는다.</p>
+      </section>
+
+      <section class="section" id="stale">
+        <div class="eyebrow">05 · Observation lifetime</div>
+        <h2>pointer 값이 같아도 이전 지식은 복구되지 않는다</h2>
+        <p>READ release와 WRITE grant 사이에 다른 owner가 page 내용을 바꿀 수 있다. 따라서 caller는 이전 hold에서 얻은 모든 결론을 버리거나 다시 구성해야 한다.</p>
+        <ul>
+          <li>record pointer와 slot 위치,</li>
+          <li>free-space와 insertion 결정,</li>
+          <li>B-tree key range, separator, sibling/child 선택,</li>
+          <li>page header, generation/dirty 관찰값, related-page 관계,</li>
+          <li>이전 page byte를 전제로 한 모든 access-method precondition.</li>
+        </ul>
+        <div class="callout warn"><strong>흔한 bug 형태:</strong> promotion이 겉보기에는 같은 page pointer를 반환하므로 caller가 blocking 전에 계산한 slot이나 record pointer를 계속 사용한다. pointer equality는 이전 borrowed lifetime을 연장하지 않는다.</div>
+      </section>
+
+      <section class="section" id="caller">
+        <div class="eyebrow">06 · Caller policy</div>
+        <h2>Page buffer는 protection을 돌려주고 access method는 의미를 복구한다</h2>
+        <p>Module은 latch/holder transition을 구현한다. semantic restart는 B-tree나 heap code의 책임이다. search를 반복하고 target record/slot을 확인한 뒤 mutation 전에 related-page 결정을 다시 구성해야 한다.</p>
+        <p>대표적인 B-tree caller는 promotion으로 의도한 경로를 보존할 수 없을 때 WRITE traversal로 전환하고 retry한다. 이는 access-method policy이지 promotion이 tree navigation을 보존한다는 일반적인 약속이 아니다.</p>
+        <p class="source-note"><strong>대표 caller evidence:</strong> pinned B-tree restart point는 <code>btree.c:28365–28393</code>과 <code>28638–28696</code>이다.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval 연습</div>
+        <h2>nested blocking promotion을 audit한다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="caller는 nested fix count 2인 READ holder를 가졌지만 다른 reader가 있으므로 유일한 fixer가 아니다 -> SHARED_READER blocking promotion은 caller의 fix 2개를 global fcnt에서 빼고 holder를 제거하며 promoter를 head에 queueing하고 저장한 count 2를 request와 함께 옮긴다 -> wait 중 이 thread에는 page pointer나 ownership이 없으므로 이전에 찾은 slot, record pointer, key range, free-space 결정, related-page 관찰값은 stale하다 -> WRITE grant 시 새 holder가 같은 count 2를 받으므로 caller가 갚을 release는 4가 아니라 여전히 2다 -> mutation 전에 access-method search를 다시 수행하고 validate해야 한다 -> conditional failure는 원래 READ holder/debt를 유지하지만 error나 interrupt는 사용할 pointer나 debt 없이 반환한다." data-concepts='[{"label":"유일한 fixer가 아님","terms":["other reader","not only","global","two"]},{"label":"blocking release와 head queue","terms":["subtract","remove","queue","head","saved"]},{"label":"unfixed window가 관찰값을 무효화","terms":["no pointer","stale","slot","record","revalidate"]},{"label":"grant 뒤에도 같은 debt count","terms":["same","count","two","not four"]},{"label":"caller가 semantic search restart","terms":["restart","search","validate","mutation"]},{"label":"다른 outcome 구분","terms":["conditional","retains","error","interrupt","no debt"]}]'>
+          <h3>문제</h3>
+          <p>Thread T가 nested READ fix 두 개를 hold하고 slot 7을 찾은 뒤 insertion 결정을 계산했다. 다른 reader도 page를 hold한다. T는 WRITE로 blocking promotion을 요청한다.</p>
+          <p><strong>과제:</strong> wait와 success를 거치는 두 debt ledger를 trace하고 stale해지는 것을 나열하라. slot 7을 다시 찾아야 하는 이유를 설명하고 conditional failure 및 interruption과 대조하라.</p>
+          <textarea aria-label="promotion audit 입력" placeholder="ownership, observation lifetime, caller restart 순서로 trace해 보세요."></textarea>
+          <button type="button" data-check>promotion audit 확인</button>
+          <button type="button" class="secondary" data-reveal>model 경로 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답을 chat에 붙여 넣어 보자. debt conservation, stale observation, outcome classification, caller 책임을 확인한 뒤 Advanced 진도를 기록한다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">핵심 읽을거리</div>
+        <h2>지식이 만료되는 정확한 지점을 표시한다</h2>
+        <p>pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2842-L3050"><code>page_buffer.c:2842–3050</code></a>을 읽고 only-fixer detection, conditional exit, fix-count subtraction, holder removal, promoter queue insertion, wakeup, new-holder recording, null-pointer failure를 표시하라.</p>
+        <p><a href="../reference/promotion-restart-card.html">인쇄용 promotion-restart card 열기 →</a></p>
+        <p><a href="0009-classify-latch-wait.html">← Lesson 0009로</a> · <a href="0011-rebuild-after-ordered-refix.html">Lesson 0011로 계속 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson 목차">
+      <strong>Lesson map</strong>
+      <a href="#meaning">1. Promotion 의미</a>
+      <a href="#outcomes">2. 네 가지 outcome</a>
+      <a href="#decision">3. Decision rule</a>
+      <a href="#debt">4. Debt conservation</a>
+      <a href="#stale">5. Stale observation</a>
+      <a href="#caller">6. Caller restart</a>
+      <a href="#retrieval">7. 직접 audit하기</a>
+      <a href="#primary-reading">핵심 읽을거리</a>
+      <hr>
+      <a href="../reference/promotion-restart-card.html">Promotion-restart card</a>
+      <a href="../../advanced/acquisition-concurrency.md">Canonical Advanced page</a>
+      <a href="0011-rebuild-after-ordered-refix.html">다음 lesson →</a>
+      <a href="../index.html">과정 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">promotion outcome, debt transfer, observation lifetime, restart ownership이 모호하면 언제든 teaching agent에게 질문하자.</footer>
+</main>
+</body>
+</html>

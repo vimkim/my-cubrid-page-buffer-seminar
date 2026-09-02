@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0009 — latch wait 분류하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0009-classify-latch-wait.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0009</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced 역량 · latch queue</div>
+    <h1>fairness를 주장하기 전에 outcome부터 분류한다</h1>
+    <p>이 lesson을 마치면 존재하지 않는 ownership이나 fairness theorem을 지어내지 않고, incompatible request가 queueing과 zero-crossing handoff를 거치는 과정을 trace할 수 있다.</p>
+    <div class="pills"><span class="pill">Immediate</span><span class="pill">Conditional</span><span class="pill">Queued</span><span class="pill">Zero-crossing</span><span class="pill">Timeout</span><span class="pill">Grant debt</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="outcomes">
+        <div class="eyebrow">01 · 결과에서 시작하기</div>
+        <h2>다섯 경로가 모두 같은 ownership을 만드는 것은 아니다</h2>
+        <table>
+          <thead><tr><th>Outcome</th><th>Caller 결과</th><th>Fix debt?</th></tr></thead>
+          <tbody>
+            <tr><td>Immediate grant</td><td>latch tuple과 holder를 기록하고 page pointer를 반환한다.</td><td>있다. acquisition 하나가 성공했다.</td></tr>
+            <tr><td>Conditional rejection</td><td>queue에 넣지 않고 반환한다.</td><td>없다.</td></tr>
+            <tr><td>Wait</td><td>request를 BCB queue에 나타내고 thread가 sleep한다.</td><td>아직 없다.</td></tr>
+            <tr><td>Timeout 또는 interrupt</td><td>queue request를 cancel/remove하고 error를 반환한다.</td><td>없다.</td></tr>
+            <tr><td>Wakeup과 grant</td><td>waker가 latch tuple을 갱신하고 재개된 thread가 holder를 기록한다.</td><td>있다. immediate success와 같은 postcondition이다.</td></tr>
+          </tbody>
+        </table>
+        <p class="big-claim">queue에 있다는 것은 pending request이지 ownership이 아니다. 완료된 grant만 release debt를 만든다.</p>
+      </section>
+
+      <section class="section" id="queue">
+        <div class="eyebrow">02 · writer 백 개</div>
+        <h2>incompatible request는 ownership zero-crossing을 기다린다</h2>
+        <img class="diagram" src="../../assets/latch-wait-queue.svg" alt="현재 WRITE holder 하나와 queue에 들어간 WRITE request 백 개가 fix-count zero-crossing에서 handoff되는 흐름">
+        <p class="caption">serialized handoff는 source에서 확인할 수 있지만 strict fairness는 확인할 수 없다.</p>
+        <ol>
+          <li>현재 WRITE holder가 <code>fcnt &gt; 0</code>을 유지한다. incompatible unconditional WRITE request는 BCB queue 뒤에 붙는다. 단, blocking promoter는 head insertion 예외다.</li>
+          <li>각 waiter는 시간 제한과 interrupt 처리가 있는 wait로 sleep한다. conditional behavior로 전환된 request는 queue에 들어가지 않는다.</li>
+          <li>현재 holder가 unfix하여 global <code>fcnt</code>가 0이 되면, release하는 thread가 BCB protection을 잡은 채 queue를 순회한다.</li>
+          <li>cancel된 entry는 건너뛰고, FLUSH waiter는 flush completion에 맡기며, head request에 따라 grant한다.</li>
+          <li>waker가 latch mode와 요청된 fix count를 설치하고, 재개된 thread가 thread별 holder를 기록해야 success가 완성된다.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> pinned grant/wait decision은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6278-L6634"><code>page_buffer.c:6278–6634</code></a>, queue/sleep은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7041-L7450"><code>7041–7450</code></a>, zero-crossing wakeup은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7452-L7590"><code>7452–7590</code></a>이다.</p>
+      </section>
+
+      <section class="section" id="head">
+        <div class="eyebrow">03 · head request가 batch를 결정한다</div>
+        <h2>Writer는 하나씩, reader는 group으로 grant한다</h2>
+        <table>
+          <thead><tr><th>Queue head</th><th>Zero-crossing 동작</th><th>남는 것</th></tr></thead>
+          <tbody>
+            <tr><td>WRITE</td><td>그 writer 하나만 grant하고 멈춘다.</td><td>나머지 reader/writer는 queue에 남는다.</td></tr>
+            <tr><td>READ</td><td>queue의 READ request를 compatible group으로 grant한다.</td><td>writer는 queue에 남는다.</td></tr>
+            <tr><td>cancel된 <code>NO_LATCH</code></td><td>건너뛴다.</td><td>scan을 계속한다.</td></tr>
+            <tr><td>FLUSH waiter</td><td>flush-completion protocol에 맡겨 둔다.</td><td>unfix가 grant하지 않는다.</td></tr>
+          </tbody>
+        </table>
+        <p>blocked reader나 writer가 남아 있으면 <code>waiter_exists</code>도 set 상태다. 새 non-holder READ는 compatibility만 내세워 queue를 앞지를 수 없다. 이미 BCB를 잡은 thread는 nested-fix protocol에 따라 re-enter할 수 있다.</p>
+      </section>
+
+      <section class="section" id="fairness">
+        <div class="eyebrow">04 · Evidence 경계</div>
+        <h2>“대체로 도착 순서”는 FIFO도 starvation freedom도 아니다</h2>
+        <p>writer 백 개는 보통 queue 순서대로 zero-crossing마다 하나씩 처리된다. 그러나 다음 세 mechanism이 겉으로 보이는 처리 순서를 바꿀 수 있다.</p>
+        <ul>
+          <li><strong>Holder re-entry:</strong> 기존 holder는 waiter를 지나 nested ownership을 얻을 수 있다.</li>
+          <li><strong>Promotion:</strong> blocking promoter는 head에 삽입된다.</li>
+          <li><strong>Reader grouping:</strong> writer가 남아 있어도 compatible reader를 batch로 grant할 수 있다.</li>
+        </ul>
+        <div class="callout warn"><strong>주장하면 안 되는 것:</strong> strict FIFO, starvation freedom, wall-clock 기준 처리 보장, latch-level deadlock freedom. timed sleep이 deadlock guard 역할을 하며 정확한 시간은 revision policy다.</div>
+      </section>
+
+      <section class="section" id="failure">
+        <div class="eyebrow">05 · 실패한 wait에는 debt가 남지 않는다</div>
+        <h2>Timeout과 interrupt는 늦은 grant가 아니라 cleanup 경로다</h2>
+        <p>timeout은 request를 reset/cancel하고 transaction wait policy에 따라 mapping된 page-latch timeout을 보고한다. interrupt된 waiter는 스스로를 제거한다. 어느 쪽도 page pointer를 반환하거나 caller가 unfix해야 할 holder를 만들지 않는다.</p>
+        <p>모든 wakeup의 양쪽을 확인해야 한다. waker의 tuple transition과 재개된 thread의 holder allocation이다. Lesson 8의 <code>VS-11</code> candidate는 정확히 이 post-grant holder-recording seam에 있다. 두 ledger가 일치해야 queue success가 완성된다.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">06 · Retrieval 연습</div>
+        <h2>“waiter가 page를 소유한다”는 표현 없이 queue 하나를 trace한다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="현재 WRITE holder가 global fcnt를 0보다 크게 유지하는 동안 incompatible unconditional writer는 queue 뒤에 붙으며 fix debt를 소유하지 않는다 -> waiter_exists는 새 non-holder reader의 앞지르기를 막는다 -> unfix로 fcnt가 0이 되면 release thread가 BCB protection 아래 scan한다 -> head가 WRITE면 writer 하나, READ면 compatible reader group을 grant한다 -> waker가 latch tuple을 갱신하고 재개된 thread가 holder를 기록하면서 일반 success debt가 생긴다 -> timeout 또는 interrupt는 request를 cancel/remove하고 page pointer나 debt 없이 반환한다 -> holder re-entry, promoter head insertion, reader grouping 때문에 strict FIFO나 starvation freedom을 주장할 수 없다." data-concepts='[{"label":"queued request에는 debt가 없음","terms":["queued","pending","no debt","not own"]},{"label":"zero-crossing handoff 흐름","terms":["fcnt","zero","unfix","protected"]},{"label":"head writer와 reader group","terms":["writer","one","reader","group"]},{"label":"grant는 두 ledger를 완성","terms":["tuple","holder","debt","woken"]},{"label":"timeout과 interrupt는 깨끗한 실패","terms":["timeout","interrupt","remove","no pointer"]},{"label":"fairness theorem 없음","terms":["fifo","fairness","starvation","re-entry","promoter"]}]'>
+          <h3>문제</h3>
+          <p>WRITE holder의 <code>fcnt=1</code>이다. queue는 <code>R1 → R2 → W1 → R3</code>이고, 또 다른 non-holder reader가 도착한다. 이어 holder가 unfix하여 0이 된다.</p>
+          <p><strong>과제:</strong> 새 request가 앞지를 수 있는지, 어떤 request가 grant되는지, debt가 언제 시작되는지, W1이 아직 무엇을 소유하는지 예측하라. 이 결과가 fairness를 증명하지 않는 이유와 W1의 timeout 결과도 덧붙여라.</p>
+          <textarea aria-label="latch queue trace 입력" placeholder="각 request를 pending, granted, failed로 분류하고 debt를 적어 보세요."></textarea>
+          <button type="button" data-check>queue trace 확인</button>
+          <button type="button" class="secondary" data-reveal>model 경로 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답을 chat에 붙여 넣어 보자. queue ownership, zero-crossing 순서, grant completion, cleanup, evidence 경계를 확인한 뒤 Advanced 진도를 기록한다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">핵심 읽을거리</div>
+        <h2>request 하나를 두 thread에 걸쳐 따라간다</h2>
+        <p>pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7041-L7590"><code>page_buffer.c:7041–7590</code></a>을 읽고 queue append, timed sleep, cancellation, zero-crossing, tuple grant, 재개된 holder 기록을 표시하라. source-visible ordering과 scheduler fairness를 구분하자.</p>
+        <p><a href="../reference/latch-queue-card.html">인쇄용 latch-queue card 열기 →</a></p>
+        <p><a href="0008-defend-a-safe-change.html">← Lesson 0008로</a> · <a href="../reference/core-synthesis-studio.html">Lesson 1–9 종합 문제 풀기 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson 목차">
+      <strong>Lesson map</strong>
+      <a href="#outcomes">1. 다섯 outcome</a>
+      <a href="#queue">2. Queue와 handoff</a>
+      <a href="#head">3. Head request</a>
+      <a href="#fairness">4. Fairness 경계</a>
+      <a href="#failure">5. 실패한 wait</a>
+      <a href="#retrieval">6. 직접 trace하기</a>
+      <a href="#primary-reading">핵심 읽을거리</a>
+      <hr>
+      <a href="../reference/latch-queue-card.html">Latch-queue card</a>
+      <a href="../../advanced/acquisition-concurrency.md">Canonical Advanced page</a>
+      <a href="../reference/core-synthesis-studio.html">다음: Core synthesis →</a>
+      <a href="../index.html">과정 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">queue membership, granted ownership, timeout cleanup, fairness 표현이 모호하면 언제든 teaching agent에게 질문하자.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID normal fix convergence 지도</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/fix-convergence-map.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 빠른 참조</span><a href="../index.html">Course 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">source tracing용 인쇄 자료</div>
+    <h1>Normal fix convergence map</h1>
+    <p>Caller intent와 준비 경로를, 두 경로가 공유하는 ownership postcondition과 구분해서 보세요.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Normal mutex path</span><span class="pill">Evidence-aware</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>준비 경로는 둘, contract는 하나</h2>
+      <img class="diagram" src="../../assets/fix-contract.svg" alt="Normal hit와 cold miss가 같은 fix contract로 합류하는 흐름">
+    </article>
+    <article class="reference-card">
+      <h2>Caller intent</h2>
+      <ol>
+        <li><strong>Fetch mode:</strong> allocation/residency에 대해 caller가 알고 있는 조건입니다.</li>
+        <li><strong>Latch mode:</strong> 허용할 content access 방식입니다.</li>
+        <li><strong>Condition:</strong> conflict가 생기면 기다릴지 거절할지 정합니다.</li>
+      </ol>
+      <p>Grant 없이 <code>NULL</code>을 반환했다면 unfix debt도 생기지 않습니다.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Resident hit</h2>
+      <ol>
+        <li>Hash에서 일치하는 candidate를 찾습니다.</li>
+        <li>그 candidate의 BCB를 lock합니다.</li>
+        <li>보호를 확보한 상태에서 VPID를 다시 확인합니다.</li>
+        <li>재사용 가능한 slot이 다른 page에 rebound되었다면 chain 탐색을 다시 시도합니다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Cold miss</h2>
+      <ol>
+        <li>먼저 등록하여 해당 VPID의 load owner가 됩니다.</li>
+        <li>아직 publish하지 않은 provisional BCB를 확보해 배정합니다.</li>
+        <li>OLD_PAGE라면 DWB, 그다음 volume에서 읽고, NEW_PAGE라면 초기화합니다.</li>
+        <li>확인하고 grant한 뒤 publish하고 load lock을 해제합니다.</li>
+        <li>Waiter를 깨웁니다. 각 waiter는 다시 시도해 자신의 debt를 얻습니다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>공통 success postcondition</h2>
+      <ol>
+        <li>요청한 VPID가 resident입니다.</li>
+        <li>요청한 latch가 grant되었습니다.</li>
+        <li>Global <code>fcnt</code>와 thread holder에 이 grant가 반영되었습니다.</li>
+        <li>빌린 <code>PAGE_PTR</code>에는 대응하는 unfix 하나의 debt가 있습니다.</li>
+      </ol>
+    </article>
+    <article class="reference-card full">
+      <h2>세 가지 identity gap</h2>
+      <table>
+        <thead><tr><th>Boundary</th><th>확인할 질문</th><th>Protection</th></tr></thead>
+        <tbody>
+          <tr><td>Hash 관찰 → BCB</td><td>Candidate가 여전히 요청한 VPID를 나타내는가?</td><td>BCB mutex</td></tr>
+          <tr><td>준비된 control → byte</td><td>BCB VPID와 page header의 volid/pageid가 일치하는가?</td><td>Convergence 시점의 BCB mutex</td></tr>
+          <tr><td>Borrowed use → release</td><td>넘겨받은 frame address가 여전히 BCB identity와 일치하는가?</td><td>Mutex 기반 unfix의 debug assertion</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Evidence boundary</h2>
+      <p>이 revision의 source로 증명되는 범위는 resident identity를 준비하는 과정과 normal contract로의 convergence입니다.</p>
+      <p>Physical I/O가 정확히 한 번이라는 것, waiter fairness, 모든 exceptional cleanup, caller correctness, durability까지 증명되지는 않습니다.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Source 경로</h2>
+      <ul>
+        <li><code>page_buffer.h:172–203</code> — caller가 선택하는 항목</li>
+        <li><code>page_buffer.c:2342–2546</code> — 바깥쪽 convergence</li>
+        <li><code>7594–7722</code> — 보호 아래 수행하는 hit 재확인</li>
+        <li><code>7981–8178</code> — load owner/waiter</li>
+        <li><code>8392–8634</code> — cold materialization</li>
+      </ul>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical 설명: <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a>. 준비 과정과 postcondition의 경계가 흐려진다면 teaching agent에게 질문하세요.</footer>
+</main>
+</body>
+</html>

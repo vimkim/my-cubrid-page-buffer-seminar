@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID page-buffer ownership debt card</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/ownership-debt-card.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print for ownership review</div>
+    <h1>Fix-debt ledger card</h1>
+    <p>Count successful grants, attribute them per thread, and repay exactly one debt per unfix.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Global fcnt</span><span class="pill">Thread holders</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>One BCB, two ledgers</h2>
+      <img class="diagram" src="../../assets/ownership-ledgers.svg" alt="Global fix count and per-thread holder debt">
+    </article>
+    <article class="reference-card">
+      <h2>Grant rule</h2>
+      <ul>
+        <li>Successful fix: global <code>fcnt + 1</code>.</li>
+        <li>Successful fix: caller holder <code>fix_count + 1</code>.</li>
+        <li>No grant: no debt and no matching unfix.</li>
+        <li>Equal pointer addresses do not merge successful calls.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Release rule</h2>
+      <ul>
+        <li>One unfix: caller holder <code>− 1</code>.</li>
+        <li>One unfix: global <code>fcnt − 1</code>.</li>
+        <li>Caller holder reaches zero: remove holder.</li>
+        <li>Global reaches zero: ordinary reuse becomes possible only if all other predicates pass.</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>A×2, B×1 sequence</h2>
+      <table>
+        <thead><tr><th>Event</th><th>Global</th><th>A holder</th><th>B holder</th><th>Usable access</th></tr></thead>
+        <tbody>
+          <tr><td>A fix 1</td><td>1</td><td>1</td><td>—</td><td>A</td></tr>
+          <tr><td>A fix 2</td><td>2</td><td>2</td><td>—</td><td>A, two debts</td></tr>
+          <tr><td>B fix</td><td>3</td><td>2</td><td>1</td><td>A and B</td></tr>
+          <tr><td>A unfix</td><td>2</td><td>1</td><td>1</td><td>A and B</td></tr>
+          <tr><td>B unfix</td><td>1</td><td>1</td><td>removed</td><td>A only</td></tr>
+          <tr><td>A final unfix</td><td>0</td><td>removed</td><td>removed</td><td>Neither</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Unfix is not</h2>
+      <ul>
+        <li>Transaction commit</li>
+        <li>Page flush</li>
+        <li>Frame eviction</li>
+        <li>Mapping invalidation</li>
+        <li>Logical deallocation</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Source route</h2>
+      <ul>
+        <li><code>page_buffer.c:460–488</code> — two owners</li>
+        <li><code>6277–6634</code> — normal grant</li>
+        <li><code>6128–6184</code> — holder decrement</li>
+        <li><code>6636–6703</code> — global decrement</li>
+        <li><code>3062–3201</code> — public unfix route</li>
+      </ul>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a>. Ask the teaching agent when totals, attribution, and pointer lifetime disagree.</footer>
+</main>
+</body>
+</html>

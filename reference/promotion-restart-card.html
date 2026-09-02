@@ -2,72 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID promotion-restart reference card</title>
-  <link rel="stylesheet" href="../assets/teach-course.css">
+  <meta http-equiv="refresh" content="0; url=../en/reference/promotion-restart-card.html">
+  <link rel="canonical" href="../en/reference/promotion-restart-card.html">
+  <title>Page moved · CUBRID page buffer course</title>
 </head>
-<body>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
-  <header class="hero">
-    <div class="eyebrow">Print for promotion review</div>
-    <h1>READ→WRITE promotion card</h1>
-    <p>Conserve the fix debt; invalidate observations whenever blocking releases the old hold.</p>
-    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Four outcomes</span><span class="pill">Restart meaning</span></div>
-  </header>
-
-  <section class="reference-grid">
-    <article class="reference-card full">
-      <h2>Promotion decision</h2>
-      <img class="diagram" src="../assets/promotion-outcomes.svg" alt="Four READ-to-WRITE promotion outcomes">
-    </article>
-    <article class="reference-card full">
-      <h2>Outcome ledger</h2>
-      <table>
-        <thead><tr><th>Outcome</th><th>Ownership</th><th>Observation rule</th></tr></thead>
-        <tbody>
-          <tr><td>In-place success</td><td>Same holder/count; mode becomes WRITE.</td><td>Continuously protected.</td></tr>
-          <tr><td>Conditional failure</td><td>READ holder/count unchanged.</td><td>Still protected; caller chooses restart.</td></tr>
-          <tr><td>Blocking success</td><td>Old holder removed; saved count returns in new WRITE holder.</td><td>Everything page-local is stale across wait.</td></tr>
-          <tr><td>Error/interrupt</td><td>Null pointer; no retained debt.</td><td>No observation may be used.</td></tr>
-        </tbody>
-      </table>
-    </article>
-    <article class="reference-card">
-      <h2>Debt conservation</h2>
-      <p>Nested count N:</p>
-      <ol>
-        <li>Subtract N from global <code>fcnt</code>.</li>
-        <li>Remove READ holder.</li>
-        <li>Carry N in promoter request.</li>
-        <li>Grant WRITE and create holder with N.</li>
-      </ol>
-      <p>Successful promotion leaves N debts, never 2N.</p>
-    </article>
-    <article class="reference-card">
-      <h2>Reconstruct after blocking</h2>
-      <ul>
-        <li>record/slot pointers</li>
-        <li>free-space decisions</li>
-        <li>keys, ranges, siblings, children</li>
-        <li>headers and related-page state</li>
-        <li>all access-method preconditions</li>
-      </ul>
-    </article>
-    <article class="reference-card full">
-      <h2>Source route</h2>
-      <table>
-        <thead><tr><th>Responsibility</th><th>Pinned range</th></tr></thead>
-        <tbody>
-          <tr><td>Promotion mechanism</td><td><code>page_buffer.c:2842–3050</code></td></tr>
-          <tr><td>B-tree conditional restart</td><td><code>btree.c:28365–28393</code></td></tr>
-          <tr><td>B-tree WRITE traversal retry</td><td><code>btree.c:28638–28696</code></td></tr>
-        </tbody>
-      </table>
-    </article>
-  </section>
-
-  <footer class="footer">Canonical explanation: <a href="../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. The page buffer restores protection; the caller restores semantic knowledge.</footer>
-</main>
+<body data-legacy-redirect>
+  <p>This course page moved to <a href="../en/reference/promotion-restart-card.html">../en/reference/promotion-restart-card.html</a>.</p>
 </body>
 </html>

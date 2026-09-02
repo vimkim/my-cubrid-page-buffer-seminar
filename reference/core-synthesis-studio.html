@@ -2,88 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID page-buffer Core synthesis studio</title>
-  <link rel="stylesheet" href="../assets/teach-course.css">
-  <script defer src="../assets/teach-retrieval.js"></script>
+  <meta http-equiv="refresh" content="0; url=../en/reference/core-synthesis-studio.html">
+  <link rel="canonical" href="../en/reference/core-synthesis-studio.html">
+  <title>Page moved · CUBRID page buffer course</title>
 </head>
-<body>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · Core checkpoint</span><a href="../index.html">Course home</a></div>
-  <header class="hero">
-    <div class="eyebrow">Lessons 1–9 · closed-book synthesis</div>
-    <h1>Reconstruct the system before reopening the pages</h1>
-    <p>This is the bridge from “I read it” to “I can explain it.” Produce one causal account, paste it into chat, and let the gaps choose your next lesson.</p>
-    <div class="pills"><span class="pill">No notes</span><span class="pill">One narrative</span><span class="pill">Counterexamples</span><span class="pill">Evidence boundary</span><span class="pill">Chat feedback</span></div>
-  </header>
-
-  <section class="section">
-    <div class="eyebrow">Before you begin</div>
-    <h2>Protect the retrieval attempt</h2>
-    <ol>
-      <li>Close Lessons 1–9 and their reference cards.</li>
-      <li>Answer from memory. Imperfect terminology is useful diagnostic evidence.</li>
-      <li>Explain causes and consequences; do not write eight disconnected definitions.</li>
-      <li>Use “I do not know yet” where needed, then name what evidence would answer it.</li>
-      <li>Paste the complete answer into chat before revealing the model structure.</li>
-    </ol>
-    <div class="callout warn"><strong>Important:</strong> the local coverage button detects vocabulary only. It cannot establish correctness, understanding, or mastery.</div>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">The eight required moves</div>
-    <h2>Follow one page, then defend the model</h2>
-    <div class="reference-grid">
-      <article class="reference-card"><span class="step">1</span><h3>Module boundary</h3><p>What does a successful fix guarantee? Which correctness work still belongs to the caller or another dependency?</p></article>
-      <article class="reference-card"><span class="step">2</span><h3>Page journey</h3><p>Trace <code>VPID → fix → holder/latch → mutation/logging → DIRTY → flush → victim eligibility → BCB reuse</code>.</p></article>
-      <article class="reference-card"><span class="step">3</span><h3>Independent axes</h3><p>Explain residency, ownership, content-latch, and dirty/flush state. Give one combination that disproves a tempting synonym.</p></article>
-      <article class="reference-card"><span class="step">4</span><h3>Generation reasoning</h3><p>Explain conceptual G and G+1, distinguish them from page LSA, and interpret all four DIRTY/FLUSHING combinations.</p></article>
-      <article class="reference-card"><span class="step">5</span><h3>Safe replacement</h3><p>Why is <code>fcnt==0</code> insufficient? How can one stable BCB slot represent different VPIDs over time without representing two simultaneously?</p></article>
-      <article class="reference-card"><span class="step">6</span><h3>Evidence-bounded concern</h3><p>Choose <code>VS-11</code> or <code>VS-12</code>. Separate what pinned source verifies from reachability, surviving state, impact, and current-branch status.</p></article>
-      <article class="reference-card"><span class="step">7</span><h3>Latch wait</h3><p>Distinguish a request queued on a BCB from a grant recorded in the atomic tuple and the resumed thread's holder. State the fairness boundary.</p></article>
-      <article class="reference-card"><span class="step">8</span><h3>Document routes</h3><p>Where do you enter to learn, change, debug, locate source/invariants, check evidence status, or rehearse?</p></article>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">Your teach-back</div>
-    <h2>Write one connected explanation</h2>
-    <div class="quiz" data-retrieval data-model="opening boundary and borrowed PAGE_PTR -> VPID, BCB, frame, holder and latch ownership -> caller lock, validation, logging, page LSA and dirty work -> conceptual G copied for flush while concurrent G+1 may re-dirty -> WAL before page propagation -> hard victim eligibility and protected serial BCB identity reuse before replacement policy -> queued request versus atomic grant versus holder completion, with no strict fairness claim -> VS source fact separated from reachability, surviving state, impact and current status -> route learning, change, diagnosis, source/invariant lookup, evidence status and rehearsal to their owning documents." data-concepts='[{"label":"Module guarantee versus caller obligations","terms":["module","caller","borrow","guarantee","obligation"]},{"label":"VPID BCB frame PAGE_PTR and ownership debt","terms":["vpid","bcb","frame","page_ptr","holder","fcnt"]},{"label":"caller mutation logging and dirty transition","terms":["lock","validate","log","lsa","dirty"]},{"label":"G and G+1 with all flag combinations","terms":["g+1","flushing","dirty","00","01","10","11"]},{"label":"WAL before propagation","terms":["wal","before","dwb","write"]},{"label":"hard eligibility and serial identity reuse","terms":["eligible","identity","reuse","serial","protect"]},{"label":"queued request, tuple grant, holder completion and fairness limit","terms":["queue","grant","tuple","holder","fair"]},{"label":"VS proof levels and current status boundary","terms":["vs-","reachability","surviving","impact","current"]},{"label":"document routing by intent","terms":["learning","playbook","debug","source map","registry","question"]}]'>
-      <h3>Start with the boundary; end by routing a hard question</h3>
-      <textarea class="synthesis-textarea" aria-label="Your Lessons 1 through 9 Core synthesis" placeholder="Write freely. Keep the page journey causal, include one counterexample, and mark uncertainty honestly."></textarea>
-      <button type="button" data-check>Check coverage only</button>
-      <button type="button" class="secondary" data-reveal>Reveal structure after submission</button>
-      <div class="feedback" aria-live="polite"></div>
-    </div>
-    <p><strong>Required handoff:</strong> paste the answer into chat. The teaching agent will assess each concept, correct only the narrow gaps, create a learning record for demonstrated understanding, and then route you to a repair or Lesson 10.</p>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">How the answer will be evaluated</div>
-    <h2>Understanding is visible in relationships</h2>
-    <table>
-      <thead><tr><th>Evidence of understanding</th><th>Repair signal</th></tr></thead>
-      <tbody>
-        <tr><td>Responsibilities stay with their actual owner.</td><td>The page buffer is credited with logical locking, logging, or record validation.</td></tr>
-        <tr><td>Transitions cause the next move in the page journey.</td><td>The answer is a vocabulary list with no causal chain.</td></tr>
-        <tr><td>State axes remain independent.</td><td>Resident=fixed, dirty=durable, unfix=flush, or eviction=deallocation.</td></tr>
-        <tr><td>G/G+1 is conceptual generation reasoning.</td><td>G is described as a stored counter or confused with page LSA.</td></tr>
-        <tr><td>BCB reuse is protected and serial.</td><td>One slot is described as simultaneously representing several VPIDs or belonging to several LRUs.</td></tr>
-        <tr><td>Evidence stops at the proved level.</td><td>A source-visible ordering is promoted directly into a current production defect.</td></tr>
-        <tr><td>Queue membership, grant, and holder completion are distinct.</td><td>Being queued is treated as already owning the latch.</td></tr>
-        <tr><td>Documents are routed by intent and ownership.</td><td>Every question is answered by rereading <code>page_buffer.c</code> from the top.</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">After submission only</div>
-    <h2>Repair narrowly; do not restart the course</h2>
-    <p>If one relationship is weak, revisit only its owning lesson and reference card. If the integrated model is sound, continue to <a href="../lessons/0010-revalidate-after-promotion.html">Lesson 10</a>. The teaching agent—not the vocabulary detector—makes that routing decision from your explanation.</p>
-    <p><a href="course-learning-path.html">Review the complete learning path →</a> · <a href="../page-buffer-teaching-material.md">Open the Canonical Guide entry →</a></p>
-  </section>
-
-  <footer class="footer">Ask the teaching agent about any prompt that is unclear. Do not reopen the lessons merely because the first wording feels incomplete.</footer>
-</main>
+<body data-legacy-redirect>
+  <p>This course page moved to <a href="../en/reference/core-synthesis-studio.html">../en/reference/core-synthesis-studio.html</a>.</p>
 </body>
 </html>

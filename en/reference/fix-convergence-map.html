@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID normal-fix convergence map</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/fix-convergence-map.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print for source tracing</div>
+    <h1>Normal-fix convergence map</h1>
+    <p>Separate caller intent and preparation path from the shared ownership postcondition.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Normal mutex path</span><span class="pill">Evidence-aware</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Two preparation paths, one contract</h2>
+      <img class="diagram" src="../../assets/fix-contract.svg" alt="Normal hit and cold miss converging on the same fix contract">
+    </article>
+    <article class="reference-card">
+      <h2>Caller intent</h2>
+      <ol>
+        <li><strong>Fetch mode:</strong> allocation/residency knowledge.</li>
+        <li><strong>Latch mode:</strong> permitted content access.</li>
+        <li><strong>Condition:</strong> wait or reject on conflict.</li>
+      </ol>
+      <p><code>NULL</code> without a grant creates no unfix debt.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Resident hit</h2>
+      <ol>
+        <li>Observe matching hash candidate.</li>
+        <li>Lock its BCB.</li>
+        <li>Recheck the VPID under protection.</li>
+        <li>Retry chain if the reusable slot was rebound.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Cold miss</h2>
+      <ol>
+        <li>Register first to become VPID load owner.</li>
+        <li>Obtain and assign an unpublished provisional BCB.</li>
+        <li>OLD_PAGE: DWB then volume; NEW_PAGE: initialize.</li>
+        <li>Confirm, grant, publish, release load lock.</li>
+        <li>Wake waiters; each retries and earns its own debt.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Shared success</h2>
+      <ol>
+        <li>Requested VPID is resident.</li>
+        <li>Requested latch is granted.</li>
+        <li>Global <code>fcnt</code> and thread holder include the grant.</li>
+        <li>Borrowed <code>PAGE_PTR</code> owes one matching unfix.</li>
+      </ol>
+    </article>
+    <article class="reference-card full">
+      <h2>Three identity gaps</h2>
+      <table>
+        <thead><tr><th>Boundary</th><th>Question</th><th>Protection</th></tr></thead>
+        <tbody>
+          <tr><td>Hash observation → BCB</td><td>Does the candidate still represent the requested VPID?</td><td>BCB mutex</td></tr>
+          <tr><td>Prepared control → bytes</td><td>Does BCB VPID equal page-header volid/pageid?</td><td>BCB mutex at convergence</td></tr>
+          <tr><td>Borrowed use → release</td><td>Does the supplied frame address still agree with BCB identity?</td><td>Debug assertion during mutex-based unfix</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Evidence boundary</h2>
+      <p>The source proves resident-identity preparation and normal contract convergence at this revision.</p>
+      <p>It does not prove one physical I/O, waiter fairness, all exceptional cleanup, caller correctness, or durability.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Source route</h2>
+      <ul>
+        <li><code>page_buffer.h:172–203</code> — caller choices</li>
+        <li><code>page_buffer.c:2342–2546</code> — outer convergence</li>
+        <li><code>7594–7722</code> — protected hit recheck</li>
+        <li><code>7981–8178</code> — load owner/waiter</li>
+        <li><code>8392–8634</code> — cold materialization</li>
+      </ul>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a>. Ask the teaching agent when preparation and postcondition become blurred.</footer>
+</main>
+</body>
+</html>

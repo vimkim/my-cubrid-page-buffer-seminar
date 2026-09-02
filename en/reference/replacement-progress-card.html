@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID replacement-progress reference card</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/replacement-progress-card.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print for pressure-path review</div>
+    <h1>Replacement progress card</h1>
+    <p>Search and coordination make progress; only protected eligibility permits frame reuse.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Revocable reservation</span><span class="pill">No fairness theorem</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Domains and search policy</h2>
+      <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private/shared LRU domains, zones, and search order">
+    </article>
+    <article class="reference-card full">
+      <h2>No-free-BCB route</h2>
+      <img class="diagram" src="../../assets/allocation-progress.svg" alt="Allocation progress loop and terminal exits">
+    </article>
+    <article class="reference-card">
+      <h2>Allocator exits</h2>
+      <ol>
+        <li>Invalid/free BCB success</li>
+        <li>Eligible LRU victim success</li>
+        <li>Direct reservation then success</li>
+        <li>Revocation then retry</li>
+        <li>Interrupt/shutdown</li>
+        <li>Timeout</li>
+        <li>Synchronous flush/search without daemon</li>
+        <li>Explicit no-buffer error</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Direct-victim rule</h2>
+      <p><strong>Assignment is a reservation.</strong></p>
+      <ol>
+        <li>Producer checks eligibility.</li>
+        <li>Consumer later locks/revalidates.</li>
+        <li>Any intervening fix revokes assignment.</li>
+        <li>Allocator requests another candidate.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Generation rule</h2>
+      <p>Post-flush may assign only after rechecking current resident state. Completion of copied G never authorizes reuse when resident G+1 is DIRTY.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Do not promote</h2>
+      <ul>
+        <li>queue priority → starvation freedom</li>
+        <li>daemon loop → stable cadence</li>
+        <li>AOUT structures → active 2Q default</li>
+        <li>reuse counters → observed eviction</li>
+        <li>victim hint → eligibility proof</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>Source route</h2>
+      <table>
+        <thead><tr><th>Responsibility</th><th>Pinned range</th></tr></thead>
+        <tbody>
+          <tr><td>Allocation loop</td><td><code>page_buffer.c:8181–8403</code></td></tr>
+          <tr><td>Victim search order</td><td><code>page_buffer.c:9067–9265</code></td></tr>
+          <tr><td>Direct assignment</td><td><code>page_buffer.c:15420–15627</code></td></tr>
+          <tr><td>Flush/post-flush handoff</td><td><code>page_buffer.c:10925–10952,15489–15556</code></td></tr>
+          <tr><td>Daemon loops</td><td><code>page_buffer.c:16972–17298</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../advanced/replacement-progress.md">Replacement Policy and Background Progress</a>. Bounded exits do not imply bounded retries.</footer>
+</main>
+</body>
+</html>

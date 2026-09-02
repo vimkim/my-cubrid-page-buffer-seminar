@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0005 — logged mutation audit하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0005-audit-a-logged-mutation.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0005</span><a href="../index.html">강의 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Core capability · caller contract</div>
+    <h1>fix 성공 이후의 logged mutation을 audit하기</h1>
+    <p>이 lesson을 마치면 heap insert 하나를 추적하고, 모든 correctness condition을 담당 owner에 배정하며, 모든 exit에서 watcher debt를 audit할 수 있습니다.</p>
+    <div class="pills"><span class="pill">Logical lock</span><span class="pill">WRITE latch</span><span class="pill">Validate</span><span class="pill">Log</span><span class="pill">Page LSA</span><span class="pill">DIRTY</span><span class="pill">Cleanup</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="boundary">
+        <div class="eyebrow">01 · Access는 필요조건이지 충분조건이 아닙니다</div>
+        <h2>성공한 fix는 access 질문에만 답합니다</h2>
+        <p class="big-claim"><code>NULL</code>이 아닌 <code>PAGE_PTR</code>는 요청한 resident page에 임시로 latched access를 얻었다는 증거일 뿐, caller의 logical operation이 올바르다는 증거는 아닙니다.</p>
+        <p>Fix 성공만으로 heap slot이 적합한지, record representation이 유효한지, transaction이 필요한 logical lock을 보유했는지, recovery payload가 올바른지, page LSA가 전진했는지, generation이 dirty인지, 모든 error path가 watcher를 release하는지는 알 수 없습니다.</p>
+        <div class="callout warn"><strong>review 질문:</strong> 각 condition은 어느 layer가 성립시키며, 어느 exit가 page, watcher, logical lock, overflow object 또는 recovery obligation을 아직 소유하고 있나요?</div>
+      </section>
+
+      <section class="section" id="protections">
+        <div class="eyebrow">02 · 두 가지 protection</div>
+        <h2>Page latch와 transaction lock은 서로의 더 강한 버전이 아닙니다</h2>
+        <img class="diagram" src="../../assets/latch-versus-lock.svg" alt="서로 다른 객체를 서로 다른 lifetime 동안 보호하는 page latch와 transaction lock">
+        <p class="caption">heap insert 하나에는 둘 다 필요하지만, 보호하는 객체와 release protocol이 다릅니다.</p>
+        <table>
+          <thead><tr><th>Protection</th><th>보호 대상</th><th>끝나는 시점</th><th>제공하지 않는 것</th></tr></thead>
+          <tbody>
+            <tr><td>Page latch</td><td>BCB/frame 하나의 resident bytes</td><td>matching unfix 또는 watcher transfer/release 시점</td><td>Row/class ownership 또는 transaction isolation</td></tr>
+            <tr><td>Transaction lock</td><td>Logical class 또는 row identity</td><td>transaction protocol이 정한 시점</td><td>resident page bytes에 대한 안전한 access</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Interface contract:</strong> page latch는 현재 in-memory bytes access를 보호합니다. <strong>Implementation policy:</strong> 이 heap insert는 page-buffer watcher ownership과 lock manager의 class/row locking을 함께 사용합니다.</p>
+      </section>
+
+      <section class="section" id="spine">
+        <div class="eyebrow">03 · 대표 caller</div>
+        <h2>성공 path의 여섯 step을 따라갑니다</h2>
+        <img class="diagram" src="../../assets/mutation-ownership-spine.svg" alt="heap insert의 여섯 step과 각 owner 및 exit obligation">
+        <p class="caption">각 row를 왼쪽부터 action, owner, exit에 남는 state 순서로 읽으세요.</p>
+        <ol>
+          <li><strong>Prepare and lock:</strong> heap과 lock management가 logical concurrency를 성립시킵니다. 큰 record라면 먼저 overflow storage를 만들 수도 있습니다.</li>
+          <li><strong>Acquire and validate:</strong> watcher가 page latch와 fix debt를 보유하는 동안 heap은 space, slot, identity, row-lock condition을 검증합니다.</li>
+          <li><strong>Mutate:</strong> heap 및 slotted-page code가 record와 page-format invariant를 지킵니다.</li>
+          <li><strong>Log and advance LSA:</strong> caller가 recovery 의미를 선택합니다. 필요하면 log manager가 page-buffer interface를 통해 page LSA를 전진시킵니다.</li>
+          <li><strong>Publish DIRTY:</strong> <code>pgbuf_set_dirty(..., DONT_FREE)</code>는 ownership을 의도적으로 유지하면서 resident generation을 propagation 대상으로 표시합니다.</li>
+          <li><strong>Transfer or release:</strong> caller가 home watcher를 scan cache로 transfer하거나 ordered-unfix한 뒤 남은 watcher를 cleanup합니다.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism과 Implementation policy:</strong> 대표적인 success spine은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/heap_file.c#L23120-L23324"><code>heap_file.c:23120–23324</code></a>에 있습니다. 이는 대표 caller의 evidence이지, 모든 page-buffer caller가 올바르다는 증명은 아닙니다.</p>
+      </section>
+
+      <section class="section" id="ordering">
+        <div class="eyebrow">04 · 인접한 transition 구분하기</div>
+        <h2>mutation, recovery evidence, dirtying, release는 서로 다른 네 event입니다</h2>
+        <table>
+          <thead><tr><th>Event</th><th>새로 성립하는 것</th><th>아직 성립하지 않는 것</th></tr></thead>
+          <tbody>
+            <tr><td>Physical mutation</td><td>WRITE latch 아래의 resident bytes에 새 heap record가 들어갑니다.</td><td>recovery 의미나 propagation obligation이 자동으로 따라오지는 않습니다.</td></tr>
+            <tr><td>Log append + page LSA</td><td>caller의 recovery action이 기록되고, recovery index가 요구하면 page LSA가 전진합니다.</td><td>LSA가 바뀌었다고 page가 자동으로 dirty가 되지는 않습니다.</td></tr>
+            <tr><td><code>pgbuf_set_dirty(..., DONT_FREE)</code></td><td>현재 resident generation에 page-image propagation이 필요해집니다.</td><td>watcher debt는 남습니다. 이 호출만으로 page가 flush되거나 모든 boundary에서 durable해지지는 않습니다.</td></tr>
+            <tr><td>Transfer or unfix</td><td>caller가 ownership debt를 옮기거나 갚습니다.</td><td>Release는 commit, flush, eviction이 아닙니다.</td></tr>
+          </tbody>
+        </table>
+        <p class="big-claim">WRITE latch → mutate → recovery log/page LSA → DIRTY → transfer or release.</p>
+        <div class="callout warn"><strong>“dirtying이 page LSA를 설정한다”라고 바꾸어 말하지 마세요.</strong> caller가 recovery 의미를 선택하고, log append가 page LSA를 전진시킬 수 있으며, dirty publication은 그 뒤의 별도 transition입니다.</div>
+      </section>
+
+      <section class="section" id="exits">
+        <div class="eyebrow">05 · 누적된 state audit하기</div>
+        <h2>exit의 코드 형태만으로는 correctness가 증명되지 않습니다</h2>
+        <table>
+          <thead><tr><th>Exit seam</th><th>Home watcher?</th><th>그 밖의 obligation</th><th>Cleanup owner</th></tr></thead>
+          <tbody>
+            <tr><td>Class-lock direct return</td><td>아직 acquire하지 않음</td><td>큰 record를 위한 overflow storage가 이미 존재할 수 있습니다.</td><td>바깥 transaction/recovery가 연결된 system-operation state를 소유합니다.</td></tr>
+            <tr><td>Destination-selection failure</td><td>helper가 하나를 선택했을 수 있음</td><td>Result OID와 helper-local selection state.</td><td><code>heap_get_insert_location_with_lock()</code>가 자신의 failure를 cleanup합니다.</td></tr>
+            <tr><td>Physical insert 또는 이후 failure</td><td>hold 중일 수 있음</td><td>다른 context watcher도 hold 중일 수 있습니다.</td><td>failure는 <code>error:</code>와 <code>heap_unfix_watchers()</code>로 모입니다.</td></tr>
+            <tr><td>Success</td><td>마지막 ownership 결정까지 hold</td><td>Scan cache가 transfer를 받을 수 있습니다.</td><td><code>pgbuf_replace_watcher()</code>가 transfer하거나 ordered unfix가 소비하고, 남은 watcher는 cleanup됩니다.</td></tr>
+          </tbody>
+        </table>
+        <p>class-lock ordering은 source에서 보이는 ownership boundary이지 production leak의 evidence가 아닙니다. 마찬가지로 공통 <code>error:</code> label 하나가 있다는 사실만으로 앞선 direct return이나 helper-owned cleanup에 관해서는 아무것도 증명할 수 없습니다.</p>
+      </section>
+
+      <section class="section" id="new-page">
+        <div class="eyebrow">06 · Caller knowledge</div>
+        <h2><code>NEW_PAGE</code> materialization은 allocation 다음입니다</h2>
+        <p><code>PAGE_FETCH_MODE::NEW_PAGE</code>는 caller가 allocated page identity를 이미 소유하고 있고, 기존 bytes를 읽지 않은 채 resident frame을 초기화하려 한다는 뜻입니다. logical page를 allocate하는 mode가 아닙니다.</p>
+        <p>allocation state, 초기 page type/layout, TDE state, recovery semantics, dirtying, 최종 ownership은 file management가 담당합니다. page-buffer Module은 frame을 materialize하고 보호합니다.</p>
+        <p class="source-note"><strong>Representative source:</strong> pinned <code>file_alloc()</code>가 allocation을 수행한 뒤 <code>pgbuf_fix(..., NEW_PAGE, WRITE, ...)</code>를 호출하는 흐름은 <code>file_manager.c:5420–5590</code>에서 확인할 수 있습니다.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>“fix가 안전하게 만들었다”라고 말하지 않고 mutation을 audit합니다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="transaction lock은 logical object를, page latch는 resident bytes를 보호함 -> heap이 destination을 validate하고 page-format state를 mutate함 -> caller가 recovery 의미를 선택하고 필요하면 log append가 page LSA를 전진시킴 -> caller가 별도로 resident generation을 DIRTY로 표시함 -> success와 failure에서 모든 watcher를 transfer하거나 release함 -> exit ledger가 누적 state와 cleanup owner를 기록함." data-concepts='[{"label":"logical lock과 page latch의 차이","terms":["transaction lock","logical","page latch","bytes"]},{"label":"caller가 맡는 destination 및 record validation","terms":["validate","space","slot","record","heap"]},{"label":"WRITE access 아래의 physical mutation","terms":["mutate","physical","write","spage"]},{"label":"dirtying보다 앞선 recovery log와 page LSA","terms":["log","lsa","recovery","dirty"]},{"label":"watcher transfer 또는 모든 exit의 cleanup","terms":["watcher","transfer","unfix","cleanup","exit"]},{"label":"명시적인 acquisition 한계","terms":["fix","not prove","not sufficient","caller"]}]'>
+          <h3>문제</h3>
+          <p>“WRITE fix가 성공한 뒤에도 logged mutation이 올바르려면 heap caller가 무엇을 더 증명하고 수행해야 하며, 모든 exit를 어떻게 audit해야 하나요?”</p>
+          <p><strong>권장 답변 구조:</strong> 두 protection → validate → mutate → log/page LSA → DIRTY → transfer/release → exit ledger.</p>
+          <p><strong>할 일:</strong> <code>pgbuf_set_dirty()</code>가 page-LSA advancement도 release도 아닌 이유를 설명하고 early exit 하나를 분석하세요.</p>
+          <textarea aria-label="caller mutation audit 답안" placeholder="visual을 닫고 각 owner와 obligation을 기억만으로 다시 구성하세요."></textarea>
+          <button type="button" data-check>audit 포함 여부 확인</button>
+          <button type="button" class="secondary" data-reveal>model spine 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답을 chat에 붙여 넣으세요. mastery를 기록하기 전에 layer ownership, ordering, exit cleanup, evidence strength를 확인합니다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">필수 읽기</div>
+        <h2>page-buffer 내부가 아니라 caller를 annotate합니다</h2>
+        <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/heap_file.c#L23120-L23324"><code>heap_file.c:23120–23324</code></a>를 읽으세요. 여섯 success step과 모든 direct return 또는 <code>goto error</code>를 표시합니다. 각 exit마다 acquired state, cleanup/transfer owner, 남은 recovery 또는 retry 결과를 기록하세요.</p>
+        <p><a href="../reference/caller-mutation-card.html">인쇄용 caller-mutation card 열기 →</a></p>
+        <p><a href="0004-repay-fix-debt.html">← Lesson 0004로 돌아가기</a> · <a href="0006-flush-one-generation.html">Lesson 0006으로 계속 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="강의 목차">
+      <strong>강의 지도</strong>
+      <a href="#boundary">1. Access boundary</a>
+      <a href="#protections">2. 두 protection</a>
+      <a href="#spine">3. 여섯 step caller</a>
+      <a href="#ordering">4. Mutation ordering</a>
+      <a href="#exits">5. Exit ledger</a>
+      <a href="#new-page">6. NEW_PAGE boundary</a>
+      <a href="#retrieval">7. teach-back</a>
+      <a href="#primary-reading">필수 읽기</a>
+      <hr>
+      <a href="../reference/caller-mutation-card.html">Caller-mutation 카드</a>
+      <a href="../../learning/03-caller-completes-correctness.md">Canonical Core 문서</a>
+      <a href="0006-flush-one-generation.html">다음 lesson →</a>
+      <a href="../index.html">강의 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">access permission, logical correctness, recovery evidence, dirty publication, cleanup ownership이 불분명하면 언제든 teaching agent에게 물어보세요.</footer>
+</main>
+</body>
+</html>

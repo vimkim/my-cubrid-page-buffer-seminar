@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID caller mutation audit · 한국어</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/caller-mutation-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">caller 리뷰용 요약</div>
+    <h1>Logged mutation audit</h1>
+    <p>acquisition이 성공했다면 caller audit가 시작된 것이지 correctness가 완성된 것은 아니다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">heap_insert_logical</span><span class="pill">exit ledger</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>6단계 mutation spine</h2>
+      <img class="diagram" src="../../assets/mutation-ownership-spine.svg" alt="heap insert의 6단계, owner, exit obligation">
+    </article>
+    <article class="reference-card">
+      <h2>두 가지 protection</h2>
+      <ul>
+        <li><strong>Page latch:</strong> 현재 resident byte에 대한 access. watcher를 release/transfer하면 끝난다.</li>
+        <li><strong>Transaction lock:</strong> logical class/row protocol. transaction policy에 따라 끝난다.</li>
+        <li>하나를 hold한다고 다른 하나도 hold한다는 뜻은 아니다.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>성공 path의 order</h2>
+      <ol>
+        <li>logical lock을 준비하고 획득한다.</li>
+        <li>destination을 acquire한 뒤 validate한다.</li>
+        <li>resident page format을 mutate한다.</li>
+        <li>recovery log를 append하고, 필요하면 page LSA를 전진시킨다.</li>
+        <li>resident generation을 DIRTY로 표시한다.</li>
+        <li>모든 watcher를 transfer하거나 release한다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>같은 뜻이 아닌 네 쌍</h2>
+      <ul>
+        <li>WRITE latch ≠ logical ownership</li>
+        <li>Mutation ≠ recovery logging</li>
+        <li>Page LSA ≠ DIRTY publication</li>
+        <li>Unfix ≠ commit or flush</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Exit ledger의 column</h2>
+      <ol>
+        <li>정확한 exit seam</li>
+        <li>이미 acquire/create한 state</li>
+        <li>consumer, transfer, cleanup owner</li>
+        <li>남은 recovery/retry consequence</li>
+        <li>evidence boundary 또는 helper dependency</li>
+      </ol>
+    </article>
+    <article class="reference-card full">
+      <h2>Source 탐색 경로</h2>
+      <table>
+        <thead><tr><th>책임</th><th>Pinned source</th></tr></thead>
+        <tbody>
+          <tr><td>완전한 representative caller</td><td><code>heap_file.c:23120–23324</code></td></tr>
+          <tr><td>destination acquisition/validation</td><td><code>heap_file.c:20493–20664</code></td></tr>
+          <tr><td>physical insert와 recovery 의미</td><td><code>heap_file.c:20821–20939</code></td></tr>
+          <tr><td>log manager의 page-LSA handoff</td><td><code>log_manager.c:2194–2226</code></td></tr>
+          <tr><td>page buffer LSA interface</td><td><code>page_buffer.c:4983–5055</code></td></tr>
+          <tr><td>NEW_PAGE materialization 전 allocation</td><td><code>file_manager.c:5420–5590</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../learning/03-caller-completes-correctness.md">Caller Completes Correctness</a>. layer나 exit owner가 불분명하면 teaching agent에게 질문한다.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID latch queue 요약 · 한국어</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/latch-queue-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">latch 리뷰용 요약</div>
+    <h1>Latch wait와 handoff</h1>
+    <p>order나 ownership을 논하기 전에 request를 pending, granted, failed로 먼저 분류한다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Zero-crossing</span><span class="pill">성공 1회, debt 1개</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>WRITE waiter 100개</h2>
+      <img class="diagram" src="../../assets/latch-wait-queue.svg" alt="queue에 들어간 WRITE request와 zero-crossing handoff">
+    </article>
+    <article class="reference-card">
+      <h2>Outcome ledger</h2>
+      <table>
+        <thead><tr><th>Outcome</th><th>Debt?</th></tr></thead>
+        <tbody>
+          <tr><td>Immediate grant</td><td>있음</td></tr>
+          <tr><td>Conditional rejection</td><td>없음</td></tr>
+          <tr><td>Queued/sleeping</td><td>아직 없음</td></tr>
+          <tr><td>Wakeup + holder 기록</td><td>있음</td></tr>
+          <tr><td>Timeout/interrupt</td><td>없음</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Zero-crossing 규칙</h2>
+      <ol>
+        <li>holder release로 <code>fcnt=0</code>이 된다.</li>
+        <li>BCB protection 안에서 scan한다.</li>
+        <li>cancel된 request는 건너뛴다.</li>
+        <li>FLUSH waiter는 그대로 둔다.</li>
+        <li>head가 WRITE이면 하나만 grant한다.</li>
+        <li>head가 READ이면 reader group을 grant한다.</li>
+        <li>blocker가 남아 있으면 <code>waiter_exists</code>를 유지한다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>양쪽이 완성하는 handoff</h2>
+      <ol>
+        <li>waker가 latch mode와 global fix count를 갱신한다.</li>
+        <li>재개된 waiter가 per-thread holder를 기록한다.</li>
+        <li>두 단계가 끝나야 caller가 정상적인 ownership을 얻는다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Fairness의 한계</h2>
+      <ul>
+        <li>holder re-entry가 waiter를 앞지를 수 있다.</li>
+        <li>blocking promoter는 head에 삽입된다.</li>
+        <li>reader는 group으로 grant될 수 있다.</li>
+        <li>timeout/scheduler timing은 policy이다.</li>
+      </ul>
+      <p>strict FIFO나 starvation freedom을 보장한다고 말하면 안 된다.</p>
+    </article>
+    <article class="reference-card full">
+      <h2>Source 탐색 경로</h2>
+      <table>
+        <thead><tr><th>책임</th><th>Pinned range</th></tr></thead>
+        <tbody>
+          <tr><td>grant/wait 판단</td><td><code>page_buffer.c:6278–6634</code></td></tr>
+          <tr><td>queue append와 timed sleep</td><td><code>page_buffer.c:7041–7450</code></td></tr>
+          <tr><td>zero-crossing wakeup</td><td><code>page_buffer.c:7452–7590</code></td></tr>
+          <tr><td>pinned revision의 timeout parameter</td><td><code>system_parameter.c:5308–5319</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. queue에 들어가 있다고 ownership을 얻은 것은 아니다.</footer>
+</main>
+</body>
+</html>

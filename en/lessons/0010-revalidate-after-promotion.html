@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0010 — Revalidate after promotion</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0010-revalidate-after-promotion.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0010</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced capability · latch promotion</div>
+    <h1>Preserve debt, discard stale observations</h1>
+    <p>By the end, you can distinguish in-place, conditional, blocking, and failed READ→WRITE promotion—and know exactly when to restart.</p>
+    <div class="pills"><span class="pill">READ</span><span class="pill">WRITE</span><span class="pill">Only fixer</span><span class="pill">Unfixed window</span><span class="pill">Same debt</span><span class="pill">Revalidate</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="meaning">
+        <div class="eyebrow">01 · Define promotion</div>
+        <h2>A READ holder asks for WRITE protection</h2>
+        <p><strong>Latch promotion</strong> is the attempt to change the current thread’s protection on one resident page from READ to WRITE. The goal is to avoid a full caller-written unfix/refix sequence when the page-buffer protocol can upgrade safely.</p>
+        <p>Promotion does not grant transaction-level ownership, preserve a B-tree search result by magic, or create another logical fix. It reorganizes the same page-buffer ownership under stronger byte protection.</p>
+      </section>
+
+      <section class="section" id="outcomes">
+        <div class="eyebrow">02 · Four outcomes</div>
+        <h2>Only one path opens an unfixed window</h2>
+        <img class="diagram" src="../../assets/promotion-outcomes.svg" alt="In-place, conditional, blocking, and error outcomes of READ-to-WRITE latch promotion">
+        <p class="caption">The blocking path moves the saved fix count through the queue but drops this thread’s protection while waiting.</p>
+        <table>
+          <thead><tr><th>Outcome</th><th>Ownership transition</th><th>Old observations?</th></tr></thead>
+          <tbody>
+            <tr><td>In-place success</td><td>Caller is the only fixer; latch becomes WRITE without release.</td><td>Remain continuously protected, subject to caller invariants.</td></tr>
+            <tr><td>Conditional failure</td><td>READ ownership and debt remain unchanged.</td><td>Still protected by READ, but caller chooses whether algorithmically to restart.</td></tr>
+            <tr><td>Blocking success</td><td>Caller’s fixes leave global <code>fcnt</code>; holder is removed; saved count waits and returns in a new WRITE holder.</td><td>Stale across the unfixed window; reconstruct and revalidate.</td></tr>
+            <tr><td>Error or interrupt</td><td>Returns with null page pointer and no retained promotion debt.</td><td>Cannot be used; audit every caller exit.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="decision">
+        <div class="eyebrow">03 · Decision rule</div>
+        <h2>“Am I the only fixer?” determines the easy path</h2>
+        <ol>
+          <li>If this holder’s nested <code>fix_count</code> equals the BCB’s global <code>fcnt</code>, every fix belongs to this thread. Unless a promoter is already waiting, promotion can change the latch mode in place.</li>
+          <li>If other readers exist and the caller requested <code>PGBUF_PROMOTE_ONLY_READER</code>, promotion fails conditionally without releasing READ ownership.</li>
+          <li>If another promoter is already first in the queue, the new promotion also fails conditionally; at most one promoter waits on a BCB.</li>
+          <li>Otherwise the shared-reader path releases this thread’s fixes, removes its holder, inserts the promoter at the queue head, and waits for WRITE.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> pinned promotion is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2842-L3050"><code>page_buffer.c:2842–3050</code></a>.</p>
+      </section>
+
+      <section class="section" id="debt">
+        <div class="eyebrow">04 · Ownership accounting</div>
+        <h2>The saved fix count moves; it does not multiply</h2>
+        <p>Suppose the caller has nested-fix count 2. Blocking promotion:</p>
+        <ol>
+          <li>subtracts 2 from the BCB’s global <code>fcnt</code>,</li>
+          <li>removes this thread’s READ holder,</li>
+          <li>stores requested fix count 2 with the queued promotion request, then</li>
+          <li>on grant, restores 2 into the global tuple and creates a new WRITE holder with count 2.</li>
+        </ol>
+        <p class="big-claim">Before and after successful promotion, the caller owes two releases—not four. During the wait, it owns no page pointer at all.</p>
+      </section>
+
+      <section class="section" id="stale">
+        <div class="eyebrow">05 · Observation lifetime</div>
+        <h2>The same pointer value does not restore old knowledge</h2>
+        <p>Between READ release and WRITE grant, other owners may modify page contents. Therefore the caller must discard or reconstruct every conclusion derived from the former hold:</p>
+        <ul>
+          <li>record pointers and slot positions,</li>
+          <li>free-space and insertion decisions,</li>
+          <li>B-tree key ranges, separators, and sibling/child choices,</li>
+          <li>page headers, generation/dirty observations, and related-page relationships,</li>
+          <li>any access-method precondition that assumed the old page bytes.</li>
+        </ul>
+        <div class="callout warn"><strong>Common bug shape:</strong> promotion returns a page pointer that looks identical, so the caller continues using a slot or record pointer computed before blocking. Pointer equality does not extend the old borrowed lifetime.</div>
+      </section>
+
+      <section class="section" id="caller">
+        <div class="eyebrow">06 · Caller policy</div>
+        <h2>Page buffer returns protection; the access method restores meaning</h2>
+        <p>The Module implements the latch/holder transition. B-tree or heap code owns the semantic restart: repeat the search, verify the target record or slot, and reconstruct related-page decisions before mutation.</p>
+        <p>Representative B-tree callers switch to a WRITE traversal and retry after promotion cannot preserve the intended path. That is access-method policy, not a generic promise that promotion preserves tree navigation.</p>
+        <p class="source-note"><strong>Representative caller evidence:</strong> pinned B-tree restart points are <code>btree.c:28365–28393</code> and <code>28638–28696</code>.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>Audit a nested blocking promotion</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} presentation moves detected." data-complete-message="Good coverage. Now deliver it aloud without reading." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="the caller has a READ holder with nested fix count two, but another reader means it is not the only fixer -> a SHARED_READER blocking promotion subtracts the caller's two fixes from global fcnt, removes its holder, queues the promoter at the head, and carries saved count two with the request -> during the wait this thread has no page pointer or ownership, so the previously found slot, record pointer, key range, free-space decision, and related-page observations are stale -> on WRITE grant a new holder receives the same count two, so the caller still owes two releases rather than four -> it must rerun the access-method search and validate before mutation -> conditional failure would instead preserve the original READ holder/debt, while error or interrupt returns no usable pointer or debt." data-concepts='[{"label":"not the only fixer","terms":["other reader","not only","global","two"]},{"label":"blocking release and head queue","terms":["subtract","remove","queue","head","saved"]},{"label":"unfixed window invalidates observations","terms":["no pointer","stale","slot","record","revalidate"]},{"label":"same debt count after grant","terms":["same","count","two","not four"]},{"label":"caller restarts semantic search","terms":["restart","search","validate","mutation"]},{"label":"other outcomes distinguished","terms":["conditional","retains","error","interrupt","no debt"]}]'>
+          <h3>Prompt</h3>
+          <p>Thread T holds two nested READ fixes, locates slot 7, and computes an insertion decision. Another reader holds the page. T requests blocking promotion to WRITE.</p>
+          <p><strong>Your task:</strong> trace both debt ledgers through wait and success; list what becomes stale; explain why slot 7 must be found again; then contrast conditional failure and interruption.</p>
+          <textarea aria-label="Your promotion audit" placeholder="Trace ownership first, then observation lifetime, then caller restart."></textarea>
+          <button type="button" data-check>Check promotion audit</button>
+          <button type="button" class="secondary" data-reveal>Reveal model route</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>Paste your answer into the chat. I will check debt conservation, stale observations, outcome classification, and caller responsibility before recording Advanced progress.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Mark the exact point where knowledge expires</h2>
+        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2842-L3050"><code>page_buffer.c:2842–3050</code></a>. Annotate only-fixer detection, conditional exits, fix-count subtraction, holder removal, promoter queue insertion, wakeup, new-holder recording, and null-pointer failure.</p>
+        <p><a href="../reference/promotion-restart-card.html">Open the printable promotion-restart card →</a></p>
+        <p><a href="0009-classify-latch-wait.html">← Return to Lesson 0009</a> · <a href="0011-rebuild-after-ordered-refix.html">Continue to Lesson 0011 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#meaning">1. Promotion meaning</a>
+      <a href="#outcomes">2. Four outcomes</a>
+      <a href="#decision">3. Decision rule</a>
+      <a href="#debt">4. Debt conservation</a>
+      <a href="#stale">5. Stale observations</a>
+      <a href="#caller">6. Caller restart</a>
+      <a href="#retrieval">7. Audit it back</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="../reference/promotion-restart-card.html">Promotion-restart card</a>
+      <a href="../../advanced/acquisition-concurrency.md">Canonical Advanced page</a>
+      <a href="0011-rebuild-after-ordered-refix.html">Next lesson →</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Ask the teaching agent whenever promotion outcome, debt transfer, observation lifetime, or restart ownership is unclear.</footer>
+</main>
+</body>
+</html>

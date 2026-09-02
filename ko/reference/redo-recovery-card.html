@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID redo/recovery 요약 · 한국어</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/redo-recovery-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">recovery 리뷰용 요약</div>
+    <h1>Checkpoint와 redo gate</h1>
+    <p>log의 의미와 allocation history는 recovery가 소유하고, 반복되는 page 변경은 page LSA가 gate한다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">record ≤ page: skip</span><span class="pill">더 새로우면 apply</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Redo page-LSA gate</h2>
+      <img class="diagram" src="../../assets/redo-lsa-gate.svg" alt="record LSA와 page LSA로 redo skip/apply를 판단하는 흐름">
+    </article>
+    <article class="reference-card">
+      <h2>Checkpoint ownership</h2>
+      <ul>
+        <li><strong>Page buffer:</strong> 조건에 맞는 page를 선별해 flush하고 남은 redo floor를 보고한다.</li>
+        <li><strong>Log/filesystem/volume owner:</strong> checkpoint record, WAL/header state, filesystem sync, metadata boundary를 담당한다.</li>
+      </ul>
+      <p>checkpoint는 모든 page를 flush하는 작업이 아니다.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Generic redo 흐름</h2>
+      <ol>
+        <li><code>RECOVERY_PAGE</code>를 WRITE로 fix한다.</li>
+        <li>target이 없거나 deallocated이면 → skip, debt 없음.</li>
+        <li><code>record_lsa &lt;= page_lsa</code>면 → skip/unfix.</li>
+        <li>record가 더 새로우면 → callback.</li>
+        <li>page LSA를 설정하고 DIRTY로 표시한다.</li>
+        <li>모든 exit에서 release한다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Page LSA가 140일 때</h2>
+      <table>
+        <thead><tr><th>Record</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>120</td><td>skip</td></tr>
+          <tr><td>140</td><td>skip</td></tr>
+          <tr><td>170</td><td>apply; page LSA → 170; DIRTY</td></tr>
+          <tr><td>170 재실행</td><td>skip</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>일반화하지 말 것</h2>
+      <ul>
+        <li>page gate → 모든 callback side effect가 idempotent</li>
+        <li>recovery mode → ordinary allocation bypass</li>
+        <li>temporary-page 규칙 → permanent-page 규칙</li>
+        <li>checkpoint 성공 → crash-redo proof</li>
+        <li>backup accepted → home-page/DWB recovery proof</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>Source 탐색 경로</h2>
+      <table>
+        <thead><tr><th>책임</th><th>Pinned range</th></tr></thead>
+        <tbody>
+          <tr><td>checkpoint coordination</td><td><code>log_page_buffer.c:6901–7406</code></td></tr>
+          <tr><td>page-LSA gate</td><td><code>log_recovery.c:497–536</code></td></tr>
+          <tr><td>recovery fetch semantics</td><td><code>log_recovery.c:6407–6431</code></td></tr>
+          <tr><td>apply, LSA, dirty, cleanup</td><td><code>log_recovery_redo.hpp:587–668</code></td></tr>
+          <tr><td>representative allocation ordering</td><td><code>file_manager.c:5420–5590</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../advanced/recovery-and-lifecycle.md">Recovery, Allocation State, and Module Lifecycle</a>. LSA가 같으면 skip하고, exceptional fetch의 의미는 recovery가 소유한다.</footer>
+</main>
+</body>
+</html>

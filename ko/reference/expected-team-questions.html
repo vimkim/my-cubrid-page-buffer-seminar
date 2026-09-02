@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID page buffer 예상 질문과 model answer</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/expected-team-questions.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 선별 리허설</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">팀에서 나올 만한 질문 15개</div>
+    <h1>설계의 이면을 묻는 질문에 답해 보세요.</h1>
+    <p>발표 리허설에 이 질문들을 활용하세요. model을 펼치기 전에 먼저 자신의 답을 말하고, owner, state, guard, invariant, evidence boundary로 그 답을 방어합니다.</p>
+    <div class="pills"><span class="pill">Object</span><span class="pill">Ownership</span><span class="pill">Durability</span><span class="pill">Replacement</span><span class="pill">Proof</span></div>
+  </header>
+
+  <section class="section">
+    <div class="eyebrow">이 페이지 활용법</div>
+    <h2>짧은 답부터, mechanism은 그다음</h2>
+    <div class="journey">
+      <article><span class="step">1</span><h3>자료 없이 답하기</h3><p>팀 회의에서 말할 수 있을 만큼 짧고 정확하게 답합니다.</p></article>
+      <article><span class="step">2</span><h3>model 펼치기</h3><p>표현이 똑같은지가 아니라 원인과 결과의 구조를 비교합니다.</p></article>
+      <article><span class="step">3</span><h3>challenge 하나 방어하기</h3><p>owner, state, guard, invariant, consequence를 짚습니다.</p></article>
+      <article><span class="step">4</span><h3>evidence 따라가기</h3><p>source anchor나 confidence limit이 필요한 논의에서는 Canonical answer를 확인합니다.</p></article>
+    </div>
+    <div class="callout"><strong>발표 원칙:</strong> 문단을 통째로 외우지 마세요. 인과관계의 spine을 기억한 뒤 자신의 말로 답을 재구성하세요.</div>
+  </section>
+
+  <section class="section" id="objects">
+    <div class="eyebrow">Part 1 · Boundary와 object</div>
+    <h2>무엇이 존재하고, correctness는 누가 책임지는가?</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-001">
+        <div class="question-meta"><span>필수</span><span>PGBUF-QB-001</span><span>Lesson 1</span></div>
+        <h3>1. page-buffer Module이 책임지는 것은 무엇이며, caller에게 남는 책임은 무엇인가?</h3>
+        <details open>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> Module은 page identity를 resident byte에 mapping하고, fix, latch, dirty/flush, replacement protocol로 그 byte를 일시적으로 보호합니다. 그러나 caller가 올바른 page를 골랐는지, 논리적으로 유효한 변경을 했는지는 알지 못합니다. allocation 지식, logical locking, page-layout validation, recovery 의미, retry, 완전한 cleanup은 caller와 인접 Module의 책임입니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> fix 성공은 access contract를 입증할 뿐, caller correctness까지 입증하지는 않습니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-001-what-does-the-page-buffer-module-own">Canonical answer와 source anchor</a> · <a href="../lessons/0001-present-the-page-journey.html">Lesson 1</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-003">
+        <div class="question-meta"><span>필수</span><span>PGBUF-QB-003</span><span>Lesson 1–2</span></div>
+        <h3>2. VPID, BCB, frame, PAGE_PTR, holder는 어떻게 다른가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> <code>VPID</code>는 logical page identity입니다. BCB는 현재 resident인 identity 하나를 위한 volatile control state이고, byte를 저장하는 frame과 짝을 이룹니다. <code>PAGE_PTR</code>는 그 byte를 잠시 빌려 보는 view일 뿐 page identity도 ownership record도 아닙니다. global <code>fcnt</code>가 frame을 reuse로부터 보호하고, 각 thread의 holder는 자신이 상환할 release debt를 따로 기록합니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> identity가 바뀌어도 같은 pointer가 다시 나올 수 있고, identity가 그대로여도 frame address는 바뀔 수 있습니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-003-how-do-vpid-bcb-frame-pageptr-and-holder-differ">Canonical answer와 source anchor</a> · <a href="../lessons/0002-separate-objects-from-state.html">Lesson 2</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-004">
+        <div class="question-meta"><span>Counterexample</span><span>PGBUF-QB-004</span><span>Lesson 2</span></div>
+        <h3>3. page가 동시에 resident, unfixed, dirty일 수 있는가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> 가능합니다. residency, fix ownership, latch state, dirty/flush state, victim eligibility는 서로 독립적인 axis입니다. caller가 변경된 page를 unfix해도, 그 page는 resident이면서 나중에 propagation해야 할 dirty 상태로 남을 수 있습니다. <code>fcnt==0</code>이라는 이유만으로 victim으로 삼아서는 안 됩니다. dirty, flushing, waiter, transient owner, identity 조건도 여전히 중요합니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> “resident”는 위치, “fixed”는 reuse protection, “dirty”는 propagation debt를 설명합니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-004-which-page-states-are-independent">Canonical answer와 source anchor</a> · <a href="object-and-state-map.html">Object와 state map</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="ownership">
+    <div class="eyebrow">Part 2 · Acquisition과 ownership</div>
+    <h2>성공해 보이는 path에서도 왜 다시 확인하는가?</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-009">
+        <div class="question-meta"><span>예상 challenge</span><span>PGBUF-QB-009</span><span>Lesson 3</span></div>
+        <h3>4. victim이나 hash candidate를 찾은 뒤 BCB identity를 왜 다시 확인하는가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> 첫 lookup은 candidate만 찾습니다. thread가 fix, release, remove, reuse에 필요한 protection을 얻기 전에 다른 thread가 resident mapping을 바꿀 수 있습니다. protection 아래의 identity check는 중요한 transition 시점에도 BCB가 예상한 VPID를 나타낸다는 사실을 입증합니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> 같은 BCB address가 아직 존재하는지를 보는 것이 아닙니다. 고정된 slot이 지금도 같은 identity를 가졌는지 확인하는 것입니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once">Canonical answer와 source anchor</a> · <a href="../lessons/0007-replace-one-frame.html">Lesson 7</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-015">
+        <div class="question-meta"><span>예상 challenge</span><span>PGBUF-QB-015</span><span>Lesson 4</span></div>
+        <h3>5. 여러 thread가 BCB 하나를 공유할 수 있는가? 그렇다면 여러 LRU에 들어가는가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> 호환되는 여러 reader는 같은 BCB를 동시에 fix할 수 있습니다. resident BCB 하나와 global <code>fcnt</code> 하나를 공유하지만, thread마다 별도의 holder entry와 nested release debt를 가집니다. 그렇다고 BCB가 여러 LRU list에 복제되는 것은 아닙니다. LRU membership은 BCB 하나에 대한 replacement-policy상의 위치이지, thread별 ownership이 아닙니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> thread별 holder ledger는 “누가 release해야 하는가?”에 답하고, LRU state는 “replacement가 어디를 탐색해야 하는가?”에 답합니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-015-what-do-fcnt-and-per-thread-holders-tell-you">Canonical answer와 source anchor</a> · <a href="ownership-debt-card.html">Ownership debt card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-013">
+        <div class="question-meta"><span>필수</span><span>PGBUF-QB-013</span><span>Lesson 5</span></div>
+        <h3>6. page latch를 이미 잡았는데도 caller에게 transaction lock이 필요한 이유는?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> page latch는 memory 안의 page image 하나에 대한 짧은 physical access를 직렬화합니다. transaction lock은 transaction conflict와 visibility rule 전반에서 logical database object를 보호합니다. byte를 보호한다고 logical permission이 생기지 않고, logical permission만으로는 byte를 수정하는 동안 보호할 수 없으므로 heap mutation에는 둘 다 필요할 수 있습니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> 두 mechanism은 대상 object, owner, lifetime이 다릅니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-013-how-does-a-page-latch-differ-from-a-transaction-lock">Canonical answer와 source anchor</a> · <a href="../lessons/0005-audit-a-logged-mutation.html">Lesson 5</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="durability">
+    <div class="eyebrow">Part 3 · Mutation과 durability</div>
+    <h2>어느 generation이 durable해졌는가?</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-023">
+        <div class="question-meta"><span>필수</span><span>PGBUF-QB-023</span><span>Lesson 5</span></div>
+        <h3>7. mutation, logging, page LSA, dirty, release의 올바른 순서는?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> caller는 먼저 logical permission을 확보하고 destination을 validation합니다. 그다음 page owner를 통해 mutation하고, recovery record를 append하며, 필요한 경우 page LSA를 전진시킨 뒤 resident generation을 dirty로 표시합니다. 마지막으로 성공 path와 error path 모두에서 모든 watcher를 넘기거나 release합니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> WRITE latch만으로는 recovery 의미, dirty publication, 모든 exit의 cleanup 중 어느 것도 제공되지 않습니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-023-what-is-the-mutation-logging-lsa-dirty-release-order">Canonical answer와 source anchor</a> · <a href="caller-mutation-card.html">Caller mutation card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-028">
+        <div class="question-meta"><span>예상 challenge</span><span>PGBUF-QB-028</span><span>Lesson 6</span></div>
+        <h3>8. generation G와 G+1은 무엇이며, DIRTY와 FLUSHING이 동시에 설정될 수 있는 이유는?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> “generation”은 flush 대상으로 고른 page byte와 LSA snapshot 하나를 추론하기 위한 label이지, 저장된 version number가 아닙니다. flusher는 G를 복사하고 그 작업을 FLUSHING으로 표시합니다. 이후 writer가 resident page를 바꾸면 그 새 byte가 G+1이 되고 DIRTY가 다시 설정됩니다. G가 성공적으로 끝나도 G+1은 dirty로 남을 수 있으므로 <code>FLUSHING</code>과 <code>DIRTY</code>가 겹쳐도 모순이 아닙니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> <code>FLUSHING</code>은 이전에 복사한 image의 작업이 진행 중이라는 뜻이고, <code>DIRTY</code>는 현재 resident image에 아직 propagation debt가 있다는 뜻입니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-028-how-can-flush-succeed-while-the-bcb-remains-dirty">Canonical answer와 source anchor</a> · <a href="flush-generation-card.html">Flush-generation card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-027">
+        <div class="question-meta"><span>필수</span><span>PGBUF-QB-027</span><span>Lesson 6</span></div>
+        <h3>9. WAL-before-data는 어디서 보장되며, flush 성공은 home page의 durability를 뜻하는가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> 복사한 page image를 제출하기 전에 page-buffer flush는 해당 image의 page LSA까지 WAL을 force하도록 log management에 요청합니다. 이후 image는 설정된 DWB 또는 direct data-volume path를 따릅니다. 이 boundary에서의 성공은 DWB에 수용됐거나 direct write가 반환됐다는 뜻일 수 있지만, physical home page가 persistent해졌다고 자동으로 입증하지는 않습니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> WAL은 recovery ordering gate이고, DWB는 page-image propagation을 보호하며, physical durability는 더 아래의 boundary입니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-027-where-is-the-wal-before-data-gate">Canonical answer와 source anchor</a> · <a href="../lessons/0006-flush-one-generation.html">Lesson 6</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="replacement">
+    <div class="eyebrow">Part 4 · Replacement와 progress</div>
+    <h2>eligibility가 먼저, policy는 그다음</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-029">
+        <div class="question-meta"><span>필수</span><span>PGBUF-QB-029</span><span>Lesson 7</span></div>
+        <h3>10. 어떤 조건을 만족해야 BCB를 안전하게 victim으로 삼을 수 있는가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> LRU policy가 candidate를 지목할 수는 있지만, reuse 전에는 protection 아래의 최종 gate를 통과해야 합니다. BCB가 unfixed이고 clean이며 flushing 중이 아니어야 하고, 자격을 막는 waiter나 transient ownership이 없어야 하며, 조건부로 protect할 수 있고, 여전히 예상한 identity에 binding되어 있어야 합니다. <code>fcnt==0</code>이나 LRU 위치만으로는 충분하지 않습니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> policy는 탐색할 위치를 고르고, hard predicate는 파괴적인 reuse를 허가합니다.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-029-what-makes-a-frame-safe-to-victimize">Canonical answer와 source anchor</a> · <a href="replacement-safety-card.html">Replacement-safety card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-040">
+        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-040</span><span>Lesson 12</span></div>
+        <h3>11. 즉시 사용할 free BCB가 없으면 어떻게 되는가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> allocator는 progress protocol에 들어갑니다. invalid 상태나 eligible victim을 찾고, flush 또는 background progress를 유도하며, direct-victim reservation을 기다리거나 소비한 뒤 retry합니다. timeout, interrupt, all-buffers-dirty 조건은 bounded exit를 제공할 수 있습니다. free list가 비었다는 것은 pressure를 뜻할 뿐, deadlock이나 starvation의 증거는 아닙니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> safety는 eligibility로 세우고, liveness는 producer, wakeup, retry, bounded exit에 달려 있습니다.</p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-040-what-happens-when-no-free-bcb-is-immediately-available">Canonical answer와 source anchor</a> · <a href="../lessons/0012-prove-replacement-progress.html">Lesson 12</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="advanced">
+    <div class="eyebrow">Part 5 · Advanced mechanism</div>
+    <h2>일시적인 ownership gap을 건너면 무엇이 달라지는가?</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-035">
+        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-035</span><span>Lesson 11</span></div>
+        <h3>12. ordered fixing은 왜 page를 먼저 release할 수 있으며, 무엇이 stale해지는가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> 여러 page를 충돌하는 순서로 acquire하지 않도록 helper가 watcher를 release하고, 필요한 순서를 정렬한 뒤 refix할 수 있습니다. refix는 identity의 ownership을 복원하지만, release 전에 얻은 관찰 결과까지 복원하지는 않습니다. <code>page_was_unfixed</code>가 gap을 알리면 page-local pointer, slot, offset, 비교 결과, traversal 결정을 다시 계산해야 합니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> refix 뒤 VPID가 같아도 byte나 그 byte에서 도출한 판단까지 같다는 뜻은 아닙니다.</p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-035-why-can-ordered-fixing-release-pages-first">Canonical answer와 source anchor</a> · <a href="ordered-watcher-card.html">Ordered-watcher card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-046">
+        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-046</span><span>Lesson 13</span></div>
+        <h3>13. redo는 page LSA를 어떻게 사용해 같은 record를 두 번 적용하지 않는가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> redo는 recovery page를 WRITE로 fix하고 log record LSA와 page LSA를 비교합니다. page가 이미 그 record를 반영한다면 redo를 skip하고 ownership을 release합니다. 그렇지 않으면 recovery function을 적용하고 page LSA를 전진시킨 뒤, 필요한 경우 page를 dirty로 표시하고 scope cleanup으로 release합니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> 이것은 LSA gate에서 page-image idempotence를 입증하지만, 임의의 callback side effect까지 자동으로 idempotent하다고 입증하지는 않습니다.</p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-046-how-does-redo-use-page-lsa-for-idempotence">Canonical answer와 source anchor</a> · <a href="../lessons/0013-gate-redo-by-page-lsa.html">Lesson 13</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-055">
+        <div class="question-meta"><span>Evidence 원칙</span><span>PGBUF-QB-055</span><span>Lesson 8, 16</span></div>
+        <h3>14. VS-10, VS-11, VS-12 packet은 defect가 실제로 존재한다는 단정인가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> 아닙니다. <code>VS-*</code> packet은 우려 사항에 대한 version-sensitive evidence record이지 판결문이 아닙니다. candidate의 source path, 현재 evidence level, 빠진 proof, status owner를 묶어 둔 것입니다. 더 강한 결론으로 승격하려면 정확한 control flow, 뒷받침된 reachability, 남아 있는 state의 evidence, caller 또는 production impact, target branch 재확인이 필요합니다. packet마다 현재 evidence level이 다를 수 있습니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> “source에서 보이는 early return”은 “도달 가능한 state leak”보다 약하고, 그것도 “입증된 production defect”보다는 약합니다.</p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-055-what-evidence-promotes-an-exceptional-path-candidate">Canonical evidence ladder</a> · <a href="../../unresolved-or-version-sensitive-findings.md">현재 packet status</a> · <a href="../lessons/0008-defend-a-safe-change.html">Lesson 8</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-070">
+        <div class="question-meta"><span>Maintainer 방어</span><span>PGBUF-QB-070</span><span>Lesson 8, 16</span></div>
+        <h3>15. 어떤 test가 page-buffer 변경의 안전성을 실제로 입증하는가?</h3>
+        <details>
+          <summary>model answer 보기</summary>
+          <div class="model-answer">
+            <p><strong>말로 답한다면:</strong> 모든 변경에 통하는 test는 없습니다. risk를 실제로 가로지르는 seam을 골라야 합니다. Interface 변경에는 대표 caller regression, ordering race에는 deterministic interleaving, unwind에는 이름이 명확한 fault injection과 state assertion, replacement policy에는 통제된 pressure, durability에는 crash/recovery evidence가 필요합니다. 그리고 무엇을 test하지 못했는지도 정확히 밝혀야 합니다.</p>
+            <p><strong>이렇게 방어하세요:</strong> 실행이 위험한 transition을 한 번도 지나지 않는다면 반복 횟수가 많아도 더 강한 evidence가 되지 않습니다.</p>
+            <p class="answer-route"><a href="../../questions/maintenance-scenarios-answers.md#pgbuf-qb-070-which-verification-seam-crosses-the-actual-risk">Canonical answer와 source anchor</a> · <a href="change-defense-card.html">Change-defense card</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">리허설 이어가기</div>
+    <h2>팀 논의가 더 깊어지면 전체 Question bank를 사용하세요</h2>
+    <div class="reference-grid">
+      <article class="reference-card"><h3>전체 Question bank</h3><p>Core, Advanced, Maintenance Scenario, Applied route를 제공하며 prompt와 evidence-aware answer를 분리해 두었습니다.</p><a href="../../questions/README.md">Canonical Question bank 열기 →</a></article>
+      <article class="reference-card"><h3>발표 scorecard</h3><p>여섯 단계 발표 rubric, challenge deck, 모르는 부분을 정직하게 다루는 답변, 팀원 feedback receipt를 담았습니다.</p><a href="presentation-rehearsal-card.html">리허설 card 열기 →</a></article>
+    </div>
+  </section>
+
+  <footer class="footer">말로 답하는 리허설을 위해 선별한 페이지입니다. Canonical 설명과 변경 가능한 evidence status는 연결된 Maintainer Guide 문서에서 관리합니다.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0001 — Present the page journey</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0001-present-the-page-journey.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0001</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Your first presentation win</div>
+    <h1>Present the whole Module as one page journey</h1>
+    <p>By the end, you can open a team presentation with a coherent 90-second map—and know exactly which canonical page owns each deeper explanation.</p>
+    <div class="pills"><span class="pill">Boundary</span><span class="pill">Ownership</span><span class="pill">Caller</span><span class="pill">Durability</span><span class="pill">Replacement</span><span class="pill">Evidence</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="boundary">
+        <div class="eyebrow">01 · Begin at the seam</div>
+        <h2>Say what the Module buys the caller</h2>
+        <p class="lede">The page-buffer Module turns a logical page identity plus access intent into temporary, latched access to resident bytes. That is a powerful contract—but it does not finish the caller's logical operation.</p>
+        <p class="big-claim">A successful normal fix connects <code>VPID</code> to a resident BCB/frame, grants the requested page latch, records one ownership debt, and lends a <code>PAGE_PTR</code> until the matching unfix.</p>
+        <div class="callout warn"><strong>Presentation guardrail:</strong> do not say “it gets a page from memory.” That hides identity validation, miss materialization, latch grant, fix accounting, pointer lifetime, and the work still owned by the caller.</div>
+        <p class="source-note">Canonical explanation: <a href="../../learning/01-contract-and-objects.md">Contract and Objects</a>. Pinned source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2260-L2685"><code>page_buffer.c:2260–2685</code></a>, <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>6277–6634</code></a>, and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3062-L3201"><code>3062–3201</code></a>.</p>
+      </section>
+
+      <section class="section" id="objects">
+        <div class="eyebrow">02 · Keep the nouns separate</div>
+        <h2>One “page” is six different things</h2>
+        <img class="diagram" src="../../assets/object-ownership-map.svg" alt="VPID, BCB, frame, PAGE_PTR, global fix count, and per-thread holder ownership map">
+        <p class="caption">Read this as relationships and lifetimes, not as a call flow.</p>
+        <p><code>VPID</code> names the logical page. A reusable BCB records which identity is resident and points to a reusable frame. <code>PAGE_PTR</code> is only a borrowed view into those bytes. Global <code>fcnt</code> and the current thread's holder are two ledgers for outstanding fix debt.</p>
+        <div class="callout"><strong>Four sentences worth memorizing:</strong> fixed is not resident; dirty is not durable; unfix is not flush; eviction is not deallocation.</div>
+      </section>
+
+      <section class="section" id="journey">
+        <div class="eyebrow">03 · The six-part narrative</div>
+        <h2>Follow one logical page, not the source-file order</h2>
+        <div class="journey">
+          <article><span class="step">1</span><h3>Model the objects</h3><p>Separate identity, residency, ownership, concurrency, and durability before discussing algorithms.</p><a href="../../learning/01-contract-and-objects.md">Core 1 →</a></article>
+          <article><span class="step">2</span><h3>Borrow and repay</h3><p>Trace hit or miss preparation into one granted latch, two ownership ledgers, a borrowed pointer, and matching release.</p><a href="../../learning/02-fix-hold-release.md">Core 2 →</a></article>
+          <article><span class="step">3</span><h3>Complete correctness</h3><p>The caller supplies logical locks, validation, log record, page LSA, dirty transition, and all-exit cleanup.</p><a href="../../learning/03-caller-completes-correctness.md">Core 3 →</a></article>
+          <article><span class="step">4</span><h3>Propagate one generation</h3><p>A flusher copies generation G, forces its WAL boundary, writes through DWB/direct I/O, and preserves a concurrent G+1 re-dirty.</p><a href="../../learning/04-flush-one-generation.md">Core 4 →</a></article>
+          <article><span class="step">5</span><h3>Reuse safely</h3><p>Hard eligibility—unfixed, clean/not flushing, waiter-free, and revalidated—comes before LRU and progress policy.</p><a href="../../learning/05-replace-one-frame.md">Core 5 →</a></article>
+          <article><span class="step">6</span><h3>Defend a change</h3><p>Name the Interface family, state owner, invariant, failure unwind, caller impact, and risk-matched verification seam.</p><a href="../../learning/06-maintainer-capstone.md">Core 6 →</a></article>
+        </div>
+      </section>
+
+      <section class="section" id="documents">
+        <div class="eyebrow">04 · Present the document set</div>
+        <h2>Route the audience instead of dumping detail</h2>
+        <table>
+          <thead><tr><th>Audience question</th><th>Document route</th><th>Your transition sentence</th></tr></thead>
+          <tbody>
+            <tr><td>“How does the Module work?”</td><td>Ordered <a href="../../page-buffer-teaching-material.md">Guide entry</a> and Core path</td><td>“Let's follow one page through the contract and its invariants.”</td></tr>
+            <tr><td>“How do I change or debug it?”</td><td><a href="../../playbooks/change-safely.md">Change</a>, <a href="../../playbooks/debug-by-symptom.md">diagnosis</a>, and <a href="../../playbooks/verify-a-change.md">verification</a> playbooks</td><td>“Start from the task, then link back to the owning explanation.”</td></tr>
+            <tr><td>“Where is that proved?”</td><td><a href="../../reference/source-map.md">Source map</a>, <a href="../../reference/invariant-index.md">invariant index</a>, inventory, and uncertainty registry</td><td>“Here is the exact claim level and its pinned evidence.”</td></tr>
+            <tr><td>“What about concurrency, daemons, recovery, or rare APIs?”</td><td>Task-selected <a href="../../advanced/acquisition-concurrency.md">Advanced path</a></td><td>“Core invariants still govern; this page extends them through the specialized mechanism.”</td></tr>
+            <tr><td>“Can I test my model?”</td><td><a href="../../questions/README.md">Question bank</a></td><td>“Predict first, locate the transition, then defend the evidence boundary.”</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="evidence">
+        <div class="eyebrow">05 · Speak evidence-aware English</div>
+        <h2>Label a claim before you strengthen it</h2>
+        <p>The guide uses six claim levels: <strong>Interface contract</strong>, <strong>Verified mechanism</strong>, <strong>Implementation policy</strong>, <strong>Inference</strong>, <strong>Runtime observation</strong>, and <strong>Historical evidence</strong>. This prevents a source-visible branch from becoming a timeless API promise, and prevents one lab run from becoming universal runtime truth.</p>
+        <div class="callout warn"><strong>Example:</strong> victim safety predicates are a Verified mechanism at the pinned revision. Exact LRU zones and scan order are Implementation policy. The existing run's lack of eviction is a Runtime observation—not proof that the victim path cannot execute.</div>
+        <p class="source-note">Evidence vocabulary: <a href="../../CONTEXT.md#evidence-language">CONTEXT.md</a>. Mutable candidate status: <a href="../../unresolved-or-version-sensitive-findings.md">Evidence and uncertainty registry</a>.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">06 · Retrieval practice</div>
+        <h2>Deliver your 90-second opening from memory</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} presentation moves detected." data-complete-message="Good coverage. Now deliver it aloud without reading." data-revisit-label="Revisit:" data-model-label="Model spine:" data-concepts='[{"label":"Module boundary and successful-fix contract","terms":["boundary","contract","vpid","temporary"]},{"label":"six objects and independent state axes","terms":["bcb","frame","page_ptr","fcnt","holder","axis"]},{"label":"fix debt and matching release","terms":["fix","unfix","release","debt"]},{"label":"caller completes correctness","terms":["caller","lock","log","lsa","dirty"]},{"label":"flush generation and replacement eligibility","terms":["generation","wal","flush","eligibility","victim"]},{"label":"evidence-aware route through the documents","terms":["evidence","verified","policy","playbook","advanced","question"]}]'>
+          <h3>Prompt</h3>
+          <p>“What does CUBRID's page-buffer Module do, what journey will this presentation follow, and how should the team use these documents afterward?”</p>
+          <p><strong>Model / recommended structure:</strong> boundary → objects and independent axes → fix/release ownership → caller completes correctness → flush generation → replacement eligibility before policy → task and evidence routes.</p>
+          <p><strong>Your task:</strong> do not copy the model. Explain one consequence of confusing two axes, and label at least one claim by evidence level.</p>
+          <textarea aria-label="Your 90-second presentation opening" placeholder="Close the guide, then write your opening from memory."></textarea>
+          <button type="button" data-check>Check presentation coverage</button>
+          <button type="button" class="secondary" data-reveal>Reveal model spine</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>The automatic check only detects vocabulary. Paste your answer into the chat for source-aware feedback; that teach-back, not lesson exposure, determines the next lesson.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Read the route selector, then only Core page 1</h2>
+        <p>Read <a href="../../page-buffer-teaching-material.md">the Guide entry</a> once for document topology, then study <a href="../../learning/01-contract-and-objects.md">Contract and Objects</a>. For primary-source contact, inspect only the public choices in <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a> today. Detailed latch CAS and miss cleanup are outside this lesson's working-memory budget.</p>
+        <p><a href="../reference/presentation-spine.html">Open the printable presentation-spine card →</a></p>
+        <p><a href="0002-separate-objects-from-state.html">After your teach-back, continue to Lesson 0002 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#boundary">1. Begin at the seam</a>
+      <a href="#objects">2. Keep the nouns separate</a>
+      <a href="#journey">3. Six-part narrative</a>
+      <a href="#documents">4. Route the document set</a>
+      <a href="#evidence">5. Label the evidence</a>
+      <a href="#retrieval">6. Teach it back</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="../reference/presentation-spine.html">Presentation-spine card</a>
+      <a href="0002-separate-objects-from-state.html">Next lesson</a>
+      <a href="../../questions/README.md">Question bank</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Questions are part of the lesson. Ask the teaching agent about any transition or source claim you cannot defend.</footer>
+</main>
+</body>
+</html>

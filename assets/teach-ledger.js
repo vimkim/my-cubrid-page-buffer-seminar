@@ -14,10 +14,11 @@ document.addEventListener ("DOMContentLoaded", function ()
     const holderBOutput = simulator.querySelector ("[data-holder-b]");
     const feedback = simulator.querySelector ("[data-ledger-feedback]");
     const log = simulator.querySelector ("[data-ledger-log]");
+    const messages = simulator.dataset;
 
     function holderLabel (count)
     {
-      return count === 0 ? "removed" : String (count);
+      return count === 0 ? messages.removedLabel : String (count);
     }
 
     function render ()
@@ -47,7 +48,7 @@ document.addEventListener ("DOMContentLoaded", function ()
       holderB = 0;
       eventNumber = 0;
       log.textContent = "";
-      feedback.textContent = "Reset. Predict the six rows before clicking the sequence.";
+      feedback.textContent = messages.resetMessage;
       render ();
     }
 
@@ -67,37 +68,37 @@ document.addEventListener ("DOMContentLoaded", function ()
           {
             holderA++;
             globalCount++;
-            label = "A fix succeeds";
+            label = messages.aFixLabel;
           }
         else if (action === "b-fix")
           {
             holderB++;
             globalCount++;
-            label = "B fix succeeds";
+            label = messages.bFixLabel;
           }
         else if (action === "a-unfix" && holderA > 0)
           {
             holderA--;
             globalCount--;
-            label = "A unfixes once";
+            label = messages.aUnfixLabel;
           }
         else if (action === "b-unfix" && holderB > 0)
           {
             holderB--;
             globalCount--;
-            label = "B unfixes once";
+            label = messages.bUnfixLabel;
           }
         else
           {
-            feedback.textContent = "Rejected: that thread has no successful fix debt to repay.";
+            feedback.textContent = messages.rejectedMessage;
             return;
           }
 
         appendEvent (label);
         render ();
         feedback.textContent = globalCount === holderA + holderB
-          ? "Invariant holds: global fcnt equals A debt plus B debt in this closed example."
-          : "Ledger mismatch: inspect the last event.";
+          ? messages.invariantMessage
+          : messages.mismatchMessage;
       });
     });
 

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0015 — Route a specialized interface</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0015-route-a-specialized-interface.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · Lesson 0015</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced capability · specialized ownership</div>
+    <h1>A <code>PAGE_PTR</code> shape does not prove a fix</h1>
+    <p>By the end, you can reject a convenient-looking helper until you have identified its owner, protection, accounting, permitted operations, and paired cleanup.</p>
+    <div class="pills"><span class="pill">Owner first</span><span class="pill">Pointer location</span><span class="pill">Guard</span><span class="pill">Accounting</span><span class="pill">Paired release</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="test">
+        <div class="eyebrow">01 · The substitution test</div>
+        <h2>Classify the protocol before comparing speed</h2>
+        <p class="lede">Two functions can both return something typed like page bytes while granting completely different rights. Ask these questions before substituting one for another.</p>
+        <ol>
+          <li><strong>Owner:</strong> which subsystem is allowed to use this protocol?</li>
+          <li><strong>Location:</strong> are the bytes in a resident frame, a caller area, or a private copy?</li>
+          <li><strong>Guard:</strong> what prevents conflicting change while the bytes are used?</li>
+          <li><strong>Accounting:</strong> does it create a BCB fix, a per-thread holder, both, or neither?</li>
+          <li><strong>Cleanup:</strong> which exact operation ends the lifetime?</li>
+          <li><strong>Permission:</strong> may the caller mutate, dirty, flush, invalidate, or only inspect?</li>
+        </ol>
+        <p class="big-claim">Interface choice follows the complete owner protocol—not the C type of its return value.</p>
+      </section>
+
+      <section class="section" id="forms">
+        <div class="eyebrow">02 · Three access forms</div>
+        <h2>Only one is the general fix contract</h2>
+        <img class="diagram" src="../../assets/access-forms-compared.svg" alt="Normal fix, simple fix, and heap scan-copy compared by latch, accounting, pointer location, cleanup, and allowed owner">
+        <table>
+          <thead><tr><th>Form</th><th>What success means</th><th>Never infer</th></tr></thead>
+          <tbody>
+            <tr><td>Normal <code>pgbuf_fix()</code></td><td>Resident frame; requested latch granted; global <code>fcnt</code> and current-thread holder recorded.</td><td>That a fix alone supplies logical locking, logging, or validation.</td></tr>
+            <tr><td>Simple fix</td><td>Temporary-file read-only owner; resident bytes; <code>fcnt</code> only; released by <code>pgbuf_simple_unfix()</code>.</td><td>That it is a faster ordinary fix. It has no content latch or holder and cannot coexist safely with a writer.</td></tr>
+            <tr><td>Heap scan-copy</td><td>Heap-owned private snapshot shaped like a <code>PAGE_PTR</code>; the handle owns its lifetime.</td><td>That it is fixed pool ownership. Never pass it to unfix, dirty, flush, or mutation interfaces.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Interface contract and verified mechanism:</strong> simple fix <code>page_buffer.h:270–273</code> and <code>page_buffer.c:2688–2811</code>; scan-copy storage <code>page_buffer.c:908–981</code> and heap ownership <code>heap_file.c:6439–6465,6787–6829</code>.</p>
+      </section>
+
+      <section class="section" id="area">
+        <div class="eyebrow">03 · Area-copy hazards</div>
+        <h2>A parameter name is not a supported mode</h2>
+        <p><code>VS-02</code> and <code>VS-03</code> are uncertainty-registry identifiers for pinned source drift. They are not runtime error codes.</p>
+        <table>
+          <thead><tr><th>Helper</th><th>Pinned executable path</th><th>Review treatment</th></tr></thead>
+          <tbody>
+            <tr><td><code>pgbuf_copy_to_area()</code><br><code>VS-02</code></td><td>On a miss, <code>do_fetch=true</code> fixes READ, copies, and unfixes. With <code>false</code>, the direct-I/O body is normally compiled out, so the unchanged caller area can be returned.</td><td>Existing <code>PAGE_AREA</code> owner only; do not generalize it into a reliable page-read abstraction.</td></tr>
+            <tr><td><code>pgbuf_copy_from_area()</code><br><code>VS-03</code></td><td>In the normal build, <code>do_fetch</code> does not select direct I/O. The function fixes <code>NEW_PAGE</code> WRITE, sets page type/TDE, copies, skips logging, dirties, and frees.</td><td>Existing owner only; never use it as a WAL-aware general page writer.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified at the pinned revision:</strong> <code>page_buffer.c:4701–4912</code>. The uncertainty registry owns the current status; a newer branch must be rechecked.</p>
+      </section>
+
+      <section class="section" id="signals">
+        <div class="eyebrow">04 · Observation versus authority</div>
+        <h2>Approximate signals may suggest work; they cannot permit it</h2>
+        <p>Waiter queries, SHOW rows, and statistics answer diagnostic or scheduling questions with path-specific synchronization. For example, <code>pgbuf_peek_stats()</code> intentionally copies BCB flags without locking each BCB, so concurrent changes can produce an approximate snapshot.</p>
+        <div class="callout"><strong>Safe use:</strong> “This count suggests replacement pressure; inspect the protected path.”<br><strong>Unsafe use:</strong> “The count is zero, therefore this page may be deallocated or reused.”</div>
+        <p><code>VS-04</code> routes prototype-name drift in <code>pgbuf_peek_stats()</code>; <code>VS-05</code> routes approximate snapshot semantics. Neither value replaces the mutex, latch, identity recheck, or owner protocol that authorizes a state transition.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:14748–14847,17323–17530</code>.</p>
+      </section>
+
+      <section class="section" id="unavailable">
+        <div class="eyebrow">05 · Dead or incomplete interface</div>
+        <h2>Declared does not mean available</h2>
+        <p>At the pinned revision, release headers macro-map and declare <code>pgbuf_fix_without_validation_release()</code>, but a repository-wide search locates no definition or caller. <code>VS-01</code> records that verified source fact.</p>
+        <p class="callout warn">Do not present it as a faster bypass. Calling it would fail at link time unless the target branch supplies a definition and a complete, tested owner protocol.</p>
+        <p class="source-note"><strong>Interface inventory:</strong> declaration at <code>page_buffer.h:320–326</code>; availability status belongs to <code>VS-01</code>.</p>
+      </section>
+
+      <section class="section" id="route">
+        <div class="eyebrow">06 · Owner-family routing</div>
+        <h2>Keep narrow hooks with the subsystem that supplies their missing knowledge</h2>
+        <table>
+          <thead><tr><th>Owner</th><th>Specialized family</th><th>Question before reuse</th></tr></thead>
+          <tbody>
+            <tr><td>Recovery</td><td>Recovery callbacks, fetch modes, LSA/TDE/type restoration</td><td>Does this caller own allocation knowledge and the redo/undo idempotence gate?</td></tr>
+            <tr><td>Invalidation/deallocation</td><td>Invalidate, callbacks, raw-I/O coherence</td><td>Have logical allocation state and resident-cache coherence been kept distinct?</td></tr>
+            <tr><td>Daemon</td><td>Maintenance, flush, post-flush, control/stats</td><td>Is lifecycle gating intact, and is cadence treated as policy?</td></tr>
+            <tr><td>Diagnostic</td><td>SHOW, counters, dumps, validation, waiter queries</td><td>What exact increment site and synchronization give this value meaning?</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>Reject four unsafe substitutions</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} presentation moves detected." data-complete-message="Good coverage. Now deliver it aloud without reading." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="simple fix belongs only to the temporary-file read-only protocol, records fcnt without a latch or holder, and pairs with simple_unfix -> scan-copy bytes are a heap-owned private snapshot, not pool ownership, so free the handle and never dirty or unfix the pointer -> copy_from_area is an existing PAGE_AREA owner protocol whose normal path ignores do_fetch, skips logging, dirties, and frees, so it is not a WAL-aware writer -> unlocked statistics and advisory waiter snapshots form hypotheses but never authorize deallocation, invalidation, mutation, or victim selection -> VS-01 is a declared but undefined release interface at the pinned revision, not an optimization choice." data-concepts='[{"label":"simple-fix owner, missing guards, and paired release","terms":["temporary","read-only","latch","holder","simple_unfix"]},{"label":"scan-copy location and handle lifetime","terms":["private","snapshot","handle","never","unfix"]},{"label":"area-copy executable path and logging boundary","terms":["copy_from_area","do_fetch","skip","logging","wal"]},{"label":"observation cannot authorize state change","terms":["approximate","diagnostic","authorize","dealloc","invalidate"]},{"label":"declared but unavailable interface","terms":["vs-01","undefined","link","unavailable"]}]'>
+          <h3>Prompt</h3>
+          <p>A review proposes four shortcuts: use simple fix where a temporary page may be written; mutate and unfix a heap scan-copy; use <code>copy_from_area(..., false)</code> for a logged update; and deallocate when approximate statistics show no users. The patch also calls <code>pgbuf_fix_without_validation()</code> in a release build.</p>
+          <p><strong>Your task:</strong> reject or constrain each choice by naming its owner, byte location, guard, accounting, paired cleanup, permitted operations, and evidence status.</p>
+          <textarea aria-label="Your specialized-interface review" placeholder="For each proposed shortcut: owner → location → guard → accounting → cleanup → permission → evidence status."></textarea>
+          <button type="button" data-check>Check protocol coverage</button>
+          <button type="button" class="secondary" data-reveal>Reveal model route</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>Paste your answer into the chat. I will check whether you reason from ownership and guards rather than names or pointer types.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Read by owner protocol, not by declaration order</h2>
+        <p>Use <a href="../../advanced/specialized-interfaces.md">Specialized Interfaces and Approximate Observability</a> as the Canonical explanation. Then inspect pinned <code>page_buffer.c:2688–2811,4701–4912,14748–14847</code> and ask which assumptions each helper leaves to its owner.</p>
+        <p><a href="../reference/specialized-interface-card.html">Open the printable specialized-interface card →</a></p>
+        <p><a href="0016-close-a-failure-proof.html">Continue to Lesson 0016 →</a></p>
+        <p><a href="0014-preserve-lifecycle-order.html">← Return to Lesson 0014</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#test">1. Substitution test</a>
+      <a href="#forms">2. Three access forms</a>
+      <a href="#area">3. Area-copy hazards</a>
+      <a href="#signals">4. Observation boundary</a>
+      <a href="#unavailable">5. Unavailable interface</a>
+      <a href="#route">6. Owner families</a>
+      <a href="#retrieval">7. Review shortcuts</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="../reference/specialized-interface-card.html">Specialized-interface card</a>
+      <a href="../../advanced/specialized-interfaces.md">Canonical Advanced page</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Ask the teaching agent whenever a helper's pointer shape, synchronization, owner, cleanup, or evidence status is unclear.</footer>
+</main>
+</body>
+</html>

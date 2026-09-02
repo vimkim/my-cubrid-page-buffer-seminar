@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID page-buffer object and state map</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/object-and-state-map.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print for source review</div>
+    <h1>Object, lifetime, and state map</h1>
+    <p>Use precise nouns first, then describe the current BCB/frame as a four-coordinate tuple.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Six objects</span><span class="pill">Four axes</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Ownership sketch</h2>
+      <img class="diagram" src="../../assets/object-ownership-map.svg" alt="Six page-buffer objects and their ownership relationships">
+    </article>
+    <article class="reference-card">
+      <h2>Objects and lifetimes</h2>
+      <table>
+        <tbody>
+          <tr><th><code>VPID</code></th><td>Logical identity value; may exist without residency.</td></tr>
+          <tr><th>BCB</th><td>Reusable pool control; current identity can change.</td></tr>
+          <tr><th>Frame</th><td>Reusable pool bytes; contents follow resident generation.</td></tr>
+          <tr><th><code>PAGE_PTR</code></th><td>Borrowed view; use ends at matching unfix.</td></tr>
+          <tr><th>Global <code>fcnt</code></th><td>All granted fix debt for one BCB.</td></tr>
+          <tr><th>Thread holder</th><td>This thread's BCB debt and nested <code>fix_count</code>.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Four-coordinate worksheet</h2>
+      <ol>
+        <li><strong>Identity / residency:</strong> which VPID does this BCB/frame represent?</li>
+        <li><strong>Ownership:</strong> which fixes prevent ordinary reuse?</li>
+        <li><strong>Concurrency:</strong> who may inspect or mutate bytes now?</li>
+        <li><strong>Durability / propagation:</strong> which generation needs propagation, and what recovery boundary exists?</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Three lifetimes</h2>
+      <ul>
+        <li><strong>Pool:</strong> BCB and frame allocation.</li>
+        <li><strong>Resident generation:</strong> current VPID-to-frame meaning.</li>
+        <li><strong>Borrow:</strong> one successful fix through matching unfix.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>Four anti-synonyms</h2>
+      <ul>
+        <li>Fixed is not resident.</li>
+        <li>DIRTY is not durable.</li>
+        <li>Unfix is not flush.</li>
+        <li>Eviction is not deallocation.</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>Source anchors</h2>
+      <table>
+        <thead><tr><th>Claim</th><th>Pinned source</th><th>Evidence level</th></tr></thead>
+        <tbody>
+          <tr><td>Holder, global <code>fcnt</code>, BCB, frame linkage</td><td><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a></td><td>Verified mechanism</td></tr>
+          <tr><td>One-to-one BCB/frame table pairing</td><td><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>page_buffer.c:5559–5660</code></a></td><td>Verified mechanism</td></tr>
+          <tr><td>Successful normal-fix borrowed view and release debt</td><td><a href="../../learning/01-contract-and-objects.md">Canonical Core explanation</a></td><td>Interface contract</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../learning/01-contract-and-objects.md">Contract and Objects</a>. Ask the teaching agent when a tuple coordinate is ambiguous.</footer>
+</main>
+</body>
+</html>

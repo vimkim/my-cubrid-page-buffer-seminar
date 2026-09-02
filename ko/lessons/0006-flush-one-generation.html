@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0006 — generation 하나 flush하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0006-flush-one-generation.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0006</span><a href="../index.html">강의 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Core capability · propagation</div>
+    <h1>다음 generation을 지우지 않고 한 generation flush하기</h1>
+    <p>이 lesson을 마치면 writer가 더 새로운 resident generation을 만드는 동안, 복사된 dirty generation이 WAL과 I/O를 통과하는 과정을 추적할 수 있습니다.</p>
+    <div class="pills"><span class="pill">Page LSA</span><span class="pill">Oldest-unflush LSA</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">WAL gate</span><span class="pill">Re-dirty</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="generation-meaning">
+        <div class="eyebrow">00 · 표기법 이해하기</div>
+        <h2><code>G</code>는 복사된 page image에 붙인 이름이며 stored counter가 아닙니다</h2>
+        <p class="big-claim"><strong>generation</strong>은 flush가 하나의 단위로 다루는 일관된 page bytes version에 붙인 reasoning label입니다.</p>
+        <p>flush가 시작되면 resident page를 복사합니다. 이 고정된 copy를 <strong>G</strong>라고 부르겠습니다. G를 쓰는 동안 writer가 아직 resident인 page를 다시 변경할 수 있습니다. 이렇게 더 새로워진 resident bytes를 <strong>G+1</strong>이라고 부릅니다. source에는 <code>generation</code>, <code>G</code>, <code>G+1</code>이라는 field가 없습니다. 같은 logical page의 두 version을 머릿속에서 분리하려고 쓰는 label입니다.</p>
+        <table>
+          <thead><tr><th>대상</th><th>무엇인가</th><th>예</th></tr></thead>
+          <tbody>
+            <tr><td>Generation G</td><td>현재 flush 중인 page-image copy의 conceptual identity.</td><td>복사된 bytes에는 LSA 140까지의 logged change가 들어 있습니다.</td></tr>
+            <tr><td>Generation G+1</td><td>G를 복사한 뒤 변경된 resident bytes의 conceptual identity.</td><td>writer가 LSA 170에서 더 나중 change를 적용합니다.</td></tr>
+            <tr><td>Page LSA</td><td>page state에 실제로 저장되는 log address로, 해당 bytes에 포함된 가장 최근 logged change를 나타냅니다.</td><td>G는 140, G+1은 170을 가집니다.</td></tr>
+          </tbody>
+        </table>
+        <p><strong>generation과 LSA가 다른 이유:</strong> 여러 logged modification이 page LSA를 100에서 140으로 옮겨도 아직 복사되지 않은 같은 resident generation에 속할 수 있습니다. 반대로 새 log address로 표현되지 않는 change라도 copy 이후의 새 generation을 만들 수 있습니다. Generation은 page-image version을 구분하고, LSA는 recovery history의 위치를 가리킵니다.</p>
+
+        <h3>DIRTY와 FLUSHING은 서로 독립적인 yes/no 질문입니다</h3>
+        <table>
+          <thead><tr><th>DIRTY</th><th>FLUSHING</th><th>의미</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>propagation을 기다리는 resident change도, in flight 상태인 copied image도 없습니다.</td></tr>
+            <tr><td>1</td><td>0</td><td>resident page에 propagation debt가 있어 이후 flush가 필요합니다.</td></tr>
+            <tr><td>0</td><td>1</td><td>copy G가 in flight이고, copy 뒤 resident page는 바뀌지 않았습니다.</td></tr>
+            <tr><td>1</td><td>1</td><td>copy G가 in flight인 상태와 resident page의 재변경이 <em>동시에</em> 존재합니다. G+1도 나중에 flush해야 합니다.</td></tr>
+          </tbody>
+        </table>
+        <p><strong>DIRTY는 to-do flag입니다.</strong> 현재 resident bytes에 완료된 propagation으로 아직 처리하지 못한 change가 있다는 뜻입니다. <strong>FLUSHING은 in-progress flag입니다.</strong> 앞서 capture한 copy가 아직 flush path를 지나고 있다는 뜻입니다. FLUSHING이 resident page를 고정시키는 것은 아닙니다.</p>
+        <div class="callout"><strong>FLUSHING을 설정할 때 DIRTY를 지우는 이유는?</strong> G의 기존 debt는 in-flight operation으로 옮겨 갔습니다. DIRTY를 지우면 깨끗한 signal slot이 생깁니다. writer가 resident page를 바꾸면 DIRTY를 다시 설정합니다. 그러면 <code>DIRTY + FLUSHING</code>은 “이전 copy는 in flight이고, 더 새로운 resident work가 대기 중”이라는 뜻이 됩니다.</div>
+      </section>
+
+      <section class="section" id="moments">
+        <div class="eyebrow">01 · boundary에 이름 붙이기</div>
+        <h2>“썼다”라는 말 뒤에는 서로 다른 네 moment가 숨어 있습니다</h2>
+        <img class="diagram" src="../../assets/durability-chain.svg" alt="write permission부터 page propagation까지 서로 다른 네 boundary">
+        <p class="caption">더 강한 evidence 없이 claim을 이 chain의 오른쪽으로 옮기지 마세요.</p>
+        <table>
+          <thead><tr><th>Moment</th><th>새로 성립하는 것</th><th>따라오지 않는 것</th></tr></thead>
+          <tbody>
+            <tr><td>Write permission</td><td>WRITE latch가 exclusive resident-byte mutation을 허용합니다.</td><td>Recoverability 또는 persistence.</td></tr>
+            <tr><td>Recoverability</td><td>적절한 log evidence가 존재하고 page LSA가 logged image를 반영합니다.</td><td>Commit WAL 또는 home page가 durable하다는 사실.</td></tr>
+            <tr><td>Transaction durability</td><td>Commit WAL이 durability boundary에 도달했습니다.</td><td>변경된 모든 page가 home location에 있다는 사실.</td></tr>
+            <tr><td>Page propagation</td><td>복사된 generation이 설정된 DWB/direct-write boundary에 도달했습니다.</td><td>동시에 변경된 resident generation이 clean하다는 사실.</td></tr>
+          </tbody>
+        </table>
+        <p class="big-claim">flush가 완료하는 것은 복사된 generation이지, “영원히 변하지 않는 page”가 아닙니다.</p>
+      </section>
+
+      <section class="section" id="lsas">
+        <div class="eyebrow">02 · 두 LSA 질문</div>
+        <h2>포함된 최신 change와 propagate하지 않은 가장 오래된 change는 서로 다른 coordinate입니다</h2>
+        <img class="diagram" src="../../assets/two-lsa-timeline.svg" alt="두 dirty generation의 page LSA와 oldest-unflush LSA timeline">
+        <p class="caption">복사된 generation G는 140/100을, 이후 resident generation G+1은 170/170을 가집니다.</p>
+        <table>
+          <thead><tr><th>Coordinate</th><th>답하는 질문</th><th>Flush에서의 용도</th></tr></thead>
+          <tbody>
+            <tr><td>Page LSA</td><td>이 bytes에 포함된 가장 최근 logged change는 무엇인가?</td><td>logged non-temporary image라면 page-image를 submit하기 전에 복사된 값까지 WAL을 force합니다.</td></tr>
+            <tr><td><code>oldest_unflush_lsa</code></td><td>이 generation에서 아직 propagate하지 않은 가장 오래된 logged change는 무엇인가?</td><td>checkpoint lower-bound material을 복사된 generation과 함께 운반합니다.</td></tr>
+          </tbody>
+        </table>
+        <ol>
+          <li>Clean image: page LSA 80.</li>
+          <li>100에서 Log A: page LSA 100, DIRTY, oldest-unflush 100.</li>
+          <li>140에서 Log B: page LSA 140, oldest-unflush는 100 유지.</li>
+          <li>Flush G가 page LSA 140과 oldest-unflush 100을 snapshot한 뒤 resident lower bound를 지웁니다.</li>
+          <li>G가 in flight인 동안 170에서 Log C: resident G+1은 page LSA 170, DIRTY, oldest-unflush 170.</li>
+        </ol>
+      </section>
+
+      <section class="section" id="generation">
+        <div class="eyebrow">03 · Ordinary success path</div>
+        <h2>BCB만 보지 말고 generation을 따라갑니다</h2>
+        <ol>
+          <li><strong>Validate identity:</strong> 보호된 BCB가 여전히 의도한 page를 가리키는지 확인합니다.</li>
+          <li><strong>Open an in-flight generation:</strong> FLUSHING을 설정하고 이전 DIRTY bit를 지워 이후 mutation이 새 DIRTY generation을 publish할 수 있게 합니다.</li>
+          <li><strong>Capture stable bytes:</strong> resident image를 복사합니다. TDE를 위해 copy를 transform하고, 설정되어 있다면 DWB slot을 reserve/copy합니다.</li>
+          <li><strong>Capture recovery coordinates:</strong> page LSA와 oldest-unflush LSA를 복사하고 resident lower bound를 지웁니다.</li>
+          <li><strong>Release BCB protection:</strong> I/O 동안 resident state lock을 계속 잡고 있을 필요는 없습니다.</li>
+          <li><strong>Gate by WAL:</strong> logged non-temporary image라면 복사된 page LSA까지 WAL을 force합니다.</li>
+          <li><strong>Submit the copied image:</strong> 설정된 DWB 또는 direct data-volume write path를 사용합니다.</li>
+          <li><strong>Complete under protection:</strong> FLUSHING을 지우고 waiter를 깨우거나, pressure 상황에서 필요한 post-flush handoff를 수행합니다.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> ordinary path는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>에 있습니다. 설정된 endpoint를 정확히 표현해야 합니다. DWB acceptance와 이후 home-page persistence는 같은 observation이 아닙니다.</p>
+      </section>
+
+      <section class="section" id="redirty">
+        <div class="eyebrow">04 · Concurrent re-dirty</div>
+        <h2>성공은 G의 in-flight marker만 지우며 G+1의 dirty debt는 지우지 않습니다</h2>
+        <table>
+          <thead><tr><th>Moment</th><th>Copied G</th><th>Resident G+1</th><th>BCB flag</th></tr></thead>
+          <tbody>
+            <tr><td>Flush 전</td><td>capture 전</td><td>LSA 140; oldest 100</td><td>DIRTY</td></tr>
+            <tr><td>G를 연 뒤</td><td>LSA 140; oldest 100</td><td>Lower bound 지움</td><td>FLUSHING; 이전 DIRTY 지움</td></tr>
+            <tr><td>170에서 Log C</td><td>여전히 140/100</td><td>LSA 170; oldest 170</td><td>FLUSHING + DIRTY</td></tr>
+            <tr><td>G 성공</td><td>설정된 boundary에서 propagation 완료</td><td>여전히 170/170</td><td>DIRTY; FLUSHING 지움</td></tr>
+          </tbody>
+        </table>
+        <p>이 flag algebra는 의도적으로 설계되었습니다. <code>pgbuf_bcb_mark_is_flushing</code>은 capture한 generation의 DIRTY state를 지우고, <code>pgbuf_bcb_mark_was_flushed</code>는 FLUSHING만 지웁니다. 더 새로운 DIRTY publication은 completion 뒤에도 남습니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16077-L16126"><code>page_buffer.c:16077–16126</code></a>의 flag helper를 비교하세요.</p>
+      </section>
+
+      <section class="section" id="failure">
+        <div class="eyebrow">05 · Ordinary failure</div>
+        <h2>Rollback은 retry할 수 있는 generation state를 복구합니다</h2>
+        <p>일반 post-release path에서 DWB addition이나 direct I/O가 실패하면 code는 BCB protection을 다시 얻고 FLUSHING을 지웁니다. capture한 generation이 dirty였다면 DIRTY를 복구하고, 복사해 둔 oldest-unflush LSA도 복구한 뒤 waiter를 깨우고 failure를 반환합니다.</p>
+        <div class="callout"><strong>Review invariant:</strong> ordinary failure 뒤에도 capture된 propagation debt를 발견해 retry할 수 있어야 하며, stale FLUSHING state 뒤에 waiter가 갇혀서는 안 됩니다.</div>
+        <p>동시에 G+1이 있다면 복구된 state를 단순화하기 전에 두 generation과 실제 interleaving을 모두 설명하세요. scalar flag 하나의 이름 때문에 두 logical debt를 지워 버리면 안 됩니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> ordinary unwind는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>에 있습니다.</p>
+      </section>
+
+      <section class="section" id="evidence">
+        <div class="eyebrow">06 · Evidence boundary</div>
+        <h2>source와 experiment가 무엇을 입증하는지 정확히 말합니다</h2>
+        <table>
+          <thead><tr><th>Label</th><th>안전한 claim</th><th>위험한 확대 해석</th></tr></thead>
+          <tbody>
+            <tr><td>Verified mechanism</td><td>pinned ordinary source path는 설명한 순서대로 snapshot, WAL gate, submission, completion, rollback을 수행합니다.</td><td>모든 early failure가 ordinary rollback을 따른다고 단정하는 것.</td></tr>
+            <tr><td>Runtime observation</td><td>기록된 experiment에서 예상한 mutation/commit state와 accepted synchronous backup boundary를 관찰했습니다.</td><td>per-page WAL-before-data, DWB completion, crash recovery 또는 page-write count까지 증명했다고 보는 것.</td></tr>
+            <tr><td>Open finding · VS-12</td><td>source inspection은 ordinary rollback 이전의 TDE/DWB preparation return에 우려를 제기합니다.</td><td>실행 가능한 fault injection 없이 이 우려를 현재 production defect라고 부르는 것.</td></tr>
+          </tbody>
+        </table>
+        <p>TDE는 복사된 image를 바꾸며 resident plaintext의 ownership을 바꾸지 않습니다. DWB는 page-image integrity를 보호하지만 WAL이나 recovery를 대체하지 않습니다. “page-buffer flush path가 설정된 DWB/direct-write boundary에서 완료되었다”라고 표현하세요.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>“page가 clean이 되었다”라고 말하지 않고 G와 G+1을 추적합니다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="flush 전 resident generation은 page LSA 140, oldest-unflush LSA 100, DIRTY 상태임 -> G를 열면 FLUSHING을 설정하고 140/100을 capture하며 이전 DIRTY와 resident lower bound를 지움 -> G가 FLUSHING인 동안 170을 logging하면 page LSA 170, oldest-unflush LSA 170, DIRTY인 resident G+1이 생김 -> G가 성공하면 FLUSHING만 지우므로 G+1은 170/170에서 DIRTY로 남음 -> ordinary failure는 retry 가능한 captured-generation state를 복구하고 waiter를 깨우지만 concurrent G+1 interleaving은 명시적으로 분석해야 함 -> source는 ordinary mechanism을 증명하고 기존 runtime observation은 이 interleaving을 증명하지 않음." data-concepts='[{"label":"pre-flush LSA state 확인","terms":["140","100","dirty"]},{"label":"capture된 generation G","terms":["flushing","capture","snapshot","140","100"]},{"label":"concurrent generation G+1 처리","terms":["170","newer","g+1","redirty","re-dirty"]},{"label":"새 DIRTY를 보존하는 success","terms":["clear","flushing","remain","dirty"]},{"label":"retry 가능한 ordinary failure","terms":["failure","restore","retry","wake"]},{"label":"evidence boundary 구분","terms":["source","runtime","observation","open","inference"]}]'>
+          <h3>문제</h3>
+          <p>clean page가 LSA 80에서 시작합니다. 100과 140의 log가 page를 dirty로 만듭니다. Flush generation G가 시작되고, G가 in flight인 동안 writer가 170에서 log를 남깁니다. 다음 시점의 page LSA, oldest-unflush LSA, DIRTY, FLUSHING을 예측하세요.</p>
+          <ol>
+            <li>G가 시작되기 직전,</li>
+            <li>G가 image를 capture한 뒤,</li>
+            <li>170 mutation 뒤,</li>
+            <li>G가 성공한 뒤,</li>
+            <li>ordinary failure라면 대신 무엇을 보존해야 하는지.</li>
+          </ol>
+          <p><strong>할 일:</strong> 어느 state가 G에 속하고 어느 state가 G+1에 속하는지 구분하고, 각 claim에 source, runtime observation, inference 또는 open finding label을 붙이세요.</p>
+          <textarea aria-label="flush generation trace 답안" placeholder="timeline을 닫고 두 generation과 evidence boundary를 기억만으로 다시 구성하세요."></textarea>
+          <button type="button" data-check>generation 포함 여부 확인</button>
+          <button type="button" class="secondary" data-reveal>model trace 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답을 chat에 붙여 넣으세요. mastery를 기록하기 전에 generation identity, flag algebra, LSA 목적, persistence 표현, evidence strength를 확인합니다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">필수 읽기</div>
+        <h2>ordinary flush attempt 하나를 annotate합니다</h2>
+        <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>를 읽으세요. identity protection, copied bytes, copied LSA, WAL gate, I/O boundary, success cleanup, ordinary failure reconstruction을 표시합니다. 그런 다음 <code>transaction/log_page_buffer.c:4150–4189</code>의 WAL gate를 확인하세요.</p>
+        <p><a href="../reference/flush-generation-card.html">인쇄용 flush-generation card 열기 →</a></p>
+        <p><a href="0005-audit-a-logged-mutation.html">← Lesson 0005로 돌아가기</a> · <a href="0007-replace-one-frame.html">Lesson 0007로 계속 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="강의 목차">
+      <strong>강의 지도</strong>
+      <a href="#generation-meaning">0. G, DIRTY, FLUSHING</a>
+      <a href="#moments">1. 네 moment</a>
+      <a href="#lsas">2. 두 LSA</a>
+      <a href="#generation">3. Ordinary path</a>
+      <a href="#redirty">4. Concurrent re-dirty</a>
+      <a href="#failure">5. Failure unwind</a>
+      <a href="#evidence">6. Evidence boundary</a>
+      <a href="#retrieval">7. trace-back</a>
+      <a href="#primary-reading">필수 읽기</a>
+      <hr>
+      <a href="../reference/flush-generation-card.html">Flush-generation 카드</a>
+      <a href="../../learning/04-flush-one-generation.md">Canonical Core 문서</a>
+      <a href="0007-replace-one-frame.html">다음 lesson →</a>
+      <a href="../index.html">강의 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">generation, flag transition, LSA 역할, persistence boundary, evidence label이 불분명하면 언제든 teaching agent에게 물어보세요.</footer>
+</main>
+</body>
+</html>

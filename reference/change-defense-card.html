@@ -2,93 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID change-defense reference card</title>
-  <link rel="stylesheet" href="../assets/teach-course.css">
+  <meta http-equiv="refresh" content="0; url=../en/reference/change-defense-card.html">
+  <link rel="canonical" href="../en/reference/change-defense-card.html">
+  <title>Page moved · CUBRID page buffer course</title>
 </head>
-<body>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
-  <header class="hero">
-    <div class="eyebrow">Print for change review</div>
-    <h1>Evidence-bounded change defense</h1>
-    <p>Trace precisely, test at the risk boundary, and stop every conclusion at its proof level.</p>
-    <div class="pills"><span class="pill">Pinned source</span><span class="pill">Fault seam</span><span class="pill">Postcondition</span><span class="pill">Uncertainty</span></div>
-  </header>
-
-  <section class="reference-grid">
-    <article class="reference-card full">
-      <h2>Decode the labels</h2>
-      <table>
-        <thead><tr><th>Label</th><th>Meaning</th><th>Not</th></tr></thead>
-        <tbody>
-          <tr><td><code>VS-*</code></td><td>Stable ID in the guide's unresolved/version-sensitive findings registry.</td><td>A source symbol or error code.</td></tr>
-          <tr><td>Case packet</td><td>One bounded review exercise combining source ranges, registry entry, worksheet, and model answer.</td><td>A network packet or page-buffer object.</td></tr>
-          <tr><td>Candidate</td><td>Verified source concern whose reachability and impact remain unproven.</td><td>A verified production defect.</td></tr>
-        </tbody>
-      </table>
-    </article>
-    <article class="reference-card full">
-      <h2>Five proof levels</h2>
-      <table>
-        <thead><tr><th>Level</th><th>Prove</th><th>Required evidence</th></tr></thead>
-        <tbody>
-          <tr><td>1</td><td>Source-visible control flow</td><td>Pinned symbols, ranges, transitions, callees, exits</td></tr>
-          <tr><td>2</td><td>Reachability</td><td>Controlled injection/schedule on supported target</td></tr>
-          <tr><td>3</td><td>Surviving state</td><td>Post-return inspection after all cleanup</td></tr>
-          <tr><td>4</td><td>Production impact</td><td>Reproduced consumer-visible consequence</td></tr>
-          <tr><td>5</td><td>Current-branch status</td><td>Re-trace and rerun at exact branch commit</td></tr>
-        </tbody>
-      </table>
-    </article>
-    <article class="reference-card full">
-      <h2>Nine-field change-impact plan</h2>
-      <table>
-        <tbody>
-          <tr><th>Behavior</th><td>Observable behavior that may change</td><th>Owners</th><td>Thread, Module, caller, consumer</td></tr>
-          <tr><th>State</th><td>Fields, flags, counters, pointers, queues, LSAs</td><th>Guards</th><td>Latch, mutex, atomic order, logical lock, precondition</td></tr>
-          <tr><th>Invariants</th><td>Required before/after conditions</td><th>Unwind</th><td>Restore, transfer, consume, wake, retry</td></tr>
-          <tr><th>Caller impact</th><td>Return, ownership, timing, retry, contract</td><th>Evidence seam</th><td>Source limit and risk-matched probe</td></tr>
-          <tr><th>Remaining uncertainty</th><td colspan="3">Inference, version sensitivity, unreachable condition, or missing observation</td></tr>
-        </tbody>
-      </table>
-    </article>
-    <article class="reference-card full">
-      <h2>Shared exceptional-return shape</h2>
-      <img class="diagram" src="../assets/exceptional-return-gaps.svg" alt="VS-11 and VS-12 exceptional-return source shapes">
-    </article>
-    <article class="reference-card">
-      <h2><code>VS-11</code> probe ledger</h2>
-      <ul>
-        <li>Inject holder extension failure separately on normal hit, lock-free hit, and awakened waiter.</li>
-        <li>Inspect atomic latch tuple, global <code>fcnt</code>, per-thread holder, waiter grant, return, and later release.</li>
-        <li>Registry status: Candidate.</li>
-      </ul>
-    </article>
-    <article class="reference-card">
-      <h2><code>VS-12</code> probe ledger</h2>
-      <ul>
-        <li>Inject TDE-copy and DWB-slot failure separately.</li>
-        <li>Inspect DIRTY, FLUSHING, oldest-unflush LSA, waiters, retry, victim eligibility, and restart.</li>
-        <li>Test concurrent re-dirty separately.</li>
-        <li>Registry status: Candidate.</li>
-      </ul>
-    </article>
-    <article class="reference-card full">
-      <h2>Review language</h2>
-      <table>
-        <thead><tr><th>Prefer</th><th>Avoid until proven</th></tr></thead>
-        <tbody>
-          <tr><td>“At pinned commit X, source shows…”</td><td>“CUBRID currently always…”</td></tr>
-          <tr><td>“This supports a control-flow concern.”</td><td>“This proves a production defect.”</td></tr>
-          <tr><td>“Inject at this callee and inspect these postconditions.”</td><td>“Add cleanup here; it looks missing.”</td></tr>
-          <tr><td>“The uncertainty registry owns candidate status.”</td><td>Copying mutable defect status into multiple pages</td></tr>
-        </tbody>
-      </table>
-    </article>
-  </section>
-
-  <footer class="footer">Canonical exercise: <a href="../learning/06-maintainer-capstone.md">Maintainer Capstone</a>. A paper argument becomes readiness evidence only after a risk-matched probe and maintainer review.</footer>
-</main>
+<body data-legacy-redirect>
+  <p>This course page moved to <a href="../en/reference/change-defense-card.html">../en/reference/change-defense-card.html</a>.</p>
 </body>
 </html>

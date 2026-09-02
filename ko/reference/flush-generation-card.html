@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID flush generation 참고 카드</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/flush-generation-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 빠른 참고</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">flush review용 인쇄 카드</div>
+    <h1>One-generation flush 카드</h1>
+    <p>복사한 generation G와 그 뒤에 생긴 resident generation G+1을 서로 독립적으로 추적합니다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">WAL before data</span><span class="pill">Retryable failure</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>symbol부터 정확히 읽기</h2>
+      <table>
+        <thead><tr><th>Symbol</th><th>뜻</th><th>CUBRID에 저장되는가?</th></tr></thead>
+        <tbody>
+          <tr><td>G</td><td>현재 flush를 위해 capture한 page-image copy입니다.</td><td>아니요. reasoning label입니다.</td></tr>
+          <tr><td>G+1</td><td>G를 capture한 뒤 변경된 resident byte입니다.</td><td>아니요. reasoning label입니다.</td></tr>
+          <tr><td>Page LSA</td><td>특정 page byte에 포함된 가장 최근 logged change입니다.</td><td>예. 실제 recovery coordinate입니다.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card full">
+      <h2>flag truth table</h2>
+      <table>
+        <thead><tr><th>DIRTY</th><th>FLUSHING</th><th>해석</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>0</td><td>resident propagation debt가 없고 진행 중인 copy도 없습니다.</td></tr>
+          <tr><td>1</td><td>0</td><td>resident byte를 flush해야 합니다.</td></tr>
+          <tr><td>0</td><td>1</td><td>G가 진행 중이며 copy 이후 변경은 아직 없습니다.</td></tr>
+          <tr><td>1</td><td>1</td><td>G가 진행 중이고, 더 새로운 resident G+1도 flush해야 합니다.</td></tr>
+        </tbody>
+      </table>
+      <p><strong>DIRTY = 기다리는 작업.</strong> <strong>FLUSHING = 진행 중인 copied work.</strong></p>
+    </article>
+    <article class="reference-card full">
+      <h2>durability 용어</h2>
+      <img class="diagram" src="../../assets/durability-chain.svg" alt="write permission, recoverability, transaction durability, page propagation의 경계">
+    </article>
+    <article class="reference-card full">
+      <h2>두 generation으로 보는 예제</h2>
+      <img class="diagram" src="../../assets/two-lsa-timeline.svg" alt="copied G와 resident G+1에서 Page LSA와 oldest-unflush LSA의 변화">
+    </article>
+    <article class="reference-card">
+      <h2>두 LSA의 역할</h2>
+      <ul>
+        <li><strong>Page LSA:</strong> image에 포함된 latest logged change이며, copy한 값이 WAL force target이 됩니다.</li>
+        <li><strong>Oldest-unflush LSA:</strong> 해당 generation에서 아직 propagate하지 않은 가장 오래된 logged change이며, checkpoint lower bound를 구성합니다.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>flag algebra</h2>
+      <ul>
+        <li>G 시작: FLUSHING을 set하고 기존 DIRTY를 clear합니다.</li>
+        <li>writer가 G+1 생성: DIRTY를 다시 set합니다.</li>
+        <li>G 성공: FLUSHING만 clear합니다.</li>
+        <li>일반적인 G failure: retryable state를 복구하고 waiter를 깨웁니다.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>일반적인 success route</h2>
+      <ol>
+        <li>BCB identity를 validate합니다.</li>
+        <li>FLUSHING을 set하고 capture한 DIRTY를 clear합니다.</li>
+        <li>stable byte와 LSA를 copy합니다.</li>
+        <li>BCB protection을 release합니다.</li>
+        <li>copy한 page LSA까지 WAL을 force합니다.</li>
+        <li>DWB 또는 direct write로 submit합니다.</li>
+        <li>다시 protect하고 FLUSHING을 clear한 뒤 wake/handoff합니다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>review 질문</h2>
+      <ol>
+        <li>각 byte/LSA/flag는 어느 generation을 설명합니까?</li>
+        <li>정확히 어느 persistence boundary까지 관찰했습니까?</li>
+        <li>G가 진행 중일 때 writer가 G+1을 publish할 수 있습니까?</li>
+        <li>failure가 retryable debt를 보존하고 waiter를 깨웁니까?</li>
+        <li>source concern을 evidence 범위보다 강하게 주장하고 있지는 않습니까?</li>
+      </ol>
+    </article>
+    <article class="reference-card full">
+      <h2>source route와 claim boundary</h2>
+      <table>
+        <thead><tr><th>Responsibility</th><th>Pinned source</th><th>Evidence 용도</th></tr></thead>
+        <tbody>
+          <tr><td>Page-LSA coupling</td><td><code>page_buffer.c:4983–5055</code></td><td>Verified mechanism</td></tr>
+          <tr><td>일반 flush와 rollback</td><td><code>page_buffer.c:10723–10962</code></td><td>Verified mechanism</td></tr>
+          <tr><td>DIRTY / FLUSHING helper</td><td><code>page_buffer.c:16077–16126</code></td><td>Verified mechanism</td></tr>
+          <tr><td>WAL force gate</td><td><code>transaction/log_page_buffer.c:4150–4189</code></td><td>Verified mechanism</td></tr>
+          <tr><td>이른 TDE/DWB preparation concern</td><td><code>page_buffer.c:10809–10828</code></td><td>Open finding VS-12이며 fault injection 필요</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../learning/04-flush-one-generation.md">Flush One Generation</a>. generation이나 persistence boundary가 모호하면 teaching agent에게 질문하세요.</footer>
+</main>
+</body>
+</html>

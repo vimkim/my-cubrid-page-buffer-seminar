@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>학습 0018 — 세 buffer pool 비교하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0018-compare-three-buffer-pools.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 학습 0018</span><a href="../index.html">학습 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">선택 비교 관점 · performance reasoning</div>
+    <h1>Responsibility를 비교한 뒤 hot seam을 검증한다</h1>
+    <p>이 학습을 마치면 하나의 page journey를 CUBRID, PostgreSQL, InnoDB에 대응해 보고, 측정하지 않은 결과를 사실처럼 말하지 않으면서 performance hypothesis를 설명할 수 있다.</p>
+    <div class="pills"><span class="pill">Protection</span><span class="pill">Ownership</span><span class="pill">Miss publication</span><span class="pill">Replacement</span><span class="pill">Measurement</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="lens">
+        <div class="eyebrow">01 · 비교 원칙</div>
+        <h2>두 가지 protection부터 본다</h2>
+        <p><strong>Replacement protection</strong>은 참조 중인 frame이 다른 logical page에 reuse되지 않게 한다. <strong>Content protection</strong>은 현재 page byte에 충돌하는 access가 들어오지 않게 한다. 모든 engine에 두 responsibility가 모두 필요하며, 가장 가까운 interface끼리도 완전한 일대일 대응은 아니다.</p>
+        <div class="reference-grid" aria-label="CUBRID, PostgreSQL, InnoDB의 ownership seam">
+          <article class="reference-card"><h3>CUBRID</h3><p><code>pgbuf_fix()</code> → BCB <code>fcnt</code> + thread holder + requested latch → <code>pgbuf_unfix()</code></p></article>
+          <article class="reference-card"><h3>PostgreSQL</h3><p>Pin → private/shared refcount → 별도 content lock → 독립적인 unlock과 unpin</p></article>
+          <article class="reference-card full"><h3>MySQL / InnoDB</h3><p><code>buf_page_get_gen(..., mtr)</code> → atomic <code>buf_fix_count</code> + S/SX/X memo entry → memo가 unlatch 후 unfix</p></article>
+        </div>
+        <p class="big-claim">CUBRID는 fix, latch, thread ownership을 결합한다. PostgreSQL은 pin과 content lock을 분리한다. InnoDB는 low-level state는 분리하지만 lifetime은 MTR memo에서 다시 묶는다.</p>
+      </section>
+
+      <section class="section" id="scenario">
+        <div class="eyebrow">02 · 공통 scenario 하나</div>
+        <h2>Page 하나를 read, modify, flush, reuse한다</h2>
+        <table>
+          <thead><tr><th>비교 축</th><th>CUBRID</th><th>PostgreSQL</th><th>MySQL / InnoDB</th></tr></thead>
+          <tbody>
+            <tr><td>Acquire와 owner</td><td><code>pgbuf_fix()</code>가 요청한 latch를 grant하고 BCB <code>fcnt</code>를 증가시키며 per-thread holder를 기록한다.</td><td>Buffer pin이 residency를, 별도 content lock이 byte를 보호한다. <code>PrivateRefCount</code>와 <code>ResourceOwner</code>가 backend ownership을 추적한다.</td><td><code>buf_fix_count</code>가 residency를, S/SX/X가 byte를 보호하며 <code>mtr_t</code> memo가 release scope를 소유한다.</td></tr>
+            <tr><td>Nested acquisition</td><td>반복 fix마다 holder <code>fix_count</code>와 shared BCB <code>fcnt</code>가 모두 증가한다.</td><td>한 backend의 첫 pin만 shared refcount를 바꾸고 반복 pin은 private count를 바꾼다.</td><td>각 low-level fix가 atomic <code>buf_fix_count</code>를 바꾸고 memo slot이 MTR resource를 기록한다.</td></tr>
+            <tr><td>Cold miss publication</td><td>Per-VPID load lock이 loader 하나를 고르고 load와 latch grant 뒤에 새 BCB를 hash-publish한다. Waiter는 깨어나 lookup을 retry한다.</td><td>I/O 전에 mapping을 invalid 상태로 publish하고 reader는 <code>BM_IO_IN_PROGRESS</code>에 합류한다.</td><td>File I/O 전에 page를 <code>BUF_IO_READ</code>로 hash/LRU-publish하고 reader는 그 state를 기다린다.</td></tr>
+            <tr><td>Replacement policy</td><td>Private/shared LRU domain, 세 zone, quota policy, daemon, direct-victim handoff.</td><td>Clock sweep가 <code>usage_count</code>를 aging하고 strategy ring이 일부 scan workload를 격리한다.</td><td>Per-instance midpoint LRU가 새 page를 old region에 넣고 page-cleaner budget을 사용한다.</td></tr>
+            <tr><td>Durability와 torn-page defense</td><td>Page LSA가 WAL-before-data를 gate하고 DWB가 page를 stage할 수 있다. FLUSHING과 DIRTY는 copied G와 resident G+1을 나타낼 수 있다.</td><td>Page LSN이 WAL-before-data를 gate한다. Core output에는 DWB stage가 없고 full-page image가 torn-page recovery를 돕는다.</td><td>Redo LSN이 data output을 gate하고 dirty page는 flush list에 들어간다. Doublewrite는 항상 쓰는 것이 아니라 조건부다.</td></tr>
+            <tr><td>Row-storage consequence</td><td>B-tree locator는 보통 별도 heap page로 이어진다.</td><td>Index TID는 보통 heap page로 이어진다.</td><td>InnoDB clustered-index leaf가 row를 저장하며 secondary lookup은 B-tree traversal을 한 번 더 수행할 수 있다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Evidence level:</strong> pinned-source mechanism과 responsibility-level partial analogy다. PostgreSQL 또는 MySQL runtime comparison은 수행하지 않았다. 감사된 비교의 provenance, evidence route, limitation은 <a href="../../source-inventory.md">source inventory</a>가 소유한다.</p>
+      </section>
+
+      <section class="section" id="performance">
+        <div class="eyebrow">03 · 첫 performance 가설</div>
+        <h2>Replacement를 바꾸기 전에 per-thread holder lookup부터 측정한다</h2>
+        <p><strong>Verified mechanism:</strong> <code>pgbuf_find_thrd_holder()</code>는 target을 찾을 때까지 current thread의 singly linked held-BCB list를 순회한다. Normal latch acquisition, lock-free READ hit, unfix, dirty validation 등 ownership check에서 호출된다. Lock-free READ path는 같은 thread가 이미 BCB를 보유해도 BCB <code>fcnt</code>에 shared CAS를 수행한다.</p>
+        <p><strong>Inference:</strong> worker가 서로 다른 page를 많이 동시에 보유하거나 이미 보유한 hot page를 반복 fix하면 linear holder 탐색과 shared cache-line traffic이 CPU bottleneck이 될 수 있다. PostgreSQL의 작은 private-refcount array와 overflow hash, local-only repeated-pin increment는 같은 safety responsibility를 더 저렴한 seam에 둘 수 있음을 보여 준다. 그 설계를 복사하면 CUBRID가 빨라진다는 증거는 아니다.</p>
+        <table>
+          <thead><tr><th>순위</th><th>Hypothesis</th><th>이 순서인 이유</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Holder lookup 주변에 traversal-depth와 cycle 측정을 추가하고 held-set size 1, 4, 16, 64를 benchmark한다.</td><td>Observation만 추가한다. Redesign 전에 linear search cost가 실제로 큰지 확인할 수 있다.</td></tr>
+            <tr><td>2</td><td>큰 held set을 위한 bounded per-thread lookup accelerator 또는 hash를 prototype한다.</td><td>현재 global <code>fcnt</code> semantics를 유지해 proof surface를 제한한다.</td></tr>
+            <tr><td>3</td><td>Nested re-fix에서 shared CAS가 지배적이면 inner nesting을 local로 유지하는 first/last-holder aggregation을 prototype한다.</td><td>잠재력은 크지만 promotion, waiter fairness, final-unfix wakeup, victim eligibility가 현재 정확한 <code>fcnt</code> semantics에 의존한다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>LRU rewrite부터 시작하지 않는다.</strong> 기존 runtime evidence에서는 실제 eviction이 일어나지 않았고 replacement policy는 correctness 및 workload sensitivity의 영향 범위가 훨씬 크다. Ownership hot path를 먼저 profile한다.</div>
+      </section>
+
+      <section class="section" id="experiment">
+        <div class="eyebrow">04 · 반증 가능한 experiment</div>
+        <h2>List cost와 shared-atomic cost를 분리한다</h2>
+        <ol>
+          <li>Release build와 resident working set을 사용하고 측정 구간에서 storage I/O를 제외한다.</li>
+          <li>서로 다른 H개 page를 보유한 채 target 하나를 반복 fix/unfix하며 H를 1, 4, 16, 64로 바꾼다.</li>
+          <li>한 thread로 실행한 뒤 target BCB를 공유하는 여러 thread로 실행한다. 확인한 holder node 수, CAS attempt/retry, pair당 cycle, throughput을 기록한다.</li>
+          <li>Non-nested/private page, nested/private page, non-nested/shared page, nested/shared page 네 형태를 비교한다.</li>
+          <li>Cost가 H에 따라 늘지 않으면 lookup hypothesis를 기각한다. Shared contention이 커지지 않거나 대표 caller의 nested re-fix가 미미하면 aggregation hypothesis를 기각한다.</li>
+        </ol>
+        <p class="big-claim">Source에서 보인 기회는 workload가 실제 cost를 드러낸 뒤에야 performance finding이 된다.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">05 · Retrieval 연습</div>
+        <h2>비교와 optimization boundary를 방어한다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="Shared invariant: 세 engine 모두 caller가 residency를 소유하는 동안 frame reuse를 막고 mutable byte에는 별도 content protection을 요구한다 -> CUBRID: pgbuf_fix가 BCB fcnt, per-thread holder, 요청 latch, 빌린 PAGE_PTR lifetime을 결합한다 -> PostgreSQL: pin과 content lock이 분리되며 한 backend의 반복 pin은 shared refcount를 더 올리지 않고 PrivateRefCount를 갱신한다 -> InnoDB: atomic buf_fix_count와 S/SX/X latch는 분리되지만 MTR memo가 결합된 release scope를 소유한다 -> miss publication: CUBRID는 VPID loader protocol 아래에서 load와 latch 뒤에 publish하고 PostgreSQL과 InnoDB는 I/O 전에 in-progress descriptor를 publish한다 -> replacement와 durability: LRU zone+DWB, clock sweep+FPI, midpoint LRU+conditional doublewrite를 비교한다 -> performance: held-set depth에 따른 linear per-thread holder lookup을 먼저 측정한 뒤 lookup accelerator를 test한다 -> shared nested CAS가 지배적이면 first/last-holder aggregation을 검토하되 promotion, waiter, final-unfix, victim invariant를 보존한다 -> evidence boundary: source-backed design difference와 optimization inference이며 측정된 speedup은 아니다." data-concepts='[{"label":"공통 safety responsibility","terms":["replacement","content","protect"]},{"label":"CUBRID의 결합된 ownership seam","terms":["fcnt","holder","latch","page_ptr"]},{"label":"PostgreSQL 분리와 private nesting","terms":["pin","content lock","private","repeated"]},{"label":"InnoDB MTR lifetime 설명","terms":["buf_fix_count","mtr","memo","s/sx/x"]},{"label":"서로 다른 miss publication timing","terms":["publish","i/o","vpid","in-progress"]},{"label":"holder lookup 먼저 측정","terms":["linear","holder","depth","measure"]},{"label":"더 위험한 atomic aggregation","terms":["cas","nested","promotion","victim"]},{"label":"정직한 evidence boundary","terms":["inference","not measured","benchmark"]}]'>
+          <h3>문제</h3>
+          <p>Teammate가 “PostgreSQL은 clock sweep를 써서 빠르니 CUBRID도 LRU를 바꿔야 한다”고 말한다. Source 범위를 넘지 않는 답을 제시하세요.</p>
+          <p><strong>할 일:</strong> 세 engine의 ownership seam, miss-publication timing, replacement policy, durability defense를 비교한 뒤 holder-lookup과 nested-atomic hypothesis의 우선순위를 정하고 각각의 반증 조건을 제시하라.</p>
+          <textarea aria-label="세 engine 비교 답안" placeholder="Shared invariant → CUBRID → PostgreSQL → InnoDB → miss/replacement/durability → 첫 측정 → 더 위험한 후속 작업 → evidence boundary 순서로 적으세요."></textarea>
+          <button type="button" data-check>비교 범위 확인</button>
+          <button type="button" class="secondary" data-reveal>Model route 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답안을 chat에 붙여 넣으세요. 잘못된 등가 관계를 짚고, 제안한 benchmark가 traversal과 shared-atomic cost를 분리할 수 있는지 확인하겠습니다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">필수 읽기</div>
+        <h2>Feature checklist가 아니라 ownership code를 읽는다</h2>
+        <ul>
+          <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6090-L6126">CUBRID holder lookup</a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7724-L7829">lock-free fix/unfix</a>.</li>
+          <li><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L230-L269">PostgreSQL private-refcount rationale</a>와 <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3269-L3386"><code>PinBuffer()</code></a>.</li>
+          <li><a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/include/buf0buf.ic#L755-L817">InnoDB buffer-fix count</a>와 <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/mtr/mtr0mtr.cc#L243-L296">MTR memo release</a>.</li>
+        </ul>
+        <p><a href="../reference/three-engine-performance-card.html">인쇄용 comparison card 열기 →</a></p>
+        <p><a href="0017-defend-the-module-live.html">← 학습 0017로 돌아가기</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="학습 목차">
+      <strong>학습 지도</strong>
+      <a href="#lens">1. 두 protection</a>
+      <a href="#scenario">2. 공통 scenario</a>
+      <a href="#performance">3. Performance 가설</a>
+      <a href="#experiment">4. 반증 가능한 experiment</a>
+      <a href="#retrieval">5. Claim 방어</a>
+      <a href="#primary-reading">필수 읽기</a>
+      <hr>
+      <a href="../reference/three-engine-performance-card.html">Comparison card</a>
+      <a href="../../source-inventory.md">Evidence inventory</a>
+      <a href="../index.html">학습 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Analogy, performance hypothesis, evidence boundary가 불분명하면 언제든 teaching agent에게 질문하세요.</footer>
+</main>
+</body>
+</html>

@@ -12,7 +12,7 @@ Build a source-level mental model of `src/storage/page_buffer.c/.h` so I can pre
 
 ## Constraints
 - Use CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912` as the source baseline.
-- Keep lessons short, interactive, in English, and grounded in the existing canonical guide pages and pinned source.
+- Keep English lessons canonical and provide a complete natural-Korean counterpart for every teaching HTML page. Preserve established database/CUBRID jargon and source identifiers in English in the Korean pages. Keep both language trees short, interactive, and grounded in the existing canonical guide pages and pinned source.
 - Serve HTML from the remote Linux host over a loopback-only HTTP server reached through SSH port forwarding; no graphical browser is available on the host.
 - Preserve concurrent work in this directory; teaching files must not rewrite canonical guide pages or other agents' assets.
 - Presentation date, duration, and the learner's current page-buffer depth have not yet been established.

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Expected CUBRID page-buffer questions and model answers</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/expected-team-questions.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · curated rehearsal</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">15 expected team questions</div>
+    <h1>Answer the questions behind the design.</h1>
+    <p>Use these questions for presentation rehearsal. Say your answer before expanding the model, then defend it with an owner, state, guard, invariant, and evidence boundary.</p>
+    <div class="pills"><span class="pill">Objects</span><span class="pill">Ownership</span><span class="pill">Durability</span><span class="pill">Replacement</span><span class="pill">Proof</span></div>
+  </header>
+
+  <section class="section">
+    <div class="eyebrow">How to use this page</div>
+    <h2>Short answer first; mechanism second</h2>
+    <div class="journey">
+      <article><span class="step">1</span><h3>Answer closed-book</h3><p>Give the shortest accurate answer you could say in a team meeting.</p></article>
+      <article><span class="step">2</span><h3>Open the model</h3><p>Compare the causal structure, not exact wording.</p></article>
+      <article><span class="step">3</span><h3>Defend one challenge</h3><p>Name the owner, state, guard, invariant, and consequence.</p></article>
+      <article><span class="step">4</span><h3>Follow the evidence</h3><p>Use the Canonical answer when the discussion needs source anchors or confidence limits.</p></article>
+    </div>
+    <div class="callout"><strong>Presentation rule:</strong> do not memorize paragraphs. Memorize the causal spine, then reconstruct the answer in your own words.</div>
+  </section>
+
+  <section class="section" id="objects">
+    <div class="eyebrow">Part 1 · Boundary and objects</div>
+    <h2>What exists, and who owns correctness?</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-001">
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-001</span><span>Lesson 1</span></div>
+        <h3>1. What does the page-buffer Module own—and what remains with its callers?</h3>
+        <details open>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> The Module maps a page identity to resident bytes and temporarily protects those bytes through fix, latch, dirty/flush, and replacement protocols. It does not know whether the caller chose the right page or made a logically valid change. Allocation knowledge, logical locking, page-layout validation, recovery meaning, retry, and complete cleanup remain with the caller and neighboring modules.</p>
+            <p><strong>Defend with:</strong> Successful fix proves an access contract; it does not prove caller correctness.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-001-what-does-the-page-buffer-module-own">Canonical answer and source anchors</a> · <a href="../lessons/0001-present-the-page-journey.html">Lesson 1</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-003">
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-003</span><span>Lessons 1–2</span></div>
+        <h3>2. How do VPID, BCB, frame, PAGE_PTR, and holder differ?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> A <code>VPID</code> is the logical page identity. A BCB is volatile control state for one currently resident identity, paired with a frame that stores the bytes. A <code>PAGE_PTR</code> is only a borrowed view into those bytes; it is not the page’s identity or ownership record. Global <code>fcnt</code> protects the frame from reuse, while each thread’s holder records its own matching release debt.</p>
+            <p><strong>Defend with:</strong> The pointer can repeat while identity changes, and identity can remain while the frame address changes.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-003-how-do-vpid-bcb-frame-pageptr-and-holder-differ">Canonical answer and source anchors</a> · <a href="../lessons/0002-separate-objects-from-state.html">Lesson 2</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-004">
+        <div class="question-meta"><span>Counterexample</span><span>PGBUF-QB-004</span><span>Lesson 2</span></div>
+        <h3>3. Can a page be resident, unfixed, and dirty at the same time?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> Yes. Residency, fix ownership, latch state, dirty/flush state, and victim eligibility are independent axes. A caller can unfix a modified page while it remains resident and dirty for later propagation. It is not safe to victimize merely because <code>fcnt==0</code>; dirty, flushing, waiter, transient-owner, and identity conditions still matter.</p>
+            <p><strong>Defend with:</strong> “Resident” describes location, “fixed” describes reuse protection, and “dirty” describes propagation debt.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-004-which-page-states-are-independent">Canonical answer and source anchors</a> · <a href="object-and-state-map.html">Object and state map</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="ownership">
+    <div class="eyebrow">Part 2 · Acquisition and ownership</div>
+    <h2>Why do successful-looking paths still recheck?</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-009">
+        <div class="question-meta"><span>Expected challenge</span><span>PGBUF-QB-009</span><span>Lesson 3</span></div>
+        <h3>4. Why check BCB identity again after finding a victim or hash candidate?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> The first lookup produces only a candidate. Before the thread obtains the protection needed to fix, release, remove, or reuse it, another thread may change the resident mapping. The protected identity check proves that the BCB still represents the expected VPID at the transition that matters.</p>
+            <p><strong>Defend with:</strong> It is not checking whether the same BCB address still exists; it is checking whether that stable slot still has the same current identity.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once">Canonical answer and source anchors</a> · <a href="../lessons/0007-replace-one-frame.html">Lesson 7</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-015">
+        <div class="question-meta"><span>Expected challenge</span><span>PGBUF-QB-015</span><span>Lesson 4</span></div>
+        <h3>5. Can several threads share one BCB? Does that put it in several LRUs?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> Several compatible readers can fix the same BCB concurrently. They share one resident BCB and one global <code>fcnt</code>, but each thread has a separate holder entry and nested release debt. That does not duplicate the BCB across LRU lists: LRU membership is replacement-policy placement for the single BCB, not per-thread ownership.</p>
+            <p><strong>Defend with:</strong> Per-thread holder ledgers answer “who owes release?”; LRU state answers “where should replacement search?”</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-015-what-do-fcnt-and-per-thread-holders-tell-you">Canonical answer and source anchors</a> · <a href="ownership-debt-card.html">Ownership debt card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-013">
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-013</span><span>Lesson 5</span></div>
+        <h3>6. Why does a caller need a transaction lock if it already has a page latch?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> A page latch serializes short physical access to one in-memory page image. A transaction lock protects a logical database object across transaction conflict and visibility rules. A heap mutation may need both because protecting bytes does not establish logical permission, and logical permission does not protect the bytes while they are edited.</p>
+            <p><strong>Defend with:</strong> The mechanisms have different objects, owners, and lifetimes.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-013-how-does-a-page-latch-differ-from-a-transaction-lock">Canonical answer and source anchors</a> · <a href="../lessons/0005-audit-a-logged-mutation.html">Lesson 5</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="durability">
+    <div class="eyebrow">Part 3 · Mutation and durability</div>
+    <h2>Which generation became durable?</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-023">
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-023</span><span>Lesson 5</span></div>
+        <h3>7. What is the correct mutation, logging, page-LSA, dirty, and release order?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> The caller first establishes logical permission and validates the destination, then mutates through the page owner, appends the recovery record, advances the page LSA when required, marks the resident generation dirty, and finally transfers or releases every watcher on both success and error paths.</p>
+            <p><strong>Defend with:</strong> A WRITE latch alone supplies none of the recovery meaning, dirty publication, or all-exit cleanup.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-023-what-is-the-mutation-logging-lsa-dirty-release-order">Canonical answer and source anchors</a> · <a href="caller-mutation-card.html">Caller mutation card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-028">
+        <div class="question-meta"><span>Expected challenge</span><span>PGBUF-QB-028</span><span>Lesson 6</span></div>
+        <h3>8. What are generation G and G+1, and why can DIRTY and FLUSHING both be set?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> “Generation” is a reasoning label for one snapshot of the page bytes and LSAs selected for flushing; it is not a stored version number. The flusher copies G and marks that work FLUSHING. If a writer changes the resident page afterward, those newer bytes are G+1 and set DIRTY again. G can finish successfully while G+1 remains dirty, so <code>FLUSHING</code> and <code>DIRTY</code> may overlap without contradiction.</p>
+            <p><strong>Defend with:</strong> <code>FLUSHING</code> means an older copied image has in-flight work; <code>DIRTY</code> means the current resident image still owes propagation.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-028-how-can-flush-succeed-while-the-bcb-remains-dirty">Canonical answer and source anchors</a> · <a href="flush-generation-card.html">Flush-generation card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-027">
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-027</span><span>Lesson 6</span></div>
+        <h3>9. Where does WAL-before-data happen, and does successful flush mean the home page is durable?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> Before submitting the copied page image, page-buffer flush asks log management to force WAL through that image’s page LSA. The image then follows the configured DWB or direct data-volume path. Success at this boundary may mean DWB acceptance or direct-write return; it does not automatically prove physical home-page persistence.</p>
+            <p><strong>Defend with:</strong> WAL is the recovery-ordering gate, DWB protects page-image propagation, and physical durability is a lower boundary.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-027-where-is-the-wal-before-data-gate">Canonical answer and source anchors</a> · <a href="../lessons/0006-flush-one-generation.html">Lesson 6</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="replacement">
+    <div class="eyebrow">Part 4 · Replacement and progress</div>
+    <h2>Eligibility first; policy second</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-029">
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-029</span><span>Lesson 7</span></div>
+        <h3>10. What makes a BCB safe to victimize?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> LRU policy may nominate a candidate, but reuse requires a protected final gate: the BCB must be unfixed, clean and not flushing, free of disqualifying waiters or transient ownership, conditionally protectable, and still bound to the expected identity. Neither <code>fcnt==0</code> nor LRU position is sufficient by itself.</p>
+            <p><strong>Defend with:</strong> Policy chooses where to search; hard predicates authorize destructive reuse.</p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-029-what-makes-a-frame-safe-to-victimize">Canonical answer and source anchors</a> · <a href="replacement-safety-card.html">Replacement-safety card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-040">
+        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-040</span><span>Lesson 12</span></div>
+        <h3>11. What happens when no free BCB is immediately available?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> The allocator enters a progress protocol: search invalid or eligible victim state, trigger flush or background progress, wait for or consume a direct-victim reservation, and retry. Timeout, interrupt, or an all-buffers-dirty condition can provide bounded exits. An empty free list is pressure, not proof of deadlock or starvation.</p>
+            <p><strong>Defend with:</strong> Safety is established by eligibility; liveness depends on producers, wakeups, retries, and bounded exits.</p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-040-what-happens-when-no-free-bcb-is-immediately-available">Canonical answer and source anchors</a> · <a href="../lessons/0012-prove-replacement-progress.html">Lesson 12</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="advanced">
+    <div class="eyebrow">Part 5 · Advanced mechanisms</div>
+    <h2>What changes across a temporary ownership gap?</h2>
+    <div class="question-stack">
+      <article class="question-card" id="q-035">
+        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-035</span><span>Lesson 11</span></div>
+        <h3>12. Why can ordered fixing release pages first, and what becomes stale?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> To avoid acquiring a multi-page set in a conflicting order, the helper may release watchers, sort the required order, and refix. Refix restores ownership of the identities, but it does not restore observations made before release. Page-local pointers, slots, offsets, comparisons, and traversal decisions must be recomputed when <code>page_was_unfixed</code> reports the gap.</p>
+            <p><strong>Defend with:</strong> Same VPID after refix does not mean same bytes or same derived decision.</p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-035-why-can-ordered-fixing-release-pages-first">Canonical answer and source anchors</a> · <a href="ordered-watcher-card.html">Ordered-watcher card</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-046">
+        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-046</span><span>Lesson 13</span></div>
+        <h3>13. How does redo use page LSA to avoid applying a record twice?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> Redo fixes the recovery page under WRITE and compares the log record LSA with the page LSA. If the page already represents that record, redo skips it and releases ownership. Otherwise it applies the recovery function, advances the page LSA, marks the page dirty as required, and releases through scope cleanup.</p>
+            <p><strong>Defend with:</strong> This proves page-image idempotence at the LSA gate; it does not automatically prove arbitrary callback side effects idempotent.</p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-046-how-does-redo-use-page-lsa-for-idempotence">Canonical answer and source anchors</a> · <a href="../lessons/0013-gate-redo-by-page-lsa.html">Lesson 13</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-055">
+        <div class="question-meta"><span>Evidence discipline</span><span>PGBUF-QB-055</span><span>Lessons 8 and 16</span></div>
+        <h3>14. Are VS-10, VS-11, and VS-12 packets true statements that defects exist?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> No. A <code>VS-*</code> packet is a version-sensitive evidence record for a concern, not a verdict. It packages the candidate’s source path, current evidence level, missing proof, and status owner. Promotion requires exact control flow, supported reachability, surviving-state evidence, caller or production impact, and a target-branch recheck. Different packets may already sit at different evidence levels.</p>
+            <p><strong>Defend with:</strong> “Source-visible early return” is weaker than “reachable state leak,” which is weaker than “demonstrated production defect.”</p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-055-what-evidence-promotes-an-exceptional-path-candidate">Canonical evidence ladder</a> · <a href="../../unresolved-or-version-sensitive-findings.md">Current packet status</a> · <a href="../lessons/0008-defend-a-safe-change.html">Lesson 8</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="q-070">
+        <div class="question-meta"><span>Maintainer defense</span><span>PGBUF-QB-070</span><span>Lessons 8 and 16</span></div>
+        <h3>15. What test actually proves a page-buffer change is safe?</h3>
+        <details>
+          <summary>Show model answer</summary>
+          <div class="model-answer">
+            <p><strong>Spoken answer:</strong> There is no universal test. Choose the seam that crosses the risk: a representative caller regression for an Interface change, deterministic interleaving for an ordering race, named fault injection plus state assertions for unwind, controlled pressure for replacement policy, and crash/recovery evidence for durability. Then state exactly what remained untested.</p>
+            <p><strong>Defend with:</strong> More repetitions are not stronger evidence if execution never crosses the risky transition.</p>
+            <p class="answer-route"><a href="../../questions/maintenance-scenarios-answers.md#pgbuf-qb-070-which-verification-seam-crosses-the-actual-risk">Canonical answer and source anchors</a> · <a href="change-defense-card.html">Change-defense card</a></p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Continue rehearsal</div>
+    <h2>Use the complete bank when the team goes deeper</h2>
+    <div class="reference-grid">
+      <article class="reference-card"><h3>Full Question bank</h3><p>Core, Advanced, Maintenance Scenario, and Applied routes with prompts separated from evidence-aware answers.</p><a href="../../questions/README.md">Open the Canonical Question bank →</a></article>
+      <article class="reference-card"><h3>Presentation scorecard</h3><p>Six-move delivery rubric, challenge deck, honest-unknown response, and teammate feedback receipt.</p><a href="presentation-rehearsal-card.html">Open the rehearsal card →</a></article>
+    </div>
+  </section>
+
+  <footer class="footer">Curated for spoken rehearsal; Canonical explanations and mutable evidence status remain in the linked Maintainer Guide documents.</footer>
+</main>
+</body>
+</html>

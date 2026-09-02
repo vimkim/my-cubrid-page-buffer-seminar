@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0002 — 객체와 state 분리하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0002-separate-objects-from-state.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0002</span><a href="../index.html">강의 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Core capability · object model</div>
+    <h1>여섯 객체와 네 state axis를 분리하기</h1>
+    <p>이 lesson을 마치면 ownership map을 그리고, resident page를 tuple로 설명하며, page buffer에서 특히 위험한 동의어 표현을 바로잡을 수 있습니다.</p>
+    <div class="pills"><span class="pill">VPID</span><span class="pill">BCB</span><span class="pill">Frame</span><span class="pill">PAGE_PTR</span><span class="pill">fcnt</span><span class="pill">Holder</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="six-objects">
+        <div class="eyebrow">01 · 추적하기 전에 이름 붙이기</div>
+        <h2>“Page”는 객체 하나가 아닙니다</h2>
+        <img class="diagram" src="../../assets/object-ownership-map.svg" alt="여섯 page-buffer 객체와 ownership 관계">
+        <p class="caption">실선은 resident structure의 관계이고, 점선은 임시 borrowing 또는 debt입니다.</p>
+        <table>
+          <thead><tr><th>객체</th><th>무엇인가</th><th>중요한 lifetime</th></tr></thead>
+          <tbody>
+            <tr><td><code>VPID</code></td><td><code>(volid, pageid)</code>로 이루어진 identity value.</td><td>resident가 아니어도 존재할 수 있습니다. allocation validity는 page buffer 바깥의 책임입니다.</td></tr>
+            <tr><td>BCB</td><td>현재 identity와 control state를 담는 재사용 가능한 pool control block.</td><td>pool과 수명을 함께하며, 시간에 따라 다른 VPID를 나타낼 수 있습니다.</td></tr>
+            <tr><td>Frame</td><td>BCB와 일대일로 짝지어진 page 크기의 bytes.</td><td>pool과 수명을 함께하며, 내용은 현재 resident-identity generation에 속합니다.</td></tr>
+            <tr><td><code>PAGE_PTR</code></td><td>caller가 현재 frame에 접근할 때 보는 주소.</td><td>matching unfix에서 사용 권한이 끝나는 borrowed view입니다.</td></tr>
+            <tr><td>Global <code>fcnt</code></td><td>모든 thread에 걸쳐 grant된 fix 수를 세는 BCB 단위 count.</td><td>양수인 debt는 일반적인 frame 재사용을 막습니다.</td></tr>
+            <tr><td>Thread holder</td><td>thread별 BCB reference와 중첩된 <code>fix_count</code>.</td><td>그 thread가 마지막 nested debt를 갚을 때까지 남습니다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified mechanism:</strong> holder, atomic-latch <code>fcnt</code>, BCB, paired frame의 정의는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a>에 있습니다. table의 일대일 pairing은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>5559–5660</code></a>에서 확인할 수 있습니다.</p>
+      </section>
+
+      <section class="section" id="three-clocks">
+        <div class="eyebrow">02 · 겹쳐 있는 세 lifetime</div>
+        <h2>주소가 그대로여도 그 주소에 부여한 의미는 끝날 수 있습니다</h2>
+        <div class="journey">
+          <article><span class="step">1</span><h3>Pool lifetime</h3><p>BCB와 frame storage는 page buffer 초기화부터 종료까지 존재합니다.</p></article>
+          <article><span class="step">2</span><h3>Resident generation</h3><p>invalidation이나 안전한 재사용으로 identity가 바뀌기 전까지 BCB/frame은 현재 VPID 하나를 나타냅니다.</p></article>
+          <article><span class="step">3</span><h3>Borrow lifetime</h3><p>성공한 fix 하나는 matching unfix까지 debt를 전제로 <code>PAGE_PTR</code>를 한 번 사용할 권한을 줍니다.</p></article>
+          <article><span class="step">!</span><h3>함정</h3><p>pointer 주소가 그대로라고 해서 identity가 유지되거나 release 후에도 ownership이 계속된다는 뜻은 아닙니다.</p></article>
+        </div>
+        <p class="big-claim">Pointer equality는 page identity가 아니고, storage lifetime은 permission lifetime이 아닙니다.</p>
+      </section>
+
+      <section class="section" id="four-axes">
+        <div class="eyebrow">03 · scalar state 대신 tuple로 보기</div>
+        <h2>서로 독립적인 네 질문을 던집니다</h2>
+        <img class="diagram" src="../../assets/state-axes.svg" alt="서로 독립적인 네 page-buffer state axis">
+        <p class="caption">그림의 위치는 coordinate를 나타낼 뿐, 반드시 따라야 하는 순서가 아닙니다.</p>
+        <table>
+          <thead><tr><th>Axis</th><th>답하는 질문</th><th>답할 수 없는 질문</th></tr></thead>
+          <tbody>
+            <tr><td>Identity / residency</td><td>이 BCB/frame이 나타내는 VPID가 있다면 무엇인가?</td><td>어느 thread가 소유하는지, bytes가 recoverable한지.</td></tr>
+            <tr><td>Ownership</td><td>현재 어떤 granted fix가 일반 재사용을 막고 있는가?</td><td>어떤 latch mode가 내용을 보호하는지, dirty인지.</td></tr>
+            <tr><td>Concurrency</td><td>지금 누가 bytes를 읽거나 변경할 수 있는가?</td><td>transaction visibility, ownership lifetime, durability.</td></tr>
+            <tr><td>Durability / propagation</td><td>어느 generation을 propagate해야 하며 recovery boundary는 무엇인가?</td><td>page가 resident인지, fixed인지, 안전하게 재사용할 수 있는지.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="classify">
+        <div class="eyebrow">04 · 분류 예제</div>
+        <h2>잘못된 두 shortcut을 드러내는 정상 state</h2>
+        <p>BCB가 여전히 VPID <code>(8, 41)</code>을 나타내고, global <code>fcnt == 0</code>, latch mode는 <code>NO_LATCH</code>, resident generation은 DIRTY라고 가정해 봅시다.</p>
+        <table>
+          <thead><tr><th>Coordinate</th><th>분류</th></tr></thead>
+          <tbody>
+            <tr><td>Identity / residency</td><td>VPID <code>(8, 41)</code>로 resident입니다.</td></tr>
+            <tr><td>Ownership</td><td>미지급 fix debt가 없습니다.</td></tr>
+            <tr><td>Concurrency</td><td>이 snapshot에는 grant된 content latch가 없습니다.</td></tr>
+            <tr><td>Durability / propagation</td><td>DIRTY입니다. 이 resident generation에는 아직 page-image propagation이 필요합니다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>버려야 할 두 결론:</strong> VPID가 여전히 resident이므로 <code>fcnt == 0</code>은 “evicted”를 뜻하지 않습니다. 또한 일반 재사용에는 dirty/flush, waiter, replacement-zone, protected revalidation 확인이 남아 있으므로 “eligible victim”이라는 뜻도 아닙니다.</div>
+        <p>이제 “page state”라는 말이 왜 지나치게 모호한지 알 수 있습니다. 유용한 설명은 네 coordinate로 된 tuple입니다.</p>
+      </section>
+
+      <section class="section" id="success">
+        <div class="eyebrow">05 · 성공한 fix에 적용하기</div>
+        <h2>성공이 보장하는 것과 보장하지 못하는 것</h2>
+        <p>정상 READ fix가 성공하면 resident identity mapping, 이 acquisition을 포함한 양수의 fix debt, grant된 READ page latch, borrowed pointer lifetime이 성립합니다. 성공만으로는 clean/dirty, durable 여부, record 존재, 올바른 transaction locking, caller correctness를 <em>보장하지 않습니다</em>.</p>
+        <div class="callout"><strong>matching unfix 후:</strong> 이 acquisition의 debt와 pointer 사용 lifetime은 끝납니다. BCB/frame은 계속 resident일 수 있고, 다른 fix 때문에 global <code>fcnt</code>가 양수로 남을 수 있습니다. ownership을 release했다고 durability state가 바뀌지도 않습니다.</div>
+        <p class="source-note"><strong>Interface contract와 Verified mechanism:</strong> 정상 successful-fix postcondition과 matching release는 <a href="../../learning/01-contract-and-objects.md">canonical Core 설명</a>에서 연결합니다. pinned path는 <code>page_buffer.c:2260–2685</code>, <code>6277–6634</code>, <code>3062–3201</code>입니다.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">06 · Retrieval practice</div>
+        <h2>그리고, 분류하고, teach-back합니다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="VPID가 이름을 정함 -> BCB가 제어함 -> Frame이 저장함 -> PAGE_PTR가 빌림; global fcnt와 Thread holder가 debt를 기록함. 다음으로 identity/residency, ownership, concurrency, durability를 독립적으로 분류함. resident + fcnt=0 + DIRTY 반례로 'unfixed이면 evicted'와 'unfixed이면 reusable'을 모두 반박함." data-concepts='[{"label":"logical identity인 VPID","terms":["vpid","identity","volid","pageid"]},{"label":"재사용되는 pool 객체인 BCB와 Frame","terms":["bcb","frame","pool","resident"]},{"label":"borrowed view인 PAGE_PTR","terms":["page_ptr","borrow","pointer","view"]},{"label":"global 및 per-thread debt ledger","terms":["fcnt","holder","fix_count","debt"]},{"label":"서로 독립적인 네 state axis","terms":["residency","ownership","concurrency","durability","axis","tuple"]},{"label":"위험한 동의어를 깨는 반례","terms":["unfixed","evicted","dirty","reuse","eligible"]}]'>
+          <h3>문제</h3>
+          <p>기억만으로 여섯 객체의 map을 그리세요. 이어서 “resident, <code>fcnt == 0</code>, <code>NO_LATCH</code>, DIRTY”를 분류하고, 왜 evicted도 아니고 일반적인 eligible victim도 아닌지 설명하세요.</p>
+          <p><strong>권장 답변 구조:</strong> identity value → reusable control block ↔ reusable bytes → borrowed view, global 및 per-thread debt, 네 coordinate, 반례.</p>
+          <p><strong>할 일:</strong> 각 lifetime이 끝나는 지점을 포함하고 Interface contract와 Verified mechanism을 구분하세요.</p>
+          <textarea aria-label="객체 map과 state 분류 답안" placeholder="diagram을 닫고 기억만으로 model을 다시 구성하세요."></textarea>
+          <button type="button" data-check>concept 포함 여부 확인</button>
+          <button type="button" class="secondary" data-reveal>model spine 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답을 chat에 붙여 넣으세요. mastery를 기록하기 전에 ownership, lifetime, state-axis 분리, evidence 표현을 확인합니다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">필수 읽기</div>
+        <h2>algorithm이 아니라 structure를 읽습니다</h2>
+        <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a>를 읽으세요. holder debt, global <code>fcnt</code>, 현재 BCB VPID, frame linkage, dirty/LSA state라는 다섯 stored fact를 정확히 찾습니다. acquisition control flow를 추적하기 전에서 멈추세요.</p>
+        <p><a href="../reference/object-and-state-map.html">인쇄용 object-and-state card 열기 →</a></p>
+        <p><a href="0003-trace-fix-convergence.html">teach-back 후 Lesson 0003로 계속 →</a></p>
+        <p><a href="0001-present-the-page-journey.html">← Lesson 0001로 돌아가기</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="강의 목차">
+      <strong>강의 지도</strong>
+      <a href="#six-objects">1. 여섯 객체</a>
+      <a href="#three-clocks">2. 세 lifetime</a>
+      <a href="#four-axes">3. 네 state axis</a>
+      <a href="#classify">4. snapshot 분류</a>
+      <a href="#success">5. fix에 적용</a>
+      <a href="#retrieval">6. teach-back</a>
+      <a href="#primary-reading">필수 읽기</a>
+      <hr>
+      <a href="../reference/object-and-state-map.html">Object-and-state 카드</a>
+      <a href="../../learning/01-contract-and-objects.md">Canonical Core 문서</a>
+      <a href="0003-trace-fix-convergence.html">다음 lesson</a>
+      <a href="../index.html">강의 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">객체의 owner, lifetime, state coordinate, source claim이 불분명하면 언제든 teaching agent에게 물어보세요.</footer>
+</main>
+</body>
+</html>

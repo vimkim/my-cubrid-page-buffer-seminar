@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0003 — fix convergence 추적하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0003-trace-fix-convergence.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0003</span><a href="../index.html">강의 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Core capability · normal acquisition</div>
+    <h1>hit와 miss가 하나의 fix contract로 모이는 과정 추적하기</h1>
+    <p>이 lesson을 마치면 hit와 miss의 준비 과정이 어떻게 다른지, 어느 지점부터 identity를 신뢰할 수 있는지, 두 경로가 왜 caller에게 같은 ownership contract를 제공하는지 설명할 수 있습니다.</p>
+    <div class="pills"><span class="pill">Caller intent</span><span class="pill">Hash hit</span><span class="pill">Load owner</span><span class="pill">Identity</span><span class="pill">Grant</span><span class="pill">Debt</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="intent">
+        <div class="eyebrow">01 · 서로 독립적인 세 input</div>
+        <h2>caller가 무엇을 알고 무엇을 원하는지에서 시작합니다</h2>
+        <table>
+          <thead><tr><th>Choice</th><th>답하는 질문</th><th>중요한 결과</th></tr></thead>
+          <tbody>
+            <tr><td><code>PAGE_FETCH_MODE</code></td><td>caller가 allocation 또는 residency에 관해 무엇을 아는가?</td><td><code>OLD_PAGE</code>는 기존 bytes를 materialize할 수 있고, <code>NEW_PAGE</code>는 기존 bytes를 읽지 않고 초기화하며, <code>OLD_PAGE_IF_IN_BUFFER</code>는 materialization을 하지 않습니다.</td></tr>
+            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>borrower가 resident bytes에 어떤 방식으로 접근할 수 있는가?</td><td>READ는 compatible reader를 허용하고, WRITE는 exclusive content access를 요청합니다.</td></tr>
+            <tr><td><code>PGBUF_LATCH_CONDITION</code></td><td>incompatible request가 기다릴 수 있는가?</td><td>Conditional은 wait path에 들어가지 않고 거절하며, unconditional은 wait path를 허용합니다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Debt rule:</strong> 예상된 non-acquisition은 debt를 만들지 않습니다. <code>OLD_PAGE_IF_IN_BUFFER</code> miss나 conditional conflict는 matching unfix 의무 없이 <code>NULL</code>을 반환할 수 있습니다. <code>NULL</code>을 하나의 보편적 error로 해석하지 말고 caller가 선택한 protocol에 맞춰 해석하세요.</div>
+        <p class="source-note"><strong>Interface contract:</strong> 세 choice type은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a>에서 분리되어 있습니다. Validation, zero-wait conversion, resident-only miss는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2260-L2413"><code>page_buffer.c:2260–2413</code></a>에 있습니다.</p>
+      </section>
+
+      <section class="section" id="convergence">
+        <div class="eyebrow">02 · 준비는 달라도 성공의 의미는 같습니다</div>
+        <h2>두 path가 하나의 postcondition으로 모입니다</h2>
+        <img class="diagram" src="../../assets/fix-contract.svg" alt="normal resident hit와 cold miss가 하나의 fix contract로 모이는 흐름">
+        <p class="caption">여기서는 일반 mutex-protected path만 보여 줍니다. lock-free READ path는 Advanced에서 이어집니다.</p>
+        <div class="journey">
+          <article><span class="step">H</span><h3>Resident hit</h3><p>hash candidate를 찾고 BCB를 보호한 뒤, 여전히 요청한 VPID를 나타내는지 다시 확인합니다.</p></article>
+          <article><span class="step">M</span><h3>Cold miss</h3><p>VPID별로 준비 과정을 serialize하고 provisional BCB/frame을 확보한 뒤 bytes를 읽거나 초기화합니다.</p></article>
+          <article><span class="step">C</span><h3>Converge</h3><p>보호된 상태에서 BCB identity와 page-header identity가 일치하는지 확인합니다.</p></article>
+          <article><span class="step">G</span><h3>Grant</h3><p>요청한 latch를 grant하고 global 및 thread debt를 갱신한 뒤 borrowed pointer를 반환합니다.</p></article>
+        </div>
+        <p class="big-claim">page가 hit였다고 더 약한 contract를 받거나, miss였다고 더 강한 contract를 받는 일은 없습니다.</p>
+      </section>
+
+      <section class="section" id="hit">
+        <div class="eyebrow">03 · Protected hit</div>
+        <h2>hash candidate는 관찰 결과이지 증명이 아닙니다</h2>
+        <p>hash chain에서 <code>vpid</code>가 일치해 보이는 BCB를 찾을 수 있습니다. 하지만 첫 비교는 BCB mutex로 보호되지 않습니다. thread가 mutex를 얻기 전에 victimizer가 BCB를 unlink하고, 다른 loader가 재사용 가능한 slot을 다른 VPID에 rebind할 수 있습니다.</p>
+        <p>그래서 hit path는 BCB를 lock한 뒤 VPID를 다시 비교합니다. 값이 바뀌었다면 candidate를 release하고 다시 찾습니다. table이 pool lifetime 동안 유지되므로 BCB storage 자체는 안전하게 살펴볼 수 있습니다. 바뀔 수 있는 것은 그 slot이 나타내는 identity입니다.</p>
+        <div class="callout"><strong>Stale-observation boundary:</strong> 보호된 VPID recheck를 거치면 보호되지 않은 candidate 관찰이 이 path에서 신뢰할 수 있는 resident-identity evidence로 바뀝니다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> protected hash-candidate recheck는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7594-L7722"><code>page_buffer.c:7594–7722</code></a>에 있습니다. Pool-lifetime BCB allocation은 <code>5559–5660</code>에서 확인할 수 있습니다.</p>
+      </section>
+
+      <section class="section" id="miss">
+        <div class="eyebrow">04 · Serialized cold miss</div>
+        <h2>waiter는 재시도하며 provisional BCB를 그대로 넘겨받지 않습니다</h2>
+        <img class="diagram" src="../../assets/load-owner-waiter.svg" alt="하나의 cold miss에서 VPID load owner와 waiter">
+        <p class="caption">하나의 hash-anchor mutex가 in-flight load-lock chain과 resident BCB chain을 보호합니다.</p>
+        <ol>
+          <li>Thread A가 miss한 뒤 VPID load-lock record를 먼저 등록해 load owner가 됩니다.</li>
+          <li>같은 VPID에서 miss한 Thread B는 A의 record를 찾아 자신을 waiter로 연결하고 잠듭니다.</li>
+          <li>A는 재사용 가능한 BCB/frame을 얻어 VPID를 지정하고, 이 provisional object를 아직 publish하지 않습니다.</li>
+          <li><code>OLD_PAGE</code>라면 A는 DWB를 확인한 다음 data volume을 봅니다. <code>NEW_PAGE</code>라면 frame을 초기화합니다.</li>
+          <li>identity를 확인하고 자신의 ownership을 grant받은 뒤 A가 BCB를 publish하고 load lock을 release합니다.</li>
+          <li>B는 깨어나 lookup을 재시도하고 resident hit를 찾은 뒤 별도의 grant와 debt를 얻습니다.</li>
+        </ol>
+        <div class="callout warn"><strong>Evidence boundary:</strong> 이 protocol은 resident-identity 준비를 serialize합니다. “physical disk I/O가 정확히 한 번 발생한다”는 증거는 아닙니다. DWB, filesystem, OS cache, device 동작, error, retry는 별도 layer입니다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> load owner/waiter 등록과 retry는 <code>page_buffer.c:7981–8178</code>에 있습니다. provisional BCB allocation과 DWB/data-volume 또는 NEW_PAGE materialization은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8634"><code>8392–8634</code></a>에 있습니다.</p>
+      </section>
+
+      <section class="section" id="identity">
+        <div class="eyebrow">05 · 세 check, 세 gap</div>
+        <h2>identity validation을 하나의 check로 뭉뚱그리지 마세요</h2>
+        <img class="diagram" src="../../assets/identity-check-timeline.svg" alt="서로 다른 세 protection gap을 닫는 identity check">
+        <p class="caption">각 check는 서로 다른 보호 아래 서로 다른 관찰을 검증합니다.</p>
+        <table>
+          <thead><tr><th>Check</th><th>닫는 gap</th><th>실패의 의미</th></tr></thead>
+          <tbody>
+            <tr><td>BCB mutex 아래에서 hit candidate VPID 확인</td><td>Unprotected hash observation → protected BCB</td><td>재사용 slot이 rebind되었습니다. chain을 다시 찾습니다.</td></tr>
+            <tr><td>BCB VPID와 page-header identity 비교</td><td>Prepared control state → prepared bytes</td><td>control block과 page image가 불일치합니다. borrowed pointer를 반환하지 않습니다.</td></tr>
+            <tr><td>Release-time identity assertion</td><td>Borrowed-use period → global decrement</td><td>debug build에서 global debt를 갚기 전에 caller/pointer identity 위반을 감지합니다.</td></tr>
+          </tbody>
+        </table>
+        <p>세 번째 check는 일반 mutex-based unfix path의 debug assertion입니다. caller의 의무를 문서화하지만, release build에는 이 assertion으로 인한 runtime guard가 없습니다.</p>
+      </section>
+
+      <section class="section" id="contract">
+        <div class="eyebrow">06 · 공통 contract 명시하기</div>
+        <h2>네 가지 사실이 acquisition 성공을 이룹니다</h2>
+        <ol>
+          <li>요청한 VPID가 BCB/frame에 resident입니다.</li>
+          <li>요청한 page latch가 grant되었습니다.</li>
+          <li>Global <code>fcnt</code>와 현재 thread의 holder가 이 acquisition을 기록합니다.</li>
+          <li>반환된 <code>PAGE_PTR</code>는 matching unfix 하나가 이 debt를 갚을 때까지 빌린 것입니다.</li>
+        </ol>
+        <p>Publication은 cold miss 준비 과정의 일부입니다. 어느 준비 path든 성공하고 나면 caller는 위 contract를 기준으로 추론합니다.</p>
+        <div class="callout warn"><strong>여기서 증명하지 않는 것:</strong> waiter fairness, lock-free READ memory ordering, 모든 exceptional cleanup path, physical-device I/O count, caller logical correctness, durability.</div>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>contract의 의미는 바꾸지 않고 차이를 설명합니다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="caller가 fetch knowledge, latch mode, wait condition을 선택함 -> protected hit가 hash candidate를 recheck함 -> cold miss는 VPID load owner 하나를 선출하고 waiter는 잠든 뒤 retry함 -> 두 path 모두 BCB와 page-header identity를 비교함 -> latch와 두 debt ledger를 grant함 -> unfix 하나를 빚진 borrowed PAGE_PTR 하나를 반환함. 이 protocol은 resident identity를 serialize하며 physical I/O를 serialize한다고 단정할 수 없음." data-concepts='[{"label":"분리된 세 caller choice","terms":["fetch","latch","condition","wait"]},{"label":"protected hit와 stale-observation boundary","terms":["hit","candidate","mutex","recheck","stale"]},{"label":"VPID load owner와 waiter retry","terms":["load owner","waiter","retry","provisional","publish"]},{"label":"BCB와 page-header identity 일치","terms":["bcb","header","identity","vpid"]},{"label":"공통 grant와 release debt","terms":["fcnt","holder","page_ptr","unfix","debt"]},{"label":"명시적인 evidence 한계","terms":["physical","i/o","fairness","durability","does not prove"]}]'>
+          <h3>문제</h3>
+          <p>“일반 resident hit와 cold miss는 무엇이 다르고, 어느 postcondition이 같으며, miss protocol이 physical disk read가 정확히 한 번임을 증명하지 못하는 이유는 무엇인가요?”</p>
+          <p><strong>권장 답변 구조:</strong> caller intent → hit protection 또는 miss serialization/materialization → 공통 identity confirmation → latch와 두 ledger → borrowed return → evidence 한계.</p>
+          <p><strong>할 일:</strong> waiter가 owner의 provisional BCB를 받는 대신 retry하는 이유를 설명하고, hit path의 stale-observation boundary를 말하세요.</p>
+          <textarea aria-label="hit와 miss convergence 설명 답안" placeholder="visual을 닫고 두 path와 공통 contract를 기억만으로 다시 구성하세요."></textarea>
+          <button type="button" data-check>trace 포함 여부 확인</button>
+          <button type="button" class="secondary" data-reveal>model spine 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답을 chat에 붙여 넣으세요. mastery를 기록하기 전에 path 순서, ownership, identity evidence, 과도한 claim이 없는지 확인합니다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">필수 읽기</div>
+        <h2>바깥쪽 spine만 추적합니다</h2>
+        <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2342-L2546"><code>page_buffer.c:2342–2546</code></a>을 읽으세요. hash hit/miss 분기, 공통 page-header check, latch helper, cold-miss publication, 반환 pointer를 표시합니다. 아직 latch queue 내부 mechanics까지 내려가지 마세요.</p>
+        <p><a href="../reference/fix-convergence-map.html">인쇄용 fix-convergence card 열기 →</a></p>
+        <p><a href="0004-repay-fix-debt.html">teach-back 후 Lesson 0004로 계속 →</a></p>
+        <p><a href="0002-separate-objects-from-state.html">← Lesson 0002로 돌아가기</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="강의 목차">
+      <strong>강의 지도</strong>
+      <a href="#intent">1. Caller intent</a>
+      <a href="#convergence">2. 두 path, 하나의 contract</a>
+      <a href="#hit">3. Protected hit</a>
+      <a href="#miss">4. Serialized miss</a>
+      <a href="#identity">5. 세 identity check</a>
+      <a href="#contract">6. 공통 postcondition</a>
+      <a href="#retrieval">7. teach-back</a>
+      <a href="#primary-reading">필수 읽기</a>
+      <hr>
+      <a href="../reference/fix-convergence-map.html">Fix-convergence 카드</a>
+      <a href="../../learning/02-fix-hold-release.md">Canonical Core 문서</a>
+      <a href="0004-repay-fix-debt.html">다음 lesson</a>
+      <a href="../index.html">강의 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">preparation step, identity check, ownership transition, evidence boundary가 불분명하면 언제든 teaching agent에게 물어보세요.</footer>
+</main>
+</body>
+</html>

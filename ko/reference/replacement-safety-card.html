@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID replacement safety 참고 카드</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/replacement-safety-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 빠른 참고</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">replacement review용 인쇄 카드</div>
+    <h1>Victim eligibility 카드</h1>
+    <p>protection 아래에서 frame을 재사용해도 안전한지 먼저 증명한 다음 policy 선택지를 비교합니다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Hard gate</span><span class="pill">Protected handoff</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>한 문장으로 설명하는 BCB identity</h2>
+      <p><strong>Stable slot, one current VPID:</strong> BCB/frame address는 A를 나타내다가 detach된 뒤 B에 쓰이는 식으로 serial reuse되며, 동시에 두 resident page identity를 나타내지 않습니다.</p>
+      <table>
+        <thead><tr><th>질문</th><th>답</th></tr></thead>
+        <tbody>
+          <tr><td>여러 thread가 hold할 수 있습니까?</td><td>예. latch rule이 허용하면 같은 current page를 여러 thread가 hold할 수 있습니다.</td></tr>
+          <tr><td>여러 VPID를 동시에 나타낼 수 있습니까?</td><td>아니요.</td></tr>
+          <tr><td>private LRU와 shared LRU에 동시에 속할 수 있습니까?</td><td>아니요. 둘은 서로 대안인 list home입니다.</td></tr>
+          <tr><td>왜 handoff를 protect합니까?</td><td>A에 대한 stale observation이 detach/rebind 또는 state movement 이후 적용되는 일을 막기 위해서입니다.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card full">
+      <h2>policy보다 먼저 확인할 eligibility</h2>
+      <img class="diagram" src="../../assets/victim-eligibility.svg" alt="policy 선택 전에 확인할 다섯 가지 replacement safety gate">
+    </article>
+    <article class="reference-card">
+      <h2>Hard predicate</h2>
+      <ol>
+        <li>identity가 여전히 candidate와 일치합니다.</li>
+        <li>fix owner나 transient right가 남아 있지 않습니다.</li>
+        <li>DIRTY 또는 FLUSHING generation debt가 남아 있지 않습니다.</li>
+        <li>충돌하는 waiter가 없습니다.</li>
+        <li>BCB protection 아래에서 모든 condition을 다시 통과합니다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Policy input</h2>
+      <ul>
+        <li>LRU placement와 victim zone</li>
+        <li>private domain과 shared domain</li>
+        <li>quota와 “another chance” decision</li>
+        <li>candidate queue와 hint</li>
+        <li>취소할 수 있는 direct assignment</li>
+      </ul>
+      <p>policy는 eligible frame의 순위를 정할 뿐, 통과하지 못한 eligibility를 고치지 않습니다.</p>
+    </article>
+    <article class="reference-card">
+      <h2>빠르게 떠올릴 네 가지 counterexample</h2>
+      <ul>
+        <li><code>fcnt == 0</code> + DIRTY → 아직 propagate하지 않은 debt</li>
+        <li><code>fcnt == 0</code> + FLUSHING → in-flight identity</li>
+        <li><code>fcnt == 0</code> + waiter → pending right</li>
+        <li>lock 전에 모두 clear → observation이 stale일 수 있음</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>동작을 구분하는 verb test</h2>
+      <ul>
+        <li><strong>Unfix:</strong> ownership debt 하나를 갚습니다.</li>
+        <li><strong>Flush:</strong> copied generation 하나를 propagate합니다.</li>
+        <li><strong>Victimize:</strong> 안전한 frame을 detach해 reuse할 수 있게 합니다.</li>
+        <li><strong>Invalidate:</strong> coherence를 위해 mapping을 제거하거나 거부합니다.</li>
+        <li><strong>Deallocate:</strong> logical storage ownership을 끝냅니다.</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>Review worksheet</h2>
+      <table>
+        <thead><tr><th>Observation</th><th>Hard predicate인가 policy인가?</th><th>Protection이 필요한가?</th><th>Stale risk</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr><td><code>fcnt == 0</code></td><td>Hard, 불완전한 sample</td><td>final check에서는 필요</td><td>새 owner/transient right</td><td>gate 확인 계속</td></tr>
+          <tr><td>DIRTY 또는 FLUSHING</td><td>Hard</td><td>필요</td><td>generation transition</td><td>reject/retry</td></tr>
+          <tr><td>Latch waiter</td><td>Hard</td><td>필요</td><td>grant/wakeup transition</td><td>reject/retry</td></tr>
+          <tr><td>quota 미만인 private LRU</td><td>Policy</td><td>policy별로 다름</td><td>quota/list change</td><td>eligible일 때만 rank</td></tr>
+          <tr><td>protected all-clear</td><td>Hard handoff</td><td>현재 hold 중</td><td>protocol로 범위가 제한됨</td><td>detach 가능</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card full">
+      <h2>Source와 evidence route</h2>
+      <table>
+        <thead><tr><th>질문</th><th>Pinned source 또는 route</th><th>Claim strength</th></tr></thead>
+        <tbody>
+          <tr><td>일반 victim selection과 handoff</td><td><code>page_buffer.c:9293–9538</code></td><td>Verified mechanism</td></tr>
+          <tr><td>Avoid-deallocation의 의미</td><td><code>page_buffer.c:16262–16296</code></td><td>Verified mechanism이며 일반 victim blocker는 아님</td></tr>
+          <tr><td>LRU, quota, daemon, direct victim</td><td><code>advanced/replacement-progress.md</code></td><td>Implementation policy</td></tr>
+          <tr><td>기존 workload</td><td><code>source-inventory.md</code></td><td>Runtime observation: eviction을 강제하지 못함</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../learning/05-replace-one-frame.md">Replace One Frame</a>. 어떤 gate든 완화하기 전에 teaching agent에게 질문하세요.</footer>
+</main>
+</body>
+</html>

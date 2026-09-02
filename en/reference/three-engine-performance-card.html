@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Three-engine page-buffer comparison card</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/three-engine-performance-card.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · printable comparison</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Responsibility and performance card</div>
+    <h1>Same invariant. Different seam.</h1>
+    <p>Use this after Lesson 18 to compare ownership accurately and keep optimization claims falsifiable.</p>
+  </header>
+
+  <section class="section">
+    <h2>Ownership in one view</h2>
+    <table>
+      <thead><tr><th>Engine</th><th>Replacement protection</th><th>Content protection</th><th>Cleanup owner</th></tr></thead>
+      <tbody>
+        <tr><td>CUBRID</td><td>BCB atomic <code>fcnt</code></td><td>READ/WRITE latch requested through <code>pgbuf_fix()</code></td><td>Per-thread holder; matching <code>pgbuf_unfix()</code></td></tr>
+        <tr><td>PostgreSQL</td><td>Shared refcount plus backend <code>PrivateRefCount</code></td><td>Separate buffer content lock</td><td><code>ResourceOwner</code> plus explicit unlock/unpin</td></tr>
+        <tr><td>InnoDB</td><td>Atomic <code>buf_fix_count</code></td><td>Block S/SX/X latch</td><td><code>mtr_t</code> memo releases latch, then fix</td></tr>
+      </tbody>
+    </table>
+    <p class="big-claim">A pin or fix protects identity from reuse. A latch or content lock protects bytes from incompatible access.</p>
+  </section>
+
+  <section class="section">
+    <h2>Design differences that matter</h2>
+    <table>
+      <thead><tr><th>Axis</th><th>CUBRID</th><th>PostgreSQL</th><th>InnoDB</th></tr></thead>
+      <tbody>
+        <tr><td>Fix/latch lifetime</td><td>Coupled in normal fix/unfix</td><td>Independently selectable</td><td>Distinct state, MTR-coupled lifetime</td></tr>
+        <tr><td>Repeated local ownership</td><td>Local holder and shared <code>fcnt</code> both change</td><td>Private count changes after first shared pin</td><td>Atomic fix count changes per low-level fix</td></tr>
+        <tr><td>Miss visibility</td><td>Publish after load and latch</td><td>Publish invalid before I/O</td><td>Publish <code>BUF_IO_READ</code> before I/O</td></tr>
+        <tr><td>Victim policy</td><td>LRU domains and zones</td><td>Clock sweep and rings</td><td>Midpoint old/new LRU</td></tr>
+        <tr><td>Torn-page defense</td><td>DWB stage</td><td>WAL full-page image</td><td>Conditional doublewrite</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>Performance-opportunity funnel</h2>
+    <ol>
+      <li><strong>Observe:</strong> measure held-list depth, nodes inspected, shared CAS attempts/retries, and cycles per fix/unfix.</li>
+      <li><strong>Localize:</strong> vary held-set size separately from thread count and target-page sharing.</li>
+      <li><strong>Low-risk prototype:</strong> accelerate per-thread holder lookup while preserving global <code>fcnt</code>.</li>
+      <li><strong>Higher-risk prototype:</strong> aggregate nested ownership locally only if shared CAS is proven material.</li>
+      <li><strong>Prove:</strong> preserve promotion, waiter ordering, zero-crossing wakeup, last-unfix LRU work, and victim exclusion.</li>
+    </ol>
+    <div class="callout warn"><strong>Current conclusion:</strong> source-backed opportunity, not measured improvement. Existing evidence does not compare latency or throughput across the three engines.</div>
+  </section>
+
+  <section class="section">
+    <h2>Thirty-second answer</h2>
+    <p>CUBRID's distinctive seam is that a normal fix combines residency protection, a per-thread holder, and the requested page latch. PostgreSQL makes pin and content lock independent and keeps repeated pins backend-local after the first shared contribution. InnoDB keeps fix count and latch state separate but records their lifetime in an MTR memo. The first CUBRID performance bet is to measure linear holder lookup as held-set depth grows; only if shared atomic traffic dominates should nested-fix aggregation be considered.</p>
+    <p><a href="../lessons/0018-compare-three-buffer-pools.html">Return to Lesson 18 →</a></p>
+  </section>
+
+  <footer class="footer">Use this card for retrieval. Use pinned source and the evidence inventory for proof.</footer>
+</main>
+</body>
+</html>

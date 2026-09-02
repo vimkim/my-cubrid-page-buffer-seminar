@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID page buffer object와 state 지도</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/object-and-state-map.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 빠른 참조</span><a href="../index.html">Course 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">source review용 인쇄 자료</div>
+    <h1>Object, lifetime, state map</h1>
+    <p>먼저 정확한 이름으로 대상을 구분한 뒤, 현재 BCB/frame 상태를 네 좌표의 tuple로 설명하세요.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Object 6개</span><span class="pill">축 4개</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Ownership 개요</h2>
+      <img class="diagram" src="../../assets/object-ownership-map.svg" alt="여섯 page-buffer object와 그 ownership 관계">
+    </article>
+    <article class="reference-card">
+      <h2>Object와 lifetime</h2>
+      <table>
+        <tbody>
+          <tr><th><code>VPID</code></th><td>Logical identity 값이며, resident가 아니어도 존재할 수 있습니다.</td></tr>
+          <tr><th>BCB</th><td>재사용되는 pool control입니다. 현재 identity는 바뀔 수 있습니다.</td></tr>
+          <tr><th>Frame</th><td>재사용되는 pool byte 영역입니다. 내용은 resident generation을 따라갑니다.</td></tr>
+          <tr><th><code>PAGE_PTR</code></th><td>빌려 쓰는 view입니다. 대응하는 unfix에서 사용이 끝납니다.</td></tr>
+          <tr><th>Global <code>fcnt</code></th><td>하나의 BCB에 부여된 모든 fix debt입니다.</td></tr>
+          <tr><th>Thread holder</th><td>이 thread가 가진 BCB debt와 중첩 <code>fix_count</code>입니다.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>네 좌표 확인표</h2>
+      <ol>
+        <li><strong>Identity / residency:</strong> 이 BCB/frame은 어느 VPID를 나타내는가?</li>
+        <li><strong>Ownership:</strong> 일반적인 재사용을 막고 있는 fix는 무엇인가?</li>
+        <li><strong>Concurrency:</strong> 지금 누가 byte를 읽거나 변경할 수 있는가?</li>
+        <li><strong>Durability / propagation:</strong> 어느 generation을 전파해야 하며, recovery boundary는 어디인가?</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>세 가지 lifetime</h2>
+      <ul>
+        <li><strong>Pool:</strong> BCB와 frame의 allocation 기간.</li>
+        <li><strong>Resident generation:</strong> 현재 VPID-to-frame mapping이 유효한 기간.</li>
+        <li><strong>Borrow:</strong> fix 성공부터 대응하는 unfix까지.</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>혼동하면 안 되는 네 쌍</h2>
+      <ul>
+        <li>Fixed와 resident는 같은 뜻이 아닙니다.</li>
+        <li>DIRTY와 durable은 같은 뜻이 아닙니다.</li>
+        <li>Unfix와 flush는 같은 동작이 아닙니다.</li>
+        <li>Eviction과 deallocation은 같은 동작이 아닙니다.</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>Source anchor</h2>
+      <table>
+        <thead><tr><th>주장</th><th>Pinned source</th><th>Evidence level</th></tr></thead>
+        <tbody>
+          <tr><td>Holder, global <code>fcnt</code>, BCB, frame의 연결 관계</td><td><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a></td><td>Verified mechanism</td></tr>
+          <tr><td>BCB/frame table의 일대일 pairing</td><td><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>page_buffer.c:5559–5660</code></a></td><td>Verified mechanism</td></tr>
+          <tr><td>Normal fix 성공으로 얻은 borrowed view와 release debt</td><td><a href="../../learning/01-contract-and-objects.md">Core의 canonical 설명</a></td><td>Interface contract</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical 설명: <a href="../../learning/01-contract-and-objects.md">Contract and Objects</a>. tuple의 어느 좌표인지 모호하다면 teaching agent에게 질문하세요.</footer>
+</main>
+</body>
+</html>

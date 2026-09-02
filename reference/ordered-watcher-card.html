@@ -2,78 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID ordered-watcher reference card</title>
-  <link rel="stylesheet" href="../assets/teach-course.css">
+  <meta http-equiv="refresh" content="0; url=../en/reference/ordered-watcher-card.html">
+  <link rel="canonical" href="../en/reference/ordered-watcher-card.html">
+  <title>Page moved · CUBRID page buffer course</title>
 </head>
-<body>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
-  <header class="hero">
-    <div class="eyebrow">Print for multi-page review</div>
-    <h1>Ordered watcher and refix card</h1>
-    <p>Enforce the caller’s canonical order, then rebuild knowledge behind every released watcher.</p>
-    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Group-rank-VPID</span><span class="pill">Selective release</span></div>
-  </header>
-
-  <section class="reference-grid">
-    <article class="reference-card full">
-      <h2>Ordered refix route</h2>
-      <img class="diagram" src="../assets/ordered-watcher-refix.svg" alt="Ordered watcher conditional fix, selective release, and sorted refix">
-    </article>
-    <article class="reference-card">
-      <h2>Comparison coordinates</h2>
-      <ol>
-        <li>Access-method group</li>
-        <li>Rank: header &lt; normal &lt; overflow</li>
-        <li>VPID within equal group/rank</li>
-        <li>No known group sorts last</li>
-      </ol>
-    </article>
-    <article class="reference-card">
-      <h2>Conditional-failure rule</h2>
-      <ul>
-        <li>Held H before request R → keep fixed.</li>
-        <li>Held H after R → fully unfix and mark watcher.</li>
-        <li>Unknown request group → release held set required by protocol.</li>
-        <li>Fix R unconditionally; refix released pages sorted.</li>
-      </ul>
-    </article>
-    <article class="reference-card">
-      <h2><code>page_was_unfixed</code></h2>
-      <p>Rebuild:</p>
-      <ul>
-        <li>record/slot pointers</li>
-        <li>free-space choice</li>
-        <li>headers and type state</li>
-        <li>cross-page relationships</li>
-        <li>access-method preconditions</li>
-      </ul>
-    </article>
-    <article class="reference-card">
-      <h2>Partial-failure ledger</h2>
-      <ol>
-        <li>Which watcher is currently held?</li>
-        <li>How many fixes does it carry?</li>
-        <li>Which watcher remains released?</li>
-        <li>Which avoid-deallocation debt remains?</li>
-        <li>Who consumes each debt on this exit?</li>
-      </ol>
-    </article>
-    <article class="reference-card full">
-      <h2>Source route</h2>
-      <table>
-        <thead><tr><th>Responsibility</th><th>Pinned range</th></tr></thead>
-        <tbody>
-          <tr><td>Ordered helpers, callbacks, refix, unwind</td><td><code>page_buffer.c:12268–13531</code></td></tr>
-          <tr><td>Heap destination/watcher owner</td><td><code>heap_file.c:20493–20664</code></td></tr>
-          <tr><td>B-tree promotion/restart owner</td><td><code>btree.c:28365–28393</code></td></tr>
-        </tbody>
-      </table>
-    </article>
-  </section>
-
-  <footer class="footer">Canonical explanation: <a href="../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. Restoring a pointer is not revalidation.</footer>
-</main>
+<body data-legacy-redirect>
+  <p>This course page moved to <a href="../en/reference/ordered-watcher-card.html">../en/reference/ordered-watcher-card.html</a>.</p>
 </body>
 </html>

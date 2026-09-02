@@ -2,106 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID replacement-safety reference card</title>
-  <link rel="stylesheet" href="../assets/teach-course.css">
+  <meta http-equiv="refresh" content="0; url=../en/reference/replacement-safety-card.html">
+  <link rel="canonical" href="../en/reference/replacement-safety-card.html">
+  <title>Page moved · CUBRID page buffer course</title>
 </head>
-<body>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
-  <header class="hero">
-    <div class="eyebrow">Print for replacement review</div>
-    <h1>Victim eligibility card</h1>
-    <p>Prove the frame reusable under protection; only then compare policy choices.</p>
-    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Hard gate</span><span class="pill">Protected handoff</span></div>
-  </header>
-
-  <section class="reference-grid">
-    <article class="reference-card full">
-      <h2>BCB identity in one sentence</h2>
-      <p><strong>Stable slot, one current VPID:</strong> a BCB/frame address is reused serially—A, detached, then B—never as two resident page identities at once.</p>
-      <table>
-        <thead><tr><th>Question</th><th>Answer</th></tr></thead>
-        <tbody>
-          <tr><td>Can many threads hold it?</td><td>Yes, for the same current page when latch rules permit.</td></tr>
-          <tr><td>Can it represent many VPIDs simultaneously?</td><td>No.</td></tr>
-          <tr><td>Can it be in private and shared LRUs simultaneously?</td><td>No; those are alternative list homes.</td></tr>
-          <tr><td>Why protect the handoff?</td><td>Prevent a stale observation of A from being applied after detach/rebind or state movement.</td></tr>
-        </tbody>
-      </table>
-    </article>
-    <article class="reference-card full">
-      <h2>Eligibility gates policy</h2>
-      <img class="diagram" src="../assets/victim-eligibility.svg" alt="Five replacement safety gates before policy">
-    </article>
-    <article class="reference-card">
-      <h2>Hard predicates</h2>
-      <ol>
-        <li>Identity still matches candidate.</li>
-        <li>No fix owner or transient right remains.</li>
-        <li>No DIRTY or FLUSHING generation debt remains.</li>
-        <li>No conflicting waiter exists.</li>
-        <li>All conditions pass again under BCB protection.</li>
-      </ol>
-    </article>
-    <article class="reference-card">
-      <h2>Policy inputs</h2>
-      <ul>
-        <li>LRU placement and victim zone</li>
-        <li>Private versus shared domain</li>
-        <li>Quota and “another chance” decisions</li>
-        <li>Candidate queues and hints</li>
-        <li>Revocable direct assignment</li>
-      </ul>
-      <p>Policy ranks eligible frames; it never repairs failed eligibility.</p>
-    </article>
-    <article class="reference-card">
-      <h2>Four fast counterexamples</h2>
-      <ul>
-        <li><code>fcnt == 0</code> + DIRTY → unpropagated debt</li>
-        <li><code>fcnt == 0</code> + FLUSHING → in-flight identity</li>
-        <li><code>fcnt == 0</code> + waiter → pending right</li>
-        <li>All clear before lock → observation may be stale</li>
-      </ul>
-    </article>
-    <article class="reference-card">
-      <h2>Verb test</h2>
-      <ul>
-        <li><strong>Unfix:</strong> repay one ownership debt.</li>
-        <li><strong>Flush:</strong> propagate one copied generation.</li>
-        <li><strong>Victimize:</strong> detach safe frame for reuse.</li>
-        <li><strong>Invalidate:</strong> remove/reject mapping for coherence.</li>
-        <li><strong>Deallocate:</strong> end logical storage ownership.</li>
-      </ul>
-    </article>
-    <article class="reference-card full">
-      <h2>Review worksheet</h2>
-      <table>
-        <thead><tr><th>Observation</th><th>Hard predicate or policy?</th><th>Protection needed?</th><th>Stale risk</th><th>Decision</th></tr></thead>
-        <tbody>
-          <tr><td><code>fcnt == 0</code></td><td>Hard, incomplete sample</td><td>Final check: yes</td><td>New owner/transient right</td><td>Continue gates</td></tr>
-          <tr><td>DIRTY or FLUSHING</td><td>Hard</td><td>Yes</td><td>Generation transition</td><td>Reject/retry</td></tr>
-          <tr><td>Latch waiter</td><td>Hard</td><td>Yes</td><td>Grant/wakeup transition</td><td>Reject/retry</td></tr>
-          <tr><td>Under-quota private LRU</td><td>Policy</td><td>Policy-specific</td><td>Quota/list change</td><td>Rank only if eligible</td></tr>
-          <tr><td>Protected all-clear</td><td>Hard handoff</td><td>Held now</td><td>Bounded by protocol</td><td>May detach</td></tr>
-        </tbody>
-      </table>
-    </article>
-    <article class="reference-card full">
-      <h2>Source and evidence route</h2>
-      <table>
-        <thead><tr><th>Question</th><th>Pinned source or route</th><th>Claim strength</th></tr></thead>
-        <tbody>
-          <tr><td>Ordinary victim selection and handoff</td><td><code>page_buffer.c:9293–9538</code></td><td>Verified mechanism</td></tr>
-          <tr><td>Avoid-deallocation meaning</td><td><code>page_buffer.c:16262–16296</code></td><td>Verified mechanism; not ordinary victim blocker</td></tr>
-          <tr><td>LRU, quota, daemons, direct victims</td><td><code>advanced/replacement-progress.md</code></td><td>Implementation policy</td></tr>
-          <tr><td>Existing workload</td><td><code>source-inventory.md</code></td><td>Runtime observation: no eviction forced</td></tr>
-        </tbody>
-      </table>
-    </article>
-  </section>
-
-  <footer class="footer">Canonical explanation: <a href="../learning/05-replace-one-frame.md">Replace One Frame</a>. Ask the teaching agent before weakening any gate.</footer>
-</main>
+<body data-legacy-redirect>
+  <p>This course page moved to <a href="../en/reference/replacement-safety-card.html">../en/reference/replacement-safety-card.html</a>.</p>
 </body>
 </html>

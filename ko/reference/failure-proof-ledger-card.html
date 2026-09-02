@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID failure-proof ledger 참조 카드</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/failure-proof-ledger-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 빠른 참조</span><a href="../index.html">Course 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Exceptional path review용 인쇄 자료</div>
+    <h1>Failure-proof ledger</h1>
+    <p>실제 branch에 도달하고 owner protocol이 안정될 때까지 기다린 다음, 모든 debt를 확인하세요. 주장의 범위는 evidence가 뒷받침하는 지점까지만 넓힙니다.</p>
+    <div class="pills"><span class="pill">Pinned source</span><span class="pill">정확한 injection</span><span class="pill">Unwind 이후</span><span class="pill">Retry</span><span class="pill">Impact</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Claim ladder</h2>
+      <img class="diagram" src="../../assets/claim-levels-ladder.svg" alt="다섯 claim level과 각 level을 확정하는 데 필요한 evidence">
+    </article>
+    <article class="reference-card">
+      <h2>Acquisition/load ledger</h2>
+      <ul>
+        <li>Global <code>fcnt</code></li>
+        <li>Latch mode/count/waiter tuple</li>
+        <li>Per-thread holder debt</li>
+        <li>Wait request의 removal/grant/wakeup</li>
+        <li>Hash, VPID, BCB, load owner identity</li>
+        <li>이후 fix/unfix retry의 진행 여부</li>
+      </ul>
+      <p>확인할 항목: <code>VS-10</code>, <code>VS-11</code>.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Flush generation ledger</h2>
+      <ul>
+        <li>DIRTY / FLUSHING for G</li>
+        <li>독립적으로 일어난 G+1 re-dirty</li>
+        <li><code>oldest_unflush_lsa</code> floor</li>
+        <li>Copied image / DWB slot ownership</li>
+        <li>Flush waiter wakeup 또는 retry owner</li>
+        <li>이후 flush/victim/checkpoint의 진행 여부</li>
+      </ul>
+      <p>확인할 항목: <code>VS-12</code>.</p>
+    </article>
+    <article class="reference-card full">
+      <h2>Risk에 맞는 가장 높은 verification seam</h2>
+      <table>
+        <thead><tr><th>Risk</th><th>Verification seam</th></tr></thead>
+        <tbody>
+          <tr><td>Allocator/read/crypto/write unwind</td><td>실제 owner path 안에서 정확한 dependency를 injection하고 state를 assertion으로 확인합니다.</td></tr>
+          <tr><td>Waiter/promotion/load/identity race</td><td>경쟁하는 transition에서 schedule을 통제하고 memory order 논증을 더합니다.</td></tr>
+          <tr><td>Victim progress</td><td>실제 pressure를 만들고 candidate 선택, rejection, 최종 victim 결정을 관찰합니다.</td></tr>
+          <tr><td>Durability/recovery</td><td>이름을 명시한 WAL, DWB 또는 home page boundary에서 crash/recovery를 수행합니다.</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Receipt에 남길 항목</h2>
+      <ol>
+        <li>Revision/build/configuration</li>
+        <li>Owner path와 정확한 branch</li>
+        <li>Injection/schedule evidence</li>
+        <li>안정화 전후의 ledger</li>
+        <li>Retry/liveness/impact 결과</li>
+        <li>뒷받침되는 claim과 뒷받침되지 않는 claim</li>
+        <li>Reproducer와 registry ID</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Pinned source 경로</h2>
+      <ul>
+        <li><code>VS-10</code>: <code>page_buffer.c:8510–8515</code></li>
+        <li>Holder allocator: <code>6000–6055</code></li>
+        <li><code>VS-12</code> setup/exit: <code>10795–10828</code></li>
+        <li>이후 rollback: <code>10908–10923</code></li>
+      </ul>
+      <p>Normal hit, lock-free hit, waiter grant site를 각각 따로 trace하세요.</p>
+    </article>
+    <article class="reference-card full">
+      <h2>Review에 사용할 표현</h2>
+      <table>
+        <thead><tr><th>확보한 evidence</th><th>방어할 수 있는 가장 강한 표현</th></tr></thead>
+        <tbody>
+          <tr><td>Source 순서만 확인</td><td>“Pinned source에서 이 proof obligation이 드러납니다.”</td></tr>
+          <tr><td>Branch injection 성공, 남은 debt 없음</td><td>“이 branch는 이 지점에서 도달 가능하며, 이번 실행에서는 cleanup이 완료됨을 관찰했습니다.”</td></tr>
+          <tr><td>Branch injection 성공, 남은 debt 있음</td><td>“이 target/configuration에서는 unwind 후 이 state가 그대로 남습니다.”</td></tr>
+          <tr><td>Consumer에게 보이는 결과 확인</td><td>“이 setup에서 재현된 impact는 남아 있는 state로 인해 발생합니다.”</td></tr>
+          <tr><td>Target branch에서 다시 확인</td><td>“이 receipt를 근거로 registry의 status update를 검토할 수 있습니다.”</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical 설명: <a href="../../advanced/failure-and-proof-obligations.md">Failure Unwind and Open Proof Obligations</a>. 변경 가능한 status는 uncertainty registry에서만 관리합니다.</footer>
+</main>
+</body>
+</html>

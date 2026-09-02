@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0016 — Close a failure proof</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0016-close-a-failure-proof.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · Lesson 0016</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced capability · failure proof</div>
+    <h1>Inspect the debt after cleanup finishes</h1>
+    <p>By the end, you can turn an exceptional return into a risk-matched proof plan and state exactly where the evidence stops.</p>
+    <div class="pills"><span class="pill">Reach the branch</span><span class="pill">Wait for unwind</span><span class="pill">Assert both ledgers</span><span class="pill">Retry</span><span class="pill">Demonstrate impact</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="levels">
+        <div class="eyebrow">01 · Retrieve the evidence boundary</div>
+        <h2>Five claims require five kinds of evidence</h2>
+        <img class="diagram" src="../../assets/claim-levels-ladder.svg" alt="Five claim levels from source-visible control flow to current-branch status">
+        <ol>
+          <li><strong>Source-visible control flow:</strong> pinned text shows a suspicious ordering or exit.</li>
+          <li><strong>Reachability:</strong> a supported target executes that exact branch.</li>
+          <li><strong>Surviving state:</strong> debt remains after callee cleanup, scope cleanup, wakeups, and retry.</li>
+          <li><strong>Production impact:</strong> a consumer observes incorrectness, leak, hang, corruption, or unacceptable progress.</li>
+          <li><strong>Current-branch status:</strong> the same path and effect are re-established on the revision being changed.</li>
+        </ol>
+        <p class="big-claim">A proof may stop at any level. Its conclusion must stop there too.</p>
+      </section>
+
+      <section class="section" id="timing">
+        <div class="eyebrow">02 · When to inspect</div>
+        <h2>The immediate return may not be the final state</h2>
+        <p>A fallible callee may clean its own resources. A scope guard or outer caller may release a mutex, remove a load record, restore flags, wake waiters, or transform the error into retry. Therefore, record state at two points:</p>
+        <ol>
+          <li><strong>At the exact return seam</strong>, to prove the branch and local ordering.</li>
+          <li><strong>After the complete owner protocol settles</strong>, to prove what survives and whether retry can make progress.</li>
+        </ol>
+        <div class="callout warn">A low-level mock that never constructs the BCB flags, holder ledger, load ownership, or waiter state cannot prove their cleanup.</div>
+      </section>
+
+      <section class="section" id="ownership-ledger">
+        <div class="eyebrow">03 · Acquisition/load ledger</div>
+        <h2>Failure must not invent invisible ownership</h2>
+        <table>
+          <thead><tr><th>State</th><th>Postcondition to assert after unwind</th></tr></thead>
+          <tbody>
+            <tr><td>Global <code>fcnt</code></td><td>No grant remains unless success or retry ownership represents it.</td></tr>
+            <tr><td>Latch tuple</td><td>Mode, count, and waiter bit match the returned contract.</td></tr>
+            <tr><td>Per-thread holder</td><td>Debt counts successful acquisitions, not attempts.</td></tr>
+            <tr><td>Wait request</td><td>Removed, granted, or woken exactly once; no stranded queue node.</td></tr>
+            <tr><td>Resident identity</td><td>Hash mapping, VPID, provisional BCB, and load owner agree.</td></tr>
+            <tr><td>Retry</td><td>A later fix can locate/load/acquire without duplicate identity or debt.</td></tr>
+          </tbody>
+        </table>
+        <p><code>VS-10</code> needs the cold-load ledger after a <code>dwb_read_page()</code> error. <code>VS-11</code> needs it separately for normal hit, lock-free hit, and awakened waiter because their grant and unwind seams differ.</p>
+        <p class="source-note"><strong>Level 1 source routes:</strong> <code>VS-10</code> at <code>page_buffer.c:8510–8515</code>; fallible holder allocation at <code>6000–6055</code>, with each grant site traced separately.</p>
+      </section>
+
+      <section class="section" id="flush-ledger">
+        <div class="eyebrow">04 · Flush-generation ledger</div>
+        <h2>Failure must preserve retryable propagation debt</h2>
+        <table>
+          <thead><tr><th>State</th><th>Postcondition to assert after unwind</th></tr></thead>
+          <tbody>
+            <tr><td>DIRTY / FLUSHING</td><td>Captured G remains retryable; concurrent G+1 remains independently dirty.</td></tr>
+            <tr><td>Oldest-unflush lower bound</td><td>The saved WAL floor is restored or transferred to the correct generation.</td></tr>
+            <tr><td>Copied G</td><td>Copy buffer and DWB-slot ownership are discharged exactly once.</td></tr>
+            <tr><td>Flush waiters</td><td>Woken, or still owned by an explicit retry path.</td></tr>
+            <tr><td>TDE / DWB / I/O resource</td><td>Each fallible resource has one cleanup owner.</td></tr>
+            <tr><td>Retry</td><td>Later flush, checkpoint, or victim work can progress without losing bytes or the WAL floor.</td></tr>
+          </tbody>
+        </table>
+        <p><code>VS-12</code> needs separate TDE-copy and DWB-slot injections. Test a concurrent post-copy re-dirty as a different schedule; a single-thread failure does not cover G+1.</p>
+        <p class="source-note"><strong>Level 1 source route:</strong> generation setup and early returns <code>page_buffer.c:10795–10828</code>; ordinary later rollback <code>10908–10923</code>.</p>
+      </section>
+
+      <section class="section" id="seam">
+        <div class="eyebrow">05 · Highest relevant seam</div>
+        <h2>Cross the boundary that could create the claimed harm</h2>
+        <table>
+          <thead><tr><th>Claim</th><th>Minimum useful seam</th><th>Weak substitute</th></tr></thead>
+          <tbody>
+            <tr><td>Allocator/read/crypto/write unwind</td><td>Inject the exact dependency inside the real owner path; assert post-state.</td><td>Mocking only the leaf function.</td></tr>
+            <tr><td>Waiter/promotion/load/identity race</td><td>Controlled schedule at the competing transition plus memory-order argument.</td><td>Unscheduled stress with no observed failure.</td></tr>
+            <tr><td>Victim progress</td><td>Pressure that observes a real candidate, rejection, and eventual victim.</td><td>Watching allocation succeed in an unpressured pool.</td></tr>
+            <tr><td>Durable recovery consequence</td><td>Crash and recover at a named WAL, DWB, or home-page boundary.</td><td>Successful flush return without crash.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="receipt">
+        <div class="eyebrow">06 · Proof receipt</div>
+        <h2>Record what the experiment cannot establish</h2>
+        <ol>
+          <li>Exact source revision, build mode, configuration, and owner path.</li>
+          <li>Injection or schedule and proof that the target branch executed.</li>
+          <li>Before/after ledger values after the complete unwind.</li>
+          <li>Retry, waiter, liveness, victim, checkpoint, or restart consequence.</li>
+          <li>Supported conclusion and explicitly unsupported conclusion.</li>
+          <li>Reproducer receipt and current registry ID; update status only in the registry.</li>
+        </ol>
+        <p><code>VS-13</code> is an error-visibility question, while <code>VS-14</code> is a controlled identity/reuse and memory-order proof obligation. Do not force every uncertainty into the same fault-injection shape.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>Upgrade a weak “stress passed” conclusion</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} presentation moves detected." data-complete-message="Good coverage. Now deliver it aloud without reading." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="source reading closes only Level 1; a passing unscheduled stress run does not prove the target branch ran or that safety holds -> choose one registry candidate and inject the exact fallible dependency in its real owner path -> prove reachability with a branch marker -> wait through callee and outer cleanup, wakeups, and retry before inspecting surviving state -> for VS-10 or VS-11 assert fcnt, latch tuple, holder, wait request, identity/load record, and later acquisition/release -> for VS-12 assert DIRTY, FLUSHING, oldest-unflush LSA, copied generation and DWB ownership, waiter wakeup, later flush/victim/checkpoint/restart; test G+1 re-dirty separately -> demonstrate consumer-visible impact before calling it a production defect -> re-trace and rerun on the branch being changed; keep mutable status in the uncertainty registry." data-concepts='[{"label":"stress does not prove reachability or safety","terms":["stress","branch","reach","not prove"]},{"label":"exact risk-boundary injection","terms":["inject","exact","callee","owner"]},{"label":"inspect after complete unwind","terms":["cleanup","wakeup","retry","after"]},{"label":"select the correct state ledger","terms":["fcnt","holder","identity","dirty","flushing","oldest"]},{"label":"separate concurrent generation schedule","terms":["g+1","re-dirty","separate","schedule"]},{"label":"impact and current revision remain separate","terms":["impact","current","revision","registry"]}]'>
+          <h3>Prompt</h3>
+          <p>A maintainer says, “I ran a stress test 10,000 times and saw no failure, so the exceptional path is safe.” Choose <code>VS-10</code>, <code>VS-11</code>, or <code>VS-12</code>.</p>
+          <p><strong>Your task:</strong> explain what the stress run did not prove; name the exact injection seam, post-unwind ledger, retry/liveness check, impact test, and current-branch revalidation needed.</p>
+          <textarea aria-label="Your failure-proof plan" placeholder="Candidate → current proof level → exact seam → after-unwind ledger → retry/impact → unsupported claims → current-branch check."></textarea>
+          <button type="button" data-check>Check proof coverage</button>
+          <button type="button" class="secondary" data-reveal>Reveal model route</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>Paste your answer into the chat. I will check whether your probe reaches the real state owner and whether your conclusion stops at the evidence obtained.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Use the registry for status and the owner path for proof</h2>
+        <p>Read <a href="../../advanced/failure-and-proof-obligations.md">Failure Unwind and Open Proof Obligations</a> beside the <a href="../../unresolved-or-version-sensitive-findings.md">uncertainty registry</a>. Select one ID, follow its Canonical mechanism, and write the before/after ledger before designing the injection.</p>
+        <p><a href="../reference/failure-proof-ledger-card.html">Open the printable failure-proof ledger →</a></p>
+        <p><a href="0017-defend-the-module-live.html">Continue to Lesson 0017 →</a></p>
+        <p><a href="0015-route-a-specialized-interface.html">← Return to Lesson 0015</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#levels">1. Five claim levels</a>
+      <a href="#timing">2. Inspection timing</a>
+      <a href="#ownership-ledger">3. Ownership ledger</a>
+      <a href="#flush-ledger">4. Flush ledger</a>
+      <a href="#seam">5. Risk boundary</a>
+      <a href="#receipt">6. Proof receipt</a>
+      <a href="#retrieval">7. Upgrade the test</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="../reference/failure-proof-ledger-card.html">Failure-proof ledger</a>
+      <a href="../../advanced/failure-and-proof-obligations.md">Canonical Advanced page</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Ask the teaching agent whenever a fault seam, cleanup owner, surviving-state claim, or evidence boundary is unclear.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0007 — Replace one frame</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0007-replace-one-frame.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0007</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Core capability · replacement</div>
+    <h1>Prove eligibility before choosing a victim</h1>
+    <p>By the end, you can separate non-negotiable reuse safety from changeable LRU and progress policy.</p>
+    <div class="pills"><span class="pill">Identity</span><span class="pill">Ownership</span><span class="pill">Generation</span><span class="pill">Wait state</span><span class="pill">Revalidation</span><span class="pill">Policy</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="identity-meaning">
+        <div class="eyebrow">00 · Decode BCB identity</div>
+        <h2>One stable slot can represent different pages over time</h2>
+        <p>A BCB is a preallocated buffer-pool descriptor paired with one frame. Its memory address is stable, but its <strong>current identity</strong> is the resident page named by <code>bcb-&gt;vpid</code>. Safe victimization ends that mapping so the same BCB/frame slot can later represent another VPID.</p>
+        <table>
+          <thead><tr><th>Time</th><th>Same BCB address</th><th>Current identity</th><th>State</th></tr></thead>
+          <tbody>
+            <tr><td>T1</td><td><code>BCB[42]</code></td><td>VPID A</td><td>Resident in exactly one LRU list/zone.</td></tr>
+            <tr><td>T2</td><td><code>BCB[42]</code></td><td>No resident VPID</td><td>Safely detached/invalid for reuse.</td></tr>
+            <tr><td>T3</td><td><code>BCB[42]</code></td><td>VPID B</td><td>Rebound and later placed in one LRU list/zone.</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Many threads may fix the same current BCB</strong> when latch compatibility permits—for example, multiple READ holders. That is shared ownership of one page identity, recorded by global <code>fcnt</code> plus per-thread holders. It is not multiple BCB identities.</p>
+        <p><strong>One BCB is not in many LRUs at once.</strong> Private and shared LRUs are alternative list domains. LRU1/LRU2/LRU3 are zones within its one current LRU. A BCB may move between lists or become detached over time, but its single link fields cannot make it an ordinary member of several lists simultaneously.</p>
+        <div class="callout"><strong>What an identity mismatch would mean:</strong> code saved an unprotected candidate observation while the slot represented A, but later examined the same BCB address after it had been rebound to B. It must discard the stale A-based decision and retry. In the ordinary LRU path, holding the LRU mutex and then acquiring BCB protection prevents this during the final detach; the helper is not merely an explicit <code>saved_vpid == bcb-&gt;vpid</code> test.</div>
+      </section>
+
+      <section class="section" id="split">
+        <div class="eyebrow">01 · Two questions</div>
+        <h2>Safe now? Then: preferable now?</h2>
+        <img class="diagram" src="../../assets/victim-eligibility.svg" alt="Hard victim predicates and final protected recheck gate replacement policy">
+        <p class="caption">Policy receives only candidates that have survived the hard gate and protected handoff.</p>
+        <table>
+          <thead><tr><th>Layer</th><th>Question</th><th>May optimization change it?</th></tr></thead>
+          <tbody>
+            <tr><td>Eligibility</td><td>Can these frame bytes and this mapping be discarded and rebound without violating any right or propagation debt?</td><td>No—not while preserving the interface contract.</td></tr>
+            <tr><td>Policy</td><td>Among eligible frames, which one best serves locality, fairness, quota, and allocation progress?</td><td>Yes, if every hard predicate and final recheck remains intact.</td></tr>
+          </tbody>
+        </table>
+        <p class="big-claim">An optimization may reorder safe candidates. It may not manufacture safety.</p>
+      </section>
+
+      <section class="section" id="gates">
+        <div class="eyebrow">02 · Hard eligibility</div>
+        <h2>Five proofs stand between observation and reuse</h2>
+        <ol>
+          <li><strong>Identity is stable:</strong> the BCB still represents the VPID and list candidate that selection examined.</li>
+          <li><strong>No ownership remains:</strong> global <code>fcnt</code>, per-thread holders, granted rights, and transient claims cannot authorize any remaining fixer.</li>
+          <li><strong>No generation debt remains:</strong> DIRTY would discard unpropagated bytes; FLUSHING would rebind while a copied generation still refers to this identity.</li>
+          <li><strong>No conflicting waiter exists:</strong> latch waiters or in-progress protocol states can carry rights that a casual counter read omits.</li>
+          <li><strong>Final protected revalidation succeeds:</strong> lock the BCB and recheck identity, flags, ownership, zone, and handoff conditions immediately before unlink or reuse.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> pinned ordinary LRU selection scans the victim zone, rejects avoid-victim flags and fixed frames, conditionally locks the BCB, calls <code>pgbuf_is_bcb_victimizable(..., true)</code>, and only then removes it from the list. Read <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9293-L9538"><code>page_buffer.c:9293–9538</code></a>.</p>
+      </section>
+
+      <section class="section" id="counterexample">
+        <div class="eyebrow">03 · Break the shortcut</div>
+        <h2><code>fcnt == 0</code> is one sample, not a reuse proof</h2>
+        <table>
+          <thead><tr><th>Candidate also has…</th><th>Why zero fixes is insufficient</th></tr></thead>
+          <tbody>
+            <tr><td>DIRTY</td><td>Reuse would discard a resident generation that still needs propagation.</td></tr>
+            <tr><td>FLUSHING</td><td>An in-flight copy still carries this frame identity; Lesson 6's generation is incomplete.</td></tr>
+            <tr><td>A latch waiter</td><td>The waiter may carry a pending acquisition right not represented by the sampled count.</td></tr>
+            <tr><td>Changed identity or zone</td><td>The selection observation became stale before the handoff.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Presentation trap:</strong> “unfixed” is not a synonym for “victimizable.” It answers only the current fix-debt coordinate.</div>
+      </section>
+
+      <section class="section" id="policy">
+        <div class="eyebrow">04 · Changeable machinery</div>
+        <h2>Only eligible frames enter replacement policy</h2>
+        <p>LRU zones and placement, private versus shared domains, quotas, candidate queues or hints, and direct assignment affect locality, fairness, CPU cost, and progress. They do not redefine whether reuse is safe.</p>
+        <p>A direct-victim assignment is revocable: if its candidate is fixed again before consumption, the allocator requests another candidate. Policy yields to newly acquired ownership; it does not force reuse.</p>
+        <p class="source-note"><strong>Implementation policy:</strong> the specific zones, quotas, queue priorities, search order, and timeout strategy belong to this revision. The hard interface condition remains: no successful fixer or incomplete generation may survive a rebind.</p>
+      </section>
+
+      <section class="section" id="verbs">
+        <div class="eyebrow">05 · Keep lifecycle verbs separate</div>
+        <h2>Release, propagate, rebind, invalidate, and deallocate are different operations</h2>
+        <table>
+          <thead><tr><th>Operation</th><th>What changes</th><th>What usually remains</th></tr></thead>
+          <tbody>
+            <tr><td>Unfix</td><td>One caller's fix debt is consumed.</td><td>The resident VPID ↔ BCB/frame mapping.</td></tr>
+            <tr><td>Flush</td><td>One copied dirty generation is propagated.</td><td>Residency and possibly a newer DIRTY generation.</td></tr>
+            <tr><td>Victimization</td><td>A safe resident frame is detached for reuse.</td><td>The logical page still exists on storage.</td></tr>
+            <tr><td>Invalidation</td><td>A resident mapping is removed or rejected for coherence/lifecycle reasons.</td><td>Logical allocation unless separately changed.</td></tr>
+            <tr><td>Logical deallocation</td><td>File/disk ownership says the page no longer exists as allocated storage.</td><td>No automatic proof that every cached reference is already gone.</td></tr>
+          </tbody>
+        </table>
+        <p>Avoid-deallocation bookkeeping for vacuum is not itself an ordinary victim blocker; do not infer that similarly named lifecycle machinery participates in LRU eligibility.</p>
+      </section>
+
+      <section class="section" id="evidence">
+        <div class="eyebrow">06 · Evidence boundary</div>
+        <h2>The existing runtime runs did not evict a frame</h2>
+        <p class="big-claim">Source establishes the pinned selection mechanism. The recorded workload did not force eviction or identify a physical victim.</p>
+        <p>Therefore it cannot validate victim order, physical-frame reuse, direct-victim revocation, or pressure-path fairness. Those claims require a bounded pressure experiment with frame identity and state observations—not merely a successful workload in a pool that never filled.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>Classify the blocker before discussing preference</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} presentation moves detected." data-complete-message="Good coverage. Now deliver it aloud without reading." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="the candidate is not eligible because a latch waiter is a hard ownership or wait-state blocker even though fcnt was sampled at zero and the page is clean -> under-quota private-list membership is policy and cannot make the candidate safe -> the scan observations can become stale, so BCB-protected final revalidation of identity, flags, ownership, zone, and handoff is required -> if a direct-assigned candidate is fixed again, the assignment is revoked and allocation requests another candidate -> source verifies the ordinary gate; the existing runtime run provides no eviction evidence." data-concepts='[{"label":"waiter is a hard blocker","terms":["waiter","hard","unsafe","not eligible"]},{"label":"fcnt zero is insufficient","terms":["fcnt","zero","insufficient","sample"]},{"label":"under-quota membership is policy","terms":["quota","private","policy","preference"]},{"label":"protected final revalidation","terms":["lock","protected","recheck","revalidate","identity"]},{"label":"direct assignment is revocable","terms":["direct","revoke","fixed","another"]},{"label":"runtime did not prove eviction","terms":["runtime","no eviction","source","evidence"]}]'>
+          <h3>Prompt</h3>
+          <p>A candidate is in the victim zone, has sampled <code>fcnt == 0</code>, is clean and not FLUSHING, has a latch waiter, and belongs to an under-quota private LRU.</p>
+          <p><strong>Your task:</strong> decide whether it is eligible; classify every observation as hard predicate or policy; state why protection is still needed; then explain what happens if a directly assigned candidate is fixed again.</p>
+          <textarea aria-label="Your victim eligibility decision" placeholder="Close the gate diagram, then argue safety before preference."></textarea>
+          <button type="button" data-check>Check replacement argument</button>
+          <button type="button" class="secondary" data-reveal>Reveal model decision</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>Paste your answer into the chat. I will check predicate/policy separation, stale-observation reasoning, vocabulary, and evidence strength before recording mastery.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Trace the protected handoff</h2>
+        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9293-L9538"><code>page_buffer.c:9293–9538</code></a>. Annotate unprotected scan observations, try-lock, <code>pgbuf_is_bcb_victimizable(..., true)</code>, and list removal. For each field, ask what could change between scan and protected decision.</p>
+        <p><a href="../reference/replacement-safety-card.html">Open the printable replacement-safety card →</a></p>
+        <p><a href="0006-flush-one-generation.html">← Return to Lesson 0006</a> · <a href="0008-defend-a-safe-change.html">Continue to Lesson 0008 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#identity-meaning">0. BCB identity</a>
+      <a href="#split">1. Eligibility vs policy</a>
+      <a href="#gates">2. Five hard proofs</a>
+      <a href="#counterexample">3. Break fcnt == 0</a>
+      <a href="#policy">4. Policy machinery</a>
+      <a href="#verbs">5. Lifecycle verbs</a>
+      <a href="#evidence">6. Evidence boundary</a>
+      <a href="#retrieval">7. Decide it back</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="../reference/replacement-safety-card.html">Replacement-safety card</a>
+      <a href="../../learning/05-replace-one-frame.md">Canonical Core page</a>
+      <a href="0008-defend-a-safe-change.html">Next lesson →</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Ask the teaching agent whenever a safety predicate, policy choice, lifecycle verb, or evidence boundary is unclear.</footer>
+</main>
+</body>
+</html>

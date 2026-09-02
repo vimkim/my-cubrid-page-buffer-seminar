@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID page buffer 과정 coverage matrix</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/course-coverage-matrix.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · coverage audit</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Mission coverage와 학습자 evidence 비교</div>
+    <h1>준비된 자료가 곧 입증된 역량은 아닙니다</h1>
+    <p>Maintainer Guide 전체를 학습할 수 있는 route는 마련되어 있습니다. 이 matrix는 어떤 자료가 준비되어 있는지, 무엇을 제출해야 역량을 입증할 수 있는지, 학습자가 실제로 어떤 evidence를 냈는지를 보여 줍니다.</p>
+    <div class="pills"><span class="pill">Canonical coverage</span><span class="pill">Retrieval evidence</span><span class="pill">Source trace</span><span class="pill">발표 gate</span></div>
+  </header>
+
+  <section class="section">
+    <div class="eyebrow">현재 evidence snapshot</div>
+    <h2>과정은 준비됐지만, 학습 성취는 아직 입증되지 않았습니다</h2>
+    <div class="reference-grid">
+      <article class="reference-card"><span class="status">자료 준비됨</span><h3>전체 개념 route</h3><p>모든 Core 및 Advanced Canonical capability에 Lesson, retrieval prompt, source route, quick reference가 마련되어 있습니다.</p></article>
+      <article class="reference-card"><span class="status waiting">읽기만 완료</span><h3>Lesson 1–9</h3><p>학습자가 읽었다고 보고했을 뿐이며, 이것만으로 retrieval이나 source-level capability가 입증되지는 않습니다.</p></article>
+      <article class="reference-card"><span class="status waiting">산출물 대기 중</span><h3>Core synthesis</h3><p>통합 teach-back이 아직 제출되지 않아 학습 기록도 없습니다.</p></article>
+      <article class="reference-card"><span class="status waiting">미진행</span><h3>Lesson 10–17</h3><p>Advanced mechanism과 발표 리허설은 준비됐지만 학습자 evidence가 없습니다.</p></article>
+      <article class="reference-card"><span class="status waiting">선택 확장 과정</span><h3>Lesson 18</h3><p>세 engine 비교와 performance hypothesis Lesson은 준비됐지만, retrieval이나 benchmark evidence는 아직 없습니다.</p></article>
+      <article class="reference-card full"><span class="status waiting">Mission 진행 중</span><h3>팀 발표 준비도</h3><p>closed-book 발표, 실시간 문서 navigation trace, 공격적인 Q&amp;A receipt, 팀원 feedback이 아직 기록되지 않았습니다.</p></article>
+    </div>
+    <div class="callout"><strong>지금 할 일:</strong> <a href="core-synthesis-studio.html">Lesson 1–9 Core synthesis</a>를 마치고 chat에 붙여 넣으세요. 이 산출물을 기준으로 부족한 부분만 보완할지, Lesson 10으로 넘어갈지 결정합니다.</div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Core 학습 범위</div>
+    <h2>page journey에서 안전한 변경 review까지</h2>
+    <table>
+      <thead><tr><th>Canonical capability</th><th>학습 route</th><th>Reference</th><th>역량 evidence</th><th>현재 학습 상태</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../../learning/01-contract-and-objects.md">Contract and Objects</a></td><td><a href="../lessons/0001-present-the-page-journey.html">L1</a>–<a href="../lessons/0002-separate-objects-from-state.html">L2</a></td><td><a href="object-and-state-map.html">Object/state map</a></td><td>object, lifetime, 독립적인 axis, counterexample 하나를 그립니다.</td><td><span class="status waiting">읽었다고 보고됨</span></td></tr>
+        <tr><td><a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a></td><td><a href="../lessons/0003-trace-fix-convergence.html">L3</a>–<a href="../lessons/0004-repay-fix-debt.html">L4</a></td><td><a href="fix-convergence-map.html">Convergence</a> · <a href="ownership-debt-card.html">Debt</a></td><td>hit/miss convergence를 추적하고 release까지 global/thread별 debt를 맞춥니다.</td><td><span class="status waiting">읽었다고 보고됨</span></td></tr>
+        <tr><td><a href="../../learning/03-caller-completes-correctness.md">Caller Completes Correctness</a></td><td><a href="../lessons/0005-audit-a-logged-mutation.html">L5</a></td><td><a href="caller-mutation-card.html">Mutation audit</a></td><td>실제 caller의 lock, validation, log/LSA/dirty 순서와 모든 exit를 점검합니다.</td><td><span class="status waiting">읽었다고 보고됨</span></td></tr>
+        <tr><td><a href="../../learning/04-flush-one-generation.md">Flush One Generation</a></td><td><a href="../lessons/0006-flush-one-generation.html">L6</a></td><td><a href="flush-generation-card.html">Generation card</a></td><td>G/G+1, 네 flag state, WAL gate, propagation, retryable failure를 예측합니다.</td><td><span class="status waiting">읽었다고 보고됨</span></td></tr>
+        <tr><td><a href="../../learning/05-replace-one-frame.md">Replace One Frame</a></td><td><a href="../lessons/0007-replace-one-frame.html">L7</a></td><td><a href="replacement-safety-card.html">Safety card</a></td><td>policy를 논하기 전에 protection 아래에서 identity와 hard eligibility를 증명합니다.</td><td><span class="status waiting">읽었다고 보고됨</span></td></tr>
+        <tr><td><a href="../../learning/06-maintainer-capstone.md">Maintainer Capstone</a></td><td><a href="../lessons/0008-defend-a-safe-change.html">L8</a></td><td><a href="change-defense-card.html">Change defense</a></td><td>change-impact packet 하나를 방어하고, 모든 claim의 강도를 해당 evidence level에서 멈춥니다.</td><td><span class="status waiting">읽었다고 보고됨</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Advanced 학습 범위</div>
+    <h2>Core invariant를 Module 전체로 확장합니다</h2>
+    <table>
+      <thead><tr><th>Canonical capability</th><th>학습 route</th><th>Reference</th><th>역량 evidence</th><th>현재 학습 상태</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency</a></td><td><a href="../lessons/0009-classify-latch-wait.html">L9</a>–<a href="../lessons/0011-rebuild-after-ordered-refix.html">L11</a></td><td><a href="latch-queue-card.html">Queue</a> · <a href="promotion-restart-card.html">Promotion</a> · <a href="ordered-watcher-card.html">Watcher</a></td><td>queue/grant completion, blocking promotion restart, ordered refix, partial unwind를 추적합니다.</td><td><span class="status waiting">L9 읽음, L10–11 대기 중</span></td></tr>
+        <tr><td><a href="../../advanced/replacement-progress.md">Replacement Progress</a></td><td><a href="../lessons/0012-prove-replacement-progress.html">L12</a></td><td><a href="replacement-progress-card.html">Progress card</a></td><td>selection policy, direct-victim revocation, G+1 handoff, liveness, fairness 한계를 설명합니다.</td><td><span class="status waiting">미진행</span></td></tr>
+        <tr><td><a href="../../advanced/recovery-and-lifecycle.md">Recovery and Lifecycle</a></td><td><a href="../lessons/0013-gate-redo-by-page-lsa.html">L13</a>–<a href="../lessons/0014-preserve-lifecycle-order.html">L14</a></td><td><a href="redo-recovery-card.html">Redo</a> · <a href="lifecycle-order-card.html">Lifecycle</a></td><td>page-LSA gate를 적용하고 allocation과 residency를 구분하며 dependency 순서를 복구합니다.</td><td><span class="status waiting">미진행</span></td></tr>
+        <tr><td><a href="../../advanced/specialized-interfaces.md">Specialized Interfaces</a></td><td><a href="../lessons/0015-route-a-specialized-interface.html">L15</a></td><td><a href="specialized-interface-card.html">Interface card</a></td><td>owner, byte location, guard, accounting, permission, cleanup, diagnostic authority를 분류합니다.</td><td><span class="status waiting">미진행</span></td></tr>
+        <tr><td><a href="../../advanced/failure-and-proof-obligations.md">Failure Proof Obligations</a></td><td><a href="../lessons/0016-close-a-failure-proof.html">L16</a></td><td><a href="failure-proof-ledger-card.html">Proof ledger</a></td><td>risk boundary까지 실행하고, 정리된 acquisition/generation debt, retry, impact, target status를 점검합니다.</td><td><span class="status waiting">미진행</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">운영 및 발표 coverage</div>
+    <h2>어디서 작업해야 하는지 아는 것도 Module 이해의 일부입니다</h2>
+    <table>
+      <thead><tr><th>Maintainer가 해야 할 일</th><th>Canonical route</th><th>학습 route</th><th>역량 evidence</th><th>현재 학습 상태</th></tr></thead>
+      <tbody>
+        <tr><td>안전하게 변경하기</td><td><a href="../../playbooks/change-safely.md">Change playbook</a></td><td><a href="../lessons/0008-defend-a-safe-change.html">L8</a> + <a href="../lessons/0016-close-a-failure-proof.html">L16</a></td><td>negative path와 target risk를 기준으로 review한 완전한 impact plan 하나.</td><td><span class="status waiting">제출된 plan 없음</span></td></tr>
+        <tr><td>symptom 진단하기</td><td><a href="../../playbooks/debug-by-symptom.md">Symptom playbook</a></td><td><a href="../lessons/0017-defend-the-module-live.html">L17 live routing</a></td><td>symptom을 owner, wait/state class, 원인을 가르는 probe, evidence limit으로 연결합니다.</td><td><span class="status waiting">navigation trace 없음</span></td></tr>
+        <tr><td>risk 지점에서 검증하기</td><td><a href="../../playbooks/verify-a-change.md">Verification playbook</a></td><td><a href="../lessons/0016-close-a-failure-proof.html">L16</a></td><td>가장 높은 관련 seam을 고르고, 무엇이 입증됐고 무엇이 입증되지 않았는지 기록합니다.</td><td><span class="status waiting">proof receipt 없음</span></td></tr>
+        <tr><td>source/invariant 찾기</td><td><a href="../../reference/source-map.md">Source map</a> · <a href="../../reference/invariant-index.md">Invariant index</a></td><td><a href="../lessons/0017-defend-the-module-live.html">L17</a></td><td>claim 하나를 Canonical page, pinned range, evidence owner까지 실시간으로 찾아갑니다.</td><td><span class="status waiting">navigation trace 없음</span></td></tr>
+        <tr><td>변경 가능한 status 확인하기</td><td><a href="../../source-inventory.md">Inventory</a> · <a href="../../unresolved-or-version-sensitive-findings.md">Registry</a></td><td><a href="../lessons/0008-defend-a-safe-change.html">L8</a> + <a href="../lessons/0015-route-a-specialized-interface.html">L15</a></td><td>낡은 status를 복사하지 않고 verified, inferred, historical, candidate, open을 구분해 밝힙니다.</td><td><span class="status waiting">synthesis 대기 중</span></td></tr>
+        <tr><td>retrieval 및 리허설</td><td><a href="../../questions/README.md">Question bank</a></td><td><a href="../lessons/0017-defend-the-module-live.html">L17</a> + <a href="presentation-rehearsal-card.html">scorecard</a></td><td>closed-book 설명, 섞인 challenge, 바로잡은 팀원 질문, feedback receipt.</td><td><span class="status waiting">리허설 evidence 없음</span></td></tr>
+        <tr><td>설계를 비교하고 performance hypothesis 우선순위 정하기</td><td><a href="../../source-inventory.md">Evidence inventory</a></td><td><a href="../lessons/0018-compare-three-buffer-pools.html">L18</a> + <a href="three-engine-performance-card.html">comparison card</a></td><td>responsibility 수준의 차이를 설명하고, nested-atomic redesign보다 holder lookup을 먼저 검토하며, falsifier를 제시합니다.</td><td><span class="status waiting">선택, 미진행</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">Mission 완료 audit</div>
+    <h2>목표를 완료하려면 어떤 evidence가 필요한가</h2>
+    <ol>
+      <li><strong>통합 Core retrieval:</strong> object map, page journey, 독립적인 axis, caller boundary, generation, replacement, evidence, latch wait를 하나로 설명합니다.</li>
+      <li><strong>Pinned source 역량:</strong> target source에서 성공한 fix/release, 대표 mutation, generation 하나의 flush, 안전한 frame reuse를 추적합니다.</li>
+      <li><strong>Advanced 전이:</strong> promotion/ordered access, pressure/progress, redo/lifecycle, specialized interface, failure proof를 Core invariant로 설명합니다.</li>
+      <li><strong>운영 navigation:</strong> 변경, symptom, evidence status, source/invariant 질문을 하나씩 실시간으로 올바른 문서에 연결합니다.</li>
+      <li><strong>발표 evidence:</strong> 일관된 closed-book 발표, counterexample, evidence label, 공격적 질문 방어, 기록된 팀원 feedback을 갖춥니다.</li>
+    </ol>
+    <p class="big-claim">과정이 준비됐다는 사실은 교육 system의 준비도를 보여 줍니다. Maintainer의 준비도는 학습자가 직접 만든 산출물로 입증해야 합니다.</p>
+  </section>
+
+  <footer class="footer">이 matrix는 점수표가 아니라 routing과 evidence audit입니다. 제출된 작업, 바로잡은 오개념, source trace, 리허설 receipt, 확인된 Mission 변경이 있을 때만 학습자 상태를 갱신하세요.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>학습 0013 — page LSA로 redo 여부 결정하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0013-gate-redo-by-page-lsa.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 학습 0013</span><a href="../index.html">학습 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced 역량 · recovery ownership</div>
+    <h1>page가 뒤처졌을 때만 redo를 적용한다</h1>
+    <p>이 학습을 마치면 checkpoint의 선택적 coordination을 설명하고, page LSA를 이용한 idempotence gate를 추적하며, recovery 전용 fetch 규칙을 올바른 owner에게 둘 수 있다.</p>
+    <div class="pills"><span class="pill">Checkpoint</span><span class="pill">RECOVERY_PAGE</span><span class="pill">Record LSA</span><span class="pill">Page LSA</span><span class="pill">Skip</span><span class="pill">한 번만 적용</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="checkpoint">
+        <div class="eyebrow">01 · 먼저 boundary부터</div>
+        <h2>Checkpoint는 coordination이지 “모든 page를 flush”하는 작업이 아니다</h2>
+        <ol>
+          <li>Log code가 append state를 flush하고 checkpoint 시작을 기록한다.</li>
+          <li>Page buffer는 checkpoint boundary까지 조건을 만족하는 dirty page만 골라 flush하고, 남은 redo floor를 보고한다.</li>
+          <li>Filesystem synchronization이 설정된 boundary를 확정한다.</li>
+          <li>Log code가 active transaction/system-operation state를 기록하고 end-checkpoint/header state를 영속화한다.</li>
+          <li>Permanent-volume checkpoint metadata를 기록한 뒤 설정된 DWB boundary를 거쳐 동기화한다.</li>
+        </ol>
+        <p class="big-claim">Page buffer가 담당하는 것은 선택적 page propagation이다. 전체 checkpoint record, WAL, filesystem sync, volume metadata protocol까지 소유하는 것은 아니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> pinned checkpoint coordination은 <code>log_page_buffer.c:6901–7406</code>에서 확인할 수 있다.</p>
+      </section>
+
+      <section class="section" id="gate">
+        <div class="eyebrow">02 · Redo idempotence</div>
+        <h2>적용하기 전에 비교한다</h2>
+        <img class="diagram" src="../../assets/redo-lsa-gate.svg" alt="Recovery가 page를 fix하고 record LSA와 page LSA를 비교해, 이전 또는 같은 record는 건너뛰고 더 새로운 record만 적용하는 과정">
+        <p class="caption">값이 같으면 이미 반영된 것이다. record LSA ≤ page LSA이면 skip한다.</p>
+        <ol>
+          <li>Recovery는 caller가 건넨 identity를 <code>RECOVERY_PAGE</code>, WRITE, unconditional access로 fix한다.</li>
+          <li>Redo record LSA와 현재 page LSA를 비교한다.</li>
+          <li><code>record_lsa &lt;= page_lsa</code>이면 unfix하고 skip한다. 해당 변경이나 그 이후 변경이 이미 page에 반영되어 있기 때문이다.</li>
+          <li>그렇지 않으면 WRITE protection 아래에서 선택된 recovery callback을 적용한다.</li>
+          <li>Page LSA를 record LSA까지 전진시키고, recovery protocol이 요구하는 대로 page를 DIRTY로 표시한 뒤 모든 exit에서 release한다.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> gate는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_recovery.c#L497-L536"><code>log_recovery.c:497–536</code></a>, fetch semantics는 <code>6407–6431</code>, apply/LSA/cleanup은 <code>log_recovery_redo.hpp:587–668</code>에 있다.</p>
+      </section>
+
+      <section class="section" id="example">
+        <div class="eyebrow">03 · 순서대로 따라보기</div>
+        <h2>Page LSA가 140이면 120과 140은 skip, 170은 apply</h2>
+        <table>
+          <thead><tr><th>Redo record</th><th>Page LSA와 비교</th><th>동작</th><th>새 page LSA</th></tr></thead>
+          <tbody>
+            <tr><td>120</td><td>120 &lt; 140</td><td>Skip하고 release한다.</td><td>140</td></tr>
+            <tr><td>140</td><td>140 = 140</td><td>Skip하고 release한다.</td><td>140</td></tr>
+            <tr><td>170</td><td>170 &gt; 140</td><td>Callback을 적용하고 DIRTY로 표시한 뒤 release한다.</td><td>170</td></tr>
+          </tbody>
+        </table>
+        <p>이제 record 170을 다시 만나면 page LSA가 이미 170이므로 skip한다. 이것이 page 변경에 대한 idempotence 논리다. Page 밖에서 callback이 일으키는 임의의 side effect까지 idempotent하다고 보장하는 것은 아니다.</p>
+      </section>
+
+      <section class="section" id="fetch">
+        <div class="eyebrow">04 · Special fetch ownership</div>
+        <h2>Recovery는 일반 caller가 모르는 allocation history를 안다</h2>
+        <p><code>RECOVERY_PAGE</code>, <code>OLD_PAGE_DEALLOCATED</code>, <code>OLD_PAGE_MAYBE_DEALLOCATED</code>에는 redo/undo와 allocation history에 관한 recovery의 지식이 담겨 있다. 따라서 일반 <code>OLD_PAGE</code> validation이라면 거부할 state를 받아들이거나 skip할 수 있다.</p>
+        <p>Log record 이후에 page가 deallocate되었다면 redo는 이를 skip할 수 있으며, 이 skip은 fix debt를 만들지 않는다. Logical allocation/deallocation의 owner는 여전히 file/disk code다. Page buffer는 그 owner가 선택한 identity를 materialize하거나 cache coherence를 지키며 invalidate한다.</p>
+        <div class="callout warn"><strong>일반화하면 안 된다:</strong> recovery 또는 temporary page에 적용되는 완화된 validation/logging 동작은 일반 permanent page caller가 allocation, type, logging contract를 우회해도 된다는 뜻이 아니다.</div>
+      </section>
+
+      <section class="section" id="mutation">
+        <div class="eyebrow">05 · Caller contract 재사용</div>
+        <h2>Recovery도 logged page와 같은 방식으로 state를 전이한다</h2>
+        <p>Gate가 apply를 선택하면 익숙한 ownership 순서로 돌아온다. WRITE-protected byte를 수정하고, page LSA에 가장 최근에 반영된 log action을 기록하며, DIRTY로 propagation debt를 공개하고, scope cleanup에서 모든 exit의 fix를 갚는다.</p>
+        <p>차이는 의미를 정하는 주체다. Recovery는 log record를 보고 callback과 special fetch mode를 고른다. 일반 page-buffer Module은 resident identity, byte protection, LSA interface, dirty state, release mechanics를 제공한다.</p>
+      </section>
+
+      <section class="section" id="evidence">
+        <div class="eyebrow">06 · Crash evidence</div>
+        <h2>Checkpoint처럼 보이는 성공만으로 crash redo를 입증할 수 없다</h2>
+        <p>기존 checkpoint/backup 관찰만으로 restart redo, page별 WAL ordering, DWB recovery, torn-page handling, home-page persistence를 입증할 수 없다. Source는 의도된 gate를 보여줄 뿐이다. Crash safety에 대한 runtime evidence를 얻으려면 controlled crash point, 정확한 build/configuration, 주장하는 boundary에서의 restart 이후 state validation이 필요하다.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval 연습</div>
+        <h2>Skip, apply, debt 없는 부재를 구분한다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="Checkpoint는 page buffer에 조건을 만족하는 page를 flush하고 redo floor를 돌려달라고 요청한다. 모든 page를 flush하거나 page buffer가 checkpoint 전체를 소유한다는 뜻은 아니다 -> recovery는 special allocation-state 지식을 소유하므로 RECOVERY_PAGE와 WRITE로 fix한다 -> page LSA가 140이면 record LSA가 page LSA 이하인 120과 140은 이미 반영되어 있으므로 skip한다 -> record 170은 적용하고 page LSA를 170으로 전진시키며, 필요한 대로 page를 DIRTY로 표시한 뒤 fix를 release한다 -> 이후 170을 replay하면 skip한다 -> deallocate된 page는 fix debt 없이 skip할 수 있다 -> 이 gate는 page 변경의 idempotence만 입증하며 임의의 callback side effect까지 입증하지 않는다 -> 기존 checkpoint/backup 관찰은 crash redo나 DWB recovery를 입증하지 않는다." data-concepts='[{"label":"checkpoint는 선택적 coordination","terms":["selective","qualifying","redo floor","not every"]},{"label":"recovery가 special fetch를 소유","terms":["RECOVERY_PAGE","allocation","recovery","write"]},{"label":"이하인 record는 skip","terms":["120","140","skip","less","equal"]},{"label":"새 record는 apply하고 dirty","terms":["170","apply","page lsa","dirty","release"]},{"label":"deallocate된 부재는 debt 없음","terms":["deallocated","skip","no debt","no fix"]},{"label":"idempotence와 crash evidence의 한계","terms":["idempotence","callback","crash","not prove","dwb"]}]'>
+          <h3>문제</h3>
+          <p>Checkpoint가 redo floor를 반환했다. Restart 중 page LSA가 140인 page에 record 120, 140, 170이 차례로 들어오며, 다른 target page는 이미 deallocate되었다.</p>
+          <p><strong>할 일:</strong> 각 operation의 owner를 정하고 모든 skip/apply/debt 결과를 판단한 뒤, 이 scenario가 crash persistence에 관해 무엇을 입증하지 못하는지 정확히 설명하라.</p>
+          <textarea aria-label="Recovery gate 추적 답안" placeholder="Checkpoint ownership, fetch mode, LSA 비교, mutation, dirtying, cleanup을 나누어 적으세요."></textarea>
+          <button type="button" data-check>Recovery trace 확인</button>
+          <button type="button" class="secondary" data-reveal>Model route 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답안을 chat에 붙여 넣으세요. Advanced 진도를 기록하기 전에 비교 방향, owner boundary, debt, crash-evidence 표현을 확인하겠습니다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">필수 읽기</div>
+        <h2>Callback보다 먼저 skip 경로를 추적한다</h2>
+        <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_recovery.c#L497-L536"><code>log_recovery.c:497–536</code></a>와 <code>log_recovery_redo.hpp:587–668</code>을 읽으세요. Special fix, absent-page skip, page-LSA 비교, callback, LSA 전진, DIRTY publication, scope cleanup을 표시합니다.</p>
+        <p><a href="../reference/redo-recovery-card.html">인쇄용 redo-recovery card 열기 →</a></p>
+        <p><a href="0012-prove-replacement-progress.html">← 학습 0012로 돌아가기</a> · <a href="0014-preserve-lifecycle-order.html">학습 0014로 계속하기 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="학습 목차">
+      <strong>학습 지도</strong>
+      <a href="#checkpoint">1. 선택적 checkpoint</a>
+      <a href="#gate">2. Redo gate</a>
+      <a href="#example">3. LSA 예시</a>
+      <a href="#fetch">4. Special fetch owner</a>
+      <a href="#mutation">5. Apply contract</a>
+      <a href="#evidence">6. Crash evidence</a>
+      <a href="#retrieval">7. 직접 판단하기</a>
+      <a href="#primary-reading">필수 읽기</a>
+      <hr>
+      <a href="../reference/redo-recovery-card.html">Redo-recovery card</a>
+      <a href="../../advanced/recovery-and-lifecycle.md">Canonical Advanced page</a>
+      <a href="0014-preserve-lifecycle-order.html">다음 학습 →</a>
+      <a href="../index.html">학습 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Checkpoint scope, LSA 비교 방향, special fetch ownership, crash evidence가 불분명하면 언제든 teaching agent에게 질문하세요.</footer>
+</main>
+</body>
+</html>

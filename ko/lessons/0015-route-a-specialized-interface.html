@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>학습 0015 — specialized interface의 owner 찾기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0015-route-a-specialized-interface.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 학습 0015</span><a href="../index.html">학습 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced 역량 · specialized ownership</div>
+    <h1><code>PAGE_PTR</code>처럼 보인다고 fix인 것은 아니다</h1>
+    <p>이 학습을 마치면 helper가 편리해 보이더라도 owner, protection, accounting, 허용 operation, 짝이 되는 cleanup을 확인하기 전에는 섣불리 재사용하지 않을 수 있다.</p>
+    <div class="pills"><span class="pill">Owner 먼저</span><span class="pill">Pointer 위치</span><span class="pill">Guard</span><span class="pill">Accounting</span><span class="pill">짝이 되는 release</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="test">
+        <div class="eyebrow">01 · 대체 가능성 검사</div>
+        <h2>속도를 비교하기 전에 protocol부터 분류한다</h2>
+        <p class="lede">두 function이 모두 page byte처럼 typed된 값을 반환해도 caller에게 주는 권한은 전혀 다를 수 있다. 하나를 다른 것으로 대체하기 전에 다음을 묻는다.</p>
+        <ol>
+          <li><strong>Owner:</strong> 어느 subsystem이 이 protocol을 사용할 수 있는가?</li>
+          <li><strong>Location:</strong> byte가 resident frame, caller area, private copy 중 어디에 있는가?</li>
+          <li><strong>Guard:</strong> byte를 사용하는 동안 충돌하는 변경을 무엇이 막는가?</li>
+          <li><strong>Accounting:</strong> BCB fix, per-thread holder, 둘 다, 혹은 아무것도 만들지 않는가?</li>
+          <li><strong>Cleanup:</strong> 정확히 어떤 operation이 lifetime을 끝내는가?</li>
+          <li><strong>Permission:</strong> caller는 mutate, dirty, flush, invalidate할 수 있는가, 아니면 inspect만 가능한가?</li>
+        </ol>
+        <p class="big-claim">Interface는 return value의 C type이 아니라 완전한 owner protocol을 보고 선택한다.</p>
+      </section>
+
+      <section class="section" id="forms">
+        <div class="eyebrow">02 · 세 가지 access 형태</div>
+        <h2>일반 fix contract는 하나뿐이다</h2>
+        <img class="diagram" src="../../assets/access-forms-compared.svg" alt="Normal fix, simple fix, heap scan-copy의 latch, accounting, pointer 위치, cleanup, 허용 owner 비교">
+        <table>
+          <thead><tr><th>형태</th><th>성공의 의미</th><th>추론하면 안 되는 것</th></tr></thead>
+          <tbody>
+            <tr><td>Normal <code>pgbuf_fix()</code></td><td>Resident frame, 요청한 latch grant, global <code>fcnt</code>와 current-thread holder 기록.</td><td>Fix만으로 logical locking, logging, validation까지 제공된다고 보면 안 된다.</td></tr>
+            <tr><td>Simple fix</td><td>Temporary-file read-only owner용이며 resident byte와 <code>fcnt</code>만 가진다. <code>pgbuf_simple_unfix()</code>로 release한다.</td><td>더 빠른 일반 fix라고 보면 안 된다. Content latch와 holder가 없어 writer와 안전하게 공존할 수 없다.</td></tr>
+            <tr><td>Heap scan-copy</td><td>Heap이 소유하는 <code>PAGE_PTR</code> 형태의 private snapshot이며 handle이 lifetime을 소유한다.</td><td>Fixed pool ownership으로 보면 안 된다. Unfix, dirty, flush, mutation interface에 넘기지 않는다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Interface contract와 verified mechanism:</strong> simple fix는 <code>page_buffer.h:270–273</code> 및 <code>page_buffer.c:2688–2811</code>, scan-copy storage는 <code>page_buffer.c:908–981</code>, heap ownership은 <code>heap_file.c:6439–6465,6787–6829</code>.</p>
+      </section>
+
+      <section class="section" id="area">
+        <div class="eyebrow">03 · Area-copy 위험</div>
+        <h2>Parameter 이름만으로 지원되는 mode라고 판단할 수 없다</h2>
+        <p><code>VS-02</code>와 <code>VS-03</code>은 pinned source drift를 기록한 uncertainty-registry identifier다. Runtime error code가 아니다.</p>
+        <table>
+          <thead><tr><th>Helper</th><th>Pinned executable path</th><th>Review 방침</th></tr></thead>
+          <tbody>
+            <tr><td><code>pgbuf_copy_to_area()</code><br><code>VS-02</code></td><td>Miss에서 <code>do_fetch=true</code>이면 READ fix, copy, unfix를 수행한다. <code>false</code>이면 direct-I/O body가 보통 compile out되므로 변경되지 않은 caller area를 반환할 수 있다.</td><td>기존 <code>PAGE_AREA</code> owner 전용이다. 신뢰할 수 있는 일반 page-read abstraction으로 확대 해석하지 않는다.</td></tr>
+            <tr><td><code>pgbuf_copy_from_area()</code><br><code>VS-03</code></td><td>일반 build에서 <code>do_fetch</code>는 direct I/O를 선택하지 않는다. Function은 <code>NEW_PAGE</code> WRITE로 fix하고 page type/TDE를 설정한 뒤 copy, logging skip, dirty, free를 수행한다.</td><td>기존 owner 전용이다. WAL-aware 일반 page writer로 사용하지 않는다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Pinned revision에서 검증:</strong> <code>page_buffer.c:4701–4912</code>. Current status는 uncertainty registry가 소유하며 newer branch에서는 다시 확인해야 한다.</p>
+      </section>
+
+      <section class="section" id="signals">
+        <div class="eyebrow">04 · Observation과 authority</div>
+        <h2>Approximate signal은 조사를 제안할 뿐 operation을 허가하지 않는다</h2>
+        <p>Waiter query, SHOW row, statistics는 path-specific synchronization 아래에서 diagnostic 또는 scheduling 질문에 답한다. 예를 들어 <code>pgbuf_peek_stats()</code>는 각 BCB를 lock하지 않고 의도적으로 flag를 copy하므로 concurrent change가 있으면 approximate snapshot이 된다.</p>
+        <div class="callout"><strong>안전한 사용:</strong> “이 count는 replacement pressure 가능성을 보여 준다. Protected path를 조사하자.”<br><strong>위험한 사용:</strong> “Count가 0이므로 이 page를 deallocate하거나 reuse해도 된다.”</div>
+        <p><code>VS-04</code>는 <code>pgbuf_peek_stats()</code>의 prototype-name drift를, <code>VS-05</code>는 approximate snapshot semantics를 다룬다. 어느 값도 state transition을 허가하는 mutex, latch, identity recheck, owner protocol을 대신하지 못한다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:14748–14847,17323–17530</code>.</p>
+      </section>
+
+      <section class="section" id="unavailable">
+        <div class="eyebrow">05 · 없거나 미완성인 interface</div>
+        <h2>Declare되었다고 사용할 수 있는 것은 아니다</h2>
+        <p>Pinned revision의 release header는 <code>pgbuf_fix_without_validation_release()</code>를 macro-map하고 declare하지만 repository-wide search에서는 definition이나 caller가 나오지 않는다. <code>VS-01</code>이 이 verified source fact를 기록한다.</p>
+        <p class="callout warn">더 빠른 bypass로 소개하면 안 된다. Target branch에 definition과 완전하고 검증된 owner protocol이 없다면 호출 시 link가 실패한다.</p>
+        <p class="source-note"><strong>Interface inventory:</strong> declaration은 <code>page_buffer.h:320–326</code>, availability status는 <code>VS-01</code>이 소유한다.</p>
+      </section>
+
+      <section class="section" id="route">
+        <div class="eyebrow">06 · Owner-family routing</div>
+        <h2>부족한 지식을 제공하는 subsystem에 narrow hook을 둔다</h2>
+        <table>
+          <thead><tr><th>Owner</th><th>Specialized family</th><th>재사용 전 질문</th></tr></thead>
+          <tbody>
+            <tr><td>Recovery</td><td>Recovery callback, fetch mode, LSA/TDE/type restoration</td><td>이 caller가 allocation 지식과 redo/undo idempotence gate를 소유하는가?</td></tr>
+            <tr><td>Invalidation/deallocation</td><td>Invalidate, callback, raw-I/O coherence</td><td>Logical allocation state와 resident-cache coherence를 분리했는가?</td></tr>
+            <tr><td>Daemon</td><td>Maintenance, flush, post-flush, control/stats</td><td>Lifecycle gating이 유지되고 cadence를 policy로 다루는가?</td></tr>
+            <tr><td>Diagnostic</td><td>SHOW, counter, dump, validation, waiter query</td><td>어떤 정확한 increment site와 synchronization이 이 값에 의미를 주는가?</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval 연습</div>
+        <h2>안전하지 않은 네 가지 대체안을 거부한다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="Simple fix는 temporary-file read-only protocol 전용이며 latch나 holder 없이 fcnt만 기록하고 simple_unfix와 짝을 이룬다 -> scan-copy byte는 pool ownership이 아니라 heap이 소유한 private snapshot이므로 handle을 free하고 pointer를 dirty 또는 unfix하지 않는다 -> copy_from_area는 기존 PAGE_AREA owner protocol이며 일반 path가 do_fetch를 무시하고 logging을 건너뛴 뒤 dirty와 free를 수행하므로 WAL-aware writer가 아니다 -> lock 없는 statistic과 advisory waiter snapshot은 hypothesis를 만들 수 있지만 deallocation, invalidation, mutation, victim selection을 허가하지 못한다 -> VS-01은 pinned revision에서 declare만 되고 define되지 않은 release interface이며 optimization 선택지가 아니다." data-concepts='[{"label":"simple-fix owner, 빠진 guard, paired release","terms":["temporary","read-only","latch","holder","simple_unfix"]},{"label":"scan-copy 위치와 handle lifetime","terms":["private","snapshot","handle","never","unfix"]},{"label":"area-copy executable path와 logging boundary","terms":["copy_from_area","do_fetch","skip","logging","wal"]},{"label":"observation은 state change를 허가하지 못함","terms":["approximate","diagnostic","authorize","dealloc","invalidate"]},{"label":"declare됐지만 사용할 수 없는 interface","terms":["vs-01","undefined","link","unavailable"]}]'>
+          <h3>문제</h3>
+          <p>Review에서 네 가지 shortcut을 제안했다. Temporary page에 write할 수 있는 곳에서 simple fix 사용, heap scan-copy를 mutate하고 unfix, logged update에 <code>copy_from_area(..., false)</code> 사용, approximate statistics에 사용자가 없으면 deallocate하는 방식이다. Patch는 release build에서 <code>pgbuf_fix_without_validation()</code>도 호출한다.</p>
+          <p><strong>할 일:</strong> 각 선택의 owner, byte 위치, guard, accounting, paired cleanup, 허용 operation, evidence status를 밝혀 거부하거나 범위를 제한하라.</p>
+          <textarea aria-label="Specialized-interface review 답안" placeholder="각 shortcut을 owner → location → guard → accounting → cleanup → permission → evidence status 순서로 검토하세요."></textarea>
+          <button type="button" data-check>Protocol 범위 확인</button>
+          <button type="button" class="secondary" data-reveal>Model route 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답안을 chat에 붙여 넣으세요. 이름이나 pointer type이 아니라 ownership과 guard를 근거로 판단했는지 확인하겠습니다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">필수 읽기</div>
+        <h2>Declaration 순서가 아니라 owner protocol을 따라 읽는다</h2>
+        <p><a href="../../advanced/specialized-interfaces.md">Specialized Interfaces and Approximate Observability</a>를 Canonical 설명으로 사용하세요. 그다음 pinned <code>page_buffer.c:2688–2811,4701–4912,14748–14847</code>을 살펴보며 각 helper가 어떤 가정을 owner에게 맡기는지 묻습니다.</p>
+        <p><a href="../reference/specialized-interface-card.html">인쇄용 specialized-interface card 열기 →</a></p>
+        <p><a href="0016-close-a-failure-proof.html">학습 0016으로 계속하기 →</a></p>
+        <p><a href="0014-preserve-lifecycle-order.html">← 학습 0014로 돌아가기</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="학습 목차">
+      <strong>학습 지도</strong>
+      <a href="#test">1. 대체 가능성 검사</a>
+      <a href="#forms">2. 세 가지 access 형태</a>
+      <a href="#area">3. Area-copy 위험</a>
+      <a href="#signals">4. Observation boundary</a>
+      <a href="#unavailable">5. 사용할 수 없는 interface</a>
+      <a href="#route">6. Owner family</a>
+      <a href="#retrieval">7. Shortcut review</a>
+      <a href="#primary-reading">필수 읽기</a>
+      <hr>
+      <a href="../reference/specialized-interface-card.html">Specialized-interface card</a>
+      <a href="../../advanced/specialized-interfaces.md">Canonical Advanced page</a>
+      <a href="../index.html">학습 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Helper의 pointer 형태, synchronization, owner, cleanup, evidence status가 불분명하면 언제든 teaching agent에게 질문하세요.</footer>
+</main>
+</body>
+</html>

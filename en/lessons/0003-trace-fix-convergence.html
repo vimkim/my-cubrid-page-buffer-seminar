@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0003 — Trace fix convergence</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0003-trace-fix-convergence.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0003</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Core capability · normal acquisition</div>
+    <h1>Trace hit and miss into one fix contract</h1>
+    <p>By the end, you can explain what hit and miss do differently, where identity becomes trustworthy, and why callers receive the same ownership contract either way.</p>
+    <div class="pills"><span class="pill">Caller intent</span><span class="pill">Hash hit</span><span class="pill">Load owner</span><span class="pill">Identity</span><span class="pill">Grant</span><span class="pill">Debt</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="intent">
+        <div class="eyebrow">01 · Three independent inputs</div>
+        <h2>Start from what the caller knows and wants</h2>
+        <table>
+          <thead><tr><th>Choice</th><th>Question answered</th><th>One Core consequence</th></tr></thead>
+          <tbody>
+            <tr><td><code>PAGE_FETCH_MODE</code></td><td>What does the caller know about allocation or residency?</td><td><code>OLD_PAGE</code> may materialize existing bytes; <code>NEW_PAGE</code> initializes without reading old bytes; <code>OLD_PAGE_IF_IN_BUFFER</code> declines materialization.</td></tr>
+            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>How may this borrower access resident bytes?</td><td>READ permits compatible readers; WRITE requests exclusive content access.</td></tr>
+            <tr><td><code>PGBUF_LATCH_CONDITION</code></td><td>May an incompatible request wait?</td><td>Conditional rejects rather than joining the wait path; unconditional permits the wait path.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Debt rule:</strong> expected non-acquisition creates no debt. An <code>OLD_PAGE_IF_IN_BUFFER</code> miss or a conditional conflict can return <code>NULL</code> without any matching unfix obligation. Interpret <code>NULL</code> through the caller's chosen protocol, not as one universal error.</div>
+        <p class="source-note"><strong>Interface contract:</strong> the three choice types are separate at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a>. Validation, zero-wait conversion, and the resident-only miss are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2260-L2413"><code>page_buffer.c:2260–2413</code></a>.</p>
+      </section>
+
+      <section class="section" id="convergence">
+        <div class="eyebrow">02 · Preparation differs; success does not</div>
+        <h2>Two paths converge on one postcondition</h2>
+        <img class="diagram" src="../../assets/fix-contract.svg" alt="Normal resident hit and cold miss converging on one fix contract">
+        <p class="caption">The normal mutex-protected path is shown; the lock-free READ path is an Advanced continuation.</p>
+        <div class="journey">
+          <article><span class="step">H</span><h3>Resident hit</h3><p>Find a hash candidate, protect its BCB, and recheck that it still represents the requested VPID.</p></article>
+          <article><span class="step">M</span><h3>Cold miss</h3><p>Serialize preparation by VPID, obtain a provisional BCB/frame, and read or initialize its bytes.</p></article>
+          <article><span class="step">C</span><h3>Converge</h3><p>Confirm that BCB identity and page-header identity agree under protection.</p></article>
+          <article><span class="step">G</span><h3>Grant</h3><p>Grant the requested latch, update global and thread debt, then return the borrowed pointer.</p></article>
+        </div>
+        <p class="big-claim">A caller never receives a weaker contract merely because the page was a hit, or a stronger contract merely because it was a miss.</p>
+      </section>
+
+      <section class="section" id="hit">
+        <div class="eyebrow">03 · Protected hit</div>
+        <h2>A hash candidate is an observation, not proof</h2>
+        <p>The hash chain can identify a BCB whose <code>vpid</code> appears to match. That first comparison is not protected by the BCB mutex. Before the thread acquires that mutex, a victimizer may unlink the BCB and another loader may rebind the reusable slot to a different VPID.</p>
+        <p>The hit path therefore locks the BCB and compares its VPID again. If it changed, the thread releases that candidate and searches again. BCB storage itself remains safe to inspect because the table lives for the pool lifetime; what may have changed is the identity the slot represents.</p>
+        <div class="callout"><strong>Stale-observation boundary:</strong> the protected VPID recheck turns an unprotected candidate observation into trustworthy resident-identity evidence for this path.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> protected hash-candidate rechecks are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7594-L7722"><code>page_buffer.c:7594–7722</code></a>. Pool-lifetime BCB allocation is at <code>5559–5660</code>.</p>
+      </section>
+
+      <section class="section" id="miss">
+        <div class="eyebrow">04 · Serialized cold miss</div>
+        <h2>The waiter retries; it does not inherit the provisional BCB</h2>
+        <img class="diagram" src="../../assets/load-owner-waiter.svg" alt="VPID load owner and waiter on one cold miss">
+        <p class="caption">One hash-anchor mutex protects the in-flight load-lock chain and the resident BCB chain.</p>
+        <ol>
+          <li>Thread A misses and registers the VPID load-lock record first, becoming load owner.</li>
+          <li>Thread B misses on the same VPID, finds A's record, links itself as a waiter, and sleeps.</li>
+          <li>A obtains a reusable BCB/frame, assigns the VPID, and keeps that provisional object unpublished.</li>
+          <li>For <code>OLD_PAGE</code>, A consults DWB then the data volume; for <code>NEW_PAGE</code>, it initializes the frame instead.</li>
+          <li>After identity confirmation and its own ownership grant, A publishes the BCB and releases the load lock.</li>
+          <li>B wakes, retries lookup, finds a resident hit, and earns a separate grant and debt.</li>
+        </ol>
+        <div class="callout warn"><strong>Evidence boundary:</strong> this protocol serializes resident-identity preparation. It does not prove “exactly one physical disk I/O”; DWB, filesystem, OS cache, device behavior, errors, and retries are separate layers.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> load owner/waiter registration and retry are at <code>page_buffer.c:7981–8178</code>; provisional BCB allocation and DWB/data-volume or NEW_PAGE materialization are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8634"><code>8392–8634</code></a>.</p>
+      </section>
+
+      <section class="section" id="identity">
+        <div class="eyebrow">05 · Three checks, three gaps</div>
+        <h2>Do not collapse identity validation into one check</h2>
+        <img class="diagram" src="../../assets/identity-check-timeline.svg" alt="Three identity checks closing three different protection gaps">
+        <p class="caption">Each check validates a different observation under different protection.</p>
+        <table>
+          <thead><tr><th>Check</th><th>Gap closed</th><th>Failure meaning</th></tr></thead>
+          <tbody>
+            <tr><td>Hit candidate VPID under BCB mutex</td><td>Unprotected hash observation → protected BCB</td><td>The reusable slot was rebound; retry the chain.</td></tr>
+            <tr><td>BCB VPID versus page-header identity</td><td>Prepared control state → prepared bytes</td><td>The control block and page image disagree; return no borrowed pointer.</td></tr>
+            <tr><td>Release-time identity assertion</td><td>Borrowed-use period → global decrement</td><td>In debug builds, detect a caller/pointer identity violation before repaying global debt.</td></tr>
+          </tbody>
+        </table>
+        <p>The third check is a debug assertion in the normal mutex-based unfix path. It documents the caller's obligation, but release builds do not gain a runtime guard from that assertion.</p>
+      </section>
+
+      <section class="section" id="contract">
+        <div class="eyebrow">06 · State the shared contract</div>
+        <h2>Four facts make acquisition successful</h2>
+        <ol>
+          <li>The requested VPID is resident in the BCB/frame.</li>
+          <li>The requested page latch has been granted.</li>
+          <li>Global <code>fcnt</code> and the current thread's holder record this acquisition.</li>
+          <li>The returned <code>PAGE_PTR</code> is borrowed until one matching unfix repays this debt.</li>
+        </ol>
+        <p>Publication is part of a cold miss's preparation. The contract above is what the caller reasons about after either preparation path succeeds.</p>
+        <div class="callout warn"><strong>Not proved here:</strong> waiter fairness, lock-free READ memory ordering, every exceptional cleanup path, physical-device I/O count, caller logical correctness, or durability.</div>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>Explain the difference without changing the contract</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} presentation moves detected." data-complete-message="Good coverage. Now deliver it aloud without reading." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="caller chooses fetch knowledge, latch mode, and wait condition -> a protected hit rechecks a hash candidate -> a cold miss elects one VPID load owner while waiters sleep and retry -> both paths compare BCB and page-header identity -> grant latch and both debt ledgers -> return one borrowed PAGE_PTR owing one unfix. The protocol serializes resident identity, not physical I/O." data-concepts='[{"label":"three separate caller choices","terms":["fetch","latch","condition","wait"]},{"label":"protected hit and stale-observation boundary","terms":["hit","candidate","mutex","recheck","stale"]},{"label":"VPID load owner and waiter retry","terms":["load owner","waiter","retry","provisional","publish"]},{"label":"BCB and page-header identity agreement","terms":["bcb","header","identity","vpid"]},{"label":"shared grant and release debt","terms":["fcnt","holder","page_ptr","unfix","debt"]},{"label":"explicit evidence limitation","terms":["physical","i/o","fairness","durability","does not prove"]}]'>
+          <h3>Prompt</h3>
+          <p>“What differs between a normal resident hit and a cold miss, what postcondition is identical, and why does the miss protocol not prove exactly one physical disk read?”</p>
+          <p><strong>Model / recommended structure:</strong> caller intent → hit protection or miss serialization/materialization → common identity confirmation → latch and both ledgers → borrowed return → evidence limitation.</p>
+          <p><strong>Your task:</strong> explain why the waiter retries rather than receiving the owner's provisional BCB, and name the stale-observation boundary on the hit path.</p>
+          <textarea aria-label="Your hit and miss convergence explanation" placeholder="Close the visuals, then reconstruct both paths and their shared contract."></textarea>
+          <button type="button" data-check>Check trace coverage</button>
+          <button type="button" class="secondary" data-reveal>Reveal model spine</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>Paste your answer into the chat. I will check path ordering, ownership, identity evidence, and overclaiming before recording mastery.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Trace the outer spine only</h2>
+        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2342-L2546"><code>page_buffer.c:2342–2546</code></a>. Mark the hash hit/miss split, common page-header check, latch helper, cold-miss publication, and returned pointer. Do not descend into latch queue mechanics yet.</p>
+        <p><a href="../reference/fix-convergence-map.html">Open the printable fix-convergence card →</a></p>
+        <p><a href="0004-repay-fix-debt.html">After your teach-back, continue to Lesson 0004 →</a></p>
+        <p><a href="0002-separate-objects-from-state.html">← Return to Lesson 0002</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#intent">1. Caller intent</a>
+      <a href="#convergence">2. Two paths, one contract</a>
+      <a href="#hit">3. Protected hit</a>
+      <a href="#miss">4. Serialized miss</a>
+      <a href="#identity">5. Three identity checks</a>
+      <a href="#contract">6. Shared postcondition</a>
+      <a href="#retrieval">7. Teach it back</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="../reference/fix-convergence-map.html">Fix-convergence card</a>
+      <a href="../../learning/02-fix-hold-release.md">Canonical Core page</a>
+      <a href="0004-repay-fix-debt.html">Next lesson</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Ask the teaching agent whenever a preparation step, identity check, ownership transition, or evidence boundary is unclear.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>세 engine의 page buffer 비교 카드</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/three-engine-performance-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · 인쇄용 비교 자료</span><a href="../index.html">Course 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Responsibility와 performance 카드</div>
+    <h1>Invariant는 같아도 seam은 다릅니다.</h1>
+    <p>Lesson 18을 마친 뒤 ownership을 정확히 비교하고, optimization 주장을 반증 가능한 형태로 유지할 때 사용하세요.</p>
+  </header>
+
+  <section class="section">
+    <h2>한눈에 보는 ownership</h2>
+    <table>
+      <thead><tr><th>Engine</th><th>Replacement protection</th><th>Content protection</th><th>Cleanup owner</th></tr></thead>
+      <tbody>
+        <tr><td>CUBRID</td><td>BCB atomic <code>fcnt</code></td><td><code>pgbuf_fix()</code>에서 요청하는 READ/WRITE latch</td><td>Per-thread holder와 대응하는 <code>pgbuf_unfix()</code></td></tr>
+        <tr><td>PostgreSQL</td><td>Shared refcount와 backend <code>PrivateRefCount</code></td><td>별도의 buffer content lock</td><td><code>ResourceOwner</code>와 명시적인 unlock/unpin</td></tr>
+        <tr><td>InnoDB</td><td>Atomic <code>buf_fix_count</code></td><td>Block S/SX/X latch</td><td><code>mtr_t</code> memo가 latch를 먼저, fix를 다음에 해제</td></tr>
+      </tbody>
+    </table>
+    <p class="big-claim">Pin 또는 fix는 identity가 재사용되지 않도록 보호합니다. Latch 또는 content lock은 호환되지 않는 access로부터 byte를 보호합니다.</p>
+  </section>
+
+  <section class="section">
+    <h2>중요한 design 차이</h2>
+    <table>
+      <thead><tr><th>Axis</th><th>CUBRID</th><th>PostgreSQL</th><th>InnoDB</th></tr></thead>
+      <tbody>
+        <tr><td>Fix/latch lifetime</td><td>Normal fix/unfix에서 결합</td><td>서로 독립적으로 선택 가능</td><td>State는 분리되고 lifetime은 MTR로 결합</td></tr>
+        <tr><td>반복되는 local ownership</td><td>Local holder와 shared <code>fcnt</code>가 모두 바뀜</td><td>첫 shared pin 이후에는 private count만 바뀜</td><td>Low-level fix마다 atomic fix count가 바뀜</td></tr>
+        <tr><td>Miss visibility</td><td>Load와 latch 이후 publish</td><td>I/O 전에 invalid 상태로 publish</td><td>I/O 전에 <code>BUF_IO_READ</code>로 publish</td></tr>
+        <tr><td>Victim policy</td><td>LRU domain과 zone</td><td>Clock sweep와 ring</td><td>Midpoint old/new LRU</td></tr>
+        <tr><td>Torn-page defense</td><td>DWB stage</td><td>WAL full-page image</td><td>조건부 doublewrite</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>Performance 개선 기회 funnel</h2>
+    <ol>
+      <li><strong>Observe:</strong> held-list depth, 확인한 node 수, shared CAS 시도/재시도 횟수, fix/unfix당 cycle을 측정합니다.</li>
+      <li><strong>Localize:</strong> held-set 크기, thread 수, target page 공유도를 각각 따로 변화시켜 원인을 좁힙니다.</li>
+      <li><strong>Low-risk prototype:</strong> global <code>fcnt</code>는 그대로 유지하면서 per-thread holder lookup을 빠르게 만듭니다.</li>
+      <li><strong>Higher-risk prototype:</strong> shared CAS traffic의 영향이 크다고 입증된 경우에만 nested ownership을 local에서 aggregate합니다.</li>
+      <li><strong>Prove:</strong> promotion, waiter ordering, zero-crossing wakeup, last-unfix LRU 작업, victim exclusion이 유지됨을 증명합니다.</li>
+    </ol>
+    <div class="callout warn"><strong>현재 결론:</strong> source에서 추론한 개선 기회일 뿐, 측정된 성능 향상이 아닙니다. 현재 evidence로는 세 engine의 latency나 throughput을 비교할 수 없습니다.</div>
+  </section>
+
+  <section class="section">
+    <h2>30초 답변</h2>
+    <p>CUBRID의 두드러진 seam은 normal fix가 residency protection, per-thread holder, 요청한 page latch를 하나로 결합한다는 점입니다. PostgreSQL은 pin과 content lock을 독립적으로 다루며, 첫 shared contribution 이후 반복되는 pin은 backend local에 유지합니다. InnoDB는 fix count와 latch state를 분리하되 그 lifetime은 MTR memo에 기록합니다. CUBRID에서 가장 먼저 검증할 performance 가설은 held-set depth가 늘어날 때 linear holder lookup 비용이 어떻게 증가하는지입니다. Shared atomic traffic이 지배적인 비용으로 확인된 뒤에만 nested-fix aggregation을 고려해야 합니다.</p>
+    <p><a href="../lessons/0018-compare-three-buffer-pools.html">Lesson 18로 돌아가기 →</a></p>
+  </section>
+
+  <footer class="footer">내용을 떠올릴 때는 이 카드를 사용하고, 증명할 때는 pinned source와 evidence inventory를 사용하세요.</footer>
+</main>
+</body>
+</html>

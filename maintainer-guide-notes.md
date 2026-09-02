@@ -117,6 +117,27 @@ The aggregate validation must:
 
 Question-bank validation additionally enforces the approved ten-page topology, prompt/answer schemas and pairing, globally unique Canonical IDs, complete source-population dispositions, preserved Reader-intake digest, and contextual route links from every Learning, Advanced, and playbook page.
 
+## Bilingual teaching HTML
+
+ADR 0002 continues to govern the canonical Markdown maintainer guide. ADR 0004 separately governs the interactive teaching HTML:
+
+- `en/` contains the canonical 41-page HTML course and `ko/` contains a structurally paired natural-Korean translation.
+- Root `index.html` is a language selector. Every paired page links directly to its counterpart with a visible `EN | KO` control.
+- Korean prose keeps established database/CUBRID jargon, evidence labels, code, and source identifiers in English. It translates meaning naturally rather than mirroring English sentence structure.
+- CSS, language-neutral JavaScript behavior, and English SVGs stay in the root `assets/` seam. Reader-facing interaction messages are supplied by fingerprinted language content rather than hard-coded in shared behavior scripts.
+- `teaching-pages.json` owns page pairing and review receipts. The bilingual aggregate checker owns inventory, topology, local links/assets, technical invariants, language/accessibility, interaction behavior, and available served-DOM gates.
+- Former `lessons/*.html` and `reference/*.html` locations are temporary English redirects; canonical Markdown under `reference/` does not move.
+
+Run the bilingual gates with:
+
+```sh
+node --test scripts/check-bilingual-teaching-site.test.mjs
+node scripts/check-bilingual-teaching-site.mjs
+node scripts/check-bilingual-teaching-site.mjs --copyparty-url <base-url>
+```
+
+The final command adds served-resource checks. HTTP or live-DOM output marked `UNAVAILABLE` is a disclosure, not a pass. `--print-fingerprints` prints the exact normalized EN/KO fingerprints for a Korean-capable reviewer to record; automation must not write or claim the review receipt.
+
 ## Retired presentation material
 
 The previous 52-minute narrative and 55-question appendix remain available as source material at

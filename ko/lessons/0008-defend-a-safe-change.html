@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0008 — 안전한 변경을 방어하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0008-defend-a-safe-change.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0008</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Core capstone · change defense</div>
+    <h1>source concern을 범위가 명확한 조사로 바꾼다</h1>
+    <p>이 lesson을 마치면 눈에 보이는 control flow를 검증되지 않은 defect로 과장하지 않으면서 change-impact plan을 방어할 수 있다.</p>
+    <div class="pills"><span class="pill">Owner</span><span class="pill">State</span><span class="pill">Guard</span><span class="pill">Invariant</span><span class="pill">Unwind</span><span class="pill">Evidence seam</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="terms">
+        <div class="eyebrow">00 · 문서 label 해석하기</div>
+        <h2><code>VS-11</code>과 <code>VS-12</code>는 code object가 아니라 registry ID다</h2>
+        <p>이 guide는 불확실하거나 revision에 민감한 finding을 <a href="../../unresolved-or-version-sensitive-findings.md">Unresolved or version-sensitive findings</a> 한 문서에서 관리한다. <code>VS-11</code>과 <code>VS-12</code>는 그 registry의 안정적인 row identifier일 뿐이다. CUBRID error code, variable, page type, runtime flag가 아니다.</p>
+        <p><strong>case packet</strong>은 registry entry, 범위를 정한 source range, prediction worksheet, proof obligation, model answer를 묶은 독립적인 review exercise를 가리키는 capstone 용어다. network packet이나 page-buffer structure가 아니다.</p>
+        <table>
+          <thead><tr><th>Case packet</th><th>pinned commit에서 검증된 source fact</th><th>아직 입증되지 않은 candidate consequence</th></tr></thead>
+          <tbody>
+            <tr><td>A · <code>VS-11</code></td><td>일부 경로는 <code>NULL</code>을 반환할 수 있는 holder allocation보다 먼저 latch/fix state를 grant한다. 인용한 snippet에는 local rollback이 보이지 않는다.</td><td>caller가 failure를 받았는데도 grant나 <code>fcnt</code>가 남을 수 있다.</td></tr>
+            <tr><td>B · <code>VS-12</code></td><td>Flush setup은 TDE/DWB 준비가 반환하기 전에 FLUSHING을 set하고 이전 DIRTY를 clear한다. 일반 rollback은 뒤에 있다.</td><td>FLUSHING이 남거나 retry 가능한 dirty/LSA bookkeeping이 사라질 수 있다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>사실이라고 말할 수 있는가?</strong> 각 entry에는 검증된 Level 1 source-ordering fact와 Candidate consequence가 명확히 구분되어 있다. candidate 전체가 검증된 production defect는 아니다. reachability, surviving state, impact, current-branch status에는 여전히 evidence가 필요하다.</div>
+      </section>
+
+      <section class="section" id="ladder">
+        <div class="eyebrow">01 · Proof ladder</div>
+        <h2>의심스러운 return은 첫 단에 불과하다</h2>
+        <table>
+          <thead><tr><th>Level</th><th>질문</th><th>판단을 닫는 evidence</th></tr></thead>
+          <tbody>
+            <tr><td>1 · Source-visible control flow</td><td>pinned 경로가 state를 바꾸고 실패 가능한 것을 호출한 뒤 눈에 보이는 local cleanup 전에 반환하는가?</td><td>정확한 symbol, range, transition, callee.</td></tr>
+            <tr><td>2 · Reachability</td><td>지원되는 target configuration에서 이 지점의 callee가 실제로 실패할 수 있는가?</td><td>target revision에서 controlled injection 또는 schedule.</td></tr>
+            <tr><td>3 · Surviving state</td><td>주변 cleanup이 모두 끝난 뒤 어떤 ownership/generation debt가 남는가?</td><td>injected return 직후 assertion/inspection.</td></tr>
+            <tr><td>4 · Production impact</td><td>남은 state가 corruption, leak, hang, retry loss, caller-visible contract violation을 일으키는가?</td><td>실제 consumer path에서 consequence 재현.</td></tr>
+            <tr><td>5 · Current-branch status</td><td>변경 대상 branch에도 같은 mechanism과 consequence가 존재하는가?</td><td>정확히 그 commit/configuration에서 다시 trace하고 실행.</td></tr>
+          </tbody>
+        </table>
+        <p class="big-claim">강한 Level 1 논증은 조사할 가치가 있다. 그렇다고 Level 2–5를 자동으로 얻는 것은 아니다.</p>
+      </section>
+
+      <section class="section" id="shape">
+        <div class="eyebrow">02 · 범위를 정한 두 packet</div>
+        <h2>두 case packet: changed state → fallible callee → exceptional return</h2>
+        <img class="diagram" src="../../assets/exceptional-return-gaps.svg" alt="VS-11과 VS-12의 source-visible exceptional return 형태">
+        <p class="caption">diagram은 control flow에서 멈춘다. status는 uncertainty registry가 관리하며 test는 같은 risk boundary를 통과해야 한다.</p>
+        <table>
+          <thead><tr><th>Packet</th><th>먼저 바뀐 state</th><th>실패 가능한 지점</th><th>Source-visible concern</th></tr></thead>
+          <tbody>
+            <tr><td><code>VS-11</code></td><td>atomic latch/fix tuple이 ownership을 grant하고 global <code>fcnt</code>를 증가시킨다.</td><td>thread별 holder extension allocation.</td><td>눈에 보이는 여러 경로가 앞선 grant의 명확한 local rollback 없이 failure를 반환한다.</td></tr>
+            <tr><td><code>VS-12</code></td><td>Flush가 generation G를 연다. FLUSHING을 set하고 이전 DIRTY를 clear한다.</td><td>TDE copy encryption 또는 설정된 DWB-slot reservation.</td><td>일반 DIRTY/lower-bound rollback보다 앞에서 early return이 보인다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>Canonical status:</strong> 둘 다 registry candidate다. “CUBRID에 이 bug가 있다”가 아니라 “pinned revision에서 보이는 source-visible concern”이라고 말해야 한다.</div>
+      </section>
+
+      <section class="section" id="template">
+        <div class="eyebrow">03 · Change-impact defense</div>
+        <h2>모든 proposal이 아홉 질문에 답하게 한다</h2>
+        <ol>
+          <li><strong>Behavior:</strong> 관찰 가능한 어떤 behavior가 바뀔 수 있는가?</li>
+          <li><strong>Owners:</strong> 각 resource/decision을 어느 thread, Module, caller가 소유하는가?</li>
+          <li><strong>State:</strong> 어느 field, flag, counter, pointer, queue, LSA가 transition하는가?</li>
+          <li><strong>Guards:</strong> 어느 BCB protection, atomic order, logical lock, caller precondition이 각 transition을 보호하는가?</li>
+          <li><strong>Invariants:</strong> transition 전후에 무엇이 반드시 성립해야 하는가?</li>
+          <li><strong>Unwind:</strong> 모든 failure/restart에서 무엇을 복구, 이전, 소비하거나 깨우는가?</li>
+          <li><strong>Caller impact:</strong> return, retained ownership, retry, timing, contract change를 누가 관찰하는가?</li>
+          <li><strong>Evidence seam:</strong> source tracing은 무엇을 입증하며 어떤 controlled probe가 risk에 도달하는가?</li>
+          <li><strong>Remaining uncertainty:</strong> 무엇이 inference, version-sensitive, unreachable, unobserved 상태인가?</li>
+        </ol>
+        <p>이 template에는 object identity, fix debt, caller correctness, flush generation, replacement eligibility, evidence grammar라는 Core가 서로 엮여 있다.</p>
+      </section>
+
+      <section class="section" id="packet-b">
+        <div class="eyebrow">04 · defense 예제</div>
+        <h2>fix를 선언하지 않고 <code>VS-12</code> 조사를 방어한다</h2>
+        <table>
+          <thead><tr><th>Template field</th><th>범위를 정한 답</th></tr></thead>
+          <tbody>
+            <tr><td>State와 guard</td><td>BCB protection 아래 generation setup이 실패 가능한 preparation call보다 먼저 FLUSHING을 set하고 이전 DIRTY를 clear한다.</td></tr>
+            <tr><td>safe failure의 invariant</td><td>captured propagation debt는 retry 가능하고 oldest-unflush bookkeeping은 사라지지 않으며 stale FLUSHING 뒤에 waiter가 남지 않는다.</td></tr>
+            <tr><td>Source seam</td><td>early return은 <code>10795–10828</code>, 일반 rollback은 뒤쪽 <code>10908–10923</code>에서 보인다.</td></tr>
+            <tr><td>아직 모르는 것</td><td>supported reachability, callee-side cleanup, 정확히 남는 flag/LSA, waiter 영향, victim eligibility, restart behavior, current-branch status.</td></tr>
+            <tr><td>다음 evidence</td><td>TDE와 DWB-slot failure를 따로 inject하고 DIRTY, FLUSHING, oldest-unflush LSA, waiter, retry, victimization, restart를 inspect한다. concurrent re-dirty는 별도 test로 다룬다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified Level 1 evidence:</strong> pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10795-L10828"><code>page_buffer.c:10795–10828</code></a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>10908–10923</code></a>을 비교하라. 실제로 무엇이 남는지 injection으로 확인하기 전에는 code를 제안하지 않는다.</p>
+      </section>
+
+      <section class="section" id="packet-a">
+        <div class="eyebrow">05 · 대안 packet</div>
+        <h2><code>VS-11</code>에는 일반 주장 하나가 아니라 injection 세 개가 필요하다</h2>
+        <p>holder allocation은 <code>NULL</code>을 <code>6000–6055</code>에서 반환할 수 있다. normal hit, lock-free READ hit, awakened waiter는 holder 기록 전에 서로 다른 경로로 ownership을 grant한다. scheduling과 cleanup seam도 각각 다르다.</p>
+        <p>세 경로 모두에서 holder extension allocation failure를 따로 inject한다. atomic latch tuple, global <code>fcnt</code>, thread별 holder list, waiter/grant state, 반환값, 이후 acquire/release 가능 여부를 inspect한다. lock-free나 waiter 결과가 normal-hit variant까지 자동으로 입증하지 않으며 그 반대도 마찬가지다.</p>
+      </section>
+
+      <section class="section" id="review">
+        <div class="eyebrow">06 · Readiness gate</div>
+        <h2>문서상의 논증만으로는 변경 준비가 끝나지 않는다</h2>
+        <p>source packet을 만든 뒤 target revision에서 범위를 좁힌 caller regression이나 controlled runtime probe를 적어도 하나 실행한다. setup, expected transition, actual observation, 뒷받침되지 않는 conclusion, 재현 가능한 receipt를 기록하라.</p>
+        <p>implementation 준비가 끝났다고 보기 전에 다른 maintainer가 ownership ledger, 모든 negative path, risk에 맞는 test seam, remaining uncertainty를 review해야 한다. 이 지점에서 team presentation이 문서 tour를 넘어 실제 review protocol이 된다.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval 연습</div>
+        <h2>방어 가능한 가장 강한 <code>VS-12</code> 문장을 만든다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="pinned f799e05의 source에서는 TDE encryption이나 DWB-slot reservation이 반환하기 전에 FLUSHING을 set하고 이전 DIRTY를 clear하며 일반 restoration block은 뒤에 있다 -> 이것은 source-visible control-flow concern만 입증한다 -> supported reachability, 남는 DIRTY/FLUSHING/oldest-unflush state, production impact, current-branch status는 입증하지 못한다 -> TDE와 DWB-slot failure를 따로 inject하여 flag, oldest-unflush LSA, waiter wakeup, retry, victim eligibility, restart를 inspect한다 -> concurrent re-dirty는 별도 schedule로 test한다 -> VS-12 status는 uncertainty registry에서 관리하고 관찰된 postcondition으로 실제 debt를 식별할 때까지 fix를 제안하지 않는다." data-concepts='[{"label":"pinned source에 보이는 ordering","terms":["pinned","flushing","dirty","before","rollback"]},{"label":"candidate는 verified defect가 아님","terms":["candidate","concern","not prove","not defect"]},{"label":"빠진 proof level","terms":["reachability","surviving","impact","current"]},{"label":"별도 fault injection","terms":["tde","dwb","inject","separate"]},{"label":"retry 가능한 state inspect","terms":["oldest","waiter","retry","victim","restart"]},{"label":"concurrent re-dirty 분리","terms":["concurrent","re-dirty","schedule","separate"]}]'>
+          <h3>문제</h3>
+          <p>reviewer가 말한다. “source가 명백히 일찍 return하니 지금 이 flush bug를 고쳐야 합니다.”</p>
+          <p><strong>과제:</strong> Level 1이 입증한 범위까지만 동의하고 빠진 proof level을 모두 말하라. risk에 맞는 가장 작은 probe와 정확한 postcondition을 제안하고 현재 status의 owner를 밝혀라.</p>
+          <textarea aria-label="evidence 경계를 지킨 change defense" placeholder="source를 축소하지도 conclusion을 과장하지도 않으면서 조사를 방어해 보세요."></textarea>
+          <button type="button" data-check>defense 범위 확인</button>
+          <button type="button" class="secondary" data-reveal>model defense 보기</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>답을 chat에 붙여 넣어 보자. ownership, transition ordering, proof-level discipline, test reach, 설명 문구를 확인한 뒤 Core 완료를 기록한다.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">핵심 읽을거리</div>
+        <h2>trace한 뒤 evidence 경계에서 멈춘다</h2>
+        <p>pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10795-L10923"><code>page_buffer.c:10795–10923</code></a>과 <a href="../../unresolved-or-version-sensitive-findings.md"><code>VS-12</code> registry entry</a>를 나란히 읽어라. generation setup, 각 fallible call, early exit, 일반 rollback, runtime evidence가 더 필요한 모든 주장을 표시하자.</p>
+        <p><a href="../reference/change-defense-card.html">인쇄용 change-defense card 열기 →</a></p>
+        <p><a href="0007-replace-one-frame.html">← Lesson 0007로</a> · <a href="0009-classify-latch-wait.html">Advanced Lesson 0009로 계속 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson 목차">
+      <strong>Lesson map</strong>
+      <a href="#terms">0. VS ID와 packet</a>
+      <a href="#ladder">1. 다섯 proof level</a>
+      <a href="#shape">2. 두 packet</a>
+      <a href="#template">3. Impact template</a>
+      <a href="#packet-b">4. VS-12 defense</a>
+      <a href="#packet-a">5. VS-11 대안</a>
+      <a href="#review">6. Readiness gate</a>
+      <a href="#retrieval">7. 직접 방어하기</a>
+      <a href="#primary-reading">핵심 읽을거리</a>
+      <hr>
+      <a href="../reference/change-defense-card.html">Change-defense card</a>
+      <a href="../../learning/06-maintainer-capstone.md">Canonical Core capstone</a>
+      <a href="0009-classify-latch-wait.html">다음: Advanced concurrency →</a>
+      <a href="../index.html">과정 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">source claim, proof level, fault seam, readiness conclusion이 모호하면 언제든 teaching agent에게 질문하자.</footer>
+</main>
+</body>
+</html>

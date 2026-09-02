@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID page-buffer Core synthesis 실습실</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/core-synthesis-studio.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · Core checkpoint</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">Lessons 1–9 · closed-book synthesis</div>
+    <h1>페이지를 다시 열기 전에 system을 재구성하세요</h1>
+    <p>“읽었다”에서 “설명할 수 있다”로 넘어가는 단계입니다. 하나의 인과관계로 설명해 chat에 붙여 넣으면, 드러난 빈틈이 다음 lesson을 결정합니다.</p>
+    <div class="pills"><span class="pill">No notes</span><span class="pill">One narrative</span><span class="pill">Counterexample</span><span class="pill">Evidence boundary</span><span class="pill">Chat feedback</span></div>
+  </header>
+
+  <section class="section">
+    <div class="eyebrow">시작하기 전에</div>
+    <h2>retrieval 시도를 제대로 지키기</h2>
+    <ol>
+      <li>Lessons 1–9와 해당 reference card를 모두 닫습니다.</li>
+      <li>기억만으로 답합니다. 용어가 조금 부정확해도 어디를 보완해야 하는지 알려 주는 유용한 diagnostic evidence입니다.</li>
+      <li>원인과 결과를 연결해 설명합니다. 서로 끊긴 정의 여덟 개를 나열하지 마세요.</li>
+      <li>필요하면 “아직 모릅니다”라고 쓰고, 어떤 evidence가 있으면 답할 수 있는지도 밝힙니다.</li>
+      <li>model structure를 보기 전에 완성한 답을 chat에 붙여 넣습니다.</li>
+    </ol>
+    <div class="callout warn"><strong>중요:</strong> local coverage button은 vocabulary가 들어 있는지만 확인합니다. correctness, understanding, mastery를 판정할 수는 없습니다.</div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">반드시 다룰 여덟 가지 move</div>
+    <h2>page 하나의 journey를 따라가며 model을 방어하기</h2>
+    <div class="reference-grid">
+      <article class="reference-card"><span class="step">1</span><h3>Module boundary</h3><p>성공한 fix는 무엇을 보장합니까? correctness를 위한 작업 가운데 여전히 caller나 다른 dependency의 책임인 것은 무엇입니까?</p></article>
+      <article class="reference-card"><span class="step">2</span><h3>Page journey</h3><p><code>VPID → fix → holder/latch → mutation/logging → DIRTY → flush → victim eligibility → BCB reuse</code>를 순서대로 trace합니다.</p></article>
+      <article class="reference-card"><span class="step">3</span><h3>Independent axis</h3><p>residency, ownership, content-latch, dirty/flush state를 설명합니다. 서로 같은 뜻처럼 보이는 두 개념이 실제로는 다름을 보여 주는 조합 하나를 드세요.</p></article>
+      <article class="reference-card"><span class="step">4</span><h3>Generation reasoning</h3><p>개념상의 G와 G+1을 설명하고 page LSA와 구분한 뒤, DIRTY/FLUSHING의 네 조합을 모두 해석합니다.</p></article>
+      <article class="reference-card"><span class="step">5</span><h3>Safe replacement</h3><p>왜 <code>fcnt==0</code>만으로는 부족합니까? stable BCB slot 하나가 동시에 두 VPID를 나타내지 않으면서 시간에 따라 서로 다른 VPID를 나타낼 수 있는 이유는 무엇입니까?</p></article>
+      <article class="reference-card"><span class="step">6</span><h3>Evidence-bounded concern</h3><p><code>VS-11</code> 또는 <code>VS-12</code>를 선택합니다. pinned source가 확인해 주는 사실과 reachability, surviving state, impact, current-branch status를 분리하세요.</p></article>
+      <article class="reference-card"><span class="step">7</span><h3>Latch wait</h3><p>BCB에 queued된 request, atomic tuple에 기록된 grant, resume한 thread의 holder를 구분합니다. fairness boundary도 명시하세요.</p></article>
+      <article class="reference-card"><span class="step">8</span><h3>Document route</h3><p>학습, 변경, debug, source/invariant 찾기, evidence status 확인, rehearsal은 각각 어디에서 시작해야 합니까?</p></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">나의 teach-back</div>
+    <h2>하나로 연결된 설명 작성하기</h2>
+    <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="빠짐없이 다뤄습니다. 이제 원고를 보지 않고 소리 내어 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="시작 지점의 boundary와 borrowed PAGE_PTR -> VPID, BCB, frame, holder와 latch ownership -> caller의 lock, validation, logging, page LSA와 dirty 작업 -> flush를 위해 copy한 개념상의 G와 그동안 다시 dirty될 수 있는 concurrent G+1 -> page propagation보다 먼저 WAL -> replacement policy보다 먼저 확인할 hard victim eligibility와 보호된 serial BCB identity reuse -> strict fairness를 주장하지 않으면서 queued request, atomic grant, holder completion 구분 -> VS source fact와 reachability, surviving state, impact, current status 분리 -> learning, change, diagnosis, source/invariant lookup, evidence status, rehearsal을 각각의 owner document로 routing." data-concepts='[{"label":"Module 보장과 caller 의무의 구분","terms":["module","caller","borrow","guarantee","obligation"]},{"label":"VPID BCB frame PAGE_PTR와 ownership debt","terms":["vpid","bcb","frame","page_ptr","holder","fcnt"]},{"label":"caller mutation logging과 dirty transition","terms":["lock","validate","log","lsa","dirty"]},{"label":"G와 G+1 및 모든 flag 조합","terms":["g+1","flushing","dirty","00","01","10","11"]},{"label":"propagation보다 먼저 WAL","terms":["wal","before","dwb","write"]},{"label":"hard eligibility와 serial identity reuse","terms":["eligible","identity","reuse","serial","protect"]},{"label":"queued request, tuple grant, holder completion, fairness 한계","terms":["queue","grant","tuple","holder","fair"]},{"label":"VS proof level과 current status boundary","terms":["vs-","reachability","surviving","impact","current"]},{"label":"목적에 따른 document routing","terms":["learning","playbook","debug","source map","registry","question"]}]'>
+      <h3>boundary로 시작해 까다로운 질문의 route를 제시하며 끝내세요</h3>
+      <textarea class="synthesis-textarea" aria-label="Lessons 1부터 9까지의 Core synthesis 답안" placeholder="자유롭게 작성하세요. page journey의 인과관계를 유지하고, counterexample 하나를 포함하며, uncertainty를 솔직하게 표시하세요."></textarea>
+      <button type="button" data-check>coverage만 확인</button>
+      <button type="button" class="secondary" data-reveal>제출 후 structure 보기</button>
+      <div class="feedback" aria-live="polite"></div>
+    </div>
+    <p><strong>필수 handoff:</strong> 답을 chat에 붙여 넣으세요. teaching agent가 concept별로 평가하고, 부족한 부분만 좁게 보완하며, 실제로 이해했다고 확인된 내용만 learning record에 남긴 뒤 repair 또는 Lesson 10으로 안내합니다.</p>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">답안 평가 기준</div>
+    <h2>이해는 개념 사이의 관계에서 드러납니다</h2>
+    <table>
+      <thead><tr><th>이해했다는 evidence</th><th>보완이 필요한 신호</th></tr></thead>
+      <tbody>
+        <tr><td>responsibility가 실제 owner에게 남아 있습니다.</td><td>logical locking, logging, record validation까지 page buffer의 책임이라고 설명합니다.</td></tr>
+        <tr><td>각 transition이 page journey의 다음 move를 일으킵니다.</td><td>인과관계 없이 vocabulary만 나열합니다.</td></tr>
+        <tr><td>state axis를 서로 독립적으로 다룹니다.</td><td>resident=fixed, dirty=durable, unfix=flush 또는 eviction=deallocation이라고 봅니다.</td></tr>
+        <tr><td>G/G+1을 개념적인 generation reasoning으로 사용합니다.</td><td>G를 저장된 counter라고 설명하거나 page LSA와 혼동합니다.</td></tr>
+        <tr><td>BCB reuse는 보호된 상태에서 serial하게 일어납니다.</td><td>slot 하나가 여러 VPID를 동시에 나타내거나 여러 LRU에 동시에 속한다고 설명합니다.</td></tr>
+        <tr><td>evidence가 증명한 level에서 주장을 멈춥니다.</td><td>source에서 보이는 ordering을 곧바로 current production defect라고 말합니다.</td></tr>
+        <tr><td>queue membership, grant, holder completion을 구분합니다.</td><td>queued 상태를 이미 latch를 소유한 것으로 취급합니다.</td></tr>
+        <tr><td>목적과 ownership에 따라 document를 찾아갑니다.</td><td>모든 질문마다 <code>page_buffer.c</code>를 처음부터 다시 읽습니다.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">제출한 뒤에만 진행</div>
+    <h2>과정 전체를 다시 시작하지 말고 필요한 부분만 보완하세요</h2>
+    <p>관계 하나가 약하다면 그 내용을 소유한 lesson과 reference card만 다시 봅니다. 통합된 model이 탄탄하다면 <a href="../lessons/0010-revalidate-after-promotion.html">Lesson 10</a>으로 넘어갑니다. 이 route는 vocabulary detector가 아니라 teaching agent가 여러분의 설명을 바탕으로 결정합니다.</p>
+    <p><a href="course-learning-path.html">전체 learning path 보기 →</a> · <a href="../../page-buffer-teaching-material.md">Canonical Guide entry 열기 →</a></p>
+  </section>
+
+  <footer class="footer">prompt가 모호하면 teaching agent에게 질문하세요. 첫 표현이 완벽하지 않다는 이유만으로 lesson을 다시 열지는 마세요.</footer>
+</main>
+</body>
+</html>

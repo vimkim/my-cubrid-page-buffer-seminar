@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID redo-recovery reference card</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/redo-recovery-card.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print for recovery review</div>
+    <h1>Checkpoint and redo gate card</h1>
+    <p>Let recovery own log meaning and allocation history; let page LSA gate repeated page changes.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">record ≤ page: skip</span><span class="pill">Newer: apply</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Redo page-LSA gate</h2>
+      <img class="diagram" src="../../assets/redo-lsa-gate.svg" alt="Redo skip and apply decision using record and page LSA">
+    </article>
+    <article class="reference-card">
+      <h2>Checkpoint ownership</h2>
+      <ul>
+        <li><strong>Page buffer:</strong> selectively flush qualifying pages; report remaining redo floor.</li>
+        <li><strong>Log/filesystem/volume owners:</strong> checkpoint records, WAL/header state, filesystem sync, metadata boundaries.</li>
+      </ul>
+      <p>Checkpoint ≠ flush every page.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Generic redo route</h2>
+      <ol>
+        <li>Fix <code>RECOVERY_PAGE</code>, WRITE.</li>
+        <li>Absent/deallocated target → skip, no debt.</li>
+        <li><code>record_lsa &lt;= page_lsa</code> → skip/unfix.</li>
+        <li>Newer record → callback.</li>
+        <li>Set page LSA and DIRTY.</li>
+        <li>Release on every exit.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Page LSA 140</h2>
+      <table>
+        <thead><tr><th>Record</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>120</td><td>Skip</td></tr>
+          <tr><td>140</td><td>Skip</td></tr>
+          <tr><td>170</td><td>Apply; page LSA → 170; DIRTY</td></tr>
+          <tr><td>170 again</td><td>Skip</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="reference-card">
+      <h2>Do not generalize</h2>
+      <ul>
+        <li>Page gate → all callback side effects idempotent</li>
+        <li>Recovery mode → ordinary allocation bypass</li>
+        <li>Temporary-page rule → permanent-page rule</li>
+        <li>Checkpoint success → crash-redo proof</li>
+        <li>Backup accepted → home-page/DWB recovery proof</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>Source route</h2>
+      <table>
+        <thead><tr><th>Responsibility</th><th>Pinned range</th></tr></thead>
+        <tbody>
+          <tr><td>Checkpoint coordination</td><td><code>log_page_buffer.c:6901–7406</code></td></tr>
+          <tr><td>Page-LSA gate</td><td><code>log_recovery.c:497–536</code></td></tr>
+          <tr><td>Recovery fetch semantics</td><td><code>log_recovery.c:6407–6431</code></td></tr>
+          <tr><td>Apply, LSA, dirty, cleanup</td><td><code>log_recovery_redo.hpp:587–668</code></td></tr>
+          <tr><td>Representative allocation ordering</td><td><code>file_manager.c:5420–5590</code></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer class="footer">Canonical explanation: <a href="../../advanced/recovery-and-lifecycle.md">Recovery, Allocation State, and Module Lifecycle</a>. Equality skips; recovery owns the exceptional fetch meaning.</footer>
+</main>
+</body>
+</html>
