@@ -141,6 +141,31 @@ test ("the technical gate rejects answer-term drift", async () =>
   });
 });
 
+test ("the technical gate rejects an incomplete six-object runtime-shape contract", async () =>
+{
+  await withFixture (async (root) =>
+  {
+    await mkdir (path.join (root, "en/lessons"), { recursive: true });
+    await mkdir (path.join (root, "ko/lessons"), { recursive: true });
+    await writeFile (path.join (root, "en/lessons/0002-separate-objects-from-state.html"), '<!doctype html><html lang="en"><body><p>Six objects.</p></body></html>\n');
+    await writeFile (path.join (root, "ko/lessons/0002-separate-objects-from-state.html"), '<!doctype html><html lang="ko"><body><p>여섯 객체를 설명합니다.</p></body></html>\n');
+    await writeFile (path.join (root, "teaching-pages.json"), JSON.stringify ({
+      version: 1,
+      expectedPageCount: 1,
+      legacyRedirectMinimumDays: 90,
+      pages: [{
+        path: "lessons/0002-separate-objects-from-state.html",
+        en: "en/lessons/0002-separate-objects-from-state.html",
+        ko: "ko/lessons/0002-separate-objects-from-state.html"
+      }]
+    }, null, 2));
+
+    await assert.rejects (
+      execFileAsync (process.execPath, [checker, "--root", root, "--gate", "technical"]),
+      (error) => /missing six-object runtime-shape contract/.test (error.stderr));
+  });
+});
+
 test ("the language gate rejects a Korean page without meaningful Korean", async () =>
 {
   await withFixture (async (root) =>

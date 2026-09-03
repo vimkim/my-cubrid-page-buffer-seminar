@@ -387,6 +387,39 @@ function technicalProjection (html)
   };
 }
 
+function validateSixObjectRuntimeShapes (pagePath, language, html, failures)
+{
+  if (pagePath !== "lessons/0002-separate-objects-from-state.html")
+    {
+      return;
+    }
+  const requiredFragments = [
+    'id="runtime-shapes"',
+    'data-default-buffer-count="32768"',
+    'data-default-page-size="16KiB"',
+    'data-default-holder-count="7"',
+    'data-holder-growth-count="10"',
+    'href="../../learning/01-contract-and-objects.md#six-objects-six-lifetimes"',
+    "<code>struct vpid { int32_t pageid; short volid; }</code>",
+    "<code>PGBUF_BCB</code>",
+    "<code>BCB_table</code>",
+    "<code>PGBUF_IOPAGE_BUFFER</code>",
+    "<code>iopage_table</code>",
+    "<code>typedef char *PAGE_PTR</code>",
+    "<code>int32_t fcnt</code>",
+    "<code>PGBUF_HOLDER</code>",
+    "<code>PGBUF_HOLDER_ANCHOR</code>",
+    "<code>NDEBUG</code>"
+  ];
+  for (const fragment of requiredFragments)
+    {
+      if (!html.includes (fragment))
+        {
+          failures.push (`${pagePath}: missing six-object runtime-shape contract in ${language}: ${fragment}`);
+        }
+    }
+}
+
 async function validateTechnicalParity (root)
 {
   const failures = [];
@@ -412,8 +445,12 @@ async function validateTechnicalParity (root)
   };
   for (const page of manifest.pages ?? [])
     {
-      const en = technicalProjection (await readFile (path.join (root, page.en), "utf8"));
-      const ko = technicalProjection (await readFile (path.join (root, page.ko), "utf8"));
+      const enHtml = await readFile (path.join (root, page.en), "utf8");
+      const koHtml = await readFile (path.join (root, page.ko), "utf8");
+      validateSixObjectRuntimeShapes (page.path, "en", enHtml, failures);
+      validateSixObjectRuntimeShapes (page.path, "ko", koHtml, failures);
+      const en = technicalProjection (enHtml);
+      const ko = technicalProjection (koHtml);
       for (const key of Object.keys (labels))
         {
           if (JSON.stringify (en[key]) !== JSON.stringify (ko[key]))
