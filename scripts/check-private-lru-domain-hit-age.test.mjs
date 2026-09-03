@@ -11,11 +11,35 @@ async function read(relative) {
   return readFile(path.join(root, relative), "utf8");
 }
 
+test("private LRU counts, index namespaces, lifetimes, and victim order have a focused lesson", async () => {
+  const [research, en, ko] = await Promise.all([
+    read(".scratch/private-lru-index/research.md"),
+    read("en/lessons/0012b-understand-private-lru-index.html"),
+    read("ko/lessons/0012b-understand-private-lru-index.html"),
+  ]);
+
+  assert.ok(research.includes("f799e05d77d5300c6ea5753b4a6cc7caee6d8912"));
+  assert.match(research, /transaction start[\s\S]{0,30}not[\s\S]{0,30}create 152/i);
+  assert.match(research, /eligible own private,[\s\S]*advertised other private,[\s\S]*advertised shared,[\s\S]*own private/i);
+  assert.match(en, /102 \+ 50 = 152/is);
+  assert.match(en, /starting a transaction does not create 152/is);
+  assert.match(en, /session creation.*(?:borrow|associate)|session.*borrow.*(?:id|index)/is);
+  assert.match(en, /p = 0.*32.*p = 151.*183/is);
+  assert.match(en, /own private.*other.private.*shared.*own private.*(?:fallback|last)/is);
+  assert.match(en, /direct victim.*later/is);
+  for (const term of ["152", "transaction", "session", "tran_index", "S + p", "session_cnt[p]", "own private", "other-private", "shared list", "Direct victim"]) {
+    assert.ok(ko.includes(term), term);
+  }
+  assert.match(en, /data-descriptor-lifetime="page-buffer"/);
+  assert.match(en, /data-assignment-lifetime="session"/);
+  assert.match(en, /data-search-order="own-over-quota,other-private,shared,own-fallback"/);
+});
+
 test("private LRU is taught as an assignment and policy domain, not page ownership", async () => {
   const [markdown, en, ko, visual] = await Promise.all([
     read("advanced/replacement-progress.md"),
-    read("en/lessons/0012-prove-replacement-progress.html"),
-    read("ko/lessons/0012-prove-replacement-progress.html"),
+    read("en/lessons/0012b-understand-private-lru-index.html"),
+    read("ko/lessons/0012b-understand-private-lru-index.html"),
     read("assets/private-lru-domain.svg"),
   ]);
 
@@ -42,8 +66,8 @@ test("private LRU is taught as an assignment and policy domain, not page ownersh
 test("adjust_age has an explicit producer, gate, sampling purpose, and cost", async () => {
   const [markdown, en, ko] = await Promise.all([
     read("advanced/replacement-progress.md"),
-    read("en/lessons/0012-prove-replacement-progress.html"),
-    read("ko/lessons/0012-prove-replacement-progress.html"),
+    read("en/lessons/0012b-understand-private-lru-index.html"),
+    read("ko/lessons/0012b-understand-private-lru-index.html"),
   ]);
 
   for (const text of [markdown, en]) {
@@ -61,8 +85,8 @@ test("adjust_age has an explicit producer, gate, sampling purpose, and cost", as
 test("zero-crossing unfix placement and private-to-shared movement are visual and costed", async () => {
   const [markdown, en, ko, visual] = await Promise.all([
     read("advanced/replacement-progress.md"),
-    read("en/lessons/0012-prove-replacement-progress.html"),
-    read("ko/lessons/0012-prove-replacement-progress.html"),
+    read("en/lessons/0012b-understand-private-lru-index.html"),
+    read("ko/lessons/0012b-understand-private-lru-index.html"),
     read("assets/unfix-lru-placement.svg"),
   ]);
 

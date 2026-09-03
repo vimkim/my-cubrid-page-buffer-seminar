@@ -34,13 +34,13 @@ async function withFixture (callback)
     }
 }
 
-test ("the inventory gate requires the 47-page course", async () =>
+test ("the inventory gate requires the 48-page course", async () =>
 {
   await withFixture (async (root) =>
   {
     await assert.rejects (
       execFileAsync (process.execPath, [checker, "--root", root, "--gate", "inventory"]),
-      (error) => /expectedPageCount must be exactly 47/.test (error.stderr));
+      (error) => /expectedPageCount must be exactly 48/.test (error.stderr));
   });
 });
 
@@ -196,6 +196,32 @@ test ("the technical gate rejects incomplete daemon concept bridges", async () =
     await assert.rejects (
       execFileAsync (process.execPath, [checker, "--root", root, "--gate", "technical"]),
       (error) => lessonNames.every ((name) => error.stderr.includes (`lessons/${name}: missing daemon concept bridge`)));
+  });
+});
+
+test ("the technical gate rejects an incomplete private-LRU index contract", async () =>
+{
+  await withFixture (async (root) =>
+  {
+    const name = "0012b-understand-private-lru-index.html";
+    await mkdir (path.join (root, "en/lessons"), { recursive: true });
+    await mkdir (path.join (root, "ko/lessons"), { recursive: true });
+    await writeFile (path.join (root, "en/lessons", name), '<!doctype html><html lang="en"><body><p>Private LRU overview.</p></body></html>\n');
+    await writeFile (path.join (root, "ko/lessons", name), '<!doctype html><html lang="ko"><body><p>Private LRU 개요를 설명합니다.</p></body></html>\n');
+    await writeFile (path.join (root, "teaching-pages.json"), JSON.stringify ({
+      version: 1,
+      expectedPageCount: 1,
+      legacyRedirectMinimumDays: 90,
+      pages: [{
+        path: `lessons/${name}`,
+        en: `en/lessons/${name}`,
+        ko: `ko/lessons/${name}`
+      }]
+    }, null, 2));
+
+    await assert.rejects (
+      execFileAsync (process.execPath, [checker, "--root", root, "--gate", "technical"]),
+      (error) => /missing private-LRU index contract/.test (error.stderr));
   });
 });
 

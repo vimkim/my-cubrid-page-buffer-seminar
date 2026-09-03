@@ -520,6 +520,81 @@ function validateDaemonConceptBridges (pagePath, language, html, failures)
     }
 }
 
+function validatePrivateLruIndexContract (pagePath, language, html, failures)
+{
+  if (pagePath !== "lessons/0012b-understand-private-lru-index.html")
+    {
+      return;
+    }
+  const sections = {
+    "index-space": {
+      attributes: {
+        "data-shared-default": "32",
+        "data-private-default": "152",
+        "data-local-private-range": "0-151",
+        "data-full-private-range": "32-183"
+      },
+      code: ["p", "S + p", "private_lru_index", "PGBUF_LRU_INDEX_FROM_PRIVATE()"]
+    },
+    lifecycle: {
+      attributes: {
+        "data-descriptor-lifetime": "page-buffer",
+        "data-assignment-lifetime": "session",
+        "data-assignment-creates-descriptor": "false",
+        "data-release-moves-bcbs": "false"
+      },
+      code: [
+        "pgbuf_initialize_page_quota_parameters()",
+        "pgbuf_initialize_lru_list()",
+        "pgbuf_assign_private_lru()",
+        "pgbuf_release_private_lru()"
+      ]
+    },
+    assignment: {
+      attributes: {
+        "data-idle-choice": "fewest-bcbs",
+        "data-fallback-choice": "least-activity",
+        "data-sharing": "allowed"
+      },
+      code: ["session_cnt[p]", "THREAD_ENTRY.private_lru_index"]
+    },
+    "victim-search": {
+      attributes: {
+        "data-search-order": "own-over-quota,other-private,shared,own-fallback",
+        "data-list-scan-zone": "LRU3",
+        "data-list-scan-max": "1000",
+        "data-direct-victim-stage": "after-search-failure"
+      },
+      code: ["pgbuf_get_victim()", "pgbuf_get_victim_from_lru_list()"]
+    }
+  };
+  for (const [sectionId, contract] of Object.entries (sections))
+    {
+      const section = elementById (html, "section", sectionId);
+      if (!section)
+        {
+          failures.push (`${pagePath}: missing private-LRU index contract in ${language}: section #${sectionId}`);
+          continue;
+        }
+      for (const [name, expected] of Object.entries (contract.attributes))
+        {
+          if (htmlAttribute (section.openingTag, name) !== expected)
+            {
+              failures.push (`${pagePath}: missing private-LRU index contract in ${language}: ${name}=${expected}`);
+            }
+        }
+      const codeValues = new Set (elementContents (section.contents, ["code"])
+        .map ((value) => value.slice ("code:".length)));
+      for (const expected of contract.code)
+        {
+          if (!codeValues.has (expected))
+            {
+              failures.push (`${pagePath}: missing private-LRU index contract in ${language}: code ${expected}`);
+            }
+        }
+    }
+}
+
 async function validateTechnicalParity (root)
 {
   const failures = [];
@@ -551,6 +626,8 @@ async function validateTechnicalParity (root)
       validateSixObjectRuntimeShapes (page.path, "ko", koHtml, failures);
       validateDaemonConceptBridges (page.path, "en", enHtml, failures);
       validateDaemonConceptBridges (page.path, "ko", koHtml, failures);
+      validatePrivateLruIndexContract (page.path, "en", enHtml, failures);
+      validatePrivateLruIndexContract (page.path, "ko", koHtml, failures);
       const en = technicalProjection (enHtml);
       const ko = technicalProjection (koHtml);
       for (const key of Object.keys (labels))
@@ -1270,9 +1347,9 @@ function manifestPaths (manifest, failures)
     {
       failures.push ("teaching-pages.json: version must be 1");
     }
-  if (manifest.expectedPageCount !== 47)
+  if (manifest.expectedPageCount !== 48)
     {
-      failures.push ("teaching-pages.json: expectedPageCount must be exactly 47");
+      failures.push ("teaching-pages.json: expectedPageCount must be exactly 48");
     }
   if (!Array.isArray (manifest.pages))
     {

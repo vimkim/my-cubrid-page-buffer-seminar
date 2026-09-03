@@ -417,7 +417,7 @@
             <p><strong>Locking:</strong> it locks only that selected list, scans at most 1,000 LRU3 entries, and try-locks BCBs. Contention on a concentrated hot list is possible, but there is no all-private-LRU mutex sweep; severe bottleneck requires measured evidence.</p>
             <p><strong>Zones:</strong> new private BCBs normally enter LRU1 top, new shared BCBs LRU2 middle. Threshold pressure demotes LRU1→LRU2→LRU3. An old-enough LRU2 hit and an ordinary LRU3 hit boost to LRU1. Private LRU1/LRU2 targets are 5%/5% of quota; shared defaults are 40%/5% of the shared target.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:9330-9538,9695-10353,14251-14511,15674-15728,16370-16506</code></p>
-            <p class="answer-route"><a href="../lessons/0012-prove-replacement-progress.html#private">Bilingual cross-private and zone visual</a> · <a href="../../advanced/replacement-progress.md#the-replacement-search-from-beginning-to-end">Canonical mechanism</a></p>
+            <p class="answer-route"><a href="../lessons/0012b-understand-private-lru-index.html#movement">Bilingual cross-private and zone visual</a> · <a href="../../advanced/replacement-progress.md#the-replacement-search-from-beginning-to-end">Canonical mechanism</a></p>
           </div>
         </details>
       </article>
