@@ -39,6 +39,26 @@
         <p class="source-note"><strong>Verified mechanism:</strong> holder, atomic-latch <code>fcnt</code>, BCB, paired frame의 정의는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a>에 있습니다. table의 일대일 pairing은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>5559–5660</code></a>에서 확인할 수 있습니다.</p>
       </section>
 
+      <section class="section" id="runtime-shapes">
+        <div class="eyebrow">01A · 이름을 concrete하게 만들기</div>
+        <h2>각 객체의 runtime form, default scale, initial state를 함께 봅니다</h2>
+        <p>여섯 이름은 동등한 여섯 allocation을 뜻하지 않습니다. <code>VPID</code>는 value, BCB와 frame은 pool array, <code>PAGE_PTR</code>는 borrowed pointer, global <code>fcnt</code>는 각 BCB 안의 field, holder는 per-thread ledger entry입니다. 아래 default snapshot은 pinned baseline의 512 MiB data buffer와 16 KiB I/O page size를 가정합니다.</p>
+        <table>
+          <thead><tr><th>객체</th><th>Concrete representation</th><th>Default allocation과 startup state</th><th>기억할 size boundary</th></tr></thead>
+          <tbody>
+            <tr><td><code>VPID</code></td><td><code>struct vpid { int32_t pageid; short volid; }</code>. Logical lookup key로 copy하고 비교하는 value입니다.</td><td>Pool-wide VPID array는 없습니다. 32,768개 BCB가 각각 current value 하나를 저장하고 null identity로 시작합니다. Caller와 storage metadata가 다른 VPID 값을 가져도 그것만으로 resident가 되지는 않습니다.</td><td>선언된 field는 32-bit page identifier와 short volume identifier입니다. In-memory <code>sizeof(VPID)</code>에는 ABI padding이 들어갈 수 있고 serialized layout은 별도 storage contract입니다.</td></tr>
+            <tr><td>BCB</td><td>Private <code>PGBUF_BCB</code> record 하나가 contiguous <code>BCB_table</code>에 들어 있습니다. Current VPID, BCB mutex, atomic latch tuple, flags, waiter/hash/LRU link, age counter, oldest unflushed LSA, frame pointer를 담습니다.</td><td>BCB 32,768개를 한 번 할당합니다. 모든 BCB는 null VPID, <code>PGBUF_LATCH_INVALID</code>, global <code>fcnt = 0</code>, INVALID-list membership으로 시작합니다.</td><td><code>num_buffers × sizeof(PGBUF_BCB)</code>로 예산을 잡습니다. 정확한 record size는 private하고 build-dependent이며 Interface promise가 아닙니다.</td></tr>
+            <tr><td>Frame</td><td><code>PGBUF_IOPAGE_BUFFER</code> 하나가 contiguous <code>iopage_table</code>에 들어 있습니다. BCB back-pointer와 실제 <code>FILEIO_PAGE</code>를 담고, index <code>i</code>는 <code>BCB[i]</code>와 영구적으로 짝지어집니다.</td><td>32,768 frames × 16 KiB가 configured frame bytes 512 MiB가 됩니다. 각 page header는 null identity와 unknown type으로 시작하며, 이 bytes는 아직 resident page를 나타내지 않습니다.</td><td>Configured 512 MiB는 page image 크기입니다. Back-pointer, alignment, BCB, hash, holder와 다른 metadata는 추가 memory를 사용합니다.</td></tr>
+            <tr><td><code>PAGE_PTR</code></td><td><code>typedef char *PAGE_PTR</code>. Frame 안의 page payload를 가리키며 descriptor도 owning allocation도 아닙니다.</td><td>Startup에 PAGE_PTR table을 만들지 않습니다. Successful fix마다 해당 acquisition을 위한 view를 반환하고 matching unfix에서 그 view의 사용 권한이 끝납니다.</td><td><code>sizeof(PAGE_PTR)</code>는 platform pointer size이지 노출하는 page size가 아닙니다. 여기서 명시한 default에서 이 pointer를 포함하는 frame은 16 KiB입니다.</td></tr>
+            <tr><td>Global <code>fcnt</code></td><td>각 BCB의 64-bit atomic latch tuple 안에서 latch mode, waiter presence와 함께 pack된 <code>int32_t fcnt</code>입니다. 별도로 할당한 object가 아니라 field입니다.</td><td>BCB당 하나이므로 counter도 32,768개이며 모두 0에서 시작합니다. 같은 thread의 nested fix를 포함해 successful fix마다 global debt가 증가합니다.</td><td>Atomic tuple 전체가 64 bits입니다. Positive <code>fcnt</code>는 ordinary reuse를 막지만 0만으로 clean 또는 eligible victim을 증명하지는 않습니다.</td></tr>
+            <tr><td>Thread holder</td><td><code>PGBUF_HOLDER</code> entry는 <code>fix_count</code>, BCB pointer, free/held-list link, performance state, watcher link를 저장합니다. Thread마다 64-byte <code>PGBUF_HOLDER_ANCHOR</code> 하나가 free/held list의 head를 가집니다.</td><td>각 thread는 free list의 7 reserved holder entry와 빈 held list로 시작합니다. First fix가 entry 하나를 bind하고 같은 thread의 nested fix는 그 entry를 재사용합니다. 부족하면 backing storage가 blocks of 10으로 증가합니다.</td><td><code>sizeof(PGBUF_HOLDER)</code>는 build에 따라 크게 달라집니다. <code>NDEBUG</code>가 없으면 entry마다 64 KiB fix-site text도 포함합니다. Binding은 final nested unfix에서 끝나지만 storage는 pool-owned로 남습니다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>Default memory picture:</strong> core pool은 32,768개 reusable BCB와 여기에 짝지어진 32,768개 reusable 16 KiB frame이라는 두 fixed array가 중심입니다. Fix는 frame을 하나 더 할당하지 않습니다. Global/per-thread debt를 만들고 기존 frame 안을 가리키는 borrowed pointer 하나를 반환합니다.</div>
+        <div class="callout warn"><strong>Evidence boundary:</strong> formula와 source width는 유지하되, 특정 compiler의 <code>sizeof(PGBUF_BCB)</code>, <code>sizeof(PGBUF_HOLDER)</code>, padding, mutex layout, debug footprint를 stable ABI claim으로 만들면 안 됩니다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> value와 view는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/compat/dbtype_def.h#L956-L961"><code>VPID</code> fields</a>와 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/storage_common.h#L146"><code>PAGE_PTR</code> alias</a>에서 정의합니다. Holder constant는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L86-L94"><code>page_buffer.c:86–94</code></a>, holder, atomic-latch, BCB, frame layout은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>460–555</code></a>, BCB/frame construction은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>5559–5660</code></a>, holder initialization은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5926-L5996"><code>5926–5996</code></a>에 있습니다. Ownership contract는 <a href="../../learning/01-contract-and-objects.md#six-objects-six-lifetimes">canonical six-object explanation</a>, default count 계산은 <a href="0012-prove-replacement-progress.html#defaults">Lesson 0012</a>에서 이어서 보세요.</p>
+      </section>
+
       <section class="section" id="three-clocks">
         <div class="eyebrow">02 · 겹쳐 있는 세 lifetime</div>
         <h2>주소가 그대로여도 그 주소에 부여한 의미는 끝날 수 있습니다</h2>
@@ -121,6 +141,7 @@
     <nav class="lesson-nav" aria-label="강의 목차">
       <strong>강의 지도</strong>
       <a href="#six-objects">1. 여섯 객체</a>
+      <a href="#runtime-shapes">1A. Runtime shapes와 defaults</a>
       <a href="#three-clocks">2. 세 lifetime</a>
       <a href="#four-axes">3. 네 state axis</a>
       <a href="#classify">4. snapshot 분류</a>
