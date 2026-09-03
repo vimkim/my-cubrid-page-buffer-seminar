@@ -34,13 +34,13 @@ async function withFixture (callback)
     }
 }
 
-test ("the inventory gate requires the 47-page course", async () =>
+test ("the inventory gate requires the 48-page course", async () =>
 {
   await withFixture (async (root) =>
   {
     await assert.rejects (
       execFileAsync (process.execPath, [checker, "--root", root, "--gate", "inventory"]),
-      (error) => /expectedPageCount must be exactly 47/.test (error.stderr));
+      (error) => /expectedPageCount must be exactly 48/.test (error.stderr));
   });
 });
 
@@ -196,6 +196,50 @@ test ("the technical gate rejects incomplete daemon concept bridges", async () =
     await assert.rejects (
       execFileAsync (process.execPath, [checker, "--root", root, "--gate", "technical"]),
       (error) => lessonNames.every ((name) => error.stderr.includes (`lessons/${name}: missing daemon concept bridge`)));
+  });
+});
+
+test ("the technical gate rejects an incomplete private-LRU index contract", async () =>
+{
+  await withFixture (async (root) =>
+  {
+    const name = "0012b-understand-private-lru-index.html";
+    await mkdir (path.join (root, "en/lessons"), { recursive: true });
+    await mkdir (path.join (root, "ko/lessons"), { recursive: true });
+    await writeFile (path.join (root, "en/lessons", name), '<!doctype html><html lang="en"><body><p>Private LRU overview.</p></body></html>\n');
+    await writeFile (path.join (root, "ko/lessons", name), '<!doctype html><html lang="ko"><body><p>Private LRU 개요를 설명합니다.</p></body></html>\n');
+    await writeFile (path.join (root, "teaching-pages.json"), JSON.stringify ({
+      version: 1,
+      expectedPageCount: 1,
+      legacyRedirectMinimumDays: 90,
+      pages: [{
+        path: `lessons/${name}`,
+        en: `en/lessons/${name}`,
+        ko: `ko/lessons/${name}`
+      }]
+    }, null, 2));
+
+    await assert.rejects (
+      execFileAsync (process.execPath, [checker, "--root", root, "--gate", "technical"]),
+      (error) => /missing private-LRU index contract/.test (error.stderr));
+
+    const decoy = `<!doctype html><html><body>
+<section id="index-space" data-shared-default="32" data-private-default="152" data-local-private-range="0-151" data-full-private-range="32-183"><p>Index ranges.</p></section>
+<section id="lifecycle" data-descriptor-lifetime="page-buffer" data-assignment-lifetime="session" data-assignment-creates-descriptor="false" data-release-moves-bcbs="false"><p>Lifetimes.</p></section>
+<section id="assignment" data-idle-choice="fewest-bcbs" data-fallback-choice="least-activity" data-sharing="allowed"><p>Assignment.</p></section>
+<section id="victim-search" data-search-order="own-over-quota,other-private,shared,own-fallback" data-list-scan-zone="LRU3" data-list-scan-max="1000" data-direct-victim-stage="after-search-failure"><p>Victim order.</p></section>
+<div>${[
+  "p", "S + p", "private_lru_index", "PGBUF_LRU_INDEX_FROM_PRIVATE()",
+  "pgbuf_initialize_page_quota_parameters()", "pgbuf_initialize_lru_list()",
+  "pgbuf_assign_private_lru()", "pgbuf_release_private_lru()", "session_cnt[p]",
+  "THREAD_ENTRY.private_lru_index", "pgbuf_get_victim()", "pgbuf_get_victim_from_lru_list()"
+].map ((value) => `<code>${value}</code>`).join ("")}</div>
+</body></html>\n`;
+    await writeFile (path.join (root, "en/lessons", name), decoy.replace ("<html>", '<html lang="en">'));
+    await writeFile (path.join (root, "ko/lessons", name), decoy.replace ("<html>", '<html lang="ko">'));
+    await assert.rejects (
+      execFileAsync (process.execPath, [checker, "--root", root, "--gate", "technical"]),
+      (error) => /missing private-LRU index contract.*code p/.test (error.stderr));
   });
 });
 

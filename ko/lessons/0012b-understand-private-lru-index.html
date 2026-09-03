@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0012B — Private LRU index 이해하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0012b-understand-private-lru-index.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0012B</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">심화 학습 · List identity와 선택</div>
+    <h1>계속 존재하는 152개 list와 session이 빌리는 index 하나를 구분합니다</h1>
+    <p>이 lesson은 네 질문을 따라갑니다. 152라는 수는 무엇을 세는지, 그 object는 언제 생기는지, session은 어떻게 index를 받는지, victim search는 다음에 어느 list를 보는지 알아봅니다.</p>
+    <div class="pills"><span class="pill">152 descriptors</span><span class="pill">Transaction마다 생성 아님</span><span class="pill">Local p</span><span class="pill">Full S + p</span><span class="pill">Ordered search</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="answer">
+        <div class="eyebrow">01 · 짧은 답</div>
+        <h2>Pool은 list를 만들고 session은 list ID 하나를 빌립니다</h2>
+        <p class="big-claim">기본값 152는 page-buffer startup 때 한 번 만들어지는 빈 private-LRU descriptor의 개수입니다. Transaction을 시작할 때 152개 list를 만드는 것이 아닙니다.</p>
+        <p>Pinned server path에서 session을 만들 때 private-local index 하나를 요청합니다. 그 session의 request들은 같은 index를 실행 thread로 복사합니다. 나중에 BCB가 해당 list에 들어갈 수 있지만, session이나 transaction이 그 BCB를 소유하는 것은 아닙니다.</p>
+      </section>
+
+      <section class="section" id="index-space" data-shared-default="32" data-private-default="152" data-local-private-range="0-151" data-full-private-range="32-183">
+        <div class="eyebrow">02 · 어떤 index인가?</div>
+        <h2>“Index”라는 한 단어가 서로 다른 세 가지를 가리킵니다</h2>
+        <img class="diagram" src="../../assets/default-replacement-topology.svg" alt="기본 buffer pool 수치와 shared 및 private LRU descriptor 범위">
+        <table>
+          <thead><tr><th>값</th><th>계산 예의 범위</th><th>용도</th></tr></thead>
+          <tbody>
+            <tr><td>Transaction-table <code>tran_index</code></td><td>LRU 범위가 아님</td><td>Database 작업을 식별합니다. LRU array subscript로 쓰지 않습니다.</td></tr>
+            <tr><td>Private-local <code>p</code></td><td>0부터 151</td><td>Session/thread의 <code>private_lru_index</code>로 저장합니다.</td></tr>
+            <tr><td>Full LRU-array index</td><td>shared 0–31, private 32–183</td><td>Resident BCB의 list-membership flag에 저장합니다. Private 변환은 <code>S + p</code>입니다.</td></tr>
+          </tbody>
+        </table>
+        <pre>S = 32, P = 152, L = S + P = 184
+p = 0   → full LRU index 32
+p = 151 → full LRU index 183</pre>
+        <p><code>PGBUF_LRU_INDEX_FROM_PRIVATE()</code>가 이 변환을 수행합니다. BCB flag의 low 16 bit에는 full list index 하나가, 별도 flag bit에는 LRU zone 하나가 기록될 뿐 session owner는 기록되지 않습니다. 따라서 “private”은 access control이 아니라 locality/quota domain이라는 뜻입니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:174–216,510–623,1079–1114</code>.</p>
+      </section>
+
+      <section class="section" id="lifecycle" data-descriptor-lifetime="page-buffer" data-assignment-lifetime="session" data-assignment-creates-descriptor="false" data-release-moves-bcbs="false">
+        <div class="eyebrow">03 · 서로 독립적인 두 lifetime</div>
+        <h2>Descriptor는 pool과 함께 살고 association은 context와 함께 삽니다</h2>
+        <img class="diagram" src="../../assets/private-lru-domain.svg" alt="Session이 private-domain assignment를 전달하지만 BCB membership은 독립적인 구조">
+        <ol>
+          <li><strong>Page-buffer startup:</strong> <code>pgbuf_initialize_page_quota_parameters()</code>가 P를 계산합니다. 자동 설정이면 P는 <code>MAX_NTRANS + 50</code>입니다.</li>
+          <li><strong>Pool construction:</strong> <code>pgbuf_initialize_lru_list()</code>가 S + P개 descriptor를 한 번에 할당하고 모든 list를 빈 상태로 초기화합니다.</li>
+          <li><strong>Session creation:</strong> <code>pgbuf_assign_private_lru()</code>가 이미 존재하는 private list 하나와 session을 연결합니다. Descriptor, BCB, frame을 새로 만들지 않습니다.</li>
+          <li><strong>Request execution:</strong> worker thread가 그 session의 local index를 잠시 전달받습니다. BCB membership은 request보다 오래 남을 수 있고 다음에 어느 transaction이 page를 fix하는지와 독립적입니다.</li>
+          <li><strong>Session destruction:</strong> <code>pgbuf_release_private_lru()</code>가 association count를 줄입니다. List를 비우지도, 그 BCB들을 옮기지도 않습니다.</li>
+          <li><strong>Page-buffer finalization:</strong> 이때 pool 소유 descriptor array가 마침내 파괴됩니다.</li>
+        </ol>
+        <p>Vacuum에는 별도의 context lifetime이 있습니다. Vacuum이 활성화되면 initialization이 preallocated worker record에 ID를 배정하며, pinned source에는 shutdown 전에 호출되는 vacuum-side release가 없습니다.</p>
+        <div class="callout"><strong>이 예에서 왜 152일까요?</strong> Server mode, private-list 자동 설정, <code>max_clients = 100</code>, HA off, admin slot 1개, system transaction 1개, compile-time vacuum-worker capacity 50을 가정합니다. 그래서 102 + 50 = 152입니다. 별도로 설정하는 worker-pool 기본값은 10이지만 이 공식은 capacity 50을 사용합니다. 이 가정이나 명시적 parameter를 바꾸면 P도 달라지고, stand-alone mode에서는 private LRU를 끕니다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:1713–1787,5740–5800,1921–1981,14513–14624</code>; <code>session.c:300–427,704–745</code>; <code>server_support.c:2069–2087</code>; <code>thread_entry_task.cpp:61–110</code>; <code>vacuum.c:1181–1191,1244–1277</code>.</p>
+        <p class="source-note"><strong>Implementation policy:</strong> automatic P sizing은 <code>page_buffer.c:13941–13985</code>, <code>system_parameter.c:1569–1580,3802–3813,4171–4182</code>, <code>connection_globals.c:83–111,157–241</code>, <code>log_common_impl.h:48–52</code>, <code>vacuum.h:121–136</code>에서 확인할 수 있습니다.</p>
+      </section>
+
+      <section class="section" id="assignment" data-idle-choice="fewest-bcbs" data-fallback-choice="least-activity" data-sharing="allowed">
+        <div class="eyebrow">04 · Session 하나를 배정하는 법</div>
+        <h2>비어 있고 작은 list를 우선하고, 없으면 activity가 가장 낮은 list를 공유합니다</h2>
+        <img class="diagram" src="../../assets/private-lru-assignment-activity.svg" alt="Private LRU assignment scan, local-to-full index 변환과 activity feedback">
+        <ol>
+          <li>P개의 private descriptor를 순회합니다. BCB가 0개인 idle descriptor는 이미 최선의 primary candidate이므로 이 경우 일찍 끝나며, 그렇지 않으면 P개를 모두 봅니다.</li>
+          <li>연결된 session이 0개인 descriptor 중 BCB가 가장 적은 것을 기억합니다.</li>
+          <li>동시에 smoothed activity가 가장 낮은 descriptor를 fallback으로 기억합니다.</li>
+          <li>Zero-session candidate를 우선하고 full index를 local p로 변환한 뒤 <code>session_cnt[p]</code>를 atomic increment합니다.</li>
+          <li>다른 assignment가 그 idle list를 동시에 가져갔다면 되돌리고 최대 다섯 번 retry합니다. Retry budget 뒤에는 공유를 허용합니다.</li>
+          <li>각 request는 p를 <code>THREAD_ENTRY.private_lru_index</code>로 복사합니다. Page fix마다 assignment를 다시 계산하지 않습니다.</li>
+        </ol>
+        <p>“Session 0개”가 “page 0개”라는 뜻은 아닙니다. 여러 session이 같은 private LRU를 사용할 수 있고, 세션이 해제되어도 resident BCB를 비우거나 옮기지 않습니다. 이 알고리즘은 policy domain을 분산할 뿐 transaction마다 private page cache나 BCB 소유권을 할당하지 않습니다.</p>
+        <p class="source-note"><strong>Implementation policy:</strong> <code>page_buffer.c:14513–14624</code>; <code>session.c:729–744</code>; <code>server_support.c:2069–2087</code>.</p>
+      </section>
+
+      <section class="section" id="activity">
+        <div class="eyebrow">05 · “Least active”의 의미</div>
+        <h2>Activity는 transaction 수가 아니라 sample된 BCB reuse입니다</h2>
+        <p>Ordinary final unfix 때 <code>pgbuf_bcb_register_hit_for_lru()</code>는 accepted adjustment epoch 하나에서 BCB 하나가 최대 hit 하나만 기여하게 합니다. Accepted <code>pgbuf_adjust_quotas()</code>만 <code>adjust_age</code>를 increment합니다. Daemon이 100 ms마다 시도해도 guard가 early return할 수 있으므로 반드시 increment되는 것은 아닙니다.</p>
+        <p>Accepted pass는 <code>ATOMIC_TAS_32</code>로 각 LRU의 <code>lru_hits</code>를 가져오면서 0으로 reset하고, hit를 초당 rate로 바꾼 뒤 private activity를 10초에 걸쳐 smoothing합니다. 그다음 activity share로 quota를 조정합니다. Lock wait를 제외한 structural work는 O(T + L + D)입니다.</p>
+        <p>이 값은 CPU time도, 연결된 session 수도, resident BCB 수도, 정확한 fix count도 아닙니다. Assignment는 zero-session descriptor가 없을 때만 fallback 기준으로 이 값을 봅니다.</p>
+        <p class="source-note"><strong>Implementation policy:</strong> <code>page_buffer.c:14251–14511,16580–16610,16994–17009,17146–17161</code>.</p>
+      </section>
+
+      <section class="section" id="movement">
+        <div class="eyebrow">06 · BCB membership은 이동할 수 있음</div>
+        <h2>Private association은 page를 그 domain에 고정하지 않습니다</h2>
+        <img class="diagram" src="../../assets/unfix-lru-placement.svg" alt="Final-unfix placement와 private에서 VOID를 거쳐 shared로 이동하는 경로">
+        <p>Ordinary movement는 unfix가 global <code>fcnt</code>를 0으로 바꿀 때만 일어납니다. <code>pgbuf_should_move_private_to_shared()</code>는 final-unfix한 thread의 private domain과 BCB의 private list가 다르거나, 같은 domain의 BCB가 hot이면서 충분히 old일 때 migration을 요청합니다.</p>
+        <p>경로는 private LRU → VOID → shared LRU2 middle입니다. Source는 private-list mutex 아래서 unlink하고 mutex를 놓은 뒤 <code>pgbuf_get_shared_lru_index_for_add()</code>로 destination을 골라 shared-list mutex 아래서 link합니다. 두 list operation 사이에도 BCB mutex는 계속 유지됩니다.</p>
+        <p>Known-node unlink/link는 O(1)에 D개의 zone demotion이 더해져 O(1 + D)입니다. Shared destination 선택은 amortized O(1)이고 주기적으로 O(S) balance scan을 수행하므로, lock wait를 제외한 migration에는 periodic O(S + D) case가 있습니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:6636–7038,8988–9063,10303–10417</code>.</p>
+      </section>
+
+      <section class="section" id="victim-search" data-search-order="own-over-quota,other-private,shared,own-fallback" data-list-scan-zone="LRU3" data-list-scan-max="1000" data-direct-victim-stage="after-search-failure">
+        <div class="eyebrow">07 · 어느 list를 search하는가?</div>
+        <h2>먼저 list를 고르고 그다음 eligible BCB를 살핍니다</h2>
+        <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private 및 shared LRU domain, list마다 세 zone, victim search 순서">
+        <p><code>pgbuf_get_victim()</code>은 다음 순서를 적용합니다.</p>
+        <ol>
+          <li><strong>Quota를 넘은 own private list:</strong> 실행 thread의 S + p list가 quota 조건상 너무 클 때만 먼저 시도합니다. Quota를 충분히 많이 넘으면 빌려 볼 other-private candidate의 범위도 제한합니다.</li>
+          <li><strong>광고된 other-private list 하나:</strong> Private quota와 page-flush daemon을 사용할 수 있으면 private-list queue에서 candidate full index 하나를 소비합니다. 모든 session을 순회하지 않습니다.</li>
+          <li><strong>광고된 shared list 하나:</strong> Shared-list candidate index를 소비합니다. Private quota가 꺼져 있으면 이 domain만 search합니다. Page-flush daemon이 없으면 guarded branch가 shared advertisement를 더 소비할 수 있습니다.</li>
+          <li><strong>Own private fallback:</strong> Own list가 quota 아래라 1단계에서 시도하지 않았다면, 여전히 quota 아래여도 마지막에 search합니다.</li>
+        </ol>
+        <p>선택한 index는 각각 <code>pgbuf_get_victim_from_lru_list()</code>에 전달됩니다. 이 함수는 선택한 list의 LRU3만 최대 1,000 position까지 보고, dirty, flushing, fixed, waiter 존재, reservation 중, mutex busy인 BCB는 여전히 거부합니다.</p>
+        <div class="callout"><strong>Direct victim은 그다음 단계이지 다섯 번째 LRU domain이 아닙니다.</strong> Server mode에서 page-flush를 사용할 수 있을 때 INVALID와 ordinary search가 실패하면 allocator는 flusher가 BCB를 clean하고 reserve할 때까지 기다릴 수 있습니다. 소비 전에 BCB가 다시 부적격해지면 이 handoff는 취소될 수 있습니다.</div>
+        <p class="source-note"><strong>Inference:</strong> <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">VS-19</a>는 restricted big-private queue의 initial producer가 pinned source에서 보이지 않는다는 점을 기록합니다. 이 branch를 progress나 fairness 보장으로 바꾸어 말하지 마세요.</p>
+        <p class="source-note"><strong>Implementation policy:</strong> list selection은 <code>page_buffer.c:9067–9253,16370–16567</code>에 있습니다. <strong>Verified mechanism:</strong> selected-list eligibility와 revocable direct-victim path는 <code>page_buffer.c:8181–8403,9256–9538,15420–15652</code>에 있습니다.</p>
+      </section>
+
+      <section class="section" id="practice">
+        <div class="eyebrow">08 · 이해 확인</div>
+        <h2>Ownership을 만들어 내지 말고 session A를 추적하세요</h2>
+        <p>S = 32, P = 152라고 합시다. Session A가 local p = 7을 받아 full private-list index는 39입니다. Request가 page X를 load하고 list 39에 final-unfix합니다. 그 뒤 session A가 끝나도 X는 그 자리에 남습니다. 나중에 session B가 p = 7을 받고 X에 접근합니다.</p>
+        <p>두 session을 위해 LRU를 새로 만들지 않은 이유, B가 X에 접근할 수 있는 이유, release가 X를 옮기지 않은 이유, victim selector가 어느 full index를 쓰는지 설명해 보세요. 그다음 A의 list가 quota 아래라고 가정하고 own list를 정확히 언제 search하는지도 답해 보세요.</p>
+      </section>
+
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">핵심 읽을거리</div>
+        <h2>전체 policy와 cost derivation은 Advanced page에서 확인하세요</h2>
+        <p><a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical private-LRU 설명 열기 →</a></p>
+        <p><a href="0012-prove-replacement-progress.html">← Lesson 0012로 돌아가기</a> · <a href="0012a-understand-aout-ghost-history.html">Optional Lesson 0012A: AOUT aside로 계속 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson 목차">
+      <strong>Lesson map</strong>
+      <a href="#answer">1. 짧은 답</a>
+      <a href="#index-space">2. 세 가지 index 의미</a>
+      <a href="#lifecycle">3. 두 lifetime</a>
+      <a href="#assignment">4. Assignment rule</a>
+      <a href="#activity">5. Activity 의미</a>
+      <a href="#movement">6. Private → shared</a>
+      <a href="#victim-search">7. Victim-search 순서</a>
+      <a href="#practice">8. 이해 확인</a>
+      <a href="#primary-reading">핵심 읽을거리</a>
+      <hr>
+      <a href="0012a-understand-aout-ghost-history.html">Optional AOUT aside →</a>
+      <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical Advanced section</a>
+      <a href="../index.html">과정 홈</a>
+    </nav>
+  </div>
+
+  <footer class="footer">Source에서 “LRU index”를 만나면 먼저 private-local p인지 full S + p array index인지 물어보세요.</footer>
+</main>
+</body>
+</html>

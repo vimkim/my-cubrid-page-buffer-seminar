@@ -11,11 +11,27 @@ async function read(relative) {
   return readFile(path.join(root, relative), "utf8");
 }
 
+test("private LRU counts, index namespaces, lifetimes, and victim order have a focused lesson", async () => {
+  const [research, en, ko, lesson12] = await Promise.all([
+    read(".scratch/private-lru-index/research.md"),
+    read("en/lessons/0012b-understand-private-lru-index.html"),
+    read("ko/lessons/0012b-understand-private-lru-index.html"),
+    read("en/lessons/0012-prove-replacement-progress.html"),
+  ]);
+
+  assert.ok(research.includes("f799e05d77d5300c6ea5753b4a6cc7caee6d8912"));
+  assert.ok(en.includes("<title>Lesson 0012B — Understand private LRU indexes</title>"));
+  assert.ok(ko.includes("<title>Lesson 0012B — Private LRU index 이해하기</title>"));
+  assert.ok(en.includes("../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned"));
+  assert.ok(ko.includes("../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned"));
+  assert.ok(lesson12.includes('href="0012b-understand-private-lru-index.html"'));
+});
+
 test("private LRU is taught as an assignment and policy domain, not page ownership", async () => {
   const [markdown, en, ko, visual] = await Promise.all([
     read("advanced/replacement-progress.md"),
-    read("en/lessons/0012-prove-replacement-progress.html"),
-    read("ko/lessons/0012-prove-replacement-progress.html"),
+    read("en/lessons/0012b-understand-private-lru-index.html"),
+    read("ko/lessons/0012b-understand-private-lru-index.html"),
     read("assets/private-lru-domain.svg"),
   ]);
 
@@ -42,8 +58,8 @@ test("private LRU is taught as an assignment and policy domain, not page ownersh
 test("adjust_age has an explicit producer, gate, sampling purpose, and cost", async () => {
   const [markdown, en, ko] = await Promise.all([
     read("advanced/replacement-progress.md"),
-    read("en/lessons/0012-prove-replacement-progress.html"),
-    read("ko/lessons/0012-prove-replacement-progress.html"),
+    read("en/lessons/0012b-understand-private-lru-index.html"),
+    read("ko/lessons/0012b-understand-private-lru-index.html"),
   ]);
 
   for (const text of [markdown, en]) {
@@ -61,8 +77,8 @@ test("adjust_age has an explicit producer, gate, sampling purpose, and cost", as
 test("zero-crossing unfix placement and private-to-shared movement are visual and costed", async () => {
   const [markdown, en, ko, visual] = await Promise.all([
     read("advanced/replacement-progress.md"),
-    read("en/lessons/0012-prove-replacement-progress.html"),
-    read("ko/lessons/0012-prove-replacement-progress.html"),
+    read("en/lessons/0012b-understand-private-lru-index.html"),
+    read("ko/lessons/0012b-understand-private-lru-index.html"),
     read("assets/unfix-lru-placement.svg"),
   ]);
 
