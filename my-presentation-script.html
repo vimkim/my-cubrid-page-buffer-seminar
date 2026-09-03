@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUBRID Page Buffer — Bilingual Presentation Script</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18232d;
+      --muted: #5a6872;
+      --paper: #f4f1e9;
+      --panel: #fffefa;
+      --line: #d8dddc;
+      --navy: #123e52;
+      --teal: #087d78;
+      --teal-soft: #e8f4f1;
+      --amber: #a85714;
+      --amber-soft: #fff1d8;
+      --red: #973e36;
+      --red-soft: #fcebea;
+      --blue-soft: #eaf1f5;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(8, 125, 120, 0.035) 1px, transparent 1px),
+        linear-gradient(rgba(8, 125, 120, 0.035) 1px, transparent 1px),
+        var(--paper);
+      background-size: 28px 28px;
+      line-height: 1.55;
+    }
+
+    a { color: var(--teal); text-underline-offset: 0.16em; }
+    code {
+      padding: 0.08em 0.3em;
+      border-radius: 4px;
+      background: #edf1f2;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.9em;
+    }
+    h1, h2, h3 { line-height: 1.16; letter-spacing: -0.025em; }
+    h1 { max-width: 18ch; margin: 10px 0 18px; font-size: clamp(2.4rem, 7vw, 5rem); }
+    h2 { margin: 0; color: var(--navy); font-size: clamp(1.55rem, 3vw, 2.35rem); }
+    h3 { margin: 0 0 8px; color: var(--navy); font-size: 1.05rem; }
+    p { margin: 0 0 11px; }
+    ul, ol { margin: 8px 0 12px; padding-left: 1.35rem; }
+    li + li { margin-top: 5px; }
+
+    .shell { width: min(1180px, calc(100% - 30px)); margin: 0 auto; padding: 24px 0 70px; }
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .hero {
+      margin: 16px 0 22px;
+      padding: clamp(32px, 7vw, 76px);
+      border-radius: 26px;
+      color: white;
+      background: linear-gradient(132deg, #102f43 0%, #14576a 58%, #087d78 100%);
+      box-shadow: 0 18px 46px rgba(20, 45, 56, 0.14);
+    }
+    .hero p { max-width: 74ch; color: #deedf0; font-size: 1.08rem; }
+    .hero code { color: white; background: rgba(255,255,255,0.13); }
+    .eyebrow { color: #91ddd5; font-size: 0.74rem; font-weight: 900; letter-spacing: 0.13em; text-transform: uppercase; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .pill { padding: 5px 11px; border: 1px solid rgba(255,255,255,0.34); border-radius: 999px; font-size: 0.76rem; }
+
+    .route, .run-sheet {
+      margin: 0 0 22px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--panel);
+      box-shadow: 0 8px 26px rgba(20, 45, 56, 0.05);
+    }
+    .route { padding: 28px; }
+    .route-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 22px; margin-top: 18px; }
+    .route a { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); text-decoration: none; }
+    .route .num { color: var(--teal); font-weight: 900; }
+
+    .run-sheet { overflow: hidden; }
+    .section-head {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 19px 25px;
+      color: white;
+      background: var(--navy);
+    }
+    .lesson-no {
+      display: grid;
+      min-width: 48px;
+      height: 48px;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,0.45);
+      border-radius: 50%;
+      font-weight: 900;
+    }
+    .section-head h2 { color: white; }
+    .section-head .route-link { color: #b9eee8; font-size: 0.78rem; font-weight: 800; }
+    .done { white-space: nowrap; font-size: 0.82rem; font-weight: 800; }
+    .box {
+      display: inline-block;
+      width: 1.05em;
+      height: 1.05em;
+      margin-right: 0.42em;
+      border: 1.7px solid currentColor;
+      border-radius: 3px;
+      vertical-align: -0.12em;
+    }
+    .cue-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding: 12px 25px;
+      border-bottom: 1px solid var(--line);
+      background: var(--teal-soft);
+    }
+    .cue-strip span { padding: 3px 9px; border-radius: 999px; color: var(--navy); background: white; font-size: 0.72rem; font-weight: 800; }
+    .bilingual { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .language { min-width: 0; padding: 24px 26px; }
+    .language + .language { border-left: 1px solid var(--line); }
+    .lang-label { margin-bottom: 14px; color: var(--teal); font-size: 0.72rem; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+    .say { margin: 13px 0; padding: 14px 16px; border-left: 4px solid var(--teal); border-radius: 10px; background: var(--teal-soft); }
+    .say strong { color: var(--navy); }
+    .cue { margin: 13px 0; padding: 13px 15px; border-radius: 10px; background: var(--blue-soft); }
+    .warn { margin: 13px 0; padding: 13px 15px; border-left: 4px solid var(--amber); border-radius: 10px; background: var(--amber-soft); }
+    .reject { margin: 13px 0; padding: 13px 15px; border-left: 4px solid var(--red); border-radius: 10px; background: var(--red-soft); }
+    .formula { margin: 11px 0; padding: 11px 14px; border-radius: 9px; background: #f1f4f4; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.86rem; }
+    .visual {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: 20px;
+      align-items: center;
+      padding: 18px 25px;
+      border-top: 1px solid var(--line);
+      background: #fafcfb;
+    }
+    .visual img { display: block; width: 100%; height: auto; max-height: 180px; object-fit: contain; border-radius: 10px; background: white; }
+    .visual strong { color: var(--navy); }
+    .source-line { padding: 13px 25px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.76rem; }
+    .source-line strong { color: var(--ink); }
+    .micro-table { width: 100%; margin: 10px 0; border-collapse: collapse; font-size: 0.86rem; }
+    .micro-table th, .micro-table td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .micro-table th { color: var(--navy); background: #f2f6f5; }
+    .footer { padding: 22px 0; color: var(--muted); text-align: center; font-size: 0.8rem; }
+
+    @media (max-width: 820px) {
+      .route-grid, .bilingual, .visual { grid-template-columns: 1fr; }
+      .language + .language { border-top: 1px solid var(--line); border-left: 0; }
+      .section-head { grid-template-columns: auto minmax(0, 1fr); }
+      .done { grid-column: 2; }
+      .visual img { max-height: none; }
+    }
+
+    @page { size: A4 portrait; margin: 10mm; }
+    @media print {
+      body { background: white; font-size: 8pt; line-height: 1.28; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .shell { width: 100%; padding: 0; }
+      .topline { display: none; }
+      .hero { min-height: 255mm; margin: 0; padding: 23mm 16mm; border: 2px solid var(--navy); border-radius: 0; color: var(--ink); background: white; box-shadow: none; break-after: page; }
+      .hero p, .hero .eyebrow { color: var(--ink); }
+      .hero code { color: var(--ink); background: #edf1f2; }
+      .hero .pill { border-color: var(--navy); }
+      .route { break-after: page; box-shadow: none; }
+      .run-sheet { margin: 0; border-radius: 0; box-shadow: none; break-before: page; }
+      .bilingual { display: table; width: 100%; table-layout: fixed; }
+      .language { display: table-cell; width: 50%; vertical-align: top; }
+      .section-head { padding: 9px 13px; }
+      .lesson-no { min-width: 38px; height: 38px; }
+      .cue-strip { padding: 6px 13px; }
+      .language { padding: 10px 13px; }
+      .visual { grid-template-columns: minmax(0, 1fr) 185px; padding: 7px 13px; }
+      .visual img { max-height: 92px; }
+      .source-line { padding: 6px 13px 8px; }
+      .say, .cue, .warn, .reject { margin: 6px 0; padding: 7px 9px; }
+      h2 { font-size: 1.32rem; }
+      h3 { font-size: 0.92rem; }
+      p { margin-bottom: 5px; }
+      ul, ol { margin-top: 4px; margin-bottom: 5px; }
+      a { color: inherit; text-decoration: none; }
+      .route-link { display: none; }
+      .footer { display: none; }
+      #lesson-06, #lesson-10 { font-size: 7.15pt; line-height: 1.18; }
+      #lesson-06 .language, #lesson-10 .language { padding: 8px 11px; }
+      #lesson-06 .micro-table th, #lesson-06 .micro-table td,
+      #lesson-10 .micro-table th, #lesson-10 .micro-table td { padding: 5px 6px; }
+      #lesson-06 .visual, #lesson-10 .visual { padding-top: 4px; padding-bottom: 4px; }
+      #lesson-06 .visual img, #lesson-10 .visual img { max-height: 68px; }
+    }
+  </style>
+</head>
+<body>
+<main class="shell">
+  <div class="topline"><span>CUBRID page buffer · private presenter companion</span><span>Pinned baseline f799e05</span></div>
+
+  <header class="hero">
+    <div class="eyebrow">Printable bilingual run sheet · English / 한국어</div>
+    <h1>CUBRID Page Buffer Presentation Script</h1>
+    <p>A concise presenter companion for Lessons 02–12. Read the spoken text, use the cue boxes to track the visual, and check each section when complete. Strong implementation claims are pinned to CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>.</p>
+    <p lang="ko">Lesson 02–12 발표용 간결한 대본입니다. 말할 문장을 읽고, cue box로 visual 흐름을 확인한 뒤, 끝난 section을 체크하세요. 구현 관련 강한 주장은 CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code> 기준입니다.</p>
+    <div class="pills"><span class="pill">Objects</span><span class="pill">Fix</span><span class="pill">Ownership</span><span class="pill">Flush</span><span class="pill">Latch queue</span><span class="pill">Replacement</span></div>
+    <div class="warn" style="margin-top:32px;color:var(--ink)"><strong>Presenter rule / 발표 원칙:</strong> use the six canonical evidence labels when evidence strength matters; use “Open” only as an uncertainty-registry status. This file is a rehearsal aid, not a second canonical guide. / 근거 수준이 중요할 때는 여섯 canonical evidence label을 사용하고, “Open”은 uncertainty-registry status로만 말합니다. 이 파일은 rehearsal aid이며 별도의 canonical guide가 아닙니다.</div>
+  </header>
+
+  <nav class="route" aria-label="Presentation route">
+    <div class="eyebrow" style="color:var(--teal)">Route / 순서</div>
+    <h2>One causal story, eleven stops</h2>
+    <div class="route-grid">
+      <a href="#lesson-02"><span class="num">02</span><span>Six objects + fix request inputs</span></a>
+      <a href="#lesson-03"><span class="num">03</span><span>Hit, cold miss, load owner, identity</span></a>
+      <a href="#lesson-04"><span class="num">04</span><span>Global and per-thread debt</span></a>
+      <a href="#lesson-04a"><span class="num">4A</span><span>Holder lifecycle, cost, and redesign boundary</span></a>
+      <a href="#lesson-05"><span class="num">05</span><span>Lock, latch, and caller debt</span></a>
+      <a href="#lesson-06"><span class="num">06</span><span>Flush actors, two LSAs, DWB</span></a>
+      <a href="#lesson-07"><span class="num">07</span><span>Invalid list and safe victim scan</span></a>
+      <a href="#lesson-09"><span class="num">09</span><span>Five latch outcomes and wait queue</span></a>
+      <a href="#lesson-10"><span class="num">10</span><span>Same-debt READ→WRITE promotion</span></a>
+      <a href="#lesson-11"><span class="num">11</span><span>Ordered fix prevents a wait cycle</span></a>
+      <a href="#lesson-12"><span class="num">12</span><span>One BCB through replacement</span></a>
+    </div>
+    <div class="cue"><strong>Deliberate skip / 의도적 생략:</strong> Lesson 08 is not part of this talk. Say so once and move directly from replacement safety to the latch queue.</div>
+  </nav>
+
+  <section class="run-sheet" id="lesson-02">
+    <header class="section-head">
+      <span class="lesson-no">02</span>
+      <div><div class="eyebrow">Objects before control flow</div><h2>Six objects, then the fix request</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>VPID</span><span>BCB</span><span>Frame</span><span>PAGE_PTR</span><span>global fcnt</span><span>thread holder</span><span>4 call arguments</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “Before tracing code, I want six nouns to stay separate. A <code>VPID</code> is the logical <code>(volid, pageid)</code> identity. A BCB is reusable control state. Its permanently paired frame stores the bytes. A <code>PAGE_PTR</code> is only a borrowed view into those bytes. Global <code>fcnt</code> says how many successful fixes protect the BCB across threads. A thread holder says which thread owes how many matching unfixes.”</div>
+        <p>Then introduce the normal fix call as four concrete arguments plus the current thread:</p>
+        <ol>
+          <li><code>VPID</code>: which logical page?</li>
+          <li><code>PAGE_FETCH_MODE</code>: what allocation/residency knowledge does the caller assert?</li>
+          <li><code>PGBUF_LATCH_MODE</code>: shared READ or exclusive WRITE access?</li>
+          <li><code>PGBUF_LATCH_CONDITION</code>: if incompatible, return now or allow waiting?</li>
+        </ol>
+        <div class="cue"><strong>Keep brief:</strong> there are seven fetch modes, but this talk needs mainly <code>OLD_PAGE</code>, <code>NEW_PAGE</code>, and <code>OLD_PAGE_IF_IN_BUFFER</code>.</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “Code 흐름을 보기 전에 여섯 개의 명사를 분리하겠습니다. <code>VPID</code>는 <code>(volid, pageid)</code>로 이루어진 logical identity입니다. BCB는 재사용되는 control state이고, BCB와 영구적으로 짝을 이룬 frame이 실제 bytes를 담습니다. <code>PAGE_PTR</code>는 그 bytes를 잠시 빌려 보는 pointer일 뿐입니다. Global <code>fcnt</code>는 여러 thread를 합쳐 이 BCB를 보호하는 successful fix 수이고, thread holder는 어느 thread가 unfix를 몇 번 갚아야 하는지 기록합니다.”</div>
+        <p>그다음 normal fix call을 현재 thread와 네 개의 실질적인 입력으로 설명합니다.</p>
+        <ol>
+          <li><code>VPID</code>: 어느 logical page인가?</li>
+          <li><code>PAGE_FETCH_MODE</code>: caller가 allocation/residency에 대해 무엇을 알고 있는가?</li>
+          <li><code>PGBUF_LATCH_MODE</code>: shared READ인가, exclusive WRITE인가?</li>
+          <li><code>PGBUF_LATCH_CONDITION</code>: 충돌하면 즉시 돌아갈 것인가, 기다려도 되는가?</li>
+        </ol>
+        <div class="cue"><strong>짧게:</strong> fetch mode는 일곱 개지만, 이번 발표에서는 <code>OLD_PAGE</code>, <code>NEW_PAGE</code>, <code>OLD_PAGE_IF_IN_BUFFER</code>를 중심으로 봅니다.</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> point left to right: identity → control → bytes → borrowed pointer. Then point downward to the two debt ledgers. / identity → control → bytes → borrowed pointer 순서로 짚고, 아래의 두 debt ledger를 가리킵니다.</div><img src="assets/object-ownership-map.svg" alt="VPID, BCB, frame, PAGE_PTR, global fix count, and thread-holder ownership map"></div>
+    <div class="source-line"><strong>Evidence:</strong> <a href="en/lessons/0002-separate-objects-from-state.html">Lesson 02</a>; <code>page_buffer.c:460–555, 5559–5667</code>; request enums and validation at <code>page_buffer.h:172–203</code> and <code>page_buffer.c:2285–2615</code>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-03">
+    <header class="section-head">
+      <span class="lesson-no">03</span>
+      <div><div class="eyebrow">Fix convergence</div><h2>Hit, cold miss, load owner, and identity</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>candidate</span><span>protected recheck</span><span>A = load owner</span><span>B = waiter</span><span>INVALID → VOID</span><span>publish</span><span>retry</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “A hash hit gives us a candidate, not yet a trustworthy identity. The bucket mutex stabilizes the resident chain while we inspect it. We then acquire the BCB mutex and compare the requested VPID again, because the reusable BCB may have been detached and rebound between observations.”</div>
+        <div class="reject"><strong>Correct the wording:</strong> there is no separate ‘hash-entry VPID’ copy. The hash chain contains BCBs. The first and second checks read the BCB’s VPID under different protection.</div>
+        <h3>Two-thread cold miss</h3>
+        <ol>
+          <li>A and B both miss the same VPID.</li>
+          <li>A registers the VPID load-lock first and becomes load owner.</li>
+          <li>B links itself as a waiter and sleeps; B owns no page yet.</li>
+          <li>A first tries the INVALID-list head. The claimed BCB changes <code>INVALID → VOID</code>; no BCB object is newly allocated.</li>
+          <li>A assigns the VPID, reads <code>OLD_PAGE</code> bytes from DWB/data volume or initializes <code>NEW_PAGE</code>, validates identity, grants itself ownership, publishes the BCB, and releases the load lock.</li>
+          <li>B wakes and retries normal lookup. It earns its own latch and fix debt.</li>
+        </ol>
+        <div class="cue"><strong>Identity pair:</strong> requested VPID == protected <code>BCB.vpid</code>; then <code>BCB.vpid</code> == the page-header <code>(volid,pageid)</code> for permanent pages.</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “Hash hit는 아직 신뢰할 수 있는 identity가 아니라 candidate만 줍니다. Bucket mutex로 resident chain을 안정화한 상태에서 후보를 찾고, 이어서 BCB mutex를 잡은 뒤 requested VPID와 다시 비교합니다. 두 관찰 사이에 재사용 가능한 BCB가 detach되고 다른 VPID로 rebind될 수 있기 때문입니다.”</div>
+        <div class="reject"><strong>표현 교정:</strong> 별도의 ‘hash-entry VPID’ 사본은 없습니다. Hash chain의 node가 BCB입니다. 첫 번째와 두 번째 확인은 서로 다른 protection 아래에서 같은 BCB VPID를 읽습니다.</div>
+        <h3>두 thread의 cold miss</h3>
+        <ol>
+          <li>A와 B가 같은 VPID를 동시에 miss합니다.</li>
+          <li>A가 VPID load-lock을 먼저 등록해 load owner가 됩니다.</li>
+          <li>B는 waiter로 연결되어 잠듭니다. 아직 page ownership은 없습니다.</li>
+          <li>A는 먼저 INVALID-list head를 요청합니다. 가져온 BCB는 <code>INVALID → VOID</code>가 되며, 새 BCB object를 heap allocation하는 것이 아닙니다.</li>
+          <li>A가 VPID를 지정하고, <code>OLD_PAGE</code>면 DWB/data volume에서 읽고 <code>NEW_PAGE</code>면 frame을 초기화합니다. Identity를 확인하고 자신의 ownership을 grant한 뒤 BCB를 publish하고 load lock을 풉니다.</li>
+          <li>B는 깨어나 normal lookup을 다시 수행하고, 자기 latch와 fix debt를 따로 얻습니다.</li>
+        </ol>
+        <div class="cue"><strong>Identity pair:</strong> requested VPID == protection 아래의 <code>BCB.vpid</code>, 이어서 permanent page라면 <code>BCB.vpid</code> == page header의 <code>(volid,pageid)</code>입니다.</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> walk A across the upper owner lane, stop B in the lower wait lane, then finish at “retry,” not “receive A’s provisional BCB.” / 위쪽 owner lane에서 A를 따라가고, 아래쪽 B를 wait에 멈춘 뒤 마지막은 “provisional BCB 전달”이 아니라 “retry”로 끝냅니다.</div><img src="assets/load-owner-waiter.svg" alt="Load owner and waiter timeline for two concurrent cold misses"></div>
+    <div class="source-line"><strong>Verified mechanism:</strong> <a href="en/lessons/0003-trace-fix-convergence.html">Lesson 03</a>; protected lookup <code>page_buffer.c:7594–7722</code>; load owner/waiter <code>7981–8178</code>; invalid-first allocation and materialization <code>8181–8634</code>; page-header identity <code>11243–11279</code>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-04">
+    <header class="section-head">
+      <span class="lesson-no">04</span>
+      <div><div class="eyebrow">Ownership accounting</div><h2>One successful fix, one debt</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>global fcnt</span><span>holder fix_count</span><span>nested debt</span><span>equal PAGE_PTR</span><span>six-step simulation</span><span>one success ↔ one unfix</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “Every successful fix creates exactly one matching unfix debt. Global <code>fcnt</code> protects residency across all threads. A per-thread holder records this thread’s nested <code>fix_count</code>. Equal <code>PAGE_PTR</code> values do not merge debts.”</div>
+        <div class="cue"><strong>Run the Lesson 04 simulation:</strong> A fix, A fix, B fix, A unfix, B unfix, A unfix. Global counts: <code>1,2,3,2,1,0</code>.</div>
+        <p>After A's first unfix, A still owns one nested debt. After B's unfix, B no longer owns the page. After A's final unfix, global <code>fcnt</code> reaches zero for this closed example and the latch can become idle.</p>
+        <div class="warn"><strong>Do not collapse the ledgers:</strong> global <code>fcnt</code> answers whether any ownership blocks reuse; one thread's holder answers whether that caller may still use the pointer and owes another release.</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “Successful fix 한 번은 matching unfix debt 한 개를 만듭니다. Global <code>fcnt</code>는 모든 thread의 ownership을 합쳐 residency를 보호합니다. Per-thread holder의 <code>fix_count</code>는 이 thread가 갚아야 할 nested debt를 기록합니다. 같은 <code>PAGE_PTR</code>가 여러 번 돌아와도 debt는 합쳐지지 않습니다.”</div>
+        <div class="cue"><strong>Lesson 04 simulation:</strong> A fix, A fix, B fix, A unfix, B unfix, A unfix 순서로 누릅니다. Global count는 <code>1,2,3,2,1,0</code>입니다.</div>
+        <p>A의 첫 unfix 뒤에는 A의 nested debt가 하나 남습니다. B가 unfix하면 B의 ownership은 끝납니다. 마지막 A unfix 뒤에는 이 closed example의 global <code>fcnt</code>가 zero가 되고 latch가 idle state로 갈 수 있습니다.</p>
+        <div class="warn"><strong>두 ledger를 합치지 않습니다:</strong> global <code>fcnt</code>는 reuse를 막는 ownership이 하나라도 있는지 답하고, 한 thread의 holder는 그 caller가 pointer를 계속 써도 되는지와 release를 더 해야 하는지 답합니다.</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> show “3 = A:2 + B:1,” then follow the six events. Point at who may still use a pointer after each unfix. / “3 = A:2 + B:1”을 보여주고 여섯 event를 따라갑니다. 각 unfix 뒤에 누가 pointer를 계속 쓸 수 있는지 짚습니다.</div><img src="assets/ownership-ledgers.svg" alt="Global fix count separated into per-thread nested holder debts"></div>
+    <div class="source-line"><strong>Evidence:</strong> <a href="en/lessons/0004-repay-fix-debt.html">Lesson 04</a>; holder and global tuple <code>page_buffer.c:460–488</code>; grant accounting <code>6277–6634</code>; release accounting <code>3062–3201, 6128–6275, 6636–6883</code>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-04a">
+    <header class="section-head">
+      <span class="lesson-no">4A</span>
+      <div><div class="eyebrow">Per-thread ownership index</div><h2>Holder lifecycle, cost, and redesign boundary</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>linear H</span><span>7 initial</span><span>+10 growth</span><span>binding zero</span><span>global zero</span><span>free-list recycle</span><span>redesign boundary</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “The current thread finds an existing holder by scanning its active list for the BCB address. With <code>H</code> distinct held BCBs, one lookup is worst-case <code>O(H)</code>. This is a source-visible risk, not a measured bottleneck.”</div>
+        <ul>
+          <li>Each thread begins with seven reserved entries; exhaustion adds ten-entry backing sets. Neither number is a maximum or evidence of the developer's expected maximum.</li>
+          <li>Nested same-BCB fixes reuse one entry and increment <code>fix_count</code>.</li>
+          <li>Thread-local zero returns the active binding to that thread's free list.</li>
+          <li>Global <code>fcnt</code> zero is different: it can release the latch, perform LRU placement/movement, grant waiters, or service deferred flush work.</li>
+          <li>Backing storage remains until page-buffer finalization: retained high-water capacity, not a demonstrated allocator leak.</li>
+        </ul>
+        <div class="reject"><strong>Redesign boundary:</strong> do not add artificial fixes, queue the current unfix asynchronously, or substitute <code>pgbuf_simple_fix()</code> for general fix. A different index is possible, but it must preserve per-owner nested counts, promotion, ordered watchers, pointer lifetime, and cleanup.</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “현재 thread는 active list에서 BCB address를 비교해 existing holder를 찾습니다. 서로 다른 held BCB가 <code>H</code>개라면 lookup 하나가 worst-case <code>O(H)</code>입니다. Source-visible risk이지 측정된 bottleneck은 아닙니다.”</div>
+        <ul>
+          <li>Thread마다 일곱 entry를 먼저 reserve하고 부족하면 열 개 단위 backing set을 추가합니다. 어느 숫자도 maximum이 아니며, developer가 예상한 maximum이라는 evidence도 없습니다.</li>
+          <li>같은 BCB의 nested fix는 entry 하나를 재사용하고 <code>fix_count</code>만 올립니다.</li>
+          <li>Thread-local zero에서는 active binding을 해당 thread의 free list로 돌려보냅니다.</li>
+          <li>Global <code>fcnt</code> zero는 다른 event입니다. Latch release, LRU placement/movement, waiter grant, deferred flush 처리가 일어날 수 있습니다.</li>
+          <li>Backing storage는 page-buffer finalization까지 유지됩니다. Retained high-water capacity이지 검증된 allocator leak은 아닙니다.</li>
+        </ul>
+        <div class="reject"><strong>Redesign boundary:</strong> 불필요한 extra fix를 만들거나, 현재 unfix 전체를 async queue에 넣거나, general fix를 <code>pgbuf_simple_fix()</code>로 대체하지 않습니다. Index representation은 바꿀 수 있지만 per-owner nested count, promotion, ordered watcher, pointer lifetime, cleanup을 보존해야 합니다.</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> show active → free for the binding, then say that backing storage remains pool-owned. / Binding은 active → free로 이동하지만 backing storage는 pool-owned 상태로 남는다고 말합니다.</div><img src="assets/holder-entry-lifetime.svg" alt="Holder entry moving between active and free lists while storage remains allocated"></div>
+    <div class="source-line"><strong>Verified mechanism and derived cost:</strong> <a href="en/lessons/0004a-understand-holder-anchor.html">Lesson 4A</a>; layout/allocation <code>page_buffer.c:438–500, 5922–6086</code>; lookup/removal <code>6090–6275</code>; global-zero path <code>6636–6883</code>; general consumers <code>6312–6537, 12268–13531</code>; simple-fix restriction <code>2688–2811</code>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-05">
+    <header class="section-head">
+      <span class="lesson-no">05</span>
+      <div><div class="eyebrow">Caller completes correctness</div><h2>Lock, latch, and fix debt are different</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>logical lock</span><span>page latch</span><span>validate</span><span>mutate</span><span>log / page LSA</span><span>DIRTY</span><span>release every exit</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “The team already knows transaction locks, so I will keep the contrast short. A transaction lock protects logical class or row ownership. A page latch protects the current in-memory bytes. A successful fix supplies temporary access, not complete caller correctness.”</div>
+        <p>For a logged WRITE mutation, the caller still owes this sequence:</p>
+        <ol>
+          <li>hold the required logical lock;</li>
+          <li>fix with WRITE and validate the page/record conditions;</li>
+          <li>mutate the bytes while latched;</li>
+          <li>append the correct recovery log and advance page LSA when required;</li>
+          <li>call <code>pgbuf_set_dirty()</code> to publish propagation debt;</li>
+          <li>transfer or unfix every ownership debt on every exit.</li>
+        </ol>
+        <div class="warn"><strong>Keep the verbs separate:</strong> logging is recovery evidence; page LSA describes the logged page image; DIRTY requests page propagation; unfix ends ownership. None is a synonym for commit, flush, or eviction.</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “Transaction lock은 팀 lock manager 세미나에서 이미 다뤘으니 차이만 짧게 보겠습니다. Transaction lock은 logical class나 row ownership을 보호하고, page latch는 현재 memory bytes 접근을 보호합니다. Successful fix는 temporary access를 제공할 뿐 caller correctness를 완성하지 않습니다.”</div>
+        <p>Logged WRITE mutation을 위해 caller가 추가로 지켜야 할 순서입니다.</p>
+        <ol>
+          <li>필요한 logical lock을 보유합니다.</li>
+          <li>WRITE fix 후 page/record 조건을 validate합니다.</li>
+          <li>Latch를 보유한 동안 bytes를 변경합니다.</li>
+          <li>맞는 recovery log를 append하고 필요하면 page LSA를 전진시킵니다.</li>
+          <li><code>pgbuf_set_dirty()</code>로 propagation debt를 publish합니다.</li>
+          <li>모든 exit에서 ownership debt를 transfer하거나 unfix합니다.</li>
+        </ol>
+        <div class="warn"><strong>동사를 분리합니다:</strong> logging은 recovery evidence, page LSA는 logged page image의 경계, DIRTY는 page propagation 요청, unfix는 ownership 종료입니다. 어느 것도 commit, flush, eviction과 같은 말이 아닙니다.</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> trace the center spine only: WRITE latch → validate → mutate → log/page LSA → DIRTY → transfer or unfix. / 가운데 spine만 따라갑니다: WRITE latch → validate → mutate → log/page LSA → DIRTY → transfer 또는 unfix.</div><img src="assets/mutation-ownership-spine.svg" alt="Caller mutation sequence from logical protection through logging, dirtying, and release"></div>
+    <div class="source-line"><strong>Interface and caller evidence:</strong> <a href="en/lessons/0005-audit-a-logged-mutation.html">Lesson 05</a>; representative heap path <code>heap_file.c:23120–23324</code>; <code>NEW_PAGE</code> allocation boundary <code>file_manager.c:5420–5590</code>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-06">
+    <header class="section-head">
+      <span class="lesson-no">06</span>
+      <div><div class="eyebrow">One flush generation</div><h2>Actors, two LSA questions, and DWB</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>4 peer daemons</span><span>page-flush</span><span>post-flush</span><span>checkpoint</span><span>page LSA</span><span>oldest_unflush_lsa</span><span>G / G+1</span><span>DWB</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “Server mode attempts to create four independent page-buffer daemon roles. Only <code>pgbuf-page-flush</code> selects and submits dirty victim candidates. <code>pgbuf-page-post-flush</code> completes BCB state and victim handoff after submission. Maintenance adjusts quota policy, and flush-control handles soft pacing.”</div>
+        <p>The daemon is only one flush path. Checkpoint, explicit foreground callers, a WRITE owner servicing an async request, and stand-alone victim pressure can also execute the common generation protocol.</p>
+        <h3>Two boundaries, two questions</h3>
+        <table class="micro-table">
+          <tr><th>Copied page LSA</th><td>How new are the copied bytes? Force WAL through this LSA before submitting the page image.</td></tr>
+          <tr><th><code>oldest_unflush_lsa</code></th><td>How far back does unpaid dirty history begin? Use it to select checkpoint work and bound redo progress.</td></tr>
+        </table>
+        <div class="say"><strong>Example:</strong> “Boundary 150, oldest 100, page LSA 170: select the page, force WAL through 170, and write the current copy. If oldest is 200 and page LSA 220, checkpoint may skip it; another flusher may still write it safely after forcing WAL through 220.”</div>
+        <div class="warn"><strong>Two risks:</strong> false checkpoint progress can start redo after unpaid history; page-before-WAL ordering can persist bytes whose explaining log is absent.</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “Server mode는 서로 독립적인 네 개의 page-buffer daemon role을 만들려고 합니다. 그중 <code>pgbuf-page-flush</code>만 dirty victim candidate를 고르고 submit합니다. <code>pgbuf-page-post-flush</code>는 submit 이후 BCB state와 victim handoff를 마무리합니다. Maintenance는 quota policy를 조정하고, flush-control은 soft pacing을 담당합니다.”</div>
+        <p>Daemon은 여러 flush path 중 하나입니다. Checkpoint, explicit foreground caller, async request를 처리하는 WRITE owner, stand-alone victim pressure도 같은 generation protocol을 실행할 수 있습니다.</p>
+        <h3>두 boundary는 서로 다른 질문에 답합니다</h3>
+        <table class="micro-table">
+          <tr><th>Copied page LSA</th><td>복사한 bytes가 얼마나 최신인가? Page image를 submit하기 전에 WAL을 이 LSA까지 force합니다.</td></tr>
+          <tr><th><code>oldest_unflush_lsa</code></th><td>갚지 않은 dirty history가 어디서 시작했는가? Checkpoint 대상 선택과 redo progress의 lower bound에 씁니다.</td></tr>
+        </table>
+        <div class="say"><strong>예시:</strong> “Boundary 150, oldest 100, page LSA 170이면 이 page를 선택하고 WAL을 170까지 force한 뒤 현재 image를 씁니다. Oldest 200, page LSA 220이면 checkpoint는 skip할 수 있지만, 다른 flusher가 WAL을 220까지 force한 뒤 미리 쓰는 것은 안전합니다.”</div>
+        <div class="warn"><strong>두 위험:</strong> 잘못된 checkpoint progress는 unpaid history보다 늦게 redo를 시작하게 하고, page-before-WAL 위반은 그 bytes를 설명할 log 없이 page만 남길 수 있습니다.</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> ask the two questions before revealing their arrows. DWB is an optional protected destination for G after the WAL gate, not “flush completion”; concurrent G+1 stays DIRTY after G completes. / 두 질문을 먼저 말한 뒤 화살표를 보여줍니다. DWB는 WAL gate 뒤 G가 거치는 optional protected destination이지 “flush 완료”가 아니며, concurrent G+1은 G 완료 뒤에도 DIRTY로 남습니다.</div><img src="assets/checkpoint-selection-vs-wal.svg" alt="Checkpoint selection boundary contrasted with the WAL-before-page-write boundary"></div>
+    <div class="source-line"><strong>Verified mechanism:</strong> <a href="en/lessons/0006-flush-one-generation.html">Lesson 06</a>; actors <code>page_buffer.c:4173–4610, 6815–6890, 8810–8901, 16972–17255</code>; generation flush <code>10723–10962</code>; WAL/DWB choice <code>10836–10899</code>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-07">
+    <header class="section-head">
+      <span class="lesson-no">07</span>
+      <div><div class="eyebrow">Replacement safety</div><h2>Invalid first; then a bounded safe-victim search</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>INVALID O(1)</span><span>selected LRU</span><span>D demotions</span><span>K ≤ 1000 nodes</span><span>4 safety questions</span><span>try-lock</span><span>protected recheck</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “A miss tries the INVALID-list head first. That is an <code>O(1)</code> pop, not a scan of every BCB. Only when INVALID is empty does policy select an LRU and search its LRU3 zone.”</div>
+        <p>For one selected-list call, the helper cost is <code>O(M + K)</code>:</p>
+        <ul>
+          <li><code>M</code> is optional pre-scan zone demotion work;</li>
+          <li><code>K</code> is the number of BCB nodes visited in that selected LRU3, capped at 1,000.</li>
+        </ul>
+        <div class="warn"><strong>Evidence boundary:</strong> the 1,000-node cap is verified policy. The pinned source does not document why 1,000 was chosen, so do not invent a rationale. It is unrelated to the count of private LRU descriptors.</div>
+        <h3>Four checks</h3>
+        <ol>
+          <li>no user: <code>fcnt == 0</code>;</li>
+          <li>no unpaid or in-flight write: not DIRTY and not FLUSHING;</li>
+          <li>no waiter or handoff/avoid-victim flag;</li>
+          <li>BCB try-lock succeeds, then all facts pass the protected recheck.</li>
+        </ol>
+        <div class="say"><strong>Say:</strong> “The LRU mutex stabilizes the list. The BCB try-lock never waits while that list mutex is held. The first observations are hints; the recheck under BCB protection authorizes detach.”</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “Miss가 나면 먼저 INVALID-list head를 시도합니다. 모든 BCB를 scan하는 것이 아니라 <code>O(1)</code> pop입니다. INVALID가 비었을 때만 policy가 LRU 하나를 선택하고 그 LRU의 LRU3 zone을 탐색합니다.”</div>
+        <p>선택된 list 한 번의 helper cost는 <code>O(M + K)</code>입니다.</p>
+        <ul>
+          <li><code>M</code>은 scan 전에 일어날 수 있는 zone demotion 작업량입니다.</li>
+          <li><code>K</code>는 선택된 LRU3에서 방문한 BCB node 수이며 최대 1,000입니다.</li>
+        </ul>
+        <div class="warn"><strong>Evidence boundary:</strong> 1,000-node cap 자체는 verified policy입니다. 하지만 pinned source에는 왜 1,000인지 rationale이 없으므로 이유를 만들어 말하지 않습니다. Private LRU descriptor 수와도 무관합니다.</div>
+        <h3>네 가지 확인</h3>
+        <ol>
+          <li>사용자 없음: <code>fcnt == 0</code></li>
+          <li>갚지 않았거나 진행 중인 write 없음: DIRTY/FLUSHING이 아님</li>
+          <li>waiter 또는 handoff/avoid-victim flag 없음</li>
+          <li>BCB try-lock 성공 후 모든 조건을 protection 아래 다시 확인</li>
+        </ol>
+        <div class="say"><strong>말하기:</strong> “LRU mutex는 list를 안정화합니다. 그 mutex를 보유한 동안 BCB try-lock은 기다리지 않고 실패하면 skip합니다. 처음 관찰은 hint이고, BCB protection 아래의 recheck가 detach를 허가합니다.”</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> stop at each gate. Emphasize that <code>fcnt == 0</code> is necessary but insufficient. / 각 gate에서 잠시 멈춥니다. <code>fcnt == 0</code>은 필요조건이지만 충분조건이 아니라고 강조합니다.</div><img src="assets/victim-eligibility.svg" alt="Victim eligibility gates for ownership, dirty state, waiters, flags, and protected recheck"></div>
+    <div class="source-line"><strong>Verified mechanism and policy:</strong> <a href="en/lessons/0007-replace-one-frame.html">Lesson 07</a>; invalid pop <code>page_buffer.c:8905–8983</code>; victim predicate <code>9265–9325</code>; bounded scan, try-lock, recheck, detach <code>9327–9538</code>. See <a href="reference/victim-scan-cap-and-aout-evidence.md">the focused evidence note</a>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-09">
+    <header class="section-head">
+      <span class="lesson-no">09</span>
+      <div><div class="eyebrow">Latch queue</div><h2>Five outcomes before any fairness claim</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>immediate</span><span>conditional reject</span><span>wait</span><span>timeout / interrupt</span><span>wakeup + grant</span><span>NO_LATCH by owner</span><span>4,950 inspections</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “After a resident BCB is found, a fix has five caller-visible outcomes: immediate grant, conditional rejection, queued wait, timeout or interrupt, and wakeup plus grant. Only the two grants create fix debt.”</div>
+        <p><code>PGBUF_UNCONDITIONAL_LATCH</code> means waiting is allowed <em>if</em> the request conflicts. It does not force every request to sleep. A waiting <code>THREAD_ENTRY</code> is a request, not a holder.</p>
+        <div class="cue"><strong>NO_LATCH:</strong> on a BCB it means resident but no READ/WRITE content latch is granted; on a wait request it can be a cancellation tombstone; on a watcher it can be initialization metadata. Always name the owning field.</div>
+        <h3>Queue cost</h3>
+        <p>The BCB stores a singly linked head and no tail. Appending with <code>W</code> queued nodes is <code>O(W)</code>. Building 100 waiters before any dequeue performs about <code>1+…+99 = 4,950</code> node inspections (or 4,851 actual next-link advances).</p>
+        <div class="warn"><strong>Do not overclaim:</strong> source proves structural cost, not a measured bottleneck. Why there is no tail pointer is not documented. A timeout/interrupt cancels or removes the ungranted request; arbitrary removal is worst-case <code>O(W)</code> and uses BCB protection.</div>
+        <p>At global zero-crossing, a WRITE grant stops the scan. If READ is selected, one forward scan may grant later compatible readers across queued writers. Therefore the source does not promise strict FIFO or starvation freedom.</p>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “Resident BCB를 찾은 뒤 fix에는 caller 관점의 다섯 outcome이 있습니다. Immediate grant, conditional rejection, queued wait, timeout 또는 interrupt, wakeup 후 grant입니다. 이 중 실제 fix debt를 만드는 것은 두 grant뿐입니다.”</div>
+        <p><code>PGBUF_UNCONDITIONAL_LATCH</code>는 충돌할 때 기다려도 된다는 뜻입니다. 모든 request가 반드시 sleep한다는 뜻은 아닙니다. 기다리는 <code>THREAD_ENTRY</code>는 request이지 holder가 아닙니다.</p>
+        <div class="cue"><strong>NO_LATCH:</strong> BCB field에서는 resident지만 READ/WRITE content latch가 없다는 뜻이고, wait request에서는 cancellation tombstone, watcher에서는 initialization metadata일 수 있습니다. 항상 owning field를 함께 말합니다.</div>
+        <h3>Queue cost</h3>
+        <p>BCB에는 singly linked head만 있고 tail은 없습니다. 이미 <code>W</code>개가 있으면 append는 <code>O(W)</code>입니다. Dequeue 없이 100개를 쌓으면 약 <code>1+…+99 = 4,950</code>번 node inspection이 발생합니다. 실제 next-link advance로 세면 4,851번입니다.</p>
+        <div class="warn"><strong>과장하지 않기:</strong> source가 증명하는 것은 구조적 cost이지 측정된 bottleneck이 아닙니다. Tail pointer가 없는 design rationale도 문서화되어 있지 않습니다. Timeout/interrupt는 아직 grant되지 않은 request를 cancel하거나 제거하며, arbitrary removal은 worst-case <code>O(W)</code>이고 BCB protection을 사용합니다.</div>
+        <p>Global zero-crossing에서 WRITE를 grant하면 scan을 멈춥니다. READ가 선택되면 한 번의 forward scan으로 queued writer를 건너 뒤의 compatible reader들도 grant할 수 있습니다. 따라서 strict FIFO나 starvation freedom은 보장된다고 말할 수 없습니다.</p>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> separate “queued request” from “granted holder.” Then trace one zero-crossing; do not call queue position ownership. / “queued request”와 “granted holder”를 분리한 뒤 zero-crossing 한 번을 따라갑니다. Queue position을 ownership이라고 부르지 않습니다.</div><img src="assets/latch-wait-queue.svg" alt="Page latch request moving from a BCB wait queue to a thread holder only after grant"></div>
+    <div class="source-line"><strong>Verified mechanism:</strong> <a href="en/lessons/0009-classify-latch-wait.html">Lesson 09</a>; grant decisions <code>page_buffer.c:6277–6634</code>; append/sleep/cancel <code>7041–7450</code>; zero-crossing scan <code>7452–7590</code>; arbitrary timeout removal <code>7198–7279</code>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-10">
+    <header class="section-head">
+      <span class="lesson-no">10</span>
+      <div><div class="eyebrow">Latch promotion</div><h2>Strengthen the same debt; do not acquire another one</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>READ → WRITE</span><span>ONLY_READER</span><span>SHARED_READER</span><span>same k</span><span>promoter head</span><span>continuity</span><span>restart boundary</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “Promotion changes the current thread’s existing READ protection to WRITE. It is not another fix. If this thread owns <code>k</code> nested READ fixes, successful promotion preserves <code>k</code> debts.”</div>
+        <div class="cue"><strong><code>WRITE(k)</code> means:</strong> one queued WRITE request carrying <code>request_fix_count = k</code>. It does not mean k separate WRITE requests.</div>
+        <table class="micro-table">
+          <tr><th>Only owner</th><td>Change READ → WRITE in place; pointer and debt remain.</td></tr>
+          <tr><th><code>ONLY_READER</code> + another reader</th><td>Fail immediately; retain READ ownership.</td></tr>
+          <tr><th><code>SHARED_READER</code> + another reader</th><td>Subtract this thread’s k fixes, remove its holder, queue WRITE(k) at the head, then restore the same k on grant.</td></tr>
+          <tr><th>Blocking failure</th><td>Pointer becomes null and old observations cannot be used.</td></tr>
+        </table>
+        <p>The queue-head position preserves successful page-state continuity: remaining owners are readers; queued writers cannot pass; the last-reader zero-crossing grants the promoter. This is why B-tree can inspect optimistically under READ and upgrade only when a structural change is discovered.</p>
+        <div class="warn"><strong>Route this count mismatch through VS-18:</strong> ordinary nested <code>pgbuf_fix(..., WRITE, ...)</code> means another acquisition. Starting from holder count 2, the pinned immediate branch sets global <code>fcnt=1</code>, then the common path increments the holder to 3. Consult the registry for current status; do not present it as a safe promotion substitute without the specified runtime proof.</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “Promotion은 현재 thread가 이미 가진 READ protection을 WRITE로 강화합니다. 새로운 fix를 하나 더 얻는 동작이 아닙니다. 이 thread가 nested READ fix를 <code>k</code>개 가지고 있다면, successful promotion 뒤에도 debt는 <code>k</code>개입니다.”</div>
+        <div class="cue"><strong><code>WRITE(k)</code>의 의미:</strong> <code>request_fix_count = k</code>를 담은 하나의 queued WRITE request입니다. WRITE request를 k번 한다는 뜻이 아닙니다.</div>
+        <table class="micro-table">
+          <tr><th>유일한 owner</th><td>READ → WRITE를 in-place로 바꾸며 pointer와 debt를 유지합니다.</td></tr>
+          <tr><th><code>ONLY_READER</code> + 다른 reader</th><td>즉시 실패하고 READ ownership은 유지합니다.</td></tr>
+          <tr><th><code>SHARED_READER</code> + 다른 reader</th><td>이 thread의 k fixes를 빼고 holder를 제거한 뒤 WRITE(k)를 head에 queue하고, grant 때 같은 k를 복원합니다.</td></tr>
+          <tr><th>Blocking failure</th><td>Pointer가 null이 되므로 이전 observation을 사용할 수 없습니다.</td></tr>
+        </table>
+        <p>Queue-head position이 successful page-state continuity를 지킵니다. 남은 owner는 reader이고, queued writer는 promoter를 앞지를 수 없으며, 마지막 reader의 zero-crossing이 promoter를 grant합니다. 그래서 B-tree는 READ로 optimistic하게 확인한 뒤 structural change가 필요할 때만 upgrade할 수 있습니다.</p>
+        <div class="warn"><strong>이 count mismatch는 VS-18로 route합니다:</strong> 일반 nested <code>pgbuf_fix(..., WRITE, ...)</code>는 추가 acquisition입니다. Holder count 2에서 pinned immediate branch는 global <code>fcnt=1</code>로 설정하고, common path는 holder를 3으로 올립니다. Current status는 registry에서 확인하고, 지정된 runtime proof 없이 promotion의 안전한 대체라고 말하지 않습니다.</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> contrast “fix WRITE: old k + 1” with “promote: same k.” Then point to the queue head as the continuity bridge. / “fix WRITE: 기존 k + 1”과 “promote: 같은 k”를 대비하고, queue head가 continuity bridge라고 짚습니다.</div><img src="assets/fix-write-vs-promote.svg" alt="Comparison of an additional WRITE fix and a same-debt READ-to-WRITE promotion"></div>
+    <div class="source-line"><strong>Verified mechanism and caller rationale:</strong> <a href="en/lessons/0010-revalidate-after-promotion.html">Lesson 10</a>; promotion <code>page_buffer.c:2842–3050</code>; condition enum <code>page_buffer.h:205–209</code>; B-tree optimistic READ and restart paths <code>btree.c:28307–28393, 28638–28696, 31672–31866</code>. Ledger-status owner: <a href="unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations"><code>VS-18</code> registry entry</a>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-11">
+    <header class="section-head">
+      <span class="lesson-no">11</span>
+      <div><div class="eyebrow">Ordered multi-page ownership</div><h2>Release later pages before waiting for an earlier page</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>A &lt; B</span><span>T1 holds B</span><span>T2 holds A</span><span>conditional first</span><span>selective release</span><span>sorted refix</span><span>page_was_unfixed</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “Ordered fix exists because individually valid page latches can form a cycle. If A sorts before B, T1 holding B must not sleep for A while T2 holds A and waits for B.”</div>
+        <ol>
+          <li>Try the requested page conditionally while current watched pages stay fixed.</li>
+          <li>If it succeeds, attach the watcher and finish—no release occurred.</li>
+          <li>If it would block, keep pages that sort before the request.</li>
+          <li>Fully unfix pages that sort after the request.</li>
+          <li>Fix the request unconditionally, then refix released pages in canonical order.</li>
+        </ol>
+        <p>The representative heap order is group → rank → VPID. The access method supplies the meaning; page buffer executes the ordered transition.</p>
+        <div class="warn"><strong>After refix:</strong> a watcher with <code>page_was_unfixed=true</code> regained ownership, not old knowledge. Rebuild record pointers, slot choices, free-space decisions, and cross-page conclusions derived behind that protection gap.</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “Ordered fix가 필요한 이유는 각각 정당한 page latch가 cycle을 만들 수 있기 때문입니다. A가 B보다 먼저라면, B를 가진 T1이 A를 기다리고 A를 가진 T2가 B를 기다리는 상태를 허용하면 안 됩니다.”</div>
+        <ol>
+          <li>현재 watched page를 유지한 채 requested page를 conditional로 먼저 시도합니다.</li>
+          <li>성공하면 watcher를 붙이고 끝냅니다. Release는 일어나지 않았습니다.</li>
+          <li>기다려야 한다면 request보다 먼저 정렬되는 page는 계속 hold합니다.</li>
+          <li>Request보다 뒤에 정렬되는 page는 완전히 unfix합니다.</li>
+          <li>Request를 unconditional로 fix한 뒤, release한 page를 canonical order로 refix합니다.</li>
+        </ol>
+        <p>대표 heap order는 group → rank → VPID입니다. 의미와 순서는 access method가 제공하고, page buffer는 ordered transition을 실행합니다.</p>
+        <div class="warn"><strong>Refix 이후:</strong> <code>page_was_unfixed=true</code>인 watcher는 ownership을 다시 얻었을 뿐, 이전 knowledge를 되살린 것이 아닙니다. Protection gap 이전에 얻은 record pointer, slot 선택, free-space 판단, cross-page conclusion을 다시 계산해야 합니다.</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> show the cycle first, then erase T1’s hold on later page B before drawing its wait for A. / 먼저 cycle을 보여주고, T1이 A를 기다리는 화살표를 그리기 전에 뒤쪽 page B의 hold를 지웁니다.</div><img src="assets/ordered-fix-deadlock-break.svg" alt="Two-page latch cycle broken by releasing the later page before waiting"></div>
+    <div class="source-line"><strong>Verified mechanism:</strong> <a href="en/lessons/0011-rebuild-after-ordered-refix.html">Lesson 11</a>; ordered helpers <code>page_buffer.c:12268–13531</code>; representative heap owner protocol <code>heap_file.c:20493–20664</code>.</div>
+  </section>
+
+  <section class="run-sheet" id="lesson-12">
+    <header class="section-head">
+      <span class="lesson-no">12</span>
+      <div><div class="eyebrow">Replacement from first principles</div><h2>One BCB through five list-membership states</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="cue-strip"><span>worked default</span><span>INVALID</span><span>VOID</span><span>LRU1</span><span>LRU2</span><span>LRU3</span><span>private domain</span><span>direct-victim handoff</span></div>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English script</div>
+        <div class="say"><strong>Say:</strong> “Under the worked baseline—512 MiB data buffer, 16 KiB page, <code>max_clients=100</code>, HA off—we get 32,768 BCB/frame pairs. Internal <code>MAX_NTRANS=102</code> gives 32 shared LRUs and 152 private LRUs, so 184 descriptors. These are derived example values, not universal constants.”</div>
+        <div class="formula">32,768 pairs · S = 32 · P = 102 + 50 = 152 · L = 184</div>
+        <h3>Five membership states</h3>
+        <ul>
+          <li><code>INVALID</code>: on the global free list, no resident VPID.</li>
+          <li><code>VOID</code>: on neither INVALID nor any LRU; it may be loading, fixed, moving, or detached.</li>
+          <li><code>LRU1</code>: hot protected zone.</li>
+          <li><code>LRU2</code>: second-chance protected zone.</li>
+          <li><code>LRU3</code>: cold zone searched for ordinary victims.</li>
+        </ul>
+        <div class="say"><strong>Travel story:</strong> “Startup INVALID → miss claims VOID → first final unfix enters private LRU1 if this context has a private domain, otherwise shared LRU2 → later insertions and threshold pressure demote boundary nodes LRU1→LRU2→LRU3 → a fix of an LRU3 page normally boosts it to LRU1 on final unfix → a clean idle LRU3 candidate may detach to VOID, lose the old hash identity, and receive a new VPID.”</div>
+        <p>Private means replacement-policy domain, not access control. Several contexts may share one private LRU, and another transaction can fix its BCB. Domain mismatch at final unfix can move a BCB private → VOID → shared LRU2.</p>
+        <div class="cue"><strong>Victim-source order and queues:</strong> policy tries the caller's eligible own private list, one advertised other-private list, one advertised shared list, then an own-list fallback. It consumes advertised LRU indexes rather than scanning every list. The index queues request capacities <code>2P</code> for private, <code>2P</code> for big-private, and <code>2S</code> for shared, rounded to powers of two; these are index-queue capacities, not page partitions.</div>
+        <div class="cue"><strong>Direct-victim flag:</strong> a separate handoff flag says a producer reserved this BCB for a waiting allocator. It blocks ordinary victim scan and can be revoked if the BCB becomes fixed again. It is not a sixth list-membership state.</div>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 대본</div>
+        <div class="say"><strong>말하기:</strong> “512 MiB data buffer, 16 KiB page, <code>max_clients=100</code>, HA off라는 worked baseline에서는 BCB/frame pair가 32,768개입니다. Internal <code>MAX_NTRANS=102</code>에서 shared LRU 32개, private LRU 152개가 되어 descriptor는 184개입니다. 이는 조건을 명시한 계산 예시이지 항상 고정된 숫자가 아닙니다.”</div>
+        <div class="formula">32,768 pairs · S = 32 · P = 102 + 50 = 152 · L = 184</div>
+        <h3>다섯 membership state</h3>
+        <ul>
+          <li><code>INVALID</code>: global free list에 있고 resident VPID가 없습니다.</li>
+          <li><code>VOID</code>: INVALID와 모든 LRU 바깥입니다. Loading, fixed, moving, detached 중일 수 있습니다.</li>
+          <li><code>LRU1</code>: hot protected zone입니다.</li>
+          <li><code>LRU2</code>: second-chance protected zone입니다.</li>
+          <li><code>LRU3</code>: ordinary victim을 찾는 cold zone입니다.</li>
+        </ul>
+        <div class="say"><strong>이동 이야기:</strong> “Startup INVALID → miss가 VOID로 claim → 첫 final unfix 때 이 context에 private domain이 있으면 private LRU1, 없으면 shared LRU2 → 이후 insertion과 threshold pressure가 boundary node를 LRU1→LRU2→LRU3으로 demote → LRU3 page를 fix하면 final unfix에서 보통 LRU1로 boost → clean idle LRU3 candidate는 VOID로 detach되고 old hash identity가 제거된 뒤 새 VPID를 받습니다.”</div>
+        <p>Private은 access control이 아니라 replacement-policy domain입니다. 여러 context가 하나의 private LRU를 공유할 수 있고, 다른 transaction도 그 BCB를 fix할 수 있습니다. Final unfix에서 domain mismatch가 나면 BCB가 private → VOID → shared LRU2로 이동할 수 있습니다.</p>
+        <div class="cue"><strong>Victim-source order와 queue:</strong> policy는 caller의 eligible own private list, advertised other-private list 하나, advertised shared list 하나, own-list fallback 순서로 시도합니다. 모든 list를 scan하지 않고 advertised LRU index를 소비합니다. Index queue의 requested capacity는 private <code>2P</code>, big-private <code>2P</code>, shared <code>2S</code>이고 power of two로 round됩니다. 이는 index queue capacity이지 page partition 크기가 아닙니다.</div>
+        <div class="cue"><strong>Direct-victim flag:</strong> producer가 waiting allocator를 위해 이 BCB를 reserve했다는 별도의 handoff flag입니다. Ordinary victim scan을 막고, BCB가 다시 fixed되면 revoke될 수 있습니다. 여섯 번째 list-membership state가 아닙니다.</div>
+      </article>
+    </div>
+    <div class="visual"><div><strong>Visual cue:</strong> follow one BCB, not the whole pool. Pause at VOID: “unlinked” does not mean “free” or “safe to overwrite.” / 전체 pool이 아니라 BCB 하나를 따라갑니다. VOID에서 멈춰 “unlinked”가 “free” 또는 “overwrite safe”라는 뜻은 아니라고 강조합니다.</div><img src="assets/bcb-replacement-state-machine.svg" alt="One BCB moving through INVALID, VOID, LRU1, LRU2, LRU3, detach, and rebind"></div>
+    <div class="source-line"><strong>Verified mechanism and revision-bound policy:</strong> <a href="en/lessons/0012-prove-replacement-progress.html">Lesson 12</a>; defaults <code>system_parameter.c:1169–1189, 1569–1582, 2329–2342</code> and <code>page_buffer.c:5740–5766, 13941–13985</code>; membership/movement <code>6636–7038, 9256–9538, 9695–10417, 15860–15986</code>; victim order/index queues <code>9067–9253, 16369–16506, 1864–1892</code>; direct-victim handoff <code>15420–15652</code>.</div>
+  </section>
+
+  <section class="run-sheet" id="close">
+    <header class="section-head">
+      <span class="lesson-no">✓</span>
+      <div><div class="eyebrow">Close</div><h2>Return to one sentence</h2></div>
+      <span class="done"><span class="box"></span>Done</span>
+    </header>
+    <div class="bilingual">
+      <article class="language" lang="en">
+        <div class="lang-label">English close</div>
+        <div class="say"><strong>Say:</strong> “A successful fix creates a temporary ownership contract over one resident page image. Correctness comes from keeping identity, ownership, latch state, durability, and replacement policy separate—and from repaying every debt at the right boundary.”</div>
+        <p>If challenged on an uncertain claim: “The pinned source establishes X, not Y. Y needs this profile, fault injection, or runtime test.”</p>
+      </article>
+      <article class="language" lang="ko">
+        <div class="lang-label">한국어 마무리</div>
+        <div class="say"><strong>말하기:</strong> “Successful fix는 resident page image 하나에 대한 temporary ownership contract를 만듭니다. Identity, ownership, latch state, durability, replacement policy를 서로 분리하고, 각 boundary에서 모든 debt를 정확히 갚을 때 correctness가 완성됩니다.”</div>
+        <p>불확실한 주장에 질문을 받으면 이렇게 답합니다. “Pinned source가 확인하는 것은 X까지이고 Y는 아닙니다. Y를 확인하려면 profile, fault injection 또는 runtime test가 필요합니다.”</p>
+      </article>
+    </div>
+    <div class="source-line"><strong>Canonical routes:</strong> <a href="page-buffer-teaching-material.md">Maintainer Guide entry</a> · <a href="en/reference/presentation-spine.html">presentation spine</a> · <a href="reference/presentation-script-technical-claims-audit.md">script claims audit</a> · <a href="source-inventory.md">source inventory</a> · <a href="unresolved-or-version-sensitive-findings.md">uncertainty registry</a>.</div>
+  </section>
+
+  <footer class="footer">Bilingual presenter companion · CUBRID f799e05 · print duplex if preferred</footer>
+</main>
+</body>
+</html>
