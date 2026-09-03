@@ -51,23 +51,30 @@
           <tbody>
             <tr><td><code>pgbuf-maintain</code></td><td>Recalculate replacement quotas/zones</td><td>100 ms attempts</td><td>None</td><td>No</td></tr>
             <tr><td><code>pgbuf-page-flush</code></td><td>Create clean replacement supply from cold dirty pages</td><td>1,000 ms default; zero is wake-only</td><td>Victim/allocation pressure</td><td><strong>Yes</strong></td></tr>
-            <tr><td><code>pgbuf-page-post-flush</code></td><td>Finish BCB state and possibly wake an allocator</td><td>1 → 10 → 100 ms, then wake-only</td><td><code>flushed_bcbs</code> enqueue</td><td>No new write</td></tr>
-            <tr><td><code>pgbuf-flush-control</code></td><td>Refresh post-write file-I/O pacing tokens</td><td>50 ms target</td><td>None</td><td>No</td></tr>
+            <tr><td><code>pgbuf-page-post-flush</code></td><td>After submission, finish BCB bookkeeping and possibly supply a waiting allocator</td><td>1 → 10 → 100 ms, then wake-only</td><td><code>flushed_bcbs</code> enqueue</td><td>No new write</td></tr>
+            <tr><td><code>pgbuf-flush-control</code></td><td>Replace the shared page-credit balance that may pause writers after successful OS writes</td><td>50 ms target</td><td>None</td><td>No</td></tr>
           </tbody>
         </table>
         <div class="callout"><strong>Wake is a hint, not a durable event:</strong> the generic waiter accepts <code>wakeup()</code> only while it is sleeping. If the task is already running, the call is not stored for its next pause. Each task therefore rechecks shared pressure or queue state when it executes.</div>
       </section>
 
+      <section class="section" id="plain-language-bridge" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-post-flush-payload="PGBUF_BCB-pointer" data-post-flush-new-io="none">
+        <div class="eyebrow">04 · Two phrases in plain English</div>
+        <h2>Neither mechanism writes the same page a second time</h2>
+        <div class="callout"><strong>File-I/O token bucket:</strong> a shared balance of page-sized credits. Participating writers spend credits after a successful OS write; when the balance is empty they may pause before continuing. Flush-control periodically replaces the balance, so this is soft pacing rather than permission to perform the write. <a href="0006c-follow-maintenance-and-pacing.html#control">See the exact producer, consumer, and bypass rules →</a></div>
+        <div class="callout"><strong>Page-flush hands completion to post-flush:</strong> page submission has finished, but in-memory BCB bookkeeping remains. Under allocator pressure, page-flush may queue only the BCB pointer for post-flush to finish; it does not pass page bytes or request another write. <a href="0006b-follow-page-flush-handoff.html#handoff">See what moves, the four conditions, and the local fallback →</a></div>
+      </section>
+
       <section class="section" id="routes">
-        <div class="eyebrow">04 · Choose the next page</div>
+        <div class="eyebrow">05 · Choose the next page</div>
         <h2>Study the two cooperating pairs separately</h2>
-        <div class="callout"><strong>Lesson 6B — page-flush and post-flush:</strong> follow allocator pressure through dirty LRU3 selection, WAL, DWB/direct submission, conditional <code>flushed_bcbs</code> handoff, protected BCB recheck, and allocator wake.</div>
-        <div class="callout"><strong>Lesson 6C — maintenance and flush-control:</strong> follow replacement samples into quotas/zones and completed file writes into a refreshed soft-pacing token budget. Neither path carries a page image.</div>
+        <div class="callout"><strong>Lesson 6B — page-flush and post-flush:</strong> first trace page-flush as it selects and submits one stable generation. Then follow the choice: finish the BCB bookkeeping locally, or queue only its pointer so post-flush can recheck it and possibly wake an allocator.</div>
+        <div class="callout"><strong>Lesson 6C — maintenance and flush-control:</strong> first follow replacement samples into quotas and zones. Separately, see a successful file write request page credits and the 50 ms control loop replace their shared balance. Neither control path carries a page image.</div>
         <p>Checkpoint, the log-flush daemon, foreground/WRITE-owner flushes, and DWB helper daemons are outside this four-role group. They can support or reuse the same durability machinery without becoming page-buffer daemon workers.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">05 · Retrieval practice</div>
+        <div class="eyebrow">06 · Retrieval practice</div>
         <h2>Explain one complete thread lifecycle and route four jobs</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="one daemon owns one OS thread, task, looper, and waiter -> its first task executes immediately but returns while the recovery gate is closed -> opening the gate is separate from waking a sleeper -> a timer grants an opportunity and the task may still do no work -> maintenance tries quota policy every 100 ms -> page-flush uses a default 1000 ms timer plus pressure wakes and is the only role that submits page images -> post-flush backs off 1, 10, 100 ms into wake-only and finishes BCB state -> flush-control targets 50 ms and refreshes post-write pacing -> shutdown stops, wakes, joins, and retires the threads before pool teardown." data-concepts='[{"label":"one-thread daemon model","terms":["one","thread","task","looper"]},{"label":"recovery gate lifecycle","terms":["recovery","gate","immediate","open"]},{"label":"timer is an opportunity","terms":["timer","may","no work"]},{"label":"four distinct roles","terms":["maintain","page-flush","post-flush","flush-control"]},{"label":"only page-flush submits","terms":["only","page-flush","submit","image"]},{"label":"joined destruction","terms":["stop","wake","join","pool"]}]'>
           <h3>Prompt</h3><p>Explain what happens from daemon construction during recovery through normal shutdown. Then name the role, cadence, and I/O responsibility of all four daemons.</p>
@@ -84,7 +91,7 @@
         <p><a href="0006-flush-one-generation.html">← Lesson 0006</a> · <a href="0006b-follow-page-flush-handoff.html">Continue to Lesson 0006B →</a></p>
       </section>
     </article>
-    <nav class="lesson-nav" aria-label="Lesson contents"><strong>Lesson map</strong><a href="#daemon">1. One daemon</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#routes">4. Focused routes</a><a href="#retrieval">5. Explain it</a><a href="#primary-reading">Primary reading</a><hr><a href="0006b-follow-page-flush-handoff.html">Lesson 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lesson 6C</a><a href="../index.html">Course home</a></nav>
+    <nav class="lesson-nav" aria-label="Lesson contents"><strong>Lesson map</strong><a href="#daemon">1. One daemon</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#plain-language-bridge">4. Two phrases</a><a href="#routes">5. Focused routes</a><a href="#retrieval">6. Explain it</a><a href="#primary-reading">Primary reading</a><hr><a href="0006b-follow-page-flush-handoff.html">Lesson 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lesson 6C</a><a href="../index.html">Course home</a></nav>
   </div>
   <footer class="footer">Ask whenever a timer, wake, gate, or useful-work condition is unclear.</footer>
 </main>

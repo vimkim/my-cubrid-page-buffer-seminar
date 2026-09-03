@@ -18,13 +18,15 @@
 <div class="callout warn"><strong>VS-20:</strong> intended direct-victim backup의 두 outer loop는 <code>index</code>를 <code>start_index</code>로 초기화한 직후 <code>index != start_index</code>를 요구합니다. 현재 코드 그대로라면 body에 들어가지 않습니다. 다른 victim producer가 있으므로 이것만으로 runtime starvation을 증명하지는 않습니다.</div>
 <div class="callout warn"><strong>VS-21:</strong> comment는 5분 quota condition을 말하지만 visible executable admission code에는 1 ms와 500 ms 비교가 있습니다. lesson은 executable 500 ms 동작을 사용합니다.</div></section>
 
-<section class="section" id="control"><div class="eyebrow">04 · pgbuf-flush-control</div><h2>첫 active pass는 timestamp만 기록하고 이후 50 ms target에서 token을 교체합니다</h2>
-<p>초기화는 mutex와 condition variable을 가진 zero-token bucket을 만듭니다. 실패하면 이 daemon이 없고 token acquisition은 no-op이 되지만 page flushing은 계속 동작합니다. 첫 gate-open task pass는 time origin만 기록합니다. 이후 pass가 elapsed time을 측정하고 bucket을 갱신합니다.</p>
+<section class="section" id="control" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-token-update="replace" data-token-soft-limit="true"><div class="eyebrow">04 · pgbuf-flush-control</div><h2>token 하나는 page 하나의 post-write pacing credit입니다</h2>
+<p>bucket은 file writer가 공유하는 mutex-protected 정수 잔액입니다. <code>FILEIO_WRITE_DEFAULT_WRITE</code> path에서는 OS write가 성공한 뒤 <code>fileio_compensate_flush()</code>가 write한 page 수만큼 token을 요청합니다. 잔액이 있으면 바로 차감하고, 부족한 일반 writer는 다음 condition broadcast를 기다릴 수 있습니다. 세고 있는 write는 이미 끝났으므로 token은 그 write를 허가하는 것이 아니라 이후 진행 속도를 조절합니다.</p>
+<p>초기화는 token 0개와 condition variable을 가진 bucket을 만듭니다. 실패하면 이 daemon이 없고 token acquisition은 no-op이 되지만 page flushing은 계속 동작합니다. 첫 gate-open task pass는 time origin만 기록합니다. 이후 pass가 elapsed time을 측정하여 첫 interval allowance를 만듭니다.</p>
+<h3>약 50 ms마다 daemon이 공유 allowance를 교체합니다</h3>
 <ol><li>token bucket을 lock합니다.</li><li>consumed-token과 page-write 통계를 읽고 clear합니다.</li><li>adaptive 또는 configured interval budget을 계산합니다.</li><li>새 budget을 이전 balance에 더하지 않고 <code>tokens</code>를 교체합니다.</li><li>interval 통계를 reset하고 condition variable을 broadcast합니다.</li></ol>
 <p>16 KiB/page에서 adaptive 40 MiB/s floor는 2,560 page/s, 50 ms마다 약 128 token입니다. non-adaptive internal 10,000-page/s 기본값은 50 ms마다 약 500 token입니다. 실제 값은 elapsed time, integer truncation, feedback에 따라 달라집니다.</p></section>
 
-<section class="section" id="soft"><div class="eyebrow">05 · Writer 동작</div><h2>token은 OS write 이후의 다음 진행을 지연합니다</h2>
-<p><code>fileio_write()</code>와 <code>fileio_write_pages()</code>는 successful OS write 뒤 <code>fileio_compensate_flush()</code>를 호출합니다. normal caller는 budget을 기다릴 수 있지만 최대 열 번 broadcast/retry 뒤 진행합니다. log critical section을 가진 caller는 demand를 account하되 missing token을 기다리지 않습니다.</p>
+<section class="section" id="soft"><div class="eyebrow">05 · Writer 동작</div><h2>writer는 OS write가 성공한 뒤에만 credit을 소비합니다</h2>
+<p><code>fileio_write()</code>와 <code>fileio_write_pages()</code>는 default compensated mode에서만 successful OS write 뒤 <code>fileio_compensate_flush()</code>를 호출합니다. <code>FILEIO_WRITE_NO_COMPENSATE_WRITE</code>는 bucket을 건너뛰며 DWB 관련 write path가 이 mode를 선택할 수 있습니다. 참여하는 normal caller는 budget을 기다릴 수 있지만 최대 열 번 broadcast/retry 뒤 진행합니다. log critical section을 가진 caller는 demand를 account하되 missing token을 기다리지 않습니다.</p>
 <p>따라서 correctness authorization이나 strict throughput ceiling이 아니라 soft pacing입니다. CPU accounting은 O(1)이고 condition broadcast와 awakened waiter scheduling 비용은 waiter 수에 따라 커집니다.</p></section>
 
 <section class="section" id="outside"><div class="eyebrow">06 · 관련 actor</div><h2>Checkpoint, log flush, foreground flush, DWB는 각자의 ownership을 가집니다</h2>

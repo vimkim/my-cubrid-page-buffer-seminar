@@ -300,6 +300,30 @@ function startTags (html)
   return startTagMatches (html).map ((match) => match.value);
 }
 
+function elementById (html, elementName, id)
+{
+  const normalizedName = elementName.toLowerCase ();
+  for (const match of startTagMatches (html))
+    {
+      const name = match.value.match (/^<\s*([a-z][a-z0-9-]*)/i)?.[1]?.toLowerCase ();
+      if (name !== normalizedName || htmlAttribute (match.value, "id") !== id)
+        {
+          continue;
+        }
+      const closingTag = `</${normalizedName}>`;
+      const close = html.toLowerCase ().indexOf (closingTag, match.end);
+      if (close < 0)
+        {
+          return undefined;
+        }
+      return {
+        openingTag: match.value,
+        contents: html.slice (match.end, close)
+      };
+    }
+  return undefined;
+}
+
 function elementContents (html, names)
 {
   const pattern = new RegExp (`<(${names.join ("|")})\\b[^>]*>([\\s\\S]*?)<\\/\\1>`, "gi");
@@ -420,6 +444,82 @@ function validateSixObjectRuntimeShapes (pagePath, language, html, failures)
     }
 }
 
+function validateDaemonConceptBridges (pagePath, language, html, failures)
+{
+  const requirements = {
+    "lessons/0006a-understand-page-buffer-daemons.html": {
+      sectionId: "plain-language-bridge",
+      attributes: {
+        "data-token-unit": "written-page",
+        "data-token-checkpoint": "after-successful-os-write",
+        "data-post-flush-payload": "PGBUF_BCB-pointer",
+        "data-post-flush-new-io": "none"
+      },
+      code: [],
+      links: [
+        "0006b-follow-page-flush-handoff.html#handoff",
+        "0006c-follow-maintenance-and-pacing.html#control"
+      ]
+    },
+    "lessons/0006b-follow-page-flush-handoff.html": {
+      sectionId: "handoff",
+      attributes: {
+        "data-handoff-payload": "PGBUF_BCB-pointer",
+        "data-handoff-after": "successful-submission",
+        "data-handoff-new-io": "none",
+        "data-handoff-fallback": "page-flush-local"
+      },
+      code: ["PGBUF_BCB *"],
+      links: []
+    },
+    "lessons/0006c-follow-maintenance-and-pacing.html": {
+      sectionId: "control",
+      attributes: {
+        "data-token-unit": "written-page",
+        "data-token-checkpoint": "after-successful-os-write",
+        "data-token-update": "replace",
+        "data-token-soft-limit": "true"
+      },
+      code: ["fileio_compensate_flush()"],
+      links: []
+    }
+  };
+  const contract = requirements[pagePath];
+  if (!contract)
+    {
+      return;
+    }
+  const section = elementById (html, "section", contract.sectionId);
+  if (!section)
+    {
+      failures.push (`${pagePath}: missing daemon concept bridge in ${language}: section #${contract.sectionId}`);
+      return;
+    }
+  for (const [name, expected] of Object.entries (contract.attributes))
+    {
+      if (htmlAttribute (section.openingTag, name) !== expected)
+        {
+          failures.push (`${pagePath}: missing daemon concept bridge in ${language}: ${name}=${expected}`);
+        }
+    }
+  const codeValues = new Set (elementContents (section.contents, ["code"]).map ((value) => value.slice ("code:".length)));
+  for (const expected of contract.code)
+    {
+      if (!codeValues.has (expected))
+        {
+          failures.push (`${pagePath}: missing daemon concept bridge in ${language}: code ${expected}`);
+        }
+    }
+  const hrefs = new Set (anchorTargets (section.contents).map ((anchor) => anchor.href));
+  for (const expected of contract.links)
+    {
+      if (!hrefs.has (expected))
+        {
+          failures.push (`${pagePath}: missing daemon concept bridge in ${language}: link ${expected}`);
+        }
+    }
+}
+
 async function validateTechnicalParity (root)
 {
   const failures = [];
@@ -449,6 +549,8 @@ async function validateTechnicalParity (root)
       const koHtml = await readFile (path.join (root, page.ko), "utf8");
       validateSixObjectRuntimeShapes (page.path, "en", enHtml, failures);
       validateSixObjectRuntimeShapes (page.path, "ko", koHtml, failures);
+      validateDaemonConceptBridges (page.path, "en", enHtml, failures);
+      validateDaemonConceptBridges (page.path, "ko", koHtml, failures);
       const en = technicalProjection (enHtml);
       const ko = technicalProjection (koHtml);
       for (const key of Object.keys (labels))

@@ -51,23 +51,30 @@
           <tbody>
             <tr><td><code>pgbuf-maintain</code></td><td>replacement quota/zone 다시 계산</td><td>100 ms attempt</td><td>없음</td><td>아니요</td></tr>
             <tr><td><code>pgbuf-page-flush</code></td><td>cold dirty page에서 clean replacement supply 만들기</td><td>기본 1,000 ms; 0은 wake-only</td><td>victim/allocation pressure</td><td><strong>예</strong></td></tr>
-            <tr><td><code>pgbuf-page-post-flush</code></td><td>BCB state를 끝내고 allocator를 깨울 수 있음</td><td>1 → 10 → 100 ms 뒤 wake-only</td><td><code>flushed_bcbs</code> enqueue</td><td>새 write 없음</td></tr>
-            <tr><td><code>pgbuf-flush-control</code></td><td>post-write file-I/O pacing token 갱신</td><td>50 ms 목표</td><td>없음</td><td>아니요</td></tr>
+            <tr><td><code>pgbuf-page-post-flush</code></td><td>submission 뒤 BCB bookkeeping을 끝내고 기다리는 allocator에 frame을 제공할 수 있음</td><td>1 → 10 → 100 ms 뒤 wake-only</td><td><code>flushed_bcbs</code> enqueue</td><td>새 write 없음</td></tr>
+            <tr><td><code>pgbuf-flush-control</code></td><td>성공한 OS write 뒤 writer를 잠시 늦출 수 있는 공유 page-credit 잔액 교체</td><td>50 ms 목표</td><td>없음</td><td>아니요</td></tr>
           </tbody>
         </table>
         <div class="callout"><strong>Wake는 hint이며 durable event가 아닙니다.</strong> generic waiter는 sleep 중일 때만 <code>wakeup()</code>을 받아들입니다. task가 이미 RUNNING이면 다음 pause를 위한 event로 저장하지 않습니다. 따라서 task는 실행될 때 shared pressure 또는 queue state를 다시 확인합니다.</div>
       </section>
 
+      <section class="section" id="plain-language-bridge" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-post-flush-payload="PGBUF_BCB-pointer" data-post-flush-new-io="none">
+        <div class="eyebrow">04 · 어려운 표현 두 개 풀어 읽기</div>
+        <h2>두 mechanism 모두 같은 page를 한 번 더 write한다는 뜻이 아닙니다</h2>
+        <div class="callout"><strong>File-I/O token bucket:</strong> 여러 writer가 공유하는 page 단위 credit 잔액입니다. 참여하는 writer는 OS write가 성공한 뒤 credit을 소비하고, 잔액이 없으면 계속 진행하기 전에 잠시 기다릴 수 있습니다. Flush-control은 주기적으로 잔액을 교체하므로 write 수행 허가가 아니라 soft pacing입니다. <a href="0006c-follow-maintenance-and-pacing.html#control">정확한 producer, consumer, bypass rule 보기 →</a></div>
+        <div class="callout"><strong>Page-flush가 completion을 post-flush에 넘김:</strong> page submission은 끝났지만 in-memory BCB bookkeeping이 남았다는 뜻입니다. allocator pressure가 있으면 page-flush는 BCB pointer만 queue에 넣어 post-flush가 마무리하게 할 수 있습니다. page byte를 넘기거나 새 write를 요청하지 않습니다. <a href="0006b-follow-page-flush-handoff.html#handoff">이동하는 것, 네 조건, local fallback 보기 →</a></div>
+      </section>
+
       <section class="section" id="routes">
-        <div class="eyebrow">04 · 다음 lesson 고르기</div>
+        <div class="eyebrow">05 · 다음 lesson 고르기</div>
         <h2>서로 협력하는 두 역할씩 나누어 봅니다</h2>
-        <div class="callout"><strong>Lesson 6B — page-flush와 post-flush:</strong> allocator pressure에서 dirty LRU3 선택, WAL, DWB/direct submission, 조건부 <code>flushed_bcbs</code> handoff, protected BCB recheck, allocator wake까지 따라갑니다.</div>
-        <div class="callout"><strong>Lesson 6C — maintenance와 flush-control:</strong> replacement sample이 quota/zone으로 바뀌는 과정과 completed file write가 새 soft-pacing token budget으로 바뀌는 과정을 봅니다. 두 경로 모두 page image를 전달하지 않습니다.</div>
+        <div class="callout"><strong>Lesson 6B — page-flush와 post-flush:</strong> 먼저 page-flush가 stable generation 하나를 선택하고 submit하는 과정을 따라갑니다. 그다음 BCB bookkeeping을 직접 끝낼지, pointer만 queue에 넣어 post-flush가 다시 확인하고 allocator를 깨우게 할지 나뉘는 지점을 봅니다.</div>
+        <div class="callout"><strong>Lesson 6C — maintenance와 flush-control:</strong> 먼저 replacement sample이 quota와 zone으로 바뀌는 과정을 봅니다. 별도로 successful file write가 page credit을 요청하고 50 ms control loop가 shared balance를 교체하는 과정도 봅니다. 어느 control path도 page image를 전달하지 않습니다.</div>
         <p>checkpoint, log-flush daemon, foreground/WRITE-owner flush, DWB helper daemon은 이 네 역할 밖에 있습니다. 같은 durability mechanism을 지원하거나 재사용해도 page-buffer daemon worker가 되는 것은 아닙니다.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">05 · Retrieval 연습</div>
+        <div class="eyebrow">06 · Retrieval 연습</div>
         <h2>thread lifecycle 하나와 네 역할을 직접 설명합니다</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="daemon 하나는 OS thread, task, looper, waiter 하나를 가진다 -> 생성 직후 task가 실행되지만 recovery gate가 닫혀 있어 반환한다 -> gate를 여는 것과 sleeper wake는 별개다 -> timer는 실행 기회를 줄 뿐 task가 아무 일도 하지 않을 수 있다 -> maintenance는 100 ms마다 quota policy를 시도한다 -> page-flush는 기본 1000 ms timer와 pressure wake를 가지며 page image를 submit하는 유일한 역할이다 -> post-flush는 1, 10, 100 ms 뒤 wake-only로 backoff하며 BCB state를 끝낸다 -> flush-control은 50 ms를 목표로 post-write pacing을 갱신한다 -> shutdown은 pool teardown 전에 thread를 stop, wake, join, retire한다." data-concepts='[{"label":"one-thread daemon model","terms":["one","thread","task","looper"]},{"label":"recovery gate lifecycle","terms":["recovery","gate","immediate","open"]},{"label":"timer is an opportunity","terms":["timer","may","no work"]},{"label":"four distinct roles","terms":["maintain","page-flush","post-flush","flush-control"]},{"label":"only page-flush submits","terms":["only","page-flush","submit","image"]},{"label":"joined destruction","terms":["stop","wake","join","pool"]}]'>
           <h3>문제</h3><p>recovery 중 daemon 생성부터 정상 shutdown까지 설명하세요. 그 다음 네 daemon의 역할, cadence, I/O 책임을 각각 말하세요.</p>
@@ -84,7 +91,7 @@
         <p><a href="0006-flush-one-generation.html">← Lesson 0006</a> · <a href="0006b-follow-page-flush-handoff.html">Lesson 0006B로 계속 →</a></p>
       </section>
     </article>
-    <nav class="lesson-nav" aria-label="Lesson 목차"><strong>Lesson map</strong><a href="#daemon">1. Daemon 하나</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#routes">4. 집중 경로</a><a href="#retrieval">5. 직접 설명</a><a href="#primary-reading">핵심 읽을거리</a><hr><a href="0006b-follow-page-flush-handoff.html">Lesson 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lesson 6C</a><a href="../index.html">과정 홈</a></nav>
+    <nav class="lesson-nav" aria-label="Lesson 목차"><strong>Lesson map</strong><a href="#daemon">1. Daemon 하나</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#plain-language-bridge">4. 표현 두 개</a><a href="#routes">5. 집중 경로</a><a href="#retrieval">6. 직접 설명</a><a href="#primary-reading">핵심 읽을거리</a><hr><a href="0006b-follow-page-flush-handoff.html">Lesson 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lesson 6C</a><a href="../index.html">과정 홈</a></nav>
   </div>
   <footer class="footer">timer, wake, gate, useful-work condition이 헷갈리면 바로 질문하세요.</footer>
 </main>

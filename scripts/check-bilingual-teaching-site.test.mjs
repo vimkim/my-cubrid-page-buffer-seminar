@@ -166,6 +166,76 @@ test ("the technical gate rejects an incomplete six-object runtime-shape contrac
   });
 });
 
+test ("the technical gate rejects incomplete daemon concept bridges", async () =>
+{
+  await withFixture (async (root) =>
+  {
+    await mkdir (path.join (root, "en/lessons"), { recursive: true });
+    await mkdir (path.join (root, "ko/lessons"), { recursive: true });
+    const lessonNames = [
+      "0006a-understand-page-buffer-daemons.html",
+      "0006b-follow-page-flush-handoff.html",
+      "0006c-follow-maintenance-and-pacing.html"
+    ];
+    for (const name of lessonNames)
+      {
+        await writeFile (path.join (root, "en/lessons", name), '<!doctype html><html lang="en"><body><p>Daemon overview.</p></body></html>\n');
+        await writeFile (path.join (root, "ko/lessons", name), '<!doctype html><html lang="ko"><body><p>데몬 개요를 설명합니다.</p></body></html>\n');
+      }
+    await writeFile (path.join (root, "teaching-pages.json"), JSON.stringify ({
+      version: 1,
+      expectedPageCount: lessonNames.length,
+      legacyRedirectMinimumDays: 90,
+      pages: lessonNames.map ((name) => ({
+        path: `lessons/${name}`,
+        en: `en/lessons/${name}`,
+        ko: `ko/lessons/${name}`
+      }))
+    }, null, 2));
+
+    await assert.rejects (
+      execFileAsync (process.execPath, [checker, "--root", root, "--gate", "technical"]),
+      (error) => lessonNames.every ((name) => error.stderr.includes (`lessons/${name}: missing daemon concept bridge`)));
+  });
+});
+
+test ("the technical gate scopes daemon evidence to each owning section", async () =>
+{
+  await withFixture (async (root) =>
+  {
+    await mkdir (path.join (root, "en/lessons"), { recursive: true });
+    await mkdir (path.join (root, "ko/lessons"), { recursive: true });
+    const pages = {
+      "0006a-understand-page-buffer-daemons.html": `<section id="plain-language-bridge" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-post-flush-payload="PGBUF_BCB-pointer" data-post-flush-new-io="none"></section>
+<a href="0006b-follow-page-flush-handoff.html#handoff">Decoy</a><a href="0006c-follow-maintenance-and-pacing.html#control">Decoy</a>`,
+      "0006b-follow-page-flush-handoff.html": `<section id="handoff" data-handoff-payload="PGBUF_BCB-pointer" data-handoff-after="successful-submission" data-handoff-new-io="none" data-handoff-fallback="page-flush-local"></section>
+<code>PGBUF_BCB *</code>`,
+      "0006c-follow-maintenance-and-pacing.html": `<section id="control" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-token-update="replace" data-token-soft-limit="true"></section>
+<code>fileio_compensate_flush()</code>`
+    };
+    for (const [name, body] of Object.entries (pages))
+      {
+        await writeFile (path.join (root, "en/lessons", name), `<!doctype html><html lang="en"><body>${body}</body></html>\n`);
+        await writeFile (path.join (root, "ko/lessons", name), `<!doctype html><html lang="ko"><body>${body}<p>한국어 설명입니다.</p></body></html>\n`);
+      }
+    const lessonNames = Object.keys (pages);
+    await writeFile (path.join (root, "teaching-pages.json"), JSON.stringify ({
+      version: 1,
+      expectedPageCount: lessonNames.length,
+      legacyRedirectMinimumDays: 90,
+      pages: lessonNames.map ((name) => ({
+        path: `lessons/${name}`,
+        en: `en/lessons/${name}`,
+        ko: `ko/lessons/${name}`
+      }))
+    }, null, 2));
+
+    await assert.rejects (
+      execFileAsync (process.execPath, [checker, "--root", root, "--gate", "technical"]),
+      (error) => lessonNames.every ((name) => error.stderr.includes (`lessons/${name}: missing daemon concept bridge`)));
+  });
+});
+
 test ("the language gate rejects a Korean page without meaningful Korean", async () =>
 {
   await withFixture (async (root) =>
