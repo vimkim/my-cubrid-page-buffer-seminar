@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>학습 0013 — page LSA로 redo 여부 결정하기</title>
+  <title>학습 0013 — log page, WAL, redo 연결하기</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <script defer src="../../assets/teach-retrieval.js"></script>
 </head>
@@ -13,16 +13,82 @@
   <div class="topline"><span>CUBRID page buffer · 학습 0013</span><a href="../index.html">학습 홈</a></div>
   <header class="hero">
     <div class="eyebrow">Advanced 역량 · recovery ownership</div>
-    <h1>page가 뒤처졌을 때만 redo를 적용한다</h1>
-    <p>이 학습을 마치면 checkpoint의 선택적 coordination을 설명하고, page LSA를 이용한 idempotence gate를 추적하며, recovery 전용 fetch 규칙을 올바른 owner에게 둘 수 있다.</p>
-    <div class="pills"><span class="pill">Checkpoint</span><span class="pill">RECOVERY_PAGE</span><span class="pill">Record LSA</span><span class="pill">Page LSA</span><span class="pill">Skip</span><span class="pill">한 번만 적용</span></div>
+    <h1>log record가 자체 buffer를 거쳐 data-page redo로 이어지는 과정</h1>
+    <p>이 학습을 마치면 data/log page pool을 구분하고, direct-mapped log frame이 fixed active ring과 archive로 이어지는 과정, WAL, page-LSA redo gate를 연결해 설명할 수 있다.</p>
+    <div class="pills"><span class="pill">LOG_BUFFER</span><span class="pill">Active ring</span><span class="pill">Archive</span><span class="pill">WAL</span><span class="pill">RECOVERY_PAGE</span><span class="pill">Page LSA</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
+      <section class="section" id="two-pools">
+        <div class="eyebrow">01 · 두 buffer 분리하기</div>
+        <h2>log page는 자체 descriptor와 frame을 사용합니다</h2>
+        <img class="diagram" src="../../assets/data-and-log-buffer-separation.svg" alt="WAL 규칙으로 연결된 독립적인 data-page와 log-page buffer pool">
+        <p><code>page_buffer.c</code>와 <code>log_page_buffer.c</code>는 서로 다른 buffering subsystem이다. include와 function call은 둘을 조율하지만, log page를 data-page pool에 넣지는 않는다.</p>
+        <table>
+          <thead><tr><th>질문</th><th>Data page</th><th>Log page</th></tr></thead>
+          <tbody>
+            <tr><td>Descriptor</td><td><code>PGBUF_BCB</code></td><td><code>LOG_BUFFER</code>: logical page ID, active physical ID, dirty bit, frame pointer</td></tr>
+            <tr><td>Lookup/reuse</td><td>VPID hash, INVALID와 LRU policy</td><td><code>logical_pageid % num_buffers</code>; 정해진 slot을 flush 후 재사용</td></tr>
+            <tr><td>Caller ownership</td><td>shared pointer, latch, fix/unfix, holder debt</td><td>reader는 보통 caller storage로 copy를 받음; BCB fix ledger 없음</td></tr>
+            <tr><td>Disk home</td><td>data-volume page</td><td>fixed active-log ring 또는 archive</td></tr>
+          </tbody>
+        </table>
+        <p>append code가 현재 log page를 “fixed”라고 부를 때가 있지만, <code>LOG_BUFFER</code>에는 <code>fcnt</code>, holder, BCB waiter queue, hash/LRU link가 없다. log append protocol이 log synchronization 아래에서 그 frame을 유지한다는 뜻이다.</p>
+        <p class="big-claim">WAL은 두 pool의 durability 순서를 연결한다. 한 pool의 frame을 다른 pool으로 옮기지 않는다.</p>
+      </section>
+
+      <section class="section" id="memory-pool">
+        <div class="eyebrow">02 · memory의 log page</div>
+        <h2>modulo index가 hash lookup과 victim 선택을 대신한다</h2>
+        <img class="diagram" src="../../assets/log-memory-and-active-file-rings.svg" alt="memory log pool과 disk active ring의 서로 다른 modulo mapping">
+        <p>frame이 네 개인 예에서는 page 0–3이 slot 0–3에 들어가고 page 4는 다시 slot 0에 매핑된다. log page마다 memory 후보 slot이 정확히 하나이므로 LRU victim scan이 없다. hit이면 그 frame을 사용하고, clean collision이면 identity를 바꿔 요청 page를 읽거나 초기화한다. dirty collision은 예상 밖이며 defensive flush path가 있다.</p>
+        <p>수정된 append page는 logical order대로 <code>toflush[]</code>에 유지된다. usable maximum은 <code>num_buffers - 1</code>이며, 여기에 도달하면 modulo wrap이 unflushed page와 충돌하기 전에 append-page flush를 강제한다.</p>
+        <p>Pinned 기본값은 <code>log_buffer_size=16,384</code> page다. 16 KiB log page라면 frame area는 256 MiB이고 descriptor와 보조 state는 별도다. 기본 512 MiB data page buffer와도 별개의 memory다.</p>
+      </section>
+
+      <section class="section" id="append-flush">
+        <div class="eyebrow">03 · Append와 log flush</div>
+        <h2>record를 staging한 뒤 append page에 복사하고 순서대로 durable하게 만든다</h2>
+        <ol>
+          <li><code>LOG_PRIOR_NODE</code>가 record를 staging하고 logical LSA를 받는다.</li>
+          <li>append path가 header와 undo/redo byte를 현재 direct-mapped <code>LOG_PAGE</code>에 복사한다.</li>
+          <li>page boundary를 넘으면 <code>append_lsa.pageid</code>를 전진시키고 다음 frame을 <code>toflush[]</code>에 넣는다.</li>
+          <li><code>logpb_flush_all_append_pages()</code>가 page를 묶어 쓰되, <code>nxio_lsa</code>가 들어 있는 boundary page를 마지막에 쓰고 active-log file을 sync한다.</li>
+          <li><code>nxio_lsa</code>가 아직 durable하다고 확인되지 않은 가장 낮은 주소로 전진한다.</li>
+        </ol>
+        <p>일반 reader는 자체 <code>LOG_PAGE</code> storage를 건넨다. <code>logpb_fetch_page()</code>는 resident 또는 disk page를 보통 그곳에 copy하므로 나중에 <code>pgbuf_unfix()</code>할 일이 없다. 현재 pool frame을 직접 유지하고 수정하는 append writer는 별도의 특수 경로다.</p>
+      </section>
+
+      <section class="section" id="ring-archive">
+        <div class="eyebrow">04 · Logical length와 physical storage</div>
+        <h2>active log는 fixed ring이고 archive가 이전 구간을 보존한다</h2>
+        <img class="diagram" src="../../assets/log-ring-archive-retention.svg" alt="fixed active ring과 archive file 위로 증가하는 logical LSA">
+        <p>기본 512 MiB log volume과 16 KiB page라면 active file은 32,768개의 physical page, 즉 header 하나와 data-log slot 32,767개를 갖는다. logical page ID는 계속 증가하고 physical slot은 <code>fpageid</code>를 기준으로 wrap한다.</p>
+        <p>slot을 재사용하기 전에 이전 logical range를 numbered archive로 copy하고 sync한다. Background archiving은 이 비용을 나누기 위해 temporary archive를 점진적으로 준비한다. data-page double-write buffer가 아니다.</p>
+        <table>
+          <thead><tr><th>Frontier</th><th>의미</th></tr></thead>
+          <tbody>
+            <tr><td><code>append_lsa</code></td><td>현재/다음 logical append 위치</td></tr>
+            <tr><td><code>nxio_lsa</code></td><td>아직 durable하다고 확인되지 않은 가장 낮은 log 주소</td></tr>
+            <tr><td><code>nxarv_pageid</code></td><td>다음으로 archive에 들어가야 할 logical page</td></tr>
+            <tr><td><code>fpageid</code></td><td>active physical slot 1에 현재 저장된 logical page</td></tr>
+          </tbody>
+        </table>
+        <p>LSA는 <code>(page ID, offset)</code> 형식의 logical 좌표다. storage를 할당하거나 보존하지 않는다. 표현 범위는 매우 크지만 유한하며, 실제로 읽을 수 있는 history는 active ring, archive file, recovery/vacuum/HA/CDC/flashback/retention 조건에 달려 있다.</p>
+      </section>
+
+      <section class="section" id="wal">
+        <div class="eyebrow">05 · 두 pool의 연결점</div>
+        <h2>WAL은 변경된 data page보다 log를 먼저 durable하게 만든다</h2>
+        <p>dirty data page에는 byte에 반영된 가장 최신 log change의 LSA가 있다. BCB frame을 data volume에 쓰기 전에 page buffer는 <code>logpb_flush_log_for_wal()</code>을 호출한다. page LSA가 <code>nxio_lsa</code> 이상이면 append log page를 먼저 flush하고 sync한다.</p>
+        <p class="big-claim">crash 뒤 recovery가 이미 disk에 도달한 모든 변경 data page를 설명하는 log record를 찾을 수 있어야 한다. 이 write order가 그 전제조건을 만든다.</p>
+        <p class="source-note"><strong>Pinned-source audit:</strong> <a href="../../reference/log-page-buffer-first-principles-audit.md">CUBRID log page buffering from first principles</a>.</p>
+      </section>
+
       <section class="section" id="checkpoint">
-        <div class="eyebrow">01 · 먼저 boundary부터</div>
-        <h2>Checkpoint는 coordination이지 “모든 page를 flush”하는 작업이 아니다</h2>
+        <div class="eyebrow">06 · Checkpoint boundary</div>
+        <h2>Checkpoint는 선택적인 page propagation을 조율합니다</h2>
         <ol>
           <li>Log code가 append state를 flush하고 checkpoint 시작을 기록한다.</li>
           <li>Page buffer는 checkpoint boundary까지 조건을 만족하는 dirty page만 골라 flush하고, 남은 redo floor를 보고한다.</li>
@@ -35,7 +101,7 @@
       </section>
 
       <section class="section" id="gate">
-        <div class="eyebrow">02 · Redo idempotence</div>
+        <div class="eyebrow">07 · Redo idempotence</div>
         <h2>적용하기 전에 비교한다</h2>
         <img class="diagram" src="../../assets/redo-lsa-gate.svg" alt="Recovery가 page를 fix하고 record LSA와 page LSA를 비교해, 이전 또는 같은 record는 건너뛰고 더 새로운 record만 적용하는 과정">
         <p class="caption">값이 같으면 이미 반영된 것이다. record LSA ≤ page LSA이면 skip한다.</p>
@@ -50,7 +116,7 @@
       </section>
 
       <section class="section" id="example">
-        <div class="eyebrow">03 · 순서대로 따라보기</div>
+        <div class="eyebrow">08 · 순서대로 따라보기</div>
         <h2>Page LSA가 140이면 120과 140은 skip, 170은 apply</h2>
         <table>
           <thead><tr><th>Redo record</th><th>Page LSA와 비교</th><th>동작</th><th>새 page LSA</th></tr></thead>
@@ -64,7 +130,7 @@
       </section>
 
       <section class="section" id="fetch">
-        <div class="eyebrow">04 · Special fetch ownership</div>
+        <div class="eyebrow">09 · Special fetch ownership</div>
         <h2>Recovery는 일반 caller가 모르는 allocation history를 안다</h2>
         <p><code>RECOVERY_PAGE</code>, <code>OLD_PAGE_DEALLOCATED</code>, <code>OLD_PAGE_MAYBE_DEALLOCATED</code>에는 redo/undo와 allocation history에 관한 recovery의 지식이 담겨 있다. 따라서 일반 <code>OLD_PAGE</code> validation이라면 거부할 state를 받아들이거나 skip할 수 있다.</p>
         <p>Log record 이후에 page가 deallocate되었다면 redo는 이를 skip할 수 있으며, 이 skip은 fix debt를 만들지 않는다. Logical allocation/deallocation의 owner는 여전히 file/disk code다. Page buffer는 그 owner가 선택한 identity를 materialize하거나 cache coherence를 지키며 invalidate한다.</p>
@@ -72,14 +138,14 @@
       </section>
 
       <section class="section" id="mutation">
-        <div class="eyebrow">05 · Caller contract 재사용</div>
+        <div class="eyebrow">10 · Caller contract 재사용</div>
         <h2>Recovery도 logged page와 같은 방식으로 state를 전이한다</h2>
         <p>Gate가 apply를 선택하면 익숙한 ownership 순서로 돌아온다. WRITE-protected byte를 수정하고, page LSA에 가장 최근에 반영된 log action을 기록하며, DIRTY로 propagation debt를 공개하고, scope cleanup에서 모든 exit의 fix를 갚는다.</p>
         <p>차이는 의미를 정하는 주체다. Recovery는 log record를 보고 callback과 special fetch mode를 고른다. 일반 page-buffer Module은 resident identity, byte protection, LSA interface, dirty state, release mechanics를 제공한다.</p>
       </section>
 
       <section class="section" id="scope-cleanup">
-        <div class="eyebrow">06 · Scope cleanup 해석</div>
+        <div class="eyebrow">11 · Scope cleanup 해석</div>
         <h2>이 function scope가 끝날 때 stack guard가 pointer를 unfix한다</h2>
         <p>fix/gate가 redo를 계속하라고 판단한 뒤 <code>log_rv_redo_record_sync()</code>는 local <code>scope_exit unfix_rcv_pgptr</code>를 만든다. 이 guard는 <code>thread_p</code>와 stack-local <code>rcv</code>를 reference로 capture한다. Destructor는 <code>pgbuf_unfix_and_init_after_check(thread_p, rcv.pgptr)</code>를 호출한다.</p>
         <ol>
@@ -93,13 +159,13 @@
       </section>
 
       <section class="section" id="evidence">
-        <div class="eyebrow">07 · Crash evidence</div>
-        <h2>Checkpoint처럼 보이는 성공만으로 crash redo를 입증할 수 없다</h2>
+        <div class="eyebrow">12 · Crash evidence</div>
+        <h2>Crash redo는 controlled restart evidence로 검증합니다</h2>
         <p>기존 checkpoint/backup 관찰만으로 restart redo, page별 WAL ordering, DWB recovery, torn-page handling, home-page persistence를 입증할 수 없다. Source는 의도된 gate를 보여줄 뿐이다. Crash safety에 대한 runtime evidence를 얻으려면 controlled crash point, 정확한 build/configuration, 주장하는 boundary에서의 restart 이후 state validation이 필요하다.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">08 · Retrieval 연습</div>
+        <div class="eyebrow">13 · Retrieval 연습</div>
         <h2>Skip, apply, debt 없는 부재를 구분한다</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="Checkpoint는 page buffer에 조건을 만족하는 page를 flush하고 redo floor를 돌려달라고 요청한다. 모든 page를 flush하거나 page buffer가 checkpoint 전체를 소유한다는 뜻은 아니다 -> recovery는 special allocation-state 지식을 소유하므로 RECOVERY_PAGE와 WRITE로 fix한다 -> page LSA가 140이면 record LSA가 page LSA 이하인 120과 140은 이미 반영되어 있으므로 skip한다 -> record 170은 적용하고 page LSA를 170으로 전진시키며, 필요한 대로 page를 DIRTY로 표시한 뒤 fix를 release한다 -> 이후 170을 replay하면 skip한다 -> deallocate된 page는 fix debt 없이 skip할 수 있다 -> 이 gate는 page 변경의 idempotence만 입증하며 임의의 callback side effect까지 입증하지 않는다 -> 기존 checkpoint/backup 관찰은 crash redo나 DWB recovery를 입증하지 않는다." data-concepts='[{"label":"checkpoint는 선택적 coordination","terms":["selective","qualifying","redo floor","not every"]},{"label":"recovery가 special fetch를 소유","terms":["RECOVERY_PAGE","allocation","recovery","write"]},{"label":"이하인 record는 skip","terms":["120","140","skip","less","equal"]},{"label":"새 record는 apply하고 dirty","terms":["170","apply","page lsa","dirty","release"]},{"label":"deallocate된 부재는 debt 없음","terms":["deallocated","skip","no debt","no fix"]},{"label":"idempotence와 crash evidence의 한계","terms":["idempotence","callback","crash","not prove","dwb"]}]'>
           <h3>문제</h3>
@@ -118,20 +184,25 @@
         <h2>Callback보다 먼저 skip 경로를 추적한다</h2>
         <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_recovery.c#L497-L536"><code>log_recovery.c:497–536</code></a>와 <code>log_recovery_redo.hpp:587–668</code>을 읽으세요. Special fix, absent-page skip, page-LSA 비교, callback, LSA 전진, DIRTY publication, scope cleanup을 표시합니다.</p>
         <p><a href="../reference/redo-recovery-card.html">인쇄용 redo-recovery card 열기 →</a></p>
-        <p><a href="0012-prove-replacement-progress.html">← 학습 0012로 돌아가기</a> · <a href="0014-preserve-lifecycle-order.html">학습 0014로 계속하기 →</a></p>
+        <p><a href="0012a-understand-aout-ghost-history.html">← 학습 0012A로 돌아가기</a> · <a href="0014-preserve-lifecycle-order.html">학습 0014로 계속하기 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="학습 목차">
       <strong>학습 지도</strong>
-      <a href="#checkpoint">1. 선택적 checkpoint</a>
-      <a href="#gate">2. Redo gate</a>
-      <a href="#example">3. LSA 예시</a>
-      <a href="#fetch">4. Special fetch owner</a>
-      <a href="#mutation">5. Apply contract</a>
-      <a href="#scope-cleanup">6. Scope cleanup</a>
-      <a href="#evidence">7. Crash evidence</a>
-      <a href="#retrieval">8. 직접 판단하기</a>
+      <a href="#two-pools">1. 두 buffer pool</a>
+      <a href="#memory-pool">2. Log memory slot</a>
+      <a href="#append-flush">3. Append와 flush</a>
+      <a href="#ring-archive">4. Ring과 archive</a>
+      <a href="#wal">5. WAL bridge</a>
+      <a href="#checkpoint">6. 선택적 checkpoint</a>
+      <a href="#gate">7. Redo gate</a>
+      <a href="#example">8. LSA 예시</a>
+      <a href="#fetch">9. Special fetch owner</a>
+      <a href="#mutation">10. Apply contract</a>
+      <a href="#scope-cleanup">11. Scope cleanup</a>
+      <a href="#evidence">12. Crash evidence</a>
+      <a href="#retrieval">13. 직접 판단하기</a>
       <a href="#primary-reading">필수 읽기</a>
       <hr>
       <a href="../reference/redo-recovery-card.html">Redo-recovery card</a>
@@ -141,7 +212,7 @@
     </nav>
   </div>
 
-  <footer class="footer">Checkpoint scope, LSA 비교 방향, special fetch ownership, crash evidence가 불분명하면 언제든 teaching agent에게 질문하세요.</footer>
+  <footer class="footer">두 buffer pool, active ring/archive storage, WAL, LSA 비교 방향, crash evidence가 불분명하면 언제든 teaching agent에게 질문하세요.</footer>
 </main>
 </body>
 </html>

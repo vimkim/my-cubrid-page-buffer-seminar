@@ -292,7 +292,7 @@
           <div class="model-answer">
             <p><strong>Answer:</strong> The allocator searches for a safe LRU victim. If none is immediately eligible, server mode can request flush progress and wait for a direct victim; stand-alone or recovery paths flush synchronously and retry. Assignment, retry, interrupt, timeout, and <code>ER_PB_ALL_BUFFERS_DIRTY</code> are bounded outcomes. Selection never overrides the hard gate: an unsafe fixed, dirty, flushing, waited-on, transient, or identity-changed BCB cannot be reused.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:8181-8403,9067-9538,15420-15660</code></p>
-            <p class="answer-route"><a href="../../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop">Canonical progress loop</a></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#what-happens-when-every-scan-fails">Canonical progress loop</a></p>
           </div>
         </details>
       </article>
@@ -306,7 +306,7 @@
             <p><strong>Answer:</strong> The counts are configuration- and mode-dependent. Auto shared count derives from <code>MAX_NTRANS</code>, targets roughly 1,000 buffers per list, and has a floor of four; explicit shared count is capped at 1,000. That number does not cap private lists. In server mode, private count <code>-1</code> becomes <code>MAX_NTRANS + 50</code>, <code>0</code> disables private quotas, and an explicit positive count is 4–4,050 at this baseline. Automatic <code>MAX_NTRANS</code> includes reserved connections and is not clamped to 1,000 in the initializer. One BCB belongs to one list. Quotas guide placement and search; they do not cap fixes or authorize reuse.</p>
             <p><strong>Answer:</strong> Shared LRU1/LRU2 defaults are 40%/5%; private quota targets reserve 5%/5%. Activity-weighted private quotas are smoothed, capped at 5,000 pages and half the pool, while the shared remainder has a minimum target of 50 per list. All numbers are pinned policy, not Interface contract.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:1071-1118,5744-5903,13942-14624</code></p>
-            <p class="answer-route"><a href="../../advanced/replacement-progress.md#counts-quotas-and-zone-boundaries-at-the-pinned-revision">Canonical LRU details</a></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#put-real-default-numbers-on-the-picture">Canonical LRU details</a></p>
           </div>
         </details>
       </article>
@@ -333,7 +333,7 @@
             <p><strong>Answer:</strong> Server mode nominally registers four: maintenance every 100 ms for quota work plus a call to an intended direct-victim backup; page flush on demand or at the 1,000 ms default interval; post-flush with adaptive 1/10/100 ms waits and then wake-only; and flush control every 50 ms for post-write soft pacing. The pinned maintenance backup loops do not enter as written (<code>VS-20</code>). Recovery gating, configuration, and failed flush-control initialization qualify the count. Stand-alone mode has no page-buffer daemons and uses synchronous progress.</p>
             <p><a href="../lessons/0006a-understand-page-buffer-daemons.html">Trace every daemon's trigger, shared state, handoff, and cost in Lesson 6A →</a></p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:16972-17255</code></p>
-            <p class="answer-route"><a href="../../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive">Canonical daemon table</a></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#what-happens-when-every-scan-fails">Canonical daemon table</a></p>
           </div>
         </details>
       </article>
@@ -372,7 +372,7 @@
           <div class="model-answer">
             <p><strong>Answer:</strong> There is no single priority number. The order is layered: domain pressure chooses own over-quota private, other private, shared, then own under-quota private; one already-selected LRU3 is walked from its hint or oldest end for at most 1,000 BCB-node visits; then the final safety gate may reject the preferred candidate. A separate high/low queue prioritizes direct-victim waiters, not BCB eligibility.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:9067-9538,11734-11790</code></p>
-            <p class="answer-route"><a href="../../advanced/replacement-progress.md#how-the-victim-search-assigns-priority">Canonical priority explanation</a></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#the-replacement-search-from-beginning-to-end">Canonical priority explanation</a></p>
           </div>
         </details>
       </article>
@@ -402,7 +402,7 @@
             <p><strong>Pressure:</strong> a nonresident materialization first tries the invalid list and searches victims only when no free slot exists. If every BCB is fixed, none is stolen: server mode waits for a future unfix or exits by timeout/interrupt/shutdown; the no-daemon path retries synchronously and fails if no victim appears.</p>
             <p><strong>One LRU:</strong> one BCB has one link pair and one encoded list index/zone. Private-to-shared movement removes it to VOID before adding it to the new list. LRU objects live for the pool; context assignments and BCB membership are shorter-lived.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:499-623,8181-8403,9265-9538,9695-10415,14513-14650,15900-16030</code></p>
-            <p class="answer-route"><a href="../lessons/0007-replace-one-frame.html#handoff-details">Bilingual protected-handoff explanation</a> · <a href="../../advanced/replacement-progress.md#lru-object-assignment-and-membership-lifetimes">Canonical LRU lifetime</a></p>
+            <p class="answer-route"><a href="../lessons/0007-replace-one-frame.html#handoff-details">Bilingual protected-handoff explanation</a> · <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical LRU lifetime</a></p>
           </div>
         </details>
       </article>
@@ -417,7 +417,7 @@
             <p><strong>Locking:</strong> it locks only that selected list, scans at most 1,000 LRU3 entries, and try-locks BCBs. Contention on a concentrated hot list is possible, but there is no all-private-LRU mutex sweep; severe bottleneck requires measured evidence.</p>
             <p><strong>Zones:</strong> new private BCBs normally enter LRU1 top, new shared BCBs LRU2 middle. Threshold pressure demotes LRU1→LRU2→LRU3. An old-enough LRU2 hit and an ordinary LRU3 hit boost to LRU1. Private LRU1/LRU2 targets are 5%/5% of quota; shared defaults are 40%/5% of the shared target.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:9330-9538,9695-10353,14251-14511,15674-15728,16370-16506</code></p>
-            <p class="answer-route"><a href="../lessons/0012-prove-replacement-progress.html#cross-private-search">Bilingual cross-private and zone visual</a> · <a href="../../advanced/replacement-progress.md#how-a-caller-finds-another-private-list">Canonical mechanism</a></p>
+            <p class="answer-route"><a href="../lessons/0012-prove-replacement-progress.html#private">Bilingual cross-private and zone visual</a> · <a href="../../advanced/replacement-progress.md#the-replacement-search-from-beginning-to-end">Canonical mechanism</a></p>
           </div>
         </details>
       </article>

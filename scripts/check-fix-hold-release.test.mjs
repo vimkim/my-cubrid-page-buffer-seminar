@@ -13,17 +13,23 @@ const fixContractPath = path.join(guideRoot, "assets/fix-contract.svg");
 const ownershipLedgersPath = path.join(guideRoot, "assets/ownership-ledgers.svg");
 const identityTimelinePath = path.join(guideRoot, "assets/identity-check-timeline.svg");
 const loadOwnerWaiterPath = path.join(guideRoot, "assets/load-owner-waiter.svg");
+const fixRequestInputsPath = path.join(guideRoot, "assets/fix-request-inputs.svg");
 const hangulPattern = /[\u3131-\u318e\u3200-\u321e\u3260-\u327f\ua960-\ua97c\uac00-\ud7a3\ud7b0-\ud7fb]/u;
 
-test("the acquisition lesson separates fetch intent, latch mode, and wait condition", async () => {
-  const markdown = await readFile(pagePath, "utf8");
+test("the acquisition lesson separates and explains every fetch, latch, and condition value", async () => {
+  const [markdown, inputsSvg] = await Promise.all([
+    readFile(pagePath, "utf8"),
+    readFile(fixRequestInputsPath, "utf8"),
+  ]);
   const problemAt = markdown.indexOf("## The maintainer problem");
   const choicesAt = markdown.indexOf("## Start with caller intent: three separate choices");
 
   assert.ok(problemAt > 0, "maintainer problem");
   assert.ok(choicesAt > problemAt, "caller choices follow the problem");
-  assert.match(markdown, /fetch intent.*caller knowledge/i);
-  assert.match(markdown, /latch mode.*wait condition.*independent/i);
+  assert.match(markdown, /three independent\s+answers/i);
+  assert.match(markdown, /### All seven fetch modes/i);
+  assert.match(markdown, /### The five latch-mode enum values/i);
+  assert.match(markdown, /### Conditional and unconditional conflict handling/i);
   assert.match(markdown, /`OLD_PAGE_IF_IN_BUFFER`.*non-acquisition/is);
   assert.match(markdown, /returns `NULL`.*no release debt/is);
 
@@ -31,13 +37,29 @@ test("the acquisition lesson separates fetch intent, latch mode, and wait condit
     "`PAGE_FETCH_MODE`",
     "`PGBUF_LATCH_MODE`",
     "`PGBUF_LATCH_CONDITION`",
+    "`OLD_PAGE`",
+    "`NEW_PAGE`",
+    "`OLD_PAGE_IF_IN_BUFFER`",
+    "`OLD_PAGE_PREVENT_DEALLOC`",
+    "`OLD_PAGE_DEALLOCATED`",
+    "`OLD_PAGE_MAYBE_DEALLOCATED`",
+    "`RECOVERY_PAGE`",
+    "`PGBUF_NO_LATCH`",
+    "`PGBUF_LATCH_READ`",
+    "`PGBUF_LATCH_WRITE`",
+    "`PGBUF_LATCH_FLUSH`",
+    "`PGBUF_LATCH_INVALID`",
+    "`PGBUF_UNCONDITIONAL_LATCH`",
+    "`PGBUF_CONDITIONAL_LATCH`",
   ]) {
     assert.ok(markdown.includes(choice), choice);
   }
+  assert.match(markdown, /fix-request-inputs\.svg/);
+  assert.match(inputsSvg, /fetch × latch × condition/);
+  assert.doesNotMatch(inputsSvg, hangulPattern);
   for (const anchor of [
     "src/storage/page_buffer.h:172-203",
-    "src/storage/page_buffer.c:2260-2332",
-    "src/storage/page_buffer.c:2408-2413",
+    "src/storage/page_buffer.c:2285-2332",
     "src/storage/page_buffer.c:6560-6594",
   ]) {
     assert.ok(markdown.includes(`\`${anchor}\``), anchor);
@@ -189,7 +211,7 @@ test("the lesson defines its trace vocabulary and explains why three identity ch
   }
   assert.doesNotMatch(markdown, /Grant and commit debt/);
 
-  assert.match(markdown, /### Why three identity checks are not redundant/);
+  assert.match(markdown, /### The distinct job of each identity check/);
   assert.match(
     markdown,
     /!\[Three identity checks closing three protection gaps\]\(\.\.\/assets\/identity-check-timeline\.svg\)/,

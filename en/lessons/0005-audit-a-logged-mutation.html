@@ -21,7 +21,7 @@
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="boundary">
-        <div class="eyebrow">01 · Access is necessary, not sufficient</div>
+        <div class="eyebrow">01 · Complete the contract after access</div>
         <h2>Successful fix answers only the access question</h2>
         <p class="big-claim">A non-<code>NULL</code> <code>PAGE_PTR</code> proves temporary, latched access to the requested resident page—not that the caller's logical operation is correct.</p>
         <p>Fix success does not prove that a heap slot is suitable, a record representation is valid, the transaction holds the required logical lock, the recovery payload is correct, the page LSA was advanced, the generation is dirty, or every error path will release its watcher.</p>
@@ -30,7 +30,7 @@
 
       <section class="section" id="protections">
         <div class="eyebrow">02 · Two protections</div>
-        <h2>Page latch and transaction lock are not stronger versions of each other</h2>
+        <h2>Page latches and transaction locks protect different domains</h2>
         <img class="diagram" src="../../assets/latch-versus-lock.svg" alt="Page latch and transaction lock protect different objects for different lifetimes">
         <p class="caption">One heap insert needs both, on different objects and with different release protocols.</p>
         <table>
@@ -77,7 +77,7 @@
 
       <section class="section" id="exits">
         <div class="eyebrow">05 · Audit accumulated state</div>
-        <h2>The spelling of an exit is not its proof</h2>
+        <h2>Prove ownership cleanup on every exit</h2>
         <table>
           <thead><tr><th>Exit seam</th><th>Home watcher?</th><th>Other obligation</th><th>Cleanup owner</th></tr></thead>
           <tbody>
@@ -116,7 +116,7 @@
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
-        <h2>Annotate the caller, not the page-buffer internals</h2>
+        <h2>Annotate the caller's complete mutation protocol</h2>
         <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/heap_file.c#L23120-L23324"><code>heap_file.c:23120–23324</code></a>. Mark the six success steps and every direct return or <code>goto error</code>. For each exit, record acquired state, cleanup/transfer owner, and remaining recovery or retry consequence.</p>
         <p><a href="../reference/caller-mutation-card.html">Open the printable caller-mutation card →</a></p>
         <p><a href="0004a-understand-holder-anchor.html">← Return to Lesson 4A</a> · <a href="0006-flush-one-generation.html">Continue to Lesson 0006 →</a></p>

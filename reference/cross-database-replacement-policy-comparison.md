@@ -178,7 +178,7 @@ path](https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5
 and [background-writer
 contract](https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/README#L250-L270).
 
-### Rings are a workload-local bypass, not another pool
+### Rings provide a workload-local bypass
 
 Bulk operations may hold a backend-private ring of shared buffer numbers and
 try each ring slot before falling back to the global clock. Under a nondefault
@@ -291,7 +291,7 @@ formula](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244
 and [history
 rotation](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L1617-L1661).
 
-## Do not translate these names literally
+## Translate policy names by mechanism
 
 | Tempting claim | Why it is false or incomplete |
 |---|---|

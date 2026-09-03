@@ -36,10 +36,10 @@ test("owner groups and approximate diagnostics route outward", async () => {
 test("the three access forms are compared visually against the objects each touches", async () => {
   const m = await readFile(page, "utf8");
   const svg = await readFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/access-forms-compared.svg"), "utf8");
-  const aAt = m.indexOf('## Scan-copy: caller-owned snapshot, not residency');
+  const aAt = m.indexOf('## Scan-copy returns a caller-owned snapshot');
   const vAt = m.indexOf('](../assets/access-forms-compared.svg)');
   const bAt = m.indexOf('## Area-copy helpers: existing owner only');
-  assert.ok(aAt > 0, '## Scan-copy: caller-owned snapshot, not residency');
+  assert.ok(aAt > 0, '## Scan-copy returns a caller-owned snapshot');
   assert.ok(vAt > aAt, "visual follows its section heading");
   assert.ok(bAt > vAt, "visual sits before the next section");
   assert.match(m, /!\[Normal fix, simple fix, and scan-copy compared against the page-buffer objects each touches\]\(\.\.\/assets\/access-forms-compared\.svg\)/);

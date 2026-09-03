@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 660" role="img" aria-labelledby="title desc">
+  <title id="title">Selective ordered release creates a precise stale-observation boundary</title>
+  <desc id="desc">A heap header remains fixed, later page N120 is fully released, requested N100 is acquired, and N120 is refixed. The watcher flags N120 as unfixed so page-derived knowledge is recomputed.</desc>
+  <defs><style>.bg{fill:#f7f5ef}.box{fill:#fff;stroke:#26384a;stroke-width:2}.keep{fill:#eaf8ef;stroke:#287a45}.gap{fill:#fff0f0;stroke:#b33b3b}.req{fill:#eaf3ff;stroke:#2563a8}.h{font:700 27px system-ui,sans-serif;fill:#172331}.t{font:700 18px system-ui,sans-serif;fill:#172331}.s{font:15px system-ui,sans-serif;fill:#334155}.tiny{font:13px system-ui,sans-serif;fill:#475569}.arrow{stroke:#526273;stroke-width:2.5;fill:none;marker-end:url(#m)}.time{stroke:#526273;stroke-width:3}</style><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0l10 5-10 5z" fill="#526273"/></marker></defs>
+  <rect class="bg" width="1200" height="660" rx="24"/><text class="h" x="52" y="52">Ownership returns after refix; page-derived knowledge does not</text>
+  <line class="time" x1="95" y1="110" x2="1110" y2="110"/><path class="arrow" d="M1030 110h80"/>
+  <text class="tiny" x="90" y="92">before request</text><text class="tiny" x="365" y="92">conditional conflict</text><text class="tiny" x="660" y="92">sorted acquisition</text><text class="tiny" x="980" y="92">caller resumes</text>
+
+  <text class="t" x="60" y="175">Header H</text><rect class="box keep" x="190" y="140" width="890" height="70" rx="14"/><text class="s" x="225" y="171">continuously fixed across the entire operation</text><text class="tiny" x="225" y="195">observations from H remain protected</text>
+
+  <text class="t" x="60" y="300">Normal N120</text><rect class="box keep" x="190" y="250" width="235" height="90" rx="14"/><text class="s" x="222" y="282">fixed + cached slot</text><text class="tiny" x="222" y="310">watcher.pgptr = old pointer</text>
+  <rect class="box gap" x="425" y="250" width="300" height="90" rx="14"/><text class="s" x="459" y="282">fully unfixed window</text><text class="tiny" x="459" y="310">watcher.pgptr = NULL; others may mutate</text>
+  <rect class="box keep" x="725" y="250" width="355" height="90" rx="14"/><text class="s" x="760" y="282">refixed after N100</text><text class="tiny" x="760" y="310">page_was_unfixed = true</text>
+
+  <text class="t" x="60" y="420">Request N100</text><rect class="box req" x="570" y="380" width="300" height="80" rx="14"/><text class="s" x="608" y="411">acquire unconditionally</text><text class="tiny" x="608" y="438">before reacquiring N120</text>
+
+  <rect class="box" x="145" y="505" width="910" height="112" rx="18"/><text class="t" x="180" y="540">Caller rule after return</text>
+  <text class="s" x="180" y="572">Keep H-only observations. Recompute N120 slots, free space, headers, and every cross-page decision that used N120.</text>
+  <text class="tiny" x="180" y="598">Even an equal numeric PAGE_PTR does not reconnect the old borrowed lifetime.</text>
+</svg>

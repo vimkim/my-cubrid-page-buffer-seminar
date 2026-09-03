@@ -22,8 +22,8 @@
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="rule">
-        <div class="eyebrow">01 · Count grants, not requests</div>
-        <h2>Success creates debt; non-acquisition does not</h2>
+        <div class="eyebrow">01 · Count successful grants</div>
+        <h2>Only successful acquisition creates fix debt</h2>
         <p class="big-claim">Every successful fix creates exactly one release debt. One matching unfix repays exactly one debt.</p>
         <p>A request that returns without a grant—such as an expected resident-only miss, a conditional conflict, a timeout, or an interrupt—creates no successful ownership and therefore no unfix debt. The accounting boundary is the grant, not entry into <code>pgbuf_fix()</code>.</p>
         <div class="callout warn"><strong>Naming guardrail:</strong> say <em>fix debt</em>, not “commit debt.” Transaction commit is outside the page-buffer Module.</div>
@@ -31,7 +31,7 @@
 
       <section class="section" id="ledgers">
         <div class="eyebrow">02 · Two ledgers, two questions</div>
-        <h2>Global exclusion is not thread attribution</h2>
+        <h2>Global exclusion and thread attribution have different jobs</h2>
         <img class="diagram" src="../../assets/ownership-ledgers.svg" alt="Global fix count and per-thread holder debt">
         <p class="caption">In this closed example, 3 = 2 + 1; the source stores the answers in different owners.</p>
         <table>

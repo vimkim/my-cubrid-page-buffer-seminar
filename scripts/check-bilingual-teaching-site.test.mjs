@@ -34,13 +34,13 @@ async function withFixture (callback)
     }
 }
 
-test ("the inventory gate requires the 44-page course", async () =>
+test ("the inventory gate requires the 47-page course", async () =>
 {
   await withFixture (async (root) =>
   {
     await assert.rejects (
       execFileAsync (process.execPath, [checker, "--root", root, "--gate", "inventory"]),
-      (error) => /expectedPageCount must be exactly 44/.test (error.stderr));
+      (error) => /expectedPageCount must be exactly 47/.test (error.stderr));
   });
 });
 

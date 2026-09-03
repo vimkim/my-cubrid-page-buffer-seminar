@@ -52,7 +52,7 @@
 
       <section class="section" id="area">
         <div class="eyebrow">03 · Area-copy 위험</div>
-        <h2>Parameter 이름만으로 지원되는 mode라고 판단할 수 없다</h2>
+        <h2>implementation boundary에서 지원 mode를 확인합니다</h2>
         <p><code>VS-02</code>와 <code>VS-03</code>은 pinned source drift를 기록한 uncertainty-registry identifier다. Runtime error code가 아니다.</p>
         <table>
           <thead><tr><th>Helper</th><th>Pinned executable path</th><th>Review 방침</th></tr></thead>
@@ -66,7 +66,7 @@
 
       <section class="section" id="signals">
         <div class="eyebrow">04 · Observation과 authority</div>
-        <h2>Approximate signal은 조사를 제안할 뿐 operation을 허가하지 않는다</h2>
+        <h2>Approximate signal은 진단 조사의 출발점입니다</h2>
         <p>Waiter query, SHOW row, statistics는 path-specific synchronization 아래에서 diagnostic 또는 scheduling 질문에 답한다. 예를 들어 <code>pgbuf_peek_stats()</code>는 각 BCB를 lock하지 않고 의도적으로 flag를 copy하므로 concurrent change가 있으면 approximate snapshot이 된다.</p>
         <div class="callout"><strong>안전한 사용:</strong> “이 count는 replacement pressure 가능성을 보여 준다. Protected path를 조사하자.”<br><strong>위험한 사용:</strong> “Count가 0이므로 이 page를 deallocate하거나 reuse해도 된다.”</div>
         <p><code>VS-04</code>는 <code>pgbuf_peek_stats()</code>의 prototype-name drift를, <code>VS-05</code>는 approximate snapshot semantics를 다룬다. 어느 값도 state transition을 허가하는 mutex, latch, identity recheck, owner protocol을 대신하지 못한다.</p>
@@ -75,7 +75,7 @@
 
       <section class="section" id="unavailable">
         <div class="eyebrow">05 · 없거나 미완성인 interface</div>
-        <h2>Declare되었다고 사용할 수 있는 것은 아니다</h2>
+        <h2>완전한 implementation path가 있어야 사용할 수 있습니다</h2>
         <p>Pinned revision의 release header는 <code>pgbuf_fix_without_validation_release()</code>를 macro-map하고 declare하지만 repository-wide search에서는 definition이나 caller가 나오지 않는다. <code>VS-01</code>이 이 verified source fact를 기록한다.</p>
         <p class="callout warn">더 빠른 bypass로 소개하면 안 된다. Target branch에 definition과 완전하고 검증된 owner protocol이 없다면 호출 시 link가 실패한다.</p>
         <p class="source-note"><strong>Interface inventory:</strong> declaration은 <code>page_buffer.h:320–326</code>, availability status는 <code>VS-01</code>이 소유한다.</p>
@@ -112,7 +112,7 @@
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">필수 읽기</div>
-        <h2>Declaration 순서가 아니라 owner protocol을 따라 읽는다</h2>
+        <h2>owner protocol을 따라 specialized interface를 읽습니다</h2>
         <p><a href="../../advanced/specialized-interfaces.md">Specialized Interfaces and Approximate Observability</a>를 Canonical 설명으로 사용하세요. 그다음 pinned <code>page_buffer.c:2688–2811,4701–4912,14748–14847</code>을 살펴보며 각 helper가 어떤 가정을 owner에게 맡기는지 묻습니다.</p>
         <p><a href="../reference/specialized-interface-card.html">인쇄용 specialized-interface card 열기 →</a></p>
         <p><a href="0016-close-a-failure-proof.html">학습 0016으로 계속하기 →</a></p>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0012A — Understand dormant AOUT history</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0012a-understand-aout-ghost-history.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0012A</span><a href="../index.html">Course home</a></div>
+  <header class="hero">
+    <div class="eyebrow">Advanced aside · dormant admission history</div>
+    <h1>AOUT remembers the identities of evicted pages</h1>
+    <p>This separate lesson keeps dormant AOUT code from obscuring the active replacement policy.</p>
+    <div class="pills"><span class="pill">Ghost metadata</span><span class="pill">No frame</span><span class="pill">Admission only</span><span class="pill">Forced off</span></div>
+  </header>
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="answer">
+        <div class="eyebrow">01 · Short answer</div>
+        <h2>AOUT is disabled in the pinned server path</h2>
+        <p>The data structures remain in source, but startup forces <code>data_aout_ratio = 0.0</code>. Initialization allocates no ghost nodes, and add/lookup helpers return immediately. Active replacement is the INVALID/VOID/private/shared three-zone LRU path from Lesson 12.</p>
+        <p class="big-claim">AOUT is retained, disabled admission-history code. It neither stores page bytes nor chooses a victim in the pinned build.</p>
+      </section>
+      <section class="section" id="entry">
+        <div class="eyebrow">02 · One ghost entry</div>
+        <h2>A VPID and former LRU index are enough to remember a past eviction</h2>
+        <img class="diagram" src="../../assets/aout-ghost-admission.svg" alt="Disabled AOUT ghost history and the first-placement choices its retained code would make">
+        <pre>{ VPID, former lru_idx, prev, next }</pre>
+        <p>An entry contains no BCB, frame, latch, fix count, dirty generation, or page copy. The real BCB/frame pair may already represent another page. One global FIFO, free-node list, VPID hash, and <code>Aout_mutex</code> manage the records.</p>
+        <pre>A = min(floor(N × data_aout_ratio), 32,768)
+hash tables = max(floor(A / 1,000), 1)</pre>
+        <p>With the pinned default ratio zero, <code>A = 0</code>. If enabled, the FIFO would recycle its oldest bottom entry when full.</p>
+      </section>
+      <section class="section" id="effect">
+        <div class="eyebrow">03 · Retained design</div>
+        <h2>A ghost hit would change first placement after reload</h2>
+        <table>
+          <thead><tr><th>Reload context</th><th>Retained placement branch</th></tr></thead>
+          <tbody>
+            <tr><td>Private domain; same-private ghost hit</td><td>Current private LRU1 top</td></tr>
+            <tr><td>Private domain; AOUT miss</td><td>Current private LRU2 middle</td></tr>
+            <tr><td>Private domain; different former LRU</td><td>Shared LRU2 middle</td></tr>
+            <tr><td>No private domain</td><td>Shared LRU2 middle</td></tr>
+          </tbody>
+        </table>
+        <p>This is admission ranking after load. It does not select the old victim, prove ownership, or authorize reuse. The active AOUT-off path simply places a private-domain page at private LRU1 top and a page without a private domain at shared LRU2 middle.</p>
+      </section>
+      <section class="section" id="boundary">
+        <div class="eyebrow">04 · Evidence boundary</div>
+        <h2>Reviving AOUT requires a new engineering review</h2>
+        <p>The forced-zero comment names <code>CBRD-20741</code>; revision history also routes readers to <code>CBRD-21135</code>. Available evidence leaves the root cause unknown. Removing the forced-zero line alone is not a complete fix.</p>
+        <p>The retained comment “LRU + Aout of 2Q” describes design structure, not active startup behavior. Any revival needs concurrency, memory, policy, and measured-performance validation. Expected benefits are not measured performance claims.</p>
+        <p class="source-note"><strong>Verified dormant source:</strong> <code>system_parameter.c:3463–3474,9931–9987</code>; <code>page_buffer.c:635–666,5802–5903,6885–6994,10468–10636</code>.</p>
+      </section>
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Keep active policy and dormant history on separate pages</h2>
+        <p><a href="../../advanced/aout-ghost-history.md">Open the canonical AOUT page →</a></p>
+        <p><a href="0012-prove-replacement-progress.html">← Return to Lesson 0012</a> · <a href="0013-gate-redo-by-page-lsa.html">Continue to Lesson 0013 →</a></p>
+      </section>
+    </article>
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#answer">1. Active status</a>
+      <a href="#entry">2. Ghost entry</a>
+      <a href="#effect">3. Admission effect</a>
+      <a href="#boundary">4. Revival boundary</a>
+      <a href="#primary-reading">Primary reading</a>
+      <hr>
+      <a href="0013-gate-redo-by-page-lsa.html">Next lesson →</a>
+      <a href="../../advanced/aout-ghost-history.md">Canonical Advanced page</a>
+      <a href="../index.html">Course home</a>
+    </nav>
+  </div>
+  <footer class="footer">Ask whether a replacement claim describes active code or a dormant branch before using it in a design argument.</footer>
+</main>
+</body>
+</html>

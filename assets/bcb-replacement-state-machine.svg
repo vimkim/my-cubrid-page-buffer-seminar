@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="780" viewBox="0 0 1280 780" role="img" aria-labelledby="title desc">
+  <title id="title">One BCB moving through invalid, void, and LRU states</title>
+  <desc id="desc">A BCB starts on the invalid free list, is detached into the void zone while a page is loaded and fixed, joins one private or shared LRU at final unfix, ages from LRU1 through LRU2 into LRU3, and returns to protected void state when a victim scan detaches it for rebinding. Void means no list membership and has several protected transitional uses; it does not by itself mean free or safe to reuse.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#48626f"/></marker>
+    <style>
+      .panel{fill:#f8fafb;stroke:#cbd7dc;stroke-width:2}.invalid{fill:#edf0ff;stroke:#5968bd;stroke-width:2.5}.void{fill:#fff3df;stroke:#b86b22;stroke-width:2.5}.hot{fill:#fde9e5;stroke:#b74b3c;stroke-width:2.5}.buffer{fill:#fff8e8;stroke:#bf7a21;stroke-width:2.5}.victim{fill:#e7f5f2;stroke:#16847d;stroke-width:2.5}.guard{fill:#fff;stroke:#627985;stroke-width:2;stroke-dasharray:8 5}.title{font:800 27px Inter,Arial,sans-serif;fill:#173443}.h{font:750 18px Inter,Arial,sans-serif;fill:#173443}.s{font:14px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}.age{fill:none;stroke:#8b6a4c;stroke-width:2.5;stroke-dasharray:7 5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <text x="640" y="38" text-anchor="middle" class="title">One BCB slot survives; its page identity and list state change</text>
+
+  <rect x="30" y="70" width="1220" height="650" rx="22" class="panel"/>
+
+  <rect x="65" y="115" width="235" height="120" rx="16" class="invalid"/>
+  <text x="182" y="150" text-anchor="middle" class="h">INVALID</text>
+  <text x="182" y="178" text-anchor="middle" class="s">on the invalid free list</text>
+  <text x="182" y="202" text-anchor="middle" class="s">no resident VPID in use</text>
+  <text x="182" y="224" text-anchor="middle" class="tiny">head pop is O(1)</text>
+
+  <path d="M300 175H390" class="line"/>
+  <text x="345" y="158" text-anchor="middle" class="tiny">cold miss pops</text>
+
+  <rect x="400" y="95" width="320" height="160" rx="16" class="void"/>
+  <text x="560" y="130" text-anchor="middle" class="h">VOID · detached transition</text>
+  <text x="560" y="160" text-anchor="middle" class="s">not on invalid or any LRU list</text>
+  <text x="560" y="187" text-anchor="middle" class="s">load/rebind happens while protected</text>
+  <text x="560" y="214" text-anchor="middle" class="s">may already represent a fixed page</text>
+  <text x="560" y="239" text-anchor="middle" class="tiny">VOID alone does not mean free or victimizable</text>
+
+  <path d="M720 175H810" class="line"/>
+  <text x="765" y="146" text-anchor="middle" class="tiny">page loaded + fixed</text>
+  <text x="765" y="164" text-anchor="middle" class="tiny">then final unfix</text>
+
+  <rect x="820" y="95" width="365" height="160" rx="16" class="guard"/>
+  <text x="1002" y="130" text-anchor="middle" class="h">Join exactly one LRU</text>
+  <text x="1002" y="160" text-anchor="middle" class="s">private context → private LRU1 top</text>
+  <text x="1002" y="187" text-anchor="middle" class="s">no private context → shared LRU2 middle</text>
+  <text x="1002" y="214" text-anchor="middle" class="s">list index + zone encoded in BCB flags</text>
+  <text x="1002" y="239" text-anchor="middle" class="tiny">active pinned path; AOUT is disabled</text>
+
+  <rect x="115" y="345" width="270" height="115" rx="16" class="hot"/>
+  <text x="250" y="380" text-anchor="middle" class="h">LRU1 · hot zone</text>
+  <text x="250" y="409" text-anchor="middle" class="s">ordinary victim scan never enters</text>
+  <text x="250" y="434" text-anchor="middle" class="tiny">reuse needs no extra boost</text>
+
+  <rect x="505" y="345" width="270" height="115" rx="16" class="buffer"/>
+  <text x="640" y="380" text-anchor="middle" class="h">LRU2 · buffer zone</text>
+  <text x="640" y="409" text-anchor="middle" class="s">still not a victim-scan zone</text>
+  <text x="640" y="434" text-anchor="middle" class="tiny">old-enough reuse boosts to LRU1</text>
+
+  <rect x="895" y="345" width="270" height="115" rx="16" class="victim"/>
+  <text x="1030" y="380" text-anchor="middle" class="h">LRU3 · scan zone</text>
+  <text x="1030" y="409" text-anchor="middle" class="s">only safe BCBs may be detached</text>
+  <text x="1030" y="434" text-anchor="middle" class="tiny">ordinary reuse boosts to LRU1</text>
+
+  <path d="M385 402H495" class="age"/>
+  <text x="440" y="383" text-anchor="middle" class="tiny">zone pressure ages</text>
+  <path d="M775 402H885" class="age"/>
+  <text x="830" y="383" text-anchor="middle" class="tiny">zone pressure ages</text>
+  <path d="M895 438C790 530 440 530 330 458" class="line"/>
+  <text x="640" y="516" text-anchor="middle" class="s">final unfix after meaningful reuse can boost an old LRU2 or ordinary LRU3 BCB to LRU1</text>
+
+  <rect x="375" y="570" width="530" height="100" rx="16" class="void"/>
+  <text x="640" y="603" text-anchor="middle" class="h">Protected VOID after victim detach</text>
+  <text x="640" y="631" text-anchor="middle" class="s">LRU mutex unlinks → zone becomes VOID → BCB mutex remains held</text>
+  <text x="640" y="655" text-anchor="middle" class="tiny">delete old hash mapping, mark latch invalid, then rebind/load another VPID</text>
+  <path d="M1030 460C1030 540 905 620 915 620" class="line"/>
+  <text x="1038" y="520" class="tiny">LRU3 scan + all gates pass</text>
+  <path d="M375 620C245 620 180 520 182 245" class="line"/>
+  <text x="84" y="534" class="tiny">explicit cleanup may</text>
+  <text x="84" y="553" class="tiny">return to invalid list</text>
+  <path d="M640 570C640 535 550 520 550 265" class="line"/>
+  <text x="568" y="548" class="tiny">rebind/load loops through VOID</text>
+</svg>

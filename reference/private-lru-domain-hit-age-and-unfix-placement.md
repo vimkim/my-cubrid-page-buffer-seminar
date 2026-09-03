@@ -7,11 +7,11 @@
 
 This is the primary-source derivation, exhaustive branch/cost catalog, and
 uncertainty record behind the canonical [private-domain and final-unfix
-explanation](../advanced/replacement-progress.md#lru-object-assignment-and-membership-lifetimes).
+explanation](../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned).
 Read that Advanced page for the learning sequence; use this note to audit a
 claim or change against the pinned source.
 
-## 1. “Private” means policy association, not page ownership
+## 1. Private LRU domains are policy associations
 
 ### Physical representation
 
@@ -162,7 +162,7 @@ ignore hits, and an unfix with queued reader/writer waiters defers policy.
 [lock-free unfix early return](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3070-L3201),
 [ignore and waiter branches](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6713-L6844)
 
-## 3. Fix does not normally reposition an existing BCB
+## 3. Ordinary fix leaves an existing BCB in place
 
 For a resident page, the normal fix path finds the BCB in its hash chain,
 registers one fix toward the hot threshold, and obtains the latch. It does not
@@ -260,7 +260,7 @@ none of those history distinctions are operational at the pinned baseline.
 [zero-capacity initialization](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5802-L5834),
 [dormant admission branches](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6896-L6993)
 
-### Special branches that should not be generalized
+### Special repositioning branches and their scope
 
 - Vacuum workers, and temporary pages already in an LRU, deliberately avoid
   ordinary promotion/migration and hit registration. A vacuum `VOID` page is

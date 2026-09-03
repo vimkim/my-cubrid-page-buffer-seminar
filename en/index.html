@@ -73,8 +73,20 @@
       <article class="reference-card full">
         <span class="status waiting">Core deep dive</span>
         <h3>Lesson 6A · Understand page-buffer daemons</h3>
-        <p>Trace each daemon's trigger, shared inputs, loop, output, locks, and cost; then follow the optional page-flush-to-post-flush handoff.</p>
+        <p>Learn the generic daemon lifecycle, recovery gate, start-to-start cadence, wake semantics, and the four-role overview.</p>
         <p><a href="lessons/0006a-understand-page-buffer-daemons.html">Preview Lesson 6A →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Core deep dive</span>
+        <h3>Lesson 6B · Follow page-flush and post-flush</h3>
+        <p>Follow allocator pressure through cold-page selection, WAL, generation submission, the conditional 8,192-entry handoff, protected recheck, and allocator wake.</p>
+        <p><a href="lessons/0006b-follow-page-flush-handoff.html">Preview Lesson 6B →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Core deep dive</span>
+        <h3>Lesson 6C · Follow maintenance and I/O pacing</h3>
+        <p>Separate 100 ms replacement-policy attempts from 50 ms post-write token refresh, with default-size calculations and source boundaries.</p>
+        <p><a href="lessons/0006c-follow-maintenance-and-pacing.html">Preview Lesson 6C →</a></p>
       </article>
       <article class="reference-card full">
         <span class="status waiting">Read reported</span>
@@ -108,9 +120,15 @@
       </article>
       <article class="reference-card full">
         <span class="status waiting">Prepared Advanced</span>
-        <h3>Lesson 12 · Prove replacement progress</h3>
-        <p>Trace the no-free-BCB loop through policy search, direct reservation, protected revocation, generation-aware post-flush, and bounded exits without claiming fairness.</p>
+        <h3>Lesson 12 · Understand replacement from one BCB</h3>
+        <p>Calculate the default pool, define INVALID and VOID, and follow one fixed BCB/frame pair through placement, cooling, victim checks, and rebinding.</p>
         <p><a href="lessons/0012-prove-replacement-progress.html">Preview Lesson 12 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Prepared Advanced aside</span>
+        <h3>Lesson 12A · Understand dormant AOUT history</h3>
+        <p>Read AOUT as disabled ghost admission metadata without confusing it with a page copy, active 2Q policy, or victim authorization.</p>
+        <p><a href="lessons/0012a-understand-aout-ghost-history.html">Preview Lesson 12A →</a></p>
       </article>
       <article class="reference-card full">
         <span class="status waiting">Prepared Advanced</span>
@@ -168,7 +186,9 @@
       <article class="course-item"><span class="step">4A</span><div><span class="status">Ready</span><h3>Holder anchor and entry</h3><p>Per-thread list heads, linear BCB lookup, nested-count reuse, entry recycling, and cost boundary.</p></div><a href="lessons/0004a-understand-holder-anchor.html">Open →</a></article>
       <article class="course-item"><span class="step">5</span><div><span class="status">Ready</span><h3>Caller completes correctness</h3><p>Logical lock, validation, mutation, recovery logging, page LSA, dirty transition, and all-exit cleanup.</p></div><a href="lessons/0005-audit-a-logged-mutation.html">Open →</a></article>
       <article class="course-item"><span class="step">6</span><div><span class="status">Ready</span><h3>Flush one generation</h3><p>Flush actors, copied generation, WAL gate, DWB/direct-write boundary, two LSAs, retryable failure, and concurrent re-dirty.</p></div><a href="lessons/0006-flush-one-generation.html">Open →</a></article>
-      <article class="course-item"><span class="step">6A</span><div><span class="status">Ready</span><h3>Page-buffer daemon control loops</h3><p>Four peer threads, their triggers and shared structures, the flush/post-flush handoff, structural costs, and the pinned maintenance anomaly.</p></div><a href="lessons/0006a-understand-page-buffer-daemons.html">Open →</a></article>
+      <article class="course-item"><span class="step">6A</span><div><span class="status">Ready</span><h3>Page-buffer daemon lifecycle</h3><p>One-thread daemon model, recovery gate, timers, wakes, and stop/wake/join destruction.</p></div><a href="lessons/0006a-understand-page-buffer-daemons.html">Open →</a></article>
+      <article class="course-item"><span class="step">6B</span><div><span class="status">Ready</span><h3>Page-flush → post-flush</h3><p>Pressure wake, dirty LRU3 selection, WAL/submission, conditional queue handoff, recheck, and allocator wake.</p></div><a href="lessons/0006b-follow-page-flush-handoff.html">Open →</a></article>
+      <article class="course-item"><span class="step">6C</span><div><span class="status">Ready</span><h3>Maintenance and I/O pacing</h3><p>Quota epoch admission, 512 MiB examples, token replacement, soft pacing, and pinned anomalies.</p></div><a href="lessons/0006c-follow-maintenance-and-pacing.html">Open →</a></article>
       <article class="course-item"><span class="step">7</span><div><span class="status">Ready</span><h3>Replace one frame</h3><p>Hard safety predicates before LRU selection and allocation-progress policy.</p></div><a href="lessons/0007-replace-one-frame.html">Open →</a></article>
       <article class="course-item"><span class="step">8</span><div><span class="status">Ready</span><h3>Defend a safe change</h3><p>Interface family, owner, invariant, failure unwind, caller impact, and risk-matched verification.</p></div><a href="lessons/0008-defend-a-safe-change.html">Open →</a></article>
       <article class="course-item"><span class="step">9</span><div><span class="status">First lesson ready</span><h3>Advanced mechanisms</h3><p>Concurrency, ordered access, replacement progress, recovery, lifecycle, specialized interfaces, and proof obligations.</p></div><a href="lessons/0009-classify-latch-wait.html">Open →</a></article>

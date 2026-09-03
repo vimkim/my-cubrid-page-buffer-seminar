@@ -30,8 +30,8 @@ test("the scan cap is one selected LRU3 walk, not a private-list limit", async (
   assert.match(evidence, /O\(M \+ min\(Z, 1000\)\)/);
   assert.match(evidence, /demotion loop is not\s+covered by `MAX_DEPTH`/is);
   assert.match(evidence, /does not\s+inspect 1,000 LRU lists/i);
-  assert.match(advanced, /private-list count.*4,050/is);
-  assert.match(advanced, /automatic formula.*not clamped.*1,000.*4,050/is);
+  assert.match(advanced, /private-list parameter.*4,050/is);
+  assert.match(advanced, /automatic formula.*not clamped.*shared-list 1,000/is);
   assert.match(evidence, /PGBUF_MIN_PAGES_IN_SHARED_LIST/);
   assert.match(evidence, /num_LRU_chains/);
 
@@ -46,7 +46,7 @@ test("the scan cap is one selected LRU3 walk, not a private-list limit", async (
 
 test("AOUT is documented as dormant ghost metadata with bounded evidence", async () => {
   const [advanced, evidence, inventory, uncertain, visual] = await Promise.all([
-    read("advanced/replacement-progress.md"),
+    read("advanced/aout-ghost-history.md"),
     read("reference/victim-scan-cap-and-aout-evidence.md"),
     read("source-inventory.md"),
     read("unresolved-or-version-sensitive-findings.md"),
@@ -71,7 +71,7 @@ test("AOUT is documented as dormant ghost metadata with bounded evidence", async
   }
   assert.match(evidence, /d3554deee3a5e2e6d2030113db550eaea42a5fa4/);
   assert.match(evidence, /Removing the forced-zero line alone is not a complete fix/);
-  assert.match(advanced, /benefits.*not measured performance claims/is);
+  assert.match(advanced, /performance benefit.*claim|benefits are not measured performance claims/is);
   assert.match(uncertain, /do not claim the dormant pinned code reproduces/i);
 
   assert.match(visual, /<svg[^>]+viewBox=/);
@@ -85,8 +85,8 @@ test("AOUT is documented as dormant ghost metadata with bounded evidence", async
 
 test("English and Korean HTML carry the same Q10 mechanisms", async () => {
   const lessons = await Promise.all([
-    read("en/lessons/0007-replace-one-frame.html"),
-    read("ko/lessons/0007-replace-one-frame.html"),
+    read("en/lessons/0012a-understand-aout-ghost-history.html"),
+    read("ko/lessons/0012a-understand-aout-ghost-history.html"),
   ]);
   const cards = await Promise.all([
     read("en/reference/replacement-progress-card.html"),
@@ -94,11 +94,10 @@ test("English and Korean HTML carry the same Q10 mechanisms", async () => {
   ]);
 
   for (const html of lessons) {
-    for (const term of ["MAX_DEPTH", "prev_BCB", "MAX_NTRANS", "4,050", "AOUT", "CBRD-20741", "CBRD-21135", "Aout_mutex"]) {
+    for (const term of ["AOUT", "CBRD-20741", "CBRD-21135", "Aout_mutex"]) {
       assert.ok(html.includes(term), term);
     }
     assert.match(html, /32,?768/);
-    assert.match(html, /lru-scan-depth-vs-list-count\.svg/);
     assert.match(html, /aout-ghost-admission\.svg/);
   }
   for (const html of cards) {

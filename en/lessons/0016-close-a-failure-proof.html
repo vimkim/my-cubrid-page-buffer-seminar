@@ -36,7 +36,7 @@
 
       <section class="section" id="timing">
         <div class="eyebrow">02 · When to inspect</div>
-        <h2>The immediate return may not be the final state</h2>
+        <h2>Include deferred cleanup in the final-state proof</h2>
         <p>A fallible callee may clean its own resources. A scope guard or outer caller may release a mutex, remove a load record, restore flags, wake waiters, or transform the error into retry. Therefore, record state at two points:</p>
         <ol>
           <li><strong>At the exact return seam</strong>, to prove the branch and local ordering.</li>
@@ -47,7 +47,7 @@
 
       <section class="section" id="ownership-ledger">
         <div class="eyebrow">03 · Acquisition/load ledger</div>
-        <h2>Failure must not invent invisible ownership</h2>
+        <h2>Failure paths preserve visible ownership accounting</h2>
         <table>
           <thead><tr><th>State</th><th>Postcondition to assert after unwind</th></tr></thead>
           <tbody>
@@ -97,7 +97,7 @@
 
       <section class="section" id="receipt">
         <div class="eyebrow">06 · Proof receipt</div>
-        <h2>Record what the experiment cannot establish</h2>
+        <h2>Record the experiment's evidence boundary</h2>
         <ol>
           <li>Exact source revision, build mode, configuration, and owner path.</li>
           <li>Injection or schedule and proof that the target branch executed.</li>

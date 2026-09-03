@@ -96,7 +96,7 @@
       </section>
 
       <section class="section" id="moments">
-        <div class="eyebrow">04 · 이 모든 것을 “write됐다”고 부르지 않기</div>
+        <div class="eyebrow">04 · 네 가지 propagation 순간 구분하기</div>
         <h2>Log durability와 page propagation은 다릅니다</h2>
         <img class="diagram" src="../../assets/durability-chain.svg" alt="Mutation, recovery logging, commit durability, page propagation의 서로 다른 경계">
         <p class="caption">Transaction은 변경된 모든 page가 home location에 도착하기 전에 commit할 수 있습니다. WAL이 이것을 안전하게 만듭니다.</p>
@@ -159,7 +159,7 @@
 
       <section class="section" id="copy-versus-dwb">
         <div class="eyebrow">08 · Copy는 DWB가 아닙니다</div>
-        <h2>DWB는 경로를 바꾸지만 flush의 의미는 바꾸지 않습니다</h2>
+        <h2>DWB는 physical write route를 바꿉니다</h2>
         <p>Private copy는 G를 이후 writer와 분리합니다. DWB는 그 사본이 갈 수 있는 선택적인 보호 destination입니다. DWB를 사용할 수 없거나 temporary page이면 page-buffer path는 대신 direct <code>fileio_write()</code>를 사용합니다. Flush는 계속 일어나며 logged non-temporary page는 계속 WAL을 지킵니다.</p>
         <table>
           <thead><tr><th>DWB path</th><th>Direct path</th></tr></thead>
@@ -173,7 +173,7 @@
 
       <section class="section" id="redirty">
         <div class="eyebrow">09 · 성공과 실패</div>
-        <h2>G+1을 잃지 않고 G를 끝냅니다</h2>
+        <h2>G를 끝내면서 G+1을 보존합니다</h2>
         <p>성공하면 completion은 FLUSHING만 clear합니다. Writer가 G+1을 만들었다면 그 DIRTY bit와 새 oldest-unflush 값은 다음 flush를 위해 남습니다.</p>
         <p>Ordinary DWB/direct-I/O failure에서는 FLUSHING을 clear하고, 복사해 둔 DIRTY debt와 oldest-unflush lower bound를 복원하고, waiter를 깨운 뒤 failure를 반환합니다. 작업은 계속 보이고 재시도할 수 있습니다.</p>
         <div class="callout warn"><strong>Review 질문:</strong> 모든 success 또는 failure exit 뒤에 어느 generation이 DIRTY를 소유하는가, 어느 operation이 FLUSHING을 소유하는가, checkpoint가 어떤 lower bound를 계속 볼 수 있어야 하는가?</div>
@@ -195,7 +195,7 @@
 
       <section class="section" id="retrieval">
         <div class="eyebrow">11 · Retrieval practice</div>
-        <h2>두 boundary를 섞지 않고 설명하기</h2>
+        <h2>두 boundary를 각각 설명합니다</h2>
         <div class="quiz" data-retrieval data-coverage-template="핵심 개념 {found}/{total}개를 찾았습니다." data-complete-message="좋습니다. 이제 보지 않고 한 번 설명해 보세요." data-revisit-label="다시 볼 것:" data-model-label="모범 답안 뼈대:" data-model="DIRTY는 flusher 하나를 배정하지 않는다 -> page-flush daemon, checkpoint actor, explicit caller, WRITE owner, standalone caller가 작업을 고르거나 실행할 수 있다 -> 모든 actor가 generation protocol 하나로 합류한다 -> flush는 resident generation 하나를 복사한다 -> oldest-unflush는 dirty history가 checkpoint boundary를 가로지르는지 판단한다 -> copied page LSA는 WAL을 어디까지 force할지 정한다 -> oldest가 checkpoint boundary보다 최신이면 건너뛸 수 있지만 미리 flush해도 안전하다 -> 위험한 것은 거짓 redo 진전 또는 page-before-WAL 순서다 -> G가 끝난 뒤 concurrent G+1은 DIRTY로 남는다." data-concepts='[{"label":"flush actor","terms":["daemon","checkpoint","caller","owner"]},{"label":"flush 목적","terms":["copy","resident","propagation"]},{"label":"checkpoint 선택","terms":["oldest","boundary","select"]},{"label":"WAL target","terms":["page lsa","force","wal"]},{"label":"선택적인 추가 flush","terms":["newer","skip","extra","safe"]},{"label":"실제 위반","terms":["redo","late","before","violation"]},{"label":"concurrent generation","terms":["g+1","dirty","remain"]}]'>
           <h3>Prompt</h3>
           <p>먼저 DIRTY가 flusher 하나를 지정하지 않는 이유를 설명하고, 이 작업을 실행할 수 있는 actor 두 개를 드세요. 그 다음 checkpoint boundary 150을 사용합니다. P의 oldest-unflush는 200이고 page LSA는 220입니다. Checkpoint가 P를 건너뛸 수 있습니까? 다른 flusher가 write해도 됩니까? 그렇다면 WAL을 어디까지 force해야 합니까? Oldest-unflush가 100인 page와 비교하세요.</p>

@@ -33,7 +33,7 @@
       <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private/shared LRU domains, zones, and search order">
     </article>
     <article class="reference-card full">
-      <h2>Do not confuse scan depth with list count</h2>
+      <h2>Separate scan depth from list count</h2>
       <img class="diagram" src="../../assets/lru-scan-depth-vs-list-count.svg" alt="One selected LRU3 scan budget compared with the number of private LRU descriptors">
     </article>
     <article class="reference-card">
@@ -105,7 +105,7 @@
       <p><strong>Pinned state:</strong> startup forces <code>data_aout_ratio = 0</code>; no ghost storage is allocated. Historical <a href="http://jira.cubrid.org/browse/CBRD-20741">CBRD-20741</a> records the assertion/core, and <a href="http://jira.cubrid.org/browse/CBRD-21135">CBRD-21135</a> records the decision to disable AOUT while the root cause was unknown. If safely enabled, a private AOUT miss would enter middle, a same-private refault top, and an other-private refault shared middle. These are dormant source branches, not measured gains. Revival must repair and stress the invariants and measure the single global <code>Aout_mutex</code>; deleting the forced-zero line alone is not a fix.</p>
     </article>
     <article class="reference-card">
-      <h2>Do not promote</h2>
+      <h2>Evidence boundaries for promotion claims</h2>
       <ul>
         <li>queue priority → starvation freedom</li>
         <li>daemon loop → stable cadence</li>

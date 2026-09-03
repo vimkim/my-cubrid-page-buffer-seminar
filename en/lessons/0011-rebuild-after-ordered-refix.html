@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0011 — Rebuild after ordered refix</title>
+  <title>Lesson 0011 — Understand ordered fix</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <script defer src="../../assets/teach-retrieval.js"></script>
 </head>
@@ -13,17 +13,43 @@
   <div class="topline"><span>CUBRID page buffer · lesson 0011</span><a href="../index.html">Course home</a></div>
   <header class="hero">
     <div class="eyebrow">Advanced capability · ordered ownership</div>
-    <h1>Restore the hold, then rebuild the knowledge</h1>
-    <p>By the end, you can trace an ordered multi-page fix, identify which watchers lost ownership, and revalidate only the observations that crossed an unfixed window.</p>
+    <h1>Why ordered fix releases pages before waiting</h1>
+    <p>By the end, you can explain the deadlock it prevents, distinguish its cheap and reorder paths, locate the holder/watcher/temporary-array state, and rebuild knowledge after a real protection gap.</p>
     <div class="pills"><span class="pill">Watcher</span><span class="pill">Group</span><span class="pill">Rank</span><span class="pill">Conditional fix</span><span class="pill">Refix</span><span class="pill">page_was_unfixed</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
+      <section class="section" id="problem">
+        <div class="eyebrow">01 · Start with the deadlock</div>
+        <h2>Two individually valid fixes can form a cycle</h2>
+        <p>Assume the canonical order is <code>A &lt; B</code>. T1 already holds B and requests A; T2 already holds A and requests B. If both requests sleep while retaining what they hold, T1 waits for T2 and T2 waits for T1.</p>
+        <img class="diagram" src="../../assets/ordered-fix-deadlock-break.svg" alt="Two-page latch cycle and the release-before-sleep rule that breaks it">
+        <p class="caption">The conditional attempt stays awake. Before T1 sleeps for earlier page A, it releases later page B, allowing T2 to finish.</p>
+        <p class="big-claim">A thread may wait for a later page while retaining earlier pages. Before it waits for an earlier page, it releases every reorderable page it holds later in the canonical order.</p>
+      </section>
+
+      <section class="section" id="paths">
+        <div class="eyebrow">02 · Separate the fast and slow paths</div>
+        <h2>The common path attaches a watcher without reordering</h2>
+        <table>
+          <thead><tr><th>Situation at entry</th><th>First attempt</th><th>What follows?</th></tr></thead>
+          <tbody>
+            <tr><td>No other BCB is held, or the only holder names this VPID</td><td>Unconditional ordinary fix</td><td>Attach the requested watcher and return.</td></tr>
+            <tr><td>Other pages are held; requested latch is compatible now</td><td>Conditional ordinary fix</td><td>Attach the watcher. No old page is released.</td></tr>
+            <tr><td>Conditional attempt gets a terminal error or zero-wait rejection</td><td>Conditional ordinary fix</td><td>Return without reordering and sleeping.</td></tr>
+            <tr><td>Conditional attempt would block and waiting is allowed</td><td>Conditional, then reorder path</td><td>Select later pages, release them, sort a temporary array, and reacquire.</td></tr>
+          </tbody>
+        </table>
+        <p>The conditional first attempt is the performance shortcut. It avoids list validation, full unfix, <code>qsort()</code>, and refix whenever the new latch is immediately available.</p>
+      </section>
+
       <section class="section" id="watcher">
-        <div class="eyebrow">01 · Define the owner object</div>
+        <div class="eyebrow">03 · Locate the state</div>
         <h2>A watcher is normal page debt plus ordering history</h2>
         <p><code>PGBUF_WATCHER</code> carries the current page pointer/ownership state and metadata used to order a set of pages. It does not replace fix debt; it makes the debt movable and auditable across a multi-page protocol.</p>
+        <img class="diagram" src="../../assets/ordered-fix-ledger-layers.svg" alt="Thread holder list, per-holder watcher chains, and temporary ordered-fix array">
+        <p class="caption">The active-holder list is not kept in canonical page order. Only the slow path copies facts into a temporary array and sorts that array.</p>
         <table>
           <thead><tr><th>Watcher information</th><th>Who supplies or interprets it?</th></tr></thead>
           <tbody>
@@ -33,23 +59,24 @@
             <tr><td><code>page_was_unfixed</code></td><td>Page buffer reports that this watcher crossed a release/refix window; the caller must rebuild observations.</td></tr>
           </tbody>
         </table>
-        <p class="big-claim">The access method defines meaning and order. The page-buffer Module enforces the ordered ownership transition.</p>
+        <p>A holder is one aggregate per thread/BCB pair in a head-inserted singly linked list. Each holder owns a doubly linked watcher chain; appending uses its tail and is <code>O(1)</code>. On the reorder path, every fix debt of a released page must be represented by a watcher, because the helper must reconstruct every pointer and count after the full unfix.</p>
+        <p class="big-claim">The access method defines meaning and order. The page-buffer Module enforces the transition using watcher metadata and a temporary sorted array—not a sorted holder list.</p>
       </section>
 
       <section class="section" id="order">
-        <div class="eyebrow">02 · Canonical order</div>
+        <div class="eyebrow">04 · Canonical order</div>
         <h2>Group → rank → VPID</h2>
         <p>Within the representative heap protocol, pages compare by:</p>
         <ol>
           <li><strong>group:</strong> heap-header VPID,</li>
-          <li><strong>rank:</strong> <code>HEAP_HDR &lt; HEAP_NORMAL &lt; HEAP_OVERFLOW</code>, then</li>
+          <li><strong>rank:</strong> <code>HEAP_HDR=0 &lt; HEAP_NORMAL=1 &lt; HEAP_OVERFLOW=2</code>, then</li>
           <li><strong>VPID:</strong> deterministic order within the same group/rank.</li>
         </ol>
         <p>Pages without a known group sort last. Every watcher for the same page must agree on rank. This order is an access-method owner protocol, not a universal semantic ordering invented by page buffer.</p>
       </section>
 
       <section class="section" id="io-contract">
-        <div class="eyebrow">03 · Input and output</div>
+        <div class="eyebrow">05 · Input and output</div>
         <h2>The return value reports status; the watcher carries ownership</h2>
         <p>The call is conceptually <code>pgbuf_ordered_fix(thread, req_vpid, fetch_mode, request_mode, req_watcher)</code>. The first four inputs identify the current thread, page, fetch semantics, and requested latch. Before the call, the caller initializes a clean watcher with <code>PGBUF_INIT_WATCHER()</code>: <code>pgptr</code> is null, while <code>initial_rank</code> and an optional heap group derived from <code>HFID</code> describe the access-method order.</p>
         <table>
@@ -64,7 +91,7 @@
       </section>
 
       <section class="section" id="protocol">
-        <div class="eyebrow">04 · Ordered refix</div>
+        <div class="eyebrow">06 · Ordered refix</div>
         <h2>Try cheaply; release only what violates the requested order</h2>
         <img class="diagram" src="../../assets/ordered-watcher-refix.svg" alt="Conditional ordered fix, selective release, unconditional request fix, and sorted refix">
         <p class="caption">A successful conditional fix releases nothing. Reordering begins only after the conditional attempt fails.</p>
@@ -81,7 +108,7 @@
       </section>
 
       <section class="section" id="example">
-        <div class="eyebrow">05 · Worked heap group</div>
+        <div class="eyebrow">07 · Worked heap group</div>
         <h2>Keep 0|90; insert 0|100 before 0|120</h2>
         <table>
           <thead><tr><th>Page</th><th>Role/order</th><th>Action after conditional failure</th></tr></thead>
@@ -91,12 +118,13 @@
             <tr><td>Held 0|120</td><td>Normal; sorts third</td><td>Fully unfix, then refix after 0|100; set <code>page_was_unfixed</code>.</td></tr>
           </tbody>
         </table>
-        <p>The final held order is <code>0|90 &lt; 0|100 &lt; 0|120</code>. Observations derived from 0|90 remained protected. Observations derived from 0|120 did not.</p>
+        <img class="diagram" src="../../assets/ordered-fix-stale-observation.svg" alt="Continuously protected header and released normal page with stale observations">
+        <p>The final held order is <code>0|90 &lt; 0|100 &lt; 0|120</code>. Observations derived from 0|90 remained protected. Observations derived from 0|120 did not. Cross-page conclusions involving 0|120 must also be checked again.</p>
       </section>
 
       <section class="section" id="rebuild">
-        <div class="eyebrow">06 · Revalidation boundary</div>
-        <h2>A restored pointer is not restored knowledge</h2>
+        <div class="eyebrow">08 · Revalidation boundary</div>
+        <h2>Restored ownership requires fresh page-derived knowledge</h2>
         <p>For every watcher with <code>page_was_unfixed=true</code>, reconstruct:</p>
         <ul>
           <li>record and slot pointers,</li>
@@ -110,14 +138,32 @@
       </section>
 
       <section class="section" id="unwind">
-        <div class="eyebrow">07 · Partial failure</div>
-        <h2>Audit each watcher, not just the function result</h2>
+        <div class="eyebrow">09 · Partial failure</div>
+        <h2>Audit the final state of every watcher</h2>
         <p>If R succeeds but a later refix fails, the held set is mixed. Some watchers may already be restored, some still carry release state, and R may itself be held. A correct caller or helper unwind must consume or retain each debt exactly once and preserve avoid-deallocation balance.</p>
         <p class="source-note"><strong>Representative caller boundary:</strong> heap destination/watcher ownership is pinned <code>heap_file.c:20493–20664</code>. This caller supplies heap meaning that generic page-buffer ordering cannot infer.</p>
       </section>
 
+      <section class="section" id="cost">
+        <div class="eyebrow">10 · Structures, cost, and limits</div>
+        <h2>The holder walk is linear; only the selected set is sorted</h2>
+        <p>Let <code>H</code> be active holder nodes, <code>W</code> all watcher nodes visited, <code>M</code> old pages selected for release, and <code>F</code> represented fix receipts on them.</p>
+        <table>
+          <thead><tr><th>Work</th><th>Structure</th><th>Local bookkeeping cost</th></tr></thead>
+          <tbody>
+            <tr><td>Choose initial latch condition</td><td>Holder-list head and perhaps its next link</td><td><code>O(1)</code></td></tr>
+            <tr><td>Find holder after immediate success</td><td>Singly linked holder list</td><td><code>O(H)</code> worst case; a newly created holder is normally the head</td></tr>
+            <tr><td>Validate/classify reorder set</td><td>Holder list plus watcher chains</td><td><code>O(H + W)</code></td></tr>
+            <tr><td>Sort request plus released pages</td><td>Temporary array, <code>qsort()</code></td><td>Average <code>O((M+1) log(M+1))</code> comparisons</td></tr>
+            <tr><td>Release/rebuild ownership</td><td>Ordinary fix/unfix plus watcher append</td><td><code>F</code> unfixes, about <code>F+1</code> fixes, and <code>O(F)</code> attachment</td></tr>
+            <tr><td>Caller ordered unfix</td><td>Holder lookup plus backward watcher search</td><td><code>O(H + W_page)</code> worst case</td></tr>
+          </tbody>
+        </table>
+        <p>These bounds exclude latch sleep and storage I/O. The temporary holder array and per-page watcher array have a pinned capacity of 64. That is an internal bounded-work assumption for this protocol, not the general maximum number of holders a thread may own.</p>
+      </section>
+
       <section class="section" id="retrieval">
-        <div class="eyebrow">08 · Retrieval practice</div>
+        <div class="eyebrow">11 · Retrieval practice</div>
         <h2>Produce a watcher-by-watcher ledger</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="the canonical heap order is group, then rank, then VPID; the header 0|90 sorts before requested normal 0|100, which sorts before held normal 0|120 -> after the conditional fix of 0|100 fails, keep header 0|90 fixed, fully unfix 0|120 with avoid-deallocation bookkeeping, and mark its watcher page_was_unfixed -> fix 0|100 unconditionally, then refix 0|120 -> observations from continuously held 0|90 remain protected, but slots, free-space decisions, headers, and cross-page conclusions involving 0|120 must be reconstructed -> the same pointer value does not restore old knowledge -> if refixing 0|120 fails, audit the debt and cleanup state of all three watchers rather than assuming one function error describes the held set." data-concepts='[{"label":"canonical group-rank-vpid order","terms":["group","rank","vpid","90","100","120"]},{"label":"selective release","terms":["keep","90","unfix","120"]},{"label":"request then sorted refix","terms":["fix","100","refix","120","order"]},{"label":"page_was_unfixed drives rebuild","terms":["page_was_unfixed","slot","free space","stale","reconstruct"]},{"label":"continuous hold stays protected","terms":["90","continuous","protected","remain"]},{"label":"partial failure uses per-watcher ledger","terms":["failure","each watcher","debt","cleanup","mixed"]}]'>
           <h3>Prompt</h3>
@@ -136,20 +182,24 @@
         <h2>Mark every watcher transition</h2>
         <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L12268-L13531"><code>page_buffer.c:12268–13531</code></a>. Annotate comparison coordinates, conditional attempt, selective full unfix, avoid-deallocation registration, requested-page acquisition, sorted refix, <code>page_was_unfixed</code>, and every partial-failure exit.</p>
         <p><a href="../reference/ordered-watcher-card.html">Open the printable ordered-watcher card →</a></p>
+        <p><a href="../../reference/ordered-fix-first-principles-audit.md">Open the pinned-source ordered-fix audit →</a></p>
         <p><a href="0010-revalidate-after-promotion.html">← Return to Lesson 0010</a> · <a href="0012-prove-replacement-progress.html">Continue to Lesson 0012 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lesson map</strong>
-      <a href="#watcher">1. Watcher meaning</a>
-      <a href="#order">2. Canonical order</a>
-      <a href="#io-contract">3. Input and output</a>
-      <a href="#protocol">4. Refix protocol</a>
-      <a href="#example">5. Worked group</a>
-      <a href="#rebuild">6. Rebuild knowledge</a>
-      <a href="#unwind">7. Partial failure</a>
-      <a href="#retrieval">8. Ledger it back</a>
+      <a href="#problem">1. Deadlock</a>
+      <a href="#paths">2. Fast/slow paths</a>
+      <a href="#watcher">3. State locations</a>
+      <a href="#order">4. Canonical order</a>
+      <a href="#io-contract">5. Input and output</a>
+      <a href="#protocol">6. Refix protocol</a>
+      <a href="#example">7. Worked group</a>
+      <a href="#rebuild">8. Rebuild knowledge</a>
+      <a href="#unwind">9. Partial failure</a>
+      <a href="#cost">10. Cost and limits</a>
+      <a href="#retrieval">11. Ledger it back</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/ordered-watcher-card.html">Ordered-watcher card</a>

@@ -100,7 +100,7 @@ Describe a resident page as a tuple, not with one overloaded “page state.” A
 
 The source stores these dimensions in different places: BCB identity and frame linkage, atomic latch mode and `fcnt`, holder records, flags, page LSA, and `oldest_unflush_lsa`. That separation is a Verified mechanism at the pinned revision, not a promise that the same fields or packing remain stable in another revision: `src/storage/page_buffer.c:499-555`.
 
-## Terms that must not collapse
+## Keep the core terms distinct
 
 | Term | Precise use in this guide | A state that disproves the synonym |
 |---|---|---|

@@ -12,17 +12,72 @@ A fix is successful only when temporary ownership has been granted and its match
 
 ## Start with caller intent: three separate choices
 
-Fetch intent is caller knowledge, not a convenience hint. Before calling the Module, the caller states what it knows about allocation and residency, separately chooses how the resident bytes must be protected, and separately chooses whether an incompatible latch may wait. Latch mode and wait condition are independent choices: READ versus WRITE answers *what access is allowed*; conditional versus unconditional answers *what to do when that access cannot be granted immediately*.
+Before following the hit and miss branches, read a fix call as three independent
+answers. The fetch mode describes what the caller believes about the logical page.
+The latch mode describes how the returned bytes may be used. The condition says
+what to do only when that access conflicts with somebody else.
+
+![Fetch mode, latch mode, and latch condition combining into one fix request](../assets/fix-request-inputs.svg)
 
 | Choice | Question answered | Core examples and consequence |
 |---|---|---|
-| `PAGE_FETCH_MODE` | What does the caller know about the page's allocation or possible residency? | `OLD_PAGE` expects an allocated existing page. `NEW_PAGE` says allocation already happened and permits materialization without reading old bytes. `OLD_PAGE_IF_IN_BUFFER` asks only for an already-resident page. |
-| `PGBUF_LATCH_MODE` | How may this borrower access the resident bytes? | `PGBUF_LATCH_READ` permits compatible readers; `PGBUF_LATCH_WRITE` requests exclusive page-content access. This choice does not say whether the call waits. |
-| `PGBUF_LATCH_CONDITION` | May an incompatible request wait? | `PGBUF_CONDITIONAL_LATCH` rejects rather than joining the latch wait path. `PGBUF_UNCONDITIONAL_LATCH` permits the wait path, although a transaction configured for zero wait is converted to conditional behavior. |
+| `PAGE_FETCH_MODE` | What kind of page is this, and may a miss materialize it? | Select one of the seven modes in the next table. |
+| `PGBUF_LATCH_MODE` | May the borrower read shared bytes or change them exclusively? | A public fix accepts READ or WRITE. |
+| `PGBUF_LATCH_CONDITION` | May an incompatible request sleep? | Conditional returns now; unconditional may enter the wait path. |
+
+### All seven fetch modes
+
+Fetch mode is a correctness statement from the caller. It is not a ranking from
+weak to strong, and it does not select READ or WRITE.
+
+| Fetch mode | Caller statement | Resident hit | Buffer miss or deallocated page |
+|---|---|---|---|
+| `OLD_PAGE` | “This VPID is an allocated, existing page.” | Use the resident image after validation. | Materialize existing bytes from DWB or the data volume. A `PAGE_UNKNOWN` image is an error. |
+| `NEW_PAGE` | “Allocation already produced this new VPID.” | A leftover resident mapping may be reused; debug checks require any old unflushed generation to be dirty. | Claim a BCB/frame and initialize it without reading old page bytes. `PAGE_UNKNOWN` is expected until the caller initializes the page type. |
+| `OLD_PAGE_IF_IN_BUFFER` | “I need this page only if it is already resident.” | Grant the requested latch if possible. The post-latch switch permits a resident `PAGE_UNKNOWN` image, so success alone does not assert a normal allocated page. | Return `NULL` immediately after the hash miss; do not claim a BCB and do not read the volume. |
+| `OLD_PAGE_PREVENT_DEALLOC` | “This is an existing page, and the gap before latch grant must not race with deallocation.” | Register a temporary BCB avoid-deallocation count before latch acquisition and remove it after the fix succeeds. | Materialize like `OLD_PAGE`, using the same temporary bridge around latch acquisition. This mode is used by ordered/heap protocols; the returned fix itself then stabilizes the page. |
+| `OLD_PAGE_DEALLOCATED` | “A recovery operation needs to access an image marked `PAGE_UNKNOWN`.” | The common post-latch check allows the deallocated image to be returned. | It may be materialized, then returned even when its type is `PAGE_UNKNOWN`. The representative caller is deallocation undo, which restores the old type. The generic fix path does not reject a normal type solely because this mode was chosen. |
+| `OLD_PAGE_MAYBE_DEALLOCATED` | “The page usually exists, but concurrent/recovery history may have deallocated it.” | Normal pages are returned. It is also eligible for the lock-free unconditional READ attempt. | Materialize if needed. If the protected image is `PAGE_UNKNOWN`, the function emits the bad-page warning, immediately unfixes its temporary grant, and returns `NULL`; the caller receives no debt. |
+| `RECOVERY_PAGE` | “Recovery must accept whatever allocation state is present.” | Accept a normal, new/immature, or deallocated image. | Skip the ordinary allocation-validity precheck, materialize as needed, and accept `PAGE_UNKNOWN`. Recovery callers normally request WRITE because redo/undo changes bytes. |
+
+The table describes the pinned implementation, including deliberately specialized
+modes. Most ordinary callers should be explainable with `OLD_PAGE` or `NEW_PAGE`;
+choosing a deallocation or recovery mode requires the corresponding owner protocol.
+
+### The five latch-mode enum values
+
+The enum is used in several structures, but `pgbuf_fix()` accepts only two values
+as its `request_mode`.
+
+| Latch mode | Meaning in a BCB or request | Valid `pgbuf_fix()` request? |
+|---|---|---|
+| `PGBUF_NO_LATCH` | In `PGBUF_BCB.atomic_latch.latch_mode`, the resident page currently has no granted READ/WRITE latch. In other owning fields it can mean initialization or a cancelled waiter. | No. |
+| `PGBUF_LATCH_READ` | Shared page-content access. Multiple compatible readers may hold it; queued writers and current ownership can change whether a new reader grants immediately. | Yes. |
+| `PGBUF_LATCH_WRITE` | Exclusive page-content access. Other threads' READ/WRITE requests conflict; the current owner has defined nested/re-entry paths. | Yes. |
+| `PGBUF_LATCH_FLUSH` | A queue request used to wait for flush completion. A page is never fixed with a granted FLUSH content latch. | No. |
+| `PGBUF_LATCH_INVALID` | The BCB has no usable resident identity, as on the invalid/free list or during invalidation. | No. |
+
+Always name the owning field when explaining `PGBUF_NO_LATCH`; the complete
+[NO_LATCH audit](../reference/no-latch-semantics-audit.md) separates the BCB idle
+state, waiter cancellation tombstone, and watcher initialization value.
+
+### Conditional and unconditional conflict handling
+
+`PGBUF_CONDITIONAL_LATCH` means “do not sleep for an incompatible latch.” It does
+not make a compatible grant weaker. `PGBUF_UNCONDITIONAL_LATCH` means “the caller
+permits the wait path if needed,” not “always sleep.” A compatible request still
+grants immediately. Moreover, a transaction configured with zero wait converts an
+unconditional request to conditional behavior before lookup.
 
 Expected non-acquisition is part of some owner protocols. On an `OLD_PAGE_IF_IN_BUFFER` miss, `pgbuf_fix_release()` returns `NULL` because the caller explicitly declined materialization. A conditional conflict can also return without a grant. In either case there is no successful acquisition and therefore no release debt. `NULL` alone is not one universal error category: the caller must interpret it using the fetch/wait intent and the error contract for that interface.
 
-**Pinned-source evidence:** the three input types are distinct at `src/storage/page_buffer.h:172-203`; validation and zero-wait conversion are visible at `src/storage/page_buffer.c:2260-2332`; the resident-only miss returns `NULL` at `src/storage/page_buffer.c:2408-2413`; and conditional rejection occurs without a grant at `src/storage/page_buffer.c:6560-6594`.
+**Pinned-source evidence:** all fetch, latch, and condition enum values are at
+`src/storage/page_buffer.h:172-203`; accepted public request modes, validation, and
+zero-wait conversion are at `src/storage/page_buffer.c:2285-2332`; lock-free READ
+eligibility and the resident-only miss are at `2358-2413`; avoid-deallocation
+registration spans `2474-2566`; deallocated-image outcomes are at `2572-2615`;
+conditional rejection occurs without a grant at `src/storage/page_buffer.c:6560-6594`; the representative
+deallocation-undo caller is at `15253-15285`.
 
 ## One trace, two preparation paths, one postcondition
 
@@ -92,7 +147,7 @@ Read the three lanes against one time axis. Thread A registers the lock record f
 
 The common caller-visible postcondition is therefore independent of preparation: the requested page is resident, the requested latch is granted, this acquisition is represented in both ledgers, and one borrowed `PAGE_PTR` is returned with one release debt.
 
-### Why three identity checks are not redundant
+### The distinct job of each identity check
 
 ![Three identity checks closing three protection gaps](../assets/identity-check-timeline.svg)
 
@@ -125,7 +180,7 @@ Pinned-source trace:
 A miss is the longest normal path, so it is where a performance question usually lands. The pinned order is:
 
 1. **Register the load lock.** Under the hash-anchor mutex, the thread either becomes load owner or finds an existing record and sleeps as a waiter. A load waiter's sleep has no timeout of its own; it relies on the owner's publication or on interruption.
-2. **Allocate a frame.** The owner takes a BCB from the invalid list, else searches the LRU lists for an eligible victim, else waits to be assigned one. This is the step that can block when the pool is under pressure; [Replacement Policy and Background Progress](../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop) owns that loop.
+2. **Allocate a frame.** The owner takes a BCB from the invalid list, else searches the LRU lists for an eligible victim, else waits to be assigned one. This is the step that can block when the pool is under pressure; [Replacement Policy and Background Progress](../advanced/replacement-progress.md#what-happens-when-every-scan-fails) owns that loop.
 3. **Read the bytes.** `OLD_PAGE` consults DWB first and otherwise reads the data volume; the `PSTAT_PB_NUM_IOREADS` counter increments before that choice is made. `NEW_PAGE` initializes the frame instead.
 4. **Decrypt if needed.** A page under transparent data encryption is decrypted in place.
 5. **Confirm identity, grant, publish.** Identity recheck 2, the latch grant, insertion into the hash chain, and release of the load lock, which wakes every load waiter.

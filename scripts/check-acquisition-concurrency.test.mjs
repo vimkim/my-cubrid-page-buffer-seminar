@@ -58,7 +58,7 @@ test("the promotion outcomes are visual and distinguish thread ownership from pa
   const svg = await readFile(path.join(assetDir, "promotion-outcomes.svg"), "utf8");
   const aAt = m.indexOf('## Blocking promotion uses queue priority to preserve page state');
   const vAt = m.indexOf('](../assets/promotion-outcomes.svg)');
-  const bAt = m.indexOf('## Ordered watchers');
+  const bAt = m.indexOf('## Ordered fix: release later pages before waiting for an earlier one');
   assert.ok(aAt > 0, '## Blocking promotion uses queue priority to preserve page state');
   assert.ok(vAt > aAt, "visual follows its section heading");
   assert.ok(bAt > vAt, "visual sits before the next section");
@@ -73,22 +73,59 @@ test("the promotion outcomes are visual and distinguish thread ownership from pa
   for (const label of ["In-place promotion", "Conditional failure: ER_PAGE_LATCH_PROMOTE_FAIL", "Blocking promotion", "Woken with WRITE", "Blocking failure", "Internal ownership gap", "no second debt"]) assert.ok(svg.includes(label), label);
 });
 
-test("the ordered-fix visual shows the canonical order, the release rule, and the refix", async () => {
-  const m = await readFile(page, "utf8");
-  const svg = await readFile(path.join(assetDir, "ordered-watcher-refix.svg"), "utf8");
-  const aAt = m.indexOf('## Ordered watchers: multi-page access as an owner protocol');
+test("the two promotion conditions have a separate decision visual", async () => {
+  const [m, svg] = await Promise.all([
+    readFile(page, "utf8"),
+    readFile(path.join(assetDir, "promotion-condition-choice.svg"), "utf8"),
+  ]);
+  assert.match(m, /#### Choosing between the two promotion conditions/);
+  assert.match(m, /promotion-condition-choice\.svg/);
+  assert.match(m, /PGBUF_PROMOTE_ONLY_READER.*ER_PAGE_LATCH_PROMOTE_FAIL/is);
+  assert.match(m, /PGBUF_PROMOTE_SHARED_READER.*queue head.*sleep/is);
+  assert.match(m, /condition therefore controls the \*\*contended\*\*\s+path/is);
+  for (const label of [
+    "PGBUF_PROMOTE_ONLY_READER",
+    "PGBUF_PROMOTE_SHARED_READER",
+    "Second-promoter rule",
+    "in-place success",
+    "queue WRITE(k) at the head",
+  ]) assert.ok(svg.includes(label), label);
+  assert.match(svg, /<svg[^>]+viewBox=/);
+  assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
+});
+
+test("ordered fix starts from deadlock, separates its structures, and bounds the reorder work", async () => {
+  const [m, deadlockSvg, ledgerSvg, refixSvg, staleSvg] = await Promise.all([
+    readFile(page, "utf8"),
+    readFile(path.join(assetDir, "ordered-fix-deadlock-break.svg"), "utf8"),
+    readFile(path.join(assetDir, "ordered-fix-ledger-layers.svg"), "utf8"),
+    readFile(path.join(assetDir, "ordered-watcher-refix.svg"), "utf8"),
+    readFile(path.join(assetDir, "ordered-fix-stale-observation.svg"), "utf8"),
+  ]);
+  const aAt = m.indexOf('## Ordered fix: release later pages before waiting for an earlier one');
   const vAt = m.indexOf('](../assets/ordered-watcher-refix.svg)');
   const bAt = m.indexOf('## Review checklist');
-  assert.ok(aAt > 0, '## Ordered watchers: multi-page access as an owner protocol');
+  assert.ok(aAt > 0, 'ordered-fix heading');
   assert.ok(vAt > aAt, "visual follows its section heading");
   assert.ok(bAt > vAt, "visual sits before the next section");
+  for (const asset of ["ordered-fix-deadlock-break.svg", "ordered-fix-ledger-layers.svg", "ordered-fix-stale-observation.svg"]) assert.ok(m.includes(`](../assets/${asset})`), asset);
+  assert.match(m, /holder.*head-inserted singly linked.*position does not represent page rank/is);
+  assert.match(m, /conditional first attempt.*avoids the release, sort, and refix/is);
+  assert.match(m, /temporary holder array.*capacity of 64.*not a general transaction limit/is);
+  assert.match(m, /O\(H \+ W\)/);
+  assert.match(m, /O\(\(M\+1\) log\(M\+1\)\)/);
   assert.match(m, /!\[Ordered fix: conditional attempt, release of pages that sort after the request, refix in canonical order\]\(\.\.\/assets\/ordered-watcher-refix\.svg\)/);
-  assert.match(m, /`PGBUF_ORDERED_HEAP_HDR` before `PGBUF_ORDERED_HEAP_NORMAL` before `PGBUF_ORDERED_HEAP_OVERFLOW`/);
+  assert.match(m, /`PGBUF_ORDERED_HEAP_HDR=0`.*`PGBUF_ORDERED_HEAP_NORMAL=1`.*`PGBUF_ORDERED_HEAP_OVERFLOW=2`/s);
   assert.match(m, /sorts after the request is fully unfixed with avoid-deallocation registered/i);
   assert.match(m, /Only those released pages come back with `page_was_unfixed` set/);
-  assert.match(svg, /<svg[^>]+viewBox=/);
-  assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
-  assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
-  assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
-  for (const label of ["CANONICAL ORDER", "Conditional fix of R", "keep it fixed", "page_was_unfixed", "Fix R unconditionally", "Refix released pages in order", "Partial failure", "HEAP_HDR"]) assert.ok(svg.includes(label), label);
+  for (const svg of [deadlockSvg, ledgerSvg, refixSvg, staleSvg]) {
+    assert.match(svg, /<svg[^>]+viewBox=/);
+    assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
+    assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
+    assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
+  }
+  for (const label of ["CANONICAL ORDER", "Conditional fix of R", "keep it fixed", "page_was_unfixed", "Fix R unconditionally", "Refix released pages in order", "Partial failure", "HEAP_HDR"]) assert.ok(refixSvg.includes(label), label);
+  for (const label of ["latch cycle", "release B", "wait-for cycle is gone"]) assert.ok(deadlockSvg.includes(label), label);
+  for (const label of ["holder for BCB", "watcher H", "temporary PGBUF_HOLDER_INFO array", "qsort"] ) assert.ok(ledgerSvg.includes(label), label);
+  for (const label of ["continuously fixed", "fully unfixed window", "Recompute N120", "page_was_unfixed = true"]) assert.ok(staleSvg.includes(label), label);
 });

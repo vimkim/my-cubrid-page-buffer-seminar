@@ -18,7 +18,7 @@ Its safety argument depends on existing invariants: a positive `fcnt` excludes v
 
 Source: `src/storage/page_buffer.c:7725-7786`. The missing post-CAS VPID recheck is tracked as proof obligation `VS-14` by the [uncertainty registry](../unresolved-or-version-sensitive-findings.md); this page does not change that status.
 
-## VPID-keyed load serialization: identity ownership, not an I/O count
+## VPID-keyed load serialization establishes one identity owner
 
 On a miss, a VPID-keyed buffer-lock protocol chooses one resident-identity owner. The owner prepares a provisional BCB, loads/validates bytes, publishes the hash mapping, and wakes waiters; waiters retry lookup rather than publish a second resident mapping.
 
@@ -40,6 +40,36 @@ There are two different singly linked lists, and a request means something diffe
 | Latch granted | `PGBUF_HOLDER_ANCHOR.thrd_hold_list` → `PGBUF_HOLDER.thrd_link` | A holder entry owned by the successful thread | Active ownership. `bufptr` identifies the BCB and `fix_count` attributes nested debt to this thread. |
 
 The transition is deliberate. `pgbuf_block_bcb()` writes the request fields into the current `THREAD_ENTRY`, links that entry into the BCB queue, releases the BCB mutex, and sleeps. At a zero-crossing, the releasing thread updates the BCB's atomic latch tuple, removes the waiter from the queue, clears that waiter's `next_wait_thrd`, and wakes it. The resumed thread then allocates or reuses a `PGBUF_HOLDER`, prepends it to its own active list, and returns success. The BCB stores the global latch mode, global `fcnt`, `waiter_exists`, and the queue head; it has no reverse list of holders or transactions.
+
+### Read `PGBUF_NO_LATCH` together with its owning field
+
+`PGBUF_NO_LATCH` is an actively used enum value, but three different records
+store it for three different reasons:
+
+| Owning field | Meaning of `PGBUF_NO_LATCH` |
+|---|---|
+| `PGBUF_BCB.atomic_latch.latch_mode` | No READ or WRITE page-content latch is currently granted. A resident page normally stays in this stable idle mode after final unfix. |
+| `THREAD_ENTRY.request_latch_mode` | Before a request, it is the default; while still queue-linked, timeout/interrupt writes it as a cancellation tombstone. It is not a page-latch request or ownership record. |
+| `PGBUF_WATCHER.latch_mode` | Initialization metadata before a successful ordered fix records READ or WRITE. `watcher.pgptr`, not this value alone, tells whether the watcher is active. |
+
+For a BCB, final unfix normally produces the stable tuple
+`latch_mode=NO_LATCH, fcnt=0`. It can remain resident in LRU1, LRU2, or LRU3 and
+can be clean or DIRTY. During zero-count handoff it can also briefly have a
+nonempty queue. Therefore BCB `NO_LATCH` does not imply free, VOID, clean,
+queue-empty, mutex-free, or victimizable.
+
+The free/unbound state is different: null VPID, `PGBUF_LATCH_INVALID`, and
+INVALID-list membership. Safe victimization needs a resident BCB in LRU3 plus
+clean/flag eligibility, zero owners and no waiters, a successful BCB try-lock,
+and a protected recheck. `NO_LATCH` is one necessary concurrency fact, not the
+whole decision.
+
+`PGBUF_LATCH_FLUSH` is likewise field-sensitive. It is a synchronous flusher's
+`THREAD_ENTRY.request_latch_mode` while that request waits. A BCB's in-flight
+write is the `PGBUF_BCB_FLUSHING` flag; the BCB is never fixed with a granted
+FLUSH page latch.
+
+Source: enum and watcher initialization at `src/storage/page_buffer.h:124-160,189-197`; request initialization at `src/thread/thread_entry.cpp:85-111`; BCB grant/final-unfix at `src/storage/page_buffer.c:6277-6703`; cancellation and handoff at `7281-7590`; victim checks at `9255-9475`. Full evidence: [`PGBUF_NO_LATCH` semantics audit](../reference/no-latch-semantics-audit.md).
 
 ### READ and WRITE with an effective unconditional condition
 
@@ -71,6 +101,27 @@ The general fix API and the promotion API answer different caller intentions. Su
 | If other readers exist and waiting is allowed | Remove T's READ contribution, append an ordinary request at the queue tail, and carry request count `2 + 1 = 3`. | Remove T's READ contribution, insert a promoter at the queue head, and carry the unchanged count `2`. |
 | Caller-selectable condition | The fix condition controls whether an incompatible acquisition may wait. | `PGBUF_PROMOTE_ONLY_READER` preserves READ ownership and reports promotion failure; `PGBUF_PROMOTE_SHARED_READER` may release and wait. |
 | Interface/failure signal | Starts from a VPID and returns the result of another fix acquisition. | Starts from the caller's existing `PAGE_PTR *`; a blocking failure can null that pointer, exposing that the old borrowed lifetime ended. |
+
+#### Choosing between the two promotion conditions
+
+![Only-reader and shared-reader promotion conditions from the same READ starting state](../assets/promotion-condition-choice.svg)
+
+Both conditions take the same fast path when this thread owns every current fix:
+the BCB changes from READ to WRITE in place and the holder keeps the same
+`fix_count`. The condition matters when another reader also owns the BCB.
+
+| Starting state | `PGBUF_PROMOTE_ONLY_READER` | `PGBUF_PROMOTE_SHARED_READER` |
+|---|---|---|
+| This thread owns every current fix | Promote READ → WRITE in place. No sleep and no debt change. | The same in-place result. |
+| Another reader exists; no promoter waits | Return `ER_PAGE_LATCH_PROMOTE_FAIL` immediately. Keep the caller's READ holder, pointer, and debt. | Subtract the caller's `k` fixes, remove its holder, insert WRITE(`k`) at the queue head, and sleep. On grant, recreate a WRITE holder with the same count `k`. |
+| A promoter is already first in the queue | Reject this second promotion and keep the current caller's READ ownership. | Reject this second promotion and keep the current caller's READ ownership. |
+
+Use `ONLY_READER` when sleeping while related pages are held could form a
+multi-page latch cycle and the caller has a restart/skip path. Use
+`SHARED_READER` when the caller deliberately accepts the temporary ownership gap
+and needs the first promoter's queue-head handoff to preserve the inspected page
+state on successful return. The condition therefore controls the **contended**
+path; it does not change the only-reader fast path.
 
 That is why the dedicated function is not redundant even though the general latch helper contains an immediate READ-to-WRITE branch. The helper's branch implements the **new fix acquisition** contract. The dedicated API implements an **in-place-or-transferred upgrade of existing ownership**, supplies promotion-specific policy, preserves the old debt count, and makes the possible unfixed window visible to the caller. B-tree and file-manager callers use it after examining a page under READ and later discovering that mutation requires WRITE; on failure they can restart or refix through an explicit WRITE path.
 
@@ -124,7 +175,7 @@ Suppose one thread holds a WRITE latch and one hundred other threads request WRI
 
 1. **Queue.** Each incompatible request is appended to the BCB's `next_wait_thrd` list in arrival order and sets the atomic latch's `waiter_exists` bit. A blocking promoter is the one exception: it is inserted at the head, and the source asserts that at most one promoter waits per BCB.
 2. **Sleep with a bound.** Each waiter sleeps in `pgbuf_timed_sleep()` with a timeout taken from the hidden server parameter `page_latch_timeout_in_msecs` (300 seconds at the pinned revision); a transaction configured for zero wait was already converted to conditional behavior and never queues. The sleep is interrupt-aware for worker threads.
-3. **Hand off at zero.** When the holder unfixes and global `fcnt` reaches zero (the zero-crossing that starts a grant scan), the releasing thread sets `NO_LATCH` and calls `pgbuf_wakeup_reader_writer()` while still holding the BCB mutex. It walks from the head, removes entries whose request mode was reset to `NO_LATCH` by timeout/interrupt, and leaves FLUSH waiters in place. If the first grantable reader is selected, the tuple becomes READ; the scan continues through the rest of the list, leaves incompatible WRITE entries linked, and grants later READ entries too. If the first grantable request is WRITE, the tuple becomes WRITE and the scan stops, so only that writer is granted. For each grant the waker adds `request_fix_count` to global `fcnt`, removes that `THREAD_ENTRY`, clears its queue link, and wakes it; the resumed thread then records its own holder.
+3. **Hand off at zero.** When the holder unfixes and global `fcnt` reaches zero (the zero-crossing that starts a grant scan), the releasing thread sets the BCB field `atomic_latch.latch_mode=NO_LATCH` and calls `pgbuf_wakeup_reader_writer()` while still holding the BCB mutex. It walks from the head, removes cancelled entries whose `THREAD_ENTRY.request_latch_mode` was overwritten with the `NO_LATCH` tombstone by timeout/interrupt, and leaves FLUSH waiters in place. If the first grantable reader is selected, the tuple becomes READ; the scan continues through the rest of the list, leaves incompatible WRITE entries linked, and grants later READ entries too. If the first grantable request is WRITE, the tuple becomes WRITE and the scan stops, so only that writer is granted. For each grant the waker adds `request_fix_count` to global `fcnt`, removes that `THREAD_ENTRY`, clears its queue link, and wakes it; the resumed thread then records its own holder.
 4. **Keep newcomers honest.** While blocked readers or writers remain, `waiter_exists` stays set, so a newly arriving non-holder READ blocks even though the latch mode might be compatible. A thread that already holds the BCB may still re-enter.
 5. **Exit without debt.** A timed-out waiter is treated as a page-latch deadlock victim: `ER_PAGE_LATCH_TIMEDOUT` is raised, followed by `ER_LK_UNILATERALLY_ABORTED` for a transaction with infinite lock wait or `ER_LK_PAGE_TIMEOUT` for a finite one. An interrupted waiter removes itself from the queue. Neither outcome creates a fix debt, and neither leaves the caller with a page pointer.
 
@@ -175,9 +226,38 @@ The single-promoter rule is part of the continuity proof. A second promoter is r
 
 Source: promotion transfer and head insertion at `src/storage/page_buffer.c:2842-3050,7041-7099`; zero-crossing handoff at `src/storage/page_buffer.c:7452-7590`. B-tree consumes pre-promotion observations after success at `src/storage/btree.c:28304-28409,28627-28710`; restart policy is at `src/storage/btree.c:28365-28393,28638-28696`.
 
-## Ordered watchers: multi-page access as an owner protocol
+## Ordered fix: release later pages before waiting for an earlier one
 
-`PGBUF_WATCHER` adds ordering metadata and state to the normal page debt. The caller chooses a rank and group from its access method; page buffer does not invent the semantic order.
+Ordered fix solves a multi-page latch deadlock. Suppose the canonical order is `A < B`: T1 already holds B and wants A, while T2 holds A and wants B. If both requests sleep unconditionally, each waits for the other forever. `pgbuf_ordered_fix()` first tries without sleeping. When T1 discovers that A is unavailable, it releases its later-ranked B before it waits for A. T2 can then finish with B, and T1 can acquire A and refix B in the one permitted direction.
+
+![Two-page latch cycle and the release-before-sleep rule that breaks it](../assets/ordered-fix-deadlock-break.svg)
+
+The rule is precise: a thread may retain earlier pages while waiting for a later page, but before waiting for an earlier page it releases every reorderable page that comes later. The page-buffer Module compares the access method's keys and moves ownership; it does not decide the semantic order itself.
+
+### The common path leaves the held set in place
+
+The entry decision separates four paths:
+
+| Current situation | First ordinary fix | Result |
+|---|---|---|
+| No other BCB is held, or the only holder is for this same VPID | Unconditional | Ordinary fix, then attach the watcher |
+| Other pages are held and the request is immediately compatible | Conditional | Attach the watcher; no old page is released |
+| The conditional attempt ends in a terminal error or zero-wait rejection | Conditional | Return the error; do not reorder and wait |
+| The conditional attempt would block and waiting is allowed | Conditional, then slow path | Select later pages, release them, sort a temporary array, and refix |
+
+This conditional first attempt is the inexpensive case: it avoids the release, sort, and refix work whenever the new latch is immediately available.
+
+### Holder, watcher, and the temporary array are separate structures
+
+`PGBUF_WATCHER` adds ordering metadata and state to the normal page debt. It is not a node that permanently sorts the thread's holder list.
+
+![Thread holder list, per-holder watcher chains, and the temporary sorted ordered-fix array](../assets/ordered-fix-ledger-layers.svg)
+
+- The thread's active-holder list is a head-inserted singly linked ownership list with one aggregate holder per thread/BCB pair. Its position does not represent page rank.
+- Each holder has a doubly linked watcher chain, with one movable receipt per ordered fix represented on that page. Appending a watcher uses the holder's tail and is constant-time.
+- Only the slow path copies released-page facts into a bounded `PGBUF_HOLDER_INFO[]`, appends the request, and calls `qsort()` on that temporary array.
+
+The helper discovers already-held ordered pages by walking the holder list and then their watcher chains. A page selected for release must have complete watcher coverage: its holder `fix_count` must equal `watch_count`. Otherwise the helper could not rebuild every caller-visible receipt after fully unfixing the page.
 
 ### Ordered-fix input and output contract
 
@@ -205,15 +285,34 @@ The ordered protocol can:
 
 ![Ordered fix: conditional attempt, release of pages that sort after the request, refix in canonical order](../assets/ordered-watcher-refix.svg)
 
-The canonical order is the access method's, not the page buffer's: pages sort by group (the heap header `VPID`), then by rank (`PGBUF_ORDERED_HEAP_HDR` before `PGBUF_ORDERED_HEAP_NORMAL` before `PGBUF_ORDERED_HEAP_OVERFLOW`), then by `VPID`, and pages without a group sort last. When a conditional fix of the new page fails, every held watched page that sorts after the request is fully unfixed with avoid-deallocation registered on its BCB, the request is fixed unconditionally, and the released pages are refixed in sorted order. Only those released pages come back with `page_was_unfixed` set.
+The canonical order is the access method's, not the page buffer's: pages sort by group (the heap header `VPID`), then by rank (`PGBUF_ORDERED_HEAP_HDR=0`, `PGBUF_ORDERED_HEAP_NORMAL=1`, `PGBUF_ORDERED_HEAP_OVERFLOW=2`), then by `VPID`, and pages without a group sort last. When a conditional fix of the new page fails, every held watched page that sorts after the request is fully unfixed with avoid-deallocation registered on its BCB, the request is fixed unconditionally, and the released pages are refixed in sorted order. Only those released pages come back with `page_was_unfixed` set.
 
 More concretely, the fast case uses an unconditional fix when the thread holds no other page (or only another fix of the same page); otherwise it first tries conditionally so it never waits while holding a potentially conflicting set. A successful attempt attaches `req_watcher` and returns. After a conditional rejection, the helper validates that every reorderable fix has a watcher, saves each page's watcher count, strongest latch mode, type, group, rank, and identity, and leaves pages that already sort before the request fixed. It registers avoid-deallocation before fully unfixing only the pages that sort after the request. If the request's group was unknown, it may temporarily fix the heap page to derive the `HFID`/header VPID, then includes the request in the saved set. The set is sorted and acquired unconditionally in canonical order; old fix counts and watcher chains are rebuilt, avoid-deallocation is balanced, and every actually released watcher retains `page_was_unfixed=true`.
 
 If a refix fails, the helper removes the requested fix if it acquired one, clears outstanding avoid-deallocation registrations, and returns an error. It cannot make the output set atomic: earlier pages in sorted order may already be refixed while later watcher pointers are still `NULL`. That is why the error contract requires a watcher-by-watcher ownership audit.
 
-When a watcher reports `page_was_unfixed`, page-local observations—including record pointers, slots, free-space decisions, and headers—may be stale. The access method must reconstruct and revalidate them after refix; restoring the pointer is not enough.
+![A continuously protected header and a released normal page whose former observations become stale](../assets/ordered-fix-stale-observation.svg)
+
+When a watcher reports `page_was_unfixed`, page-local observations—including record pointers, slots, free-space decisions, and headers—may be stale. The access method must reconstruct and revalidate them after refix; restoring the pointer is not enough. A watcher that remained fixed preserves its own page-local observation lifetime, although cross-page conclusions that depended on a released page still require revalidation.
+
+### Structural cost and fixed bounds
+
+Let `H` be active holders on the thread's singly linked list, `W` the watcher nodes visited across them, `M` the old pages selected for release, and `F` the fix receipts on those released pages.
+
+| Work | Structure | Bookkeeping cost |
+|---|---|---:|
+| Choose conditional versus unconditional entry | holder-list head and possibly its next link | `O(1)` |
+| Find the new holder after immediate success | singly linked holder list | `O(H)` worst case; a newly created holder is normally at the head |
+| Validate and classify the slow-path set | holders plus watcher chains | `O(H + W)` |
+| Sort the request and released pages | temporary array with `qsort()` | average `O((M+1) log(M+1))` comparisons |
+| Release and rebuild ownership | ordinary unfix/fix per represented receipt | `F` unfixes, about `F+1` fixes, and `O(F)` watcher attachment |
+| Ordered unfix by the caller | holder lookup plus watcher search from the tail | `O(H + W_page)` worst case |
+
+These are only local bookkeeping bounds. An unconditional refix may sleep, and a miss may perform storage I/O, so wall-clock time is not bounded by `H`, `W`, and `M`. The temporary holder array and per-page watcher array have a pinned compile-time capacity of 64; that is an internal bounded-work assumption, not a general transaction limit or the maximum number of holders a thread may own.
 
 Source: watcher initialization and interface at `src/storage/page_buffer.h:90-164,205-258,282-352`; ordered comparison, fix, and cleanup at `src/storage/page_buffer.c:12186-13063`; ordered callback at `src/storage/page_buffer.c:13065-13531`. Heap’s destination/watcher owner protocol is visible at `src/storage/heap_file.c:20493-20664`; B-tree’s promotion/restart caller is visible at `src/storage/btree.c:28365-28393`.
+
+Evidence audit: [Ordered Fix from First Principles](../reference/ordered-fix-first-principles-audit.md).
 
 ## Review checklist
 

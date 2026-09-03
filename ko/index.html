@@ -73,8 +73,20 @@
       <article class="reference-card full">
         <span class="status waiting">Core 심화</span>
         <h3>Lesson 6A · Page-buffer daemon 이해하기</h3>
-        <p>각 daemon의 trigger, shared input, loop, output, lock, cost를 살펴보고 선택적인 page-flush-to-post-flush handoff를 추적합니다.</p>
+        <p>generic daemon lifecycle, recovery gate, start-to-start cadence, wake semantics와 네 역할의 개요를 배웁니다.</p>
         <p><a href="lessons/0006a-understand-page-buffer-daemons.html">Lesson 6A 미리 보기 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Core 심화</span>
+        <h3>Lesson 6B · page-flush와 post-flush 따라가기</h3>
+        <p>allocator pressure에서 cold-page selection, WAL, generation submission, 조건부 8,192-entry handoff, protected recheck, allocator wake까지 추적합니다.</p>
+        <p><a href="lessons/0006b-follow-page-flush-handoff.html">Lesson 6B 미리 보기 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Core 심화</span>
+        <h3>Lesson 6C · maintenance와 I/O pacing 따라가기</h3>
+        <p>100 ms replacement-policy attempt와 50 ms post-write token refresh를 기본 수치 및 source boundary와 함께 구분합니다.</p>
+        <p><a href="lessons/0006c-follow-maintenance-and-pacing.html">Lesson 6C 미리 보기 →</a></p>
       </article>
       <article class="reference-card full">
         <span class="status waiting">읽었다고 보고됨</span>
@@ -108,9 +120,15 @@
       </article>
       <article class="reference-card full">
         <span class="status waiting">Advanced 준비됨</span>
-        <h3>Lesson 12 · replacement progress 증명하기</h3>
-        <p>fairness를 보장한다고 과장하지 않으면서, free BCB가 없는 loop를 policy search, direct reservation, protected revocation, generation-aware post-flush, bounded exit까지 추적합니다.</p>
+        <h3>Lesson 12 · BCB 하나로 replacement 이해하기</h3>
+        <p>기본 pool 수를 계산하고 INVALID와 VOID를 정의한 뒤, 고정된 BCB/frame pair 하나의 배치, 냉각, victim 검사와 rebind를 따라갑니다.</p>
         <p><a href="lessons/0012-prove-replacement-progress.html">Lesson 12 미리 보기 →</a></p>
+      </article>
+      <article class="reference-card full">
+        <span class="status waiting">Advanced 보충 준비됨</span>
+        <h3>Lesson 12A · 비활성 AOUT history 이해하기</h3>
+        <p>AOUT을 page copy, active 2Q policy, victim authorization으로 혼동하지 않고 비활성 ghost admission metadata로 읽습니다.</p>
+        <p><a href="lessons/0012a-understand-aout-ghost-history.html">Lesson 12A 미리 보기 →</a></p>
       </article>
       <article class="reference-card full">
         <span class="status waiting">Advanced 준비됨</span>
@@ -168,7 +186,9 @@
       <article class="course-item"><span class="step">4A</span><div><span class="status">준비됨</span><h3>Holder anchor와 entry</h3><p>Per-thread list head, linear BCB lookup, nested-count reuse, entry recycling, cost boundary.</p></div><a href="lessons/0004a-understand-holder-anchor.html">열기 →</a></article>
       <article class="course-item"><span class="step">5</span><div><span class="status">준비됨</span><h3>correctness를 완성하는 caller</h3><p>logical lock, validation, mutation, recovery logging, page LSA, dirty transition, 모든 exit의 cleanup.</p></div><a href="lessons/0005-audit-a-logged-mutation.html">열기 →</a></article>
       <article class="course-item"><span class="step">6</span><div><span class="status">준비됨</span><h3>한 generation flush하기</h3><p>Flush actor, copied generation, WAL gate, DWB/direct-write boundary, 두 LSA, retryable failure, 동시 re-dirty.</p></div><a href="lessons/0006-flush-one-generation.html">열기 →</a></article>
-      <article class="course-item"><span class="step">6A</span><div><span class="status">준비됨</span><h3>Page-buffer daemon control loop</h3><p>동등한 thread 네 개의 trigger/shared structure, flush/post-flush handoff, structural cost, pinned maintenance anomaly.</p></div><a href="lessons/0006a-understand-page-buffer-daemons.html">열기 →</a></article>
+      <article class="course-item"><span class="step">6A</span><div><span class="status">준비됨</span><h3>Page-buffer daemon lifecycle</h3><p>one-thread daemon model, recovery gate, timer, wake, stop/wake/join destruction.</p></div><a href="lessons/0006a-understand-page-buffer-daemons.html">열기 →</a></article>
+      <article class="course-item"><span class="step">6B</span><div><span class="status">준비됨</span><h3>Page-flush → post-flush</h3><p>pressure wake, dirty LRU3 selection, WAL/submission, 조건부 queue handoff, recheck, allocator wake.</p></div><a href="lessons/0006b-follow-page-flush-handoff.html">열기 →</a></article>
+      <article class="course-item"><span class="step">6C</span><div><span class="status">준비됨</span><h3>Maintenance와 I/O pacing</h3><p>quota epoch admission, 512 MiB 수치, token replacement, soft pacing, pinned anomaly.</p></div><a href="lessons/0006c-follow-maintenance-and-pacing.html">열기 →</a></article>
       <article class="course-item"><span class="step">7</span><div><span class="status">준비됨</span><h3>frame 하나 교체하기</h3><p>LRU selection과 allocation-progress policy보다 먼저 확인할 hard safety predicate.</p></div><a href="lessons/0007-replace-one-frame.html">열기 →</a></article>
       <article class="course-item"><span class="step">8</span><div><span class="status">준비됨</span><h3>안전한 변경 방어하기</h3><p>interface family, owner, invariant, failure unwind, caller impact, risk에 맞춘 verification.</p></div><a href="lessons/0008-defend-a-safe-change.html">열기 →</a></article>
       <article class="course-item"><span class="step">9</span><div><span class="status">첫 Lesson 준비됨</span><h3>Advanced mechanism</h3><p>concurrency, ordered access, replacement progress, recovery, lifecycle, specialized interface, proof obligation.</p></div><a href="lessons/0009-classify-latch-wait.html">열기 →</a></article>

@@ -14,7 +14,7 @@ Simple fix is restricted to read-only access in its temporary-file protocol. It 
 
 It is not a faster interchangeable `pgbuf_fix()`. It lacks the normal page-content latch, holder diagnostics, and last-unfix processing. Source: declaration warning at `src/storage/page_buffer.h:270-273`; implementation at `src/storage/page_buffer.c:2688-2811`; representative owner `src/query/query_manager.c:2733`.
 
-## Scan-copy: caller-owned snapshot, not residency
+## Scan-copy returns a caller-owned snapshot
 
 The heap scan-copy handle caches a caller-owned snapshot of page bytes for repeated scan use. It may fix a live page long enough to copy it, but the returned scan-copy pointer is not a resident fixed page and cannot be passed to `pgbuf_unfix()` or page mutation interfaces. Its lifetime and invalidation belong to heap scan state.
 
@@ -43,7 +43,7 @@ Both helpers remain restricted to their existing owner protocols. The [uncertain
 
 For recovery/lifecycle details use [Recovery, Allocation State, and Module Lifecycle](./recovery-and-lifecycle.md). For daemon progress use [Replacement Policy and Background Progress](./replacement-progress.md).
 
-## Approximate observability is not authorization
+## Approximate observability as a diagnostic hint
 
 SHOW, statistics, validation, and lock-free snapshot helpers have path-specific meanings. A counter must be tied to its increment site; dirty counts may count calls rather than unique pages, and I/O-read accounting may precede DWB-versus-volume resolution. Some waiter, prevent-deallocation, SHOW, and statistics reads are an approximate snapshot without the BCB mutex.
 

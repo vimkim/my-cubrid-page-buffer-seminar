@@ -20,8 +20,29 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+      <section class="section" id="questions-first">
+        <div class="eyebrow">01 · Begin with the three design questions</div>
+        <h2>Cost first, redesign second, lifetime third</h2>
+        <h3>1. Can the traversal become expensive?</h3>
+        <p>Yes. If this thread currently holds <code>H</code> distinct BCBs, <code>pgbuf_find_thrd_holder()</code> starts at <code>thrd_hold_list</code> and follows <code>thrd_link</code>, so one lookup is worst-case O(H). Acquiring N new distinct pages without releasing earlier pages accumulates <code>N(N−1)/2</code> comparisons, or <code>O(N²)</code>. This becomes a measured bottleneck only when profiles also show large hold depth and samples in <code>pgbuf_find_thrd_holder()</code> or <code>pgbuf_remove_thrd_holder()</code>.</p>
+        <h3>2. Can it be redesigned?</h3>
+        <p>Yes. A per-thread hash, acquisition handle, or BCB-side owner map can change lookup direction and cost. The redesign must retain equivalent <code>&lt;thread_id, fix_count&gt;</code> information: WRITE needs one owner/count, while shared READ needs one nested count per reader. The linked list can disappear; owner attribution cannot disappear while the current API semantics remain.</p>
+        <h3>3. How large is it, how many exist, and how long do they live?</h3>
+        <table>
+          <thead><tr><th>Question</th><th>Pinned answer</th></tr></thead>
+          <tbody>
+            <tr><td>Entry size</td><td>A release-build <code>PGBUF_HOLDER</code> is 56 bytes on the normal 64-bit ABI. A non-release build adds the 64 KiB <code>fixed_at</code> array, so exact size is build-dependent and roughly 65.6 KiB there.</td></tr>
+            <tr><td>Anchor size</td><td><code>PGBUF_HOLDER_ANCHOR</code> has a source static assertion for exactly 64 bytes.</td></tr>
+            <tr><td>Initial count</td><td><code>PGBUF_DEFAULT_FIX_COUNT == 7</code> reserved entries per configured thread.</td></tr>
+            <tr><td>Growth and maximum</td><td><code>PGBUF_NUM_ALLOC_HOLDER == 10</code> entries per shared expansion set. Seven and ten are capacities, not maxima; general holders grow until allocation failure or an outer protocol limit.</td></tr>
+            <tr><td>Lifetime</td><td>Storage survives until page-buffer finalization. One logical thread–BCB binding survives from first successful fix through final matching unfix; nested fixes only change <code>fix_count</code>.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified mechanism and inferred cost:</strong> layout/constants are at <code>page_buffer.c:86–94,438–497</code>; reservation/expansion at <code>5922–6086</code>; lookup/removal at <code>6090–6275</code>. The separate ordered-fix save-array limit is 64 at <code>317–319,12284–12474</code>; it is not the general holder maximum.</p>
+      </section>
+
       <section class="section" id="two-objects">
-        <div class="eyebrow">01 · One sentence first</div>
+        <div class="eyebrow">02 · Name the two objects</div>
         <h2>The anchor owns lists; an entry records one thread–BCB relationship</h2>
         <p class="big-claim"><code>PGBUF_HOLDER_ANCHOR</code> is one thread's small directory. A <code>PGBUF_HOLDER</code> is one reusable record saying “this thread currently owes N unfixes to this BCB.”</p>
         <img class="diagram" src="../../assets/holder-anchor-vs-entry.svg" alt="One holder anchor for Thread 17 pointing to active holder entries for BCB X and BCB Y and to free reusable entries">
@@ -36,7 +57,7 @@
       </section>
 
       <section class="section" id="read-snapshot">
-        <div class="eyebrow">02 · Read the snapshot</div>
+        <div class="eyebrow">03 · Read the snapshot</div>
         <h2>Two active entries can represent four successful fixes</h2>
         <p>In the diagram, Thread 17 has fixed BCB X three times and BCB Y once. Its anchor therefore has <code>num_hold_cnt = 2</code>, because it owns two <em>distinct active entries</em>. The sum of their nested debts is <code>3 + 1 = 4</code>.</p>
         <div class="callout"><strong>Do not equate the counters:</strong> <code>num_hold_cnt</code> is the active-list length; it is not the sum of holder <code>fix_count</code> values.</div>
@@ -44,8 +65,8 @@
       </section>
 
       <section class="section" id="find-existing">
-        <div class="eyebrow">03 · Answer the lookup question</div>
-        <h2>It scans by BCB address; it does not remember a position</h2>
+        <div class="eyebrow">04 · Trace one lookup</div>
+        <h2>It finds an existing holder by scanning for the BCB address</h2>
         <p class="big-claim">For another fix of BCB A, <code>pgbuf_find_thrd_holder(thread_p, bufptr_A)</code> walks the current thread's active list and compares <code>holder-&gt;bufptr == bufptr_A</code>.</p>
         <ol>
           <li>Resolve the current thread's anchor. <code>thread_p-&gt;m_holder_anchor</code> lazily caches <code>&amp;pgbuf_Pool.thrd_holder_info[thread_p-&gt;index]</code>.</li>
@@ -67,7 +88,7 @@
       </section>
 
       <section class="section" id="why-holder">
-        <div class="eyebrow">04 · Why the thread needs a ledger</div>
+        <div class="eyebrow">05 · Why the thread needs a ledger</div>
         <h2>Global fcnt protects residency; the holder attributes debt to its owner</h2>
         <p class="big-claim">The BCB can say “three fixes exist,” but it cannot say that Thread A owns two, Thread B owns one, and Thread C owns none. The holder supplies that missing attribution.</p>
         <img class="diagram" src="../../assets/why-thread-holder.svg" alt="A BCB global fix count of three separated into two debts for Thread A, one for Thread B, and none for Thread C">
@@ -82,7 +103,7 @@
             <tr><td>What must ordered multi-page fixing revisit?</td><td>A BCB-by-BCB pool scan would not preserve this thread's watcher, rank, and owner grouping.</td><td>The thread list enumerates precisely its outstanding BCB bindings and attached watcher state.</td></tr>
           </tbody>
         </table>
-        <h3>Important: the holder is not a complete release-build misuse guard</h3>
+        <h3>Release-build misuse detection has a limited boundary</h3>
         <p>If a caller omits unfix, the holder and global debt remain; the mistake is not prevented at the call site. In a release build, <code>pgbuf_unfix_all()</code> uses the thread list as a request-end cleanup safety net. Debug builds instead assert and report outstanding holders. Until cleanup, the leaked fix can keep a BCB ineligible for replacement.</p>
         <p>An extra or wrong-thread unfix is even more important to distinguish. <code>pgbuf_unlatch_thrd_holder()</code> notices a missing entry and returns <code>ER_PB_UNFIXED_PAGEPTR</code>, but the pinned ordinary release path is not fail-closed: the lock-free READ release does not consume that status, and the protected release decrements global <code>fcnt</code> before checking it. After the final valid unfix, the old <code>PAGE_PTR</code> is contractually invalid and may already name reused storage. Therefore the holder exposes ownership information, but it does not make double-unfix safe or reliably stop its state mutation at this revision.</p>
         <div class="callout warn"><strong>Precise conclusion:</strong> holder fields exist and drive normal release-build behavior; only extra debug tracking and assertions are debug-only. Misuse prevention is a separate, incomplete property routed as <code>VS-17</code>.</div>
@@ -120,7 +141,7 @@
       </section>
 
       <section class="section" id="two-links">
-        <div class="eyebrow">05 · Two list roles</div>
+        <div class="eyebrow">06 · Two list roles</div>
         <h2>The same entry storage changes lists and link fields</h2>
         <table>
           <thead><tr><th>Entry state</th><th>Owning list</th><th>Link used</th><th>BCB meaning</th></tr></thead>
@@ -133,16 +154,16 @@
       </section>
 
       <section class="section" id="lifetime">
-        <div class="eyebrow">06 · Storage lifetime versus binding lifetime</div>
-        <h2>Final unfix removes the binding, not the backing allocation</h2>
+        <div class="eyebrow">07 · Storage lifetime versus binding lifetime</div>
+        <h2>Final unfix removes the active binding</h2>
         <img class="diagram" src="../../assets/holder-entry-lifetime.svg" alt="Holder entry moving from a thread free list to its active list and back">
         <p class="caption">The entry is recycled; one logical thread–BCB binding is temporary.</p>
-        <p>Initialization gives every thread seven reserved free entries. If a thread exhausts its free list, allocation obtains an entry from shared extension sets of ten. A first successful fix activates one entry. Each repeated successful fix increments it. Each matching unfix decrements it; when it reaches zero, removal unlinks it from the active list and pushes it onto that thread's free list. Watchers must already be detached.</p>
+        <p>Initialization gives every thread seven reserved free entries. The 64-byte anchor is cache-line-sized; a release holder is 56 bytes on the normal 64-bit ABI, while non-release fix-site tracking adds 64 KiB. If a thread exhausts its free list, allocation obtains an entry from shared extension sets of ten. Neither seven nor ten is a maximum. A first successful fix activates one entry. Each repeated successful fix increments it. Each matching unfix decrements it; when it reaches zero, removal unlinks it from the active list and pushes it onto that thread's free list. Watchers must already be detached.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> initialization and allocation are at <code>page_buffer.c:5922–6086</code>; final-debt removal and recycling are at <code>6128–6275</code>. Backing holder storage is reclaimed during page-buffer finalization, not by an ordinary unfix.</p>
       </section>
 
       <section class="section" id="unfix-cost">
-        <div class="eyebrow">07 · Unfix and cost</div>
+        <div class="eyebrow">08 · Detailed cost derivation</div>
         <h2>Can this become very slow? Yes, when one thread holds many distinct pages</h2>
         <p>Let <code>H</code> be the number of distinct BCBs currently held by this thread—not the buffer-pool size, lifetime fix count, or sum of nested debts. Because the active list has no BCB-to-holder index, position determines the work:</p>
         <table>
@@ -157,7 +178,7 @@
         <h3>Worst-case accumulation</h3>
         <p>Fixing distinct pages A, B, C, …, N without releasing earlier pages performs 0, 1, 2, …, N−1 failed comparisons before each new entry is created. The total is <code>N(N−1)/2</code>, therefore <code>O(N²)</code>. This acquisition cost exists even if the pages are later released in favorable LIFO order.</p>
         <p>Order still changes release cost because each new entry is prepended. LIFO release repeatedly removes the head and is favorable. Releasing the oldest entries first, or repeatedly accessing an older entry while newer entries remain, repeatedly crosses a long list and can add another quadratic pattern.</p>
-        <h3>Why this is not automatically the production bottleneck</h3>
+        <h3>How to judge whether traversal is a production bottleneck</h3>
         <ul>
           <li>The list is thread-local, so its traversal is CPU/cache work rather than cross-thread list-lock contention.</li>
           <li>When <code>H</code> is small, a linear scan is short. The seven reserved entries per thread are consistent with an expected common shape of few simultaneous distinct holds, but they are not a hard limit or performance proof; extension sets provide more entries.</li>
@@ -169,7 +190,7 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">08 · Retrieval practice</div>
+        <div class="eyebrow">09 · Retrieval practice</div>
         <h2>Explain A×3 without saying “the anchor finds its position”</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now repeat it without the diagram." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="the thread resolves its one anchor -> pgbuf_find_thrd_holder starts at thrd_hold_list and linearly compares each holder bufptr with BCB A -> first successful fix allocates and prepends one holder with fix_count 1 -> two repeated successful fixes find the same entry and raise fix_count to 3 without changing num_hold_cnt -> each unfix scans for the entry and decrements it -> the third unfix removes the zero-count entry and pushes its storage to thrd_free_list." data-concepts='[{"label":"one anchor per thread","terms":["anchor","thread","one","index"]},{"label":"linear lookup from list head","terms":["linear","scan","head","thrd_hold_list"]},{"label":"comparison by BCB pointer","terms":["bufptr","bcb","pointer","compare"]},{"label":"same entry counts nested fixes","terms":["same","entry","fix_count","3"]},{"label":"num_hold_cnt stays one","terms":["num_hold_cnt","one","length","distinct"]},{"label":"final unfix recycles entry","terms":["unfix","zero","remove","free list","recycle"]}]'>
           <h3>Prompt</h3>
@@ -192,14 +213,15 @@
 
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lesson map</strong>
-      <a href="#two-objects">1. Anchor versus entry</a>
-      <a href="#read-snapshot">2. Read the snapshot</a>
-      <a href="#find-existing">3. Find existing debt</a>
-      <a href="#why-holder">4. Why keep a holder?</a>
-      <a href="#two-links">5. Two list roles</a>
-      <a href="#lifetime">6. Entry lifetime</a>
-      <a href="#unfix-cost">7. Release cost</a>
-      <a href="#retrieval">8. Teach it back</a>
+      <a href="#questions-first">1. Cost → redesign → lifetime</a>
+      <a href="#two-objects">2. Anchor versus entry</a>
+      <a href="#read-snapshot">3. Read the snapshot</a>
+      <a href="#find-existing">4. Find existing debt</a>
+      <a href="#why-holder">5. Why keep a holder?</a>
+      <a href="#two-links">6. Two list roles</a>
+      <a href="#lifetime">7. Entry lifetime</a>
+      <a href="#unfix-cost">8. Cost derivation</a>
+      <a href="#retrieval">9. Teach it back</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../../learning/02-fix-hold-release.md">Canonical Core page</a>

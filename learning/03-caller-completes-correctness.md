@@ -14,7 +14,7 @@ The practical review question is therefore not “did fix succeed?” but:
 
 > Which layer establishes each precondition, and which exits still own a page, watcher, lock, or recovery obligation?
 
-## Contract ledger: acquisition is necessary, not sufficient
+## Contract ledger from acquisition through durable mutation
 
 | Page-buffer or log-layer guarantee | Caller obligation |
 |---|---|

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0012A — 비활성 AOUT history 이해하기</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <script defer src="../../assets/teach-retrieval.js"></script>
+</head>
+<body>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0012a-understand-aout-ghost-history.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID page buffer · lesson 0012A</span><a href="../index.html">과정 홈</a></div>
+  <header class="hero">
+    <div class="eyebrow">심화 보충 · 비활성 admission history</div>
+    <h1>AOUT은 evict된 identity를 기억합니다</h1>
+    <p>비활성 AOUT code가 현재 replacement policy의 이해를 방해하지 않도록 별도 lesson으로 분리했습니다.</p>
+    <div class="pills"><span class="pill">Ghost metadata</span><span class="pill">No frame</span><span class="pill">Admission only</span><span class="pill">Forced off</span></div>
+  </header>
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="answer">
+        <div class="eyebrow">01 · 짧은 답</div>
+        <h2>Pinned server path에서는 AOUT이 비활성화되어 있습니다</h2>
+        <p>자료구조는 source에 남아 있지만 startup이 <code>data_aout_ratio = 0.0</code>을 강제합니다. Initialization은 ghost node를 할당하지 않고 add/lookup helper도 즉시 반환합니다. 현재 replacement는 Lesson 12의 INVALID/VOID/private/shared 3-zone LRU path입니다.</p>
+        <p class="big-claim">AOUT은 source에 남아 있지만 비활성인 admission-history code입니다. Pinned build에서 page bytes를 저장하거나 victim을 고르지 않습니다.</p>
+      </section>
+      <section class="section" id="entry">
+        <div class="eyebrow">02 · Ghost entry 하나</div>
+        <h2>VPID와 이전 LRU index로 과거 eviction을 기억합니다</h2>
+        <img class="diagram" src="../../assets/aout-ghost-admission.svg" alt="비활성 AOUT ghost history와 retained code가 선택할 첫 배치 위치">
+        <pre>{ VPID, former lru_idx, prev, next }</pre>
+        <p>Entry에는 BCB, frame, latch, fix count, dirty generation, page copy가 없습니다. 실제 BCB/frame pair는 이미 다른 page를 나타낼 수 있습니다. 전역 FIFO 하나, free-node list, VPID hash, <code>Aout_mutex</code>가 record를 관리합니다.</p>
+        <pre>A = min(floor(N × data_aout_ratio), 32,768)
+hash tables = max(floor(A / 1,000), 1)</pre>
+        <p>Pinned 기본 ratio가 0이므로 <code>A = 0</code>입니다. 활성화된다고 가정하면 FIFO가 가득 찼을 때 가장 오래된 bottom entry를 재사용합니다.</p>
+      </section>
+      <section class="section" id="effect">
+        <div class="eyebrow">03 · Retained design</div>
+        <h2>Ghost hit는 reload 뒤의 첫 배치 위치를 바꾸도록 설계되었습니다</h2>
+        <table>
+          <thead><tr><th>Reload context</th><th>Retained placement branch</th></tr></thead>
+          <tbody>
+            <tr><td>Private domain; same-private ghost hit</td><td>현재 private LRU1 top</td></tr>
+            <tr><td>Private domain; AOUT miss</td><td>현재 private LRU2 middle</td></tr>
+            <tr><td>Private domain; 다른 former LRU</td><td>Shared LRU2 middle</td></tr>
+            <tr><td>Private domain 없음</td><td>Shared LRU2 middle</td></tr>
+          </tbody>
+        </table>
+        <p>이것은 load 뒤의 admission ranking입니다. 이전 victim을 고르거나 ownership을 증명하거나 reuse를 허가하지 않습니다. 현재 AOUT-off path는 private-domain page를 private LRU1 top에, private domain이 없는 page를 shared LRU2 middle에 배치합니다.</p>
+      </section>
+      <section class="section" id="boundary">
+        <div class="eyebrow">04 · Evidence 경계</div>
+        <h2>AOUT을 다시 활성화하려면 새로운 engineering review가 필요합니다</h2>
+        <p>Forced-zero comment는 <code>CBRD-20741</code>을 가리키며 revision history는 <code>CBRD-21135</code>도 안내합니다. 현재 evidence로는 root cause를 알 수 없습니다. Forced-zero line 하나만 제거하는 것은 complete fix가 아닙니다.</p>
+        <p>Retained comment의 “LRU + Aout of 2Q”는 design structure를 설명하며 active startup behavior를 증명하지 않습니다. Revival에는 concurrency, memory, policy와 측정된 performance validation이 필요합니다. 기대 효과를 측정된 performance claim으로 쓰면 안 됩니다.</p>
+        <p class="source-note"><strong>Verified dormant source:</strong> <code>system_parameter.c:3463–3474,9931–9987</code>; <code>page_buffer.c:635–666,5802–5903,6885–6994,10468–10636</code>.</p>
+      </section>
+      <section class="section" id="primary-reading">
+        <div class="eyebrow">핵심 읽을거리</div>
+        <h2>Active policy와 dormant history를 별도 page로 읽으세요</h2>
+        <p><a href="../../advanced/aout-ghost-history.md">Canonical AOUT page 열기 →</a></p>
+        <p><a href="0012-prove-replacement-progress.html">← Lesson 0012로 돌아가기</a> · <a href="0013-gate-redo-by-page-lsa.html">Lesson 0013으로 계속 →</a></p>
+      </section>
+    </article>
+    <nav class="lesson-nav" aria-label="Lesson 목차">
+      <strong>Lesson map</strong>
+      <a href="#answer">1. Active 상태</a>
+      <a href="#entry">2. Ghost entry</a>
+      <a href="#effect">3. Admission 효과</a>
+      <a href="#boundary">4. Revival 경계</a>
+      <a href="#primary-reading">핵심 읽을거리</a>
+      <hr>
+      <a href="0013-gate-redo-by-page-lsa.html">다음 lesson →</a>
+      <a href="../../advanced/aout-ghost-history.md">Canonical Advanced page</a>
+      <a href="../index.html">과정 홈</a>
+    </nav>
+  </div>
+  <footer class="footer">Replacement claim을 설계 근거로 쓰기 전에 active code인지 dormant branch인지 먼저 확인하세요.</footer>
+</main>
+</body>
+</html>

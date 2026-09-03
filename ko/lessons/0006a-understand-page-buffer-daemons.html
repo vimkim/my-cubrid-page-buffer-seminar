@@ -3,163 +3,90 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0006A — page-buffer daemon 이해하기</title>
+  <title>Lesson 0006A — page-buffer daemon 만나기</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <script defer src="../../assets/teach-retrieval.js"></script>
 </head>
 <body>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0006a-understand-page-buffer-daemons.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
 <main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · Lesson 0006A</span><a href="../index.html">Course 홈</a></div>
+  <div class="topline"><span>CUBRID page buffer · Lesson 0006A</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">Core 심화 · background control</div>
-    <h1>네 daemon은 네 page writer가 아니라 서로 다른 네 loop입니다</h1>
-    <p>각 daemon을 무엇이 깨우는지, 어떤 shared state를 읽는지, 어떤 progress를 소유하는지, page-buffer flush를 시작하는지 구분합니다.</p>
-    <div class="pills"><span class="pill">Trigger</span><span class="pill">Input</span><span class="pill">Work</span><span class="pill">Output</span><span class="pill">Cost</span><span class="pill">Lifecycle</span></div>
+    <div class="eyebrow">Core 심화 · lifecycle 개요</div>
+    <h1>서로 다른 일을 하는 네 background loop를 만납니다</h1>
+    <p>daemon이 무엇인지, thread가 언제 존재하는지, 실제 유용한 작업은 언제 하는지부터 시작합니다. 그 다음 각 역할을 집중 후속 lesson으로 연결합니다.</p>
+    <div class="pills"><span class="pill">One thread</span><span class="pill">Task</span><span class="pill">Looper</span><span class="pill">Boot gate</span><span class="pill">Wake</span><span class="pill">Join</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
-      <section class="section" id="map">
-        <div class="eyebrow">01 · Topology</div>
-        <h2>Process 하나, 동등한 thread 네 개, 서로 다른 작업 네 개</h2>
-        <img class="diagram" src="../../assets/page-buffer-daemon-control-loops.svg" alt="Trigger, shared input, work, output으로 구분한 독립적인 page-buffer daemon control loop 네 개">
-        <p class="caption">Boot gate는 네 task를 모두 막거나 엽니다. 초록색 page-flush 행만 page-generation flush mechanism으로 들어갑니다.</p>
-        <p class="big-claim">Dirty page를 네 worker 중 하나에게 배정하지 않습니다. <code>DIRTY</code>는 selection policy 또는 explicit caller가 행동할 때까지 BCB state로 남습니다.</p>
-        <ul>
-          <li><code>pgbuf_daemons_init()</code>는 역할마다 daemon object 하나를 만듭니다. 각 object가 <code>std::thread</code> 하나를 소유합니다.</li>
-          <li>Task를 실행하고, 각자 가진 <code>cubthread::looper</code> 규칙에 따라 쉬었다가 다시 실행합니다. 네 worker가 함께 소비하는 공통 dirty-page work queue는 없습니다.</li>
-          <li>Restart 과정에서 object를 만들지만 <code>BO_IS_FLUSH_DAEMON_AVAILABLE()</code>이 false이면 task가 즉시 돌아옵니다. Boot는 recovery 뒤에만 gate를 엽니다.</li>
-          <li><code>pgbuf-flush-control</code>은 선택적입니다. Token-bucket 초기화가 실패하면 daemon pointer가 null로 남습니다. Stand-alone mode는 네 daemon 모두 만들지 않습니다.</li>
-        </ul>
+      <section class="section" id="daemon">
+        <div class="eyebrow">01 · daemon 정의하기</div>
+        <h2>daemon 하나는 task 하나를 실행하고 pause하는 thread 하나입니다</h2>
+        <p><code>create_daemon()</code>은 managed execution context 하나와 <code>std::thread</code> 하나를 만듭니다. loop는 간단합니다. task를 실행하고, <code>cubthread::looper</code>에게 pause 시간을 물은 뒤, 다시 task를 실행합니다. 따라서 네 이름은 하나의 dirty-page queue에서 같은 일을 꺼내는 worker가 아니라 서로 독립적인 control loop입니다.</p>
+        <p>task는 생성 직후 한 번 실행됩니다. fixed period는 start-to-start 목표입니다. looper가 직전 task 실행 시간을 빼므로 100 ms 주기가 “작업을 끝낸 뒤 항상 100 ms를 더 sleep한다”는 뜻도, 매번 유용한 작업을 한다는 보장도 아닙니다.</p>
       </section>
 
-      <section class="section" id="ledger">
-        <div class="eyebrow">02 · Responsibility ledger</div>
-        <h2>Trigger → input → work → output 순서로 묻습니다</h2>
+      <section class="section" id="lifecycle">
+        <div class="eyebrow">02 · 전체 lifecycle</div>
+        <h2>생성, enable, 유용한 작업, 소멸은 서로 다른 순간입니다</h2>
+        <img class="diagram" src="../../assets/page-buffer-daemon-lifecycle.svg" alt="page-buffer daemon 생성, recovery gate, useful loop, join destruction">
+        <ol>
+          <li>먼저 page-buffer pool, LRU, queue, monitor를 초기화합니다.</li>
+          <li>server boot는 log recovery가 끝나기 전에 네 daemon thread를 만듭니다.</li>
+          <li>생성 직후 task는 boot gate가 닫힌 것을 보고 page-buffer의 유용한 작업 없이 반환합니다.</li>
+          <li>recovery 뒤 boot가 gate를 엽니다. gate를 여는 동작 자체가 모든 sleeper를 wake하지는 않습니다. 이후 timer 또는 normal work wake에서 열린 gate를 관찰합니다.</li>
+          <li>정상 shutdown은 looper stop flag를 set하고 sleeper를 깨운 뒤 OS thread를 join하고 task/context를 retire하며 pointer를 비웁니다.</li>
+          <li><code>log_final()</code>과 pool teardown은 daemon이 모두 멈춘 뒤 실행되므로 shared state보다 오래 사는 daemon은 없습니다.</li>
+        </ol>
+        <p>stand-alone mode에서는 이 네 thread를 만들지 않습니다. background page-flush가 없으면 관련 requester가 victim flushing을 동기적으로 수행할 수 있습니다.</p>
+      </section>
+
+      <section class="section" id="cadence">
+        <div class="eyebrow">03 · Timer, wake, useful work</div>
+        <h2>각 역할은 서로 다른 pause와 admission rule을 가집니다</h2>
+        <img class="diagram" src="../../assets/page-buffer-daemon-cadence.svg" alt="maintenance, page-flush, post-flush, flush-control의 실행 주기와 깨우기 조건">
         <table>
-          <thead><tr><th>Daemon</th><th>실행 시점</th><th>접근 대상</th><th>결과</th><th>Page flush 시작?</th></tr></thead>
+          <thead><tr><th>Daemon</th><th>쉽게 말한 역할</th><th>Nominal pause</th><th>명시적 work wake</th><th>Page-image I/O?</th></tr></thead>
           <tbody>
-            <tr><td><code>pgbuf-maintain</code></td><td>100 ms마다</td><td>LRU hit/activity sample, quota, zone boundary, direct-victim state</td><td>Replacement-policy target을 갱신하고 의도상 backup assignment routine을 호출</td><td>아니요</td></tr>
-            <tr><td><code>pgbuf-page-flush</code></td><td>요청이 오거나 <code>page_bg_flush_interval_msecs</code>마다. 기본 1,000 ms</td><td>LRU3 candidate, flush priority, BCB state, WAL state, pressure signal</td><td>Demand wake는 iteration 하나를 강제하지만 timer wake는 아무 일도 안 할 수 있음. Dirty cold generation을 제출하고 pressure가 남으면 계속 실행</td><td><strong>예</strong></td></tr>
-            <tr><td><code>pgbuf-page-post-flush</code></td><td>Page-flush handoff wake. Idle pause는 1/10/100 ms로 늘어난 뒤 wake-only</td><td><code>flushed_bcbs</code>, BCB state, direct-victim/BCB flush-waiter queue</td><td>이전 FLUSHING state를 끝내고 flush waiter를 깨우며 이제 clean인 BCB를 allocator에게 reserve할 수 있음</td><td>새 write 없음</td></tr>
-            <tr><td><code>pgbuf-flush-control</code></td><td>초기화 성공 뒤 50 ms마다</td><td>File-I/O token bucket, elapsed time, 관측/소비 token 통계</td><td>Token budget을 교체하고 rate-control waiter를 깨움</td><td>아니요</td></tr>
+            <tr><td><code>pgbuf-maintain</code></td><td>replacement quota/zone 다시 계산</td><td>100 ms attempt</td><td>없음</td><td>아니요</td></tr>
+            <tr><td><code>pgbuf-page-flush</code></td><td>cold dirty page에서 clean replacement supply 만들기</td><td>기본 1,000 ms; 0은 wake-only</td><td>victim/allocation pressure</td><td><strong>예</strong></td></tr>
+            <tr><td><code>pgbuf-page-post-flush</code></td><td>BCB state를 끝내고 allocator를 깨울 수 있음</td><td>1 → 10 → 100 ms 뒤 wake-only</td><td><code>flushed_bcbs</code> enqueue</td><td>새 write 없음</td></tr>
+            <tr><td><code>pgbuf-flush-control</code></td><td>post-write file-I/O pacing token 갱신</td><td>50 ms 목표</td><td>없음</td><td>아니요</td></tr>
           </tbody>
         </table>
-        <div class="callout"><strong>Boundary를 정확히 말해야 합니다.</strong> <code>pgbuf-page-flush</code>는 page-buffer flush submission을 시작합니다. DWB가 켜져 있으면 같은 thread에서 home-volume write를 끝내는 대신 stable image를 downstream DWB 작업에 넣는 것일 수 있습니다.</div>
+        <div class="callout"><strong>Wake는 hint이며 durable event가 아닙니다.</strong> generic waiter는 sleep 중일 때만 <code>wakeup()</code>을 받아들입니다. task가 이미 RUNNING이면 다음 pause를 위한 event로 저장하지 않습니다. 따라서 task는 실행될 때 shared pressure 또는 queue state를 다시 확인합니다.</div>
       </section>
 
-      <section class="section" id="flush-post">
-        <div class="eyebrow">03 · 유일한 producer–consumer 쌍</div>
-        <h2>Page flush가 completion을 post-flush에 넘길 수 있습니다</h2>
-        <pre><code>allocation pressure / timed wake
-  → pgbuf-page-flush
-      → choose dirty LRU3 candidates
-      → recheck identity + dirty + cold + unfixed + WAL
-      → copy generation and submit DWB/direct I/O
-      → if a direct-victim waiter exists and flushed_bcbs accepts the pointer:
-           produce BCB* → wake pgbuf-page-post-flush
-        else:
-           complete FLUSHING state in this thread
-
-pgbuf-page-post-flush
-  → drain flushed_bcbs (capacity 8,192)
-  → lock each BCB and recheck clean + unfixed + LRU3 + quota
-  → reserve for one waiting allocator when still eligible
-  → clear old FLUSHING state and wake flush waiters</code></pre>
-        <p>Post-flush가 “모든 flush의 후반부”를 수행하는 것은 아닙니다. Page-flush 경로이고, direct-victim waiter가 있고, post-flush daemon이 존재하고, bounded queue가 pointer를 받아들일 때만 handoff합니다. 나머지는 submit한 thread가 직접 BCB를 완료합니다.</p>
-        <p>Protected recheck가 반드시 필요합니다. I/O submission과 post-processing 사이에 다른 thread가 BCB를 fix하거나 LRU3 밖으로 옮기거나 더 새로운 DIRTY generation을 만들 수 있습니다. 이전 generation의 completion이 더 새로운 resident byte의 reuse를 허가해서는 안 됩니다.</p>
-      </section>
-
-      <section class="section" id="maintain">
-        <div class="eyebrow">04 · Maintenance는 policy이지 I/O가 아닙니다</div>
-        <h2>Quota adjustment는 실행되지만 backup assignment loop에는 anomaly가 있습니다</h2>
-        <p>Maintenance 실행은 먼저 <code>pgbuf_adjust_quotas()</code>를 호출합니다. Per-LRU hit sample을 소비하고, private activity를 추정하며, private/shared threshold를 갱신하고, threshold를 넘은 zone을 demote하며, candidate를 가진 LRU를 다시 publish하고, approximate “victim rich” signal을 갱신합니다.</p>
-        <p>그다음 <code>pgbuf_direct_victims_maintenance()</code>를 호출합니다. Comment는 이를 low-activity backup이라고 설명합니다. 초기값 5는 strict assignment cap이 아니라 outer continuation budget입니다. Helper call 한 번이 LRU3 entry를 최대 1,000개 검사하고 BCB 여러 개를 assign할 수 있습니다. 그러나 pinned outer <code>for</code> loop 둘은 <code>index</code>를 저장된 시작 index로 초기화하고 즉시 <code>index != start_index</code>를 요구합니다. 첫 검사부터 false라서 작성된 그대로라면 두 body 모두 실행되지 않습니다.</p>
-        <div class="callout warn"><strong>Evidence boundary — VS-20:</strong> quota adjustment는 verified로 설명합니다. Direct-victim maintenance는 comment가 의도한 역할이지만 source-visible loop condition에 막힌 것으로 설명합니다. 다른 producer는 여전히 direct victim을 assign하므로 이 source anomaly만으로 production stall이나 starvation을 증명할 수 없습니다.</div>
-      </section>
-
-      <section class="section" id="control">
-        <div class="eyebrow">05 · Flush control은 rate를 제어합니다</div>
-        <h2>BCB가 아니라 token을 관리합니다</h2>
-        <p>Flush-control task는 page-buffer daemon과 함께 생성되지만 state는 <code>file_io.c</code>에 있습니다. 첫 실행은 time origin만 기록합니다. 이후 50 ms마다 adaptive 또는 configured token rate를 계산하고, shared token budget을 교체하고, interval 통계를 reset하고, token-bucket condition variable을 broadcast합니다. Non-log caller는 열 번의 broadcast/retry 뒤에는 기다림을 끝내고, log critical section을 가진 caller는 부족한 token을 기다리지 않으므로 soft limiter입니다.</p>
-        <p>File-I/O path는 OS write call 뒤 <code>fileio_compensate_flush()</code>에서 이 budget을 소비합니다. 따라서 기다림은 다음 progress를 늦춥니다. 방금 끝난 write 전에 permission을 주는 token이 아닙니다. 이 pacing path는 dirty page를 고르거나 <code>FLUSHING</code>을 설정하거나 byte를 복사하거나 WAL을 force하거나 page-generation flush mechanism을 호출하지 않습니다. 초기화 실패로 daemon이 없으면 bucket pointer가 null이므로 token acquisition이 no-op이 되지만 page flushing은 계속 존재합니다.</p>
-      </section>
-
-      <section class="section" id="cost">
-        <div class="eyebrow">06 · Structural cost</div>
-        <h2>의도적으로 I/O-bound인 것은 page-flush loop뿐입니다</h2>
-        <table>
-          <thead><tr><th>Loop</th><th>Wait/I/O 전 CPU-side bound</th><th>Wall time을 지배할 수 있는 요소</th></tr></thead>
-          <tbody>
-            <tr><td>Maintenance</td><td>Thread counter shard, 모든 LRU descriptor, zone demotion에 O(T + S + P + D)</td><td>LRU mutex contention. <code>VS-20</code> 때문에 의도한 assignment scan은 실행 비용에 포함하지 않음</td></tr>
-            <tr><td>Page flush</td><td>O(T + S + P + K + C log C + C·N). Base scan budget은 200 MiB 분량 page 수로 제한되지만 positive-priority LRU마다 최소 하나를 검사하므로 그 LRU 수만큼 더해질 수 있음</td><td>BCB contention, WAL wait, DWB, file I/O, scheduling</td></tr>
-            <tr><td>Post-flush</td><td>O(Q + stale direct waiter + scan한 모든 BCB flush waiter). Capacity 8,192는 backlog bound이지 concurrent refill 중 drain bound가 아님</td><td>BCB/thread mutex와 queue CAS contention</td></tr>
-            <tr><td>Flush control</td><td>O(1) accounting과 condition broadcast</td><td>깨어난 waiter 수와 scheduler behavior</td></tr>
-          </tbody>
-        </table>
-        <p><code>T</code>는 managed thread 수, <code>S</code>/<code>P</code>는 shared/private LRU 수, <code>D</code>는 zone demotion 수, <code>K</code>는 검사한 LRU node, <code>C</code>는 candidate, <code>N</code>은 neighbor span, <code>Q</code>는 drain한 post-flush entry 수입니다. Big-O는 structure traversal을 뜻하며 elapsed latency가 아닙니다.</p>
-      </section>
-
-      <section class="section" id="not-daemon">
-        <div class="eyebrow">07 · 이 네 daemon 밖에는 무엇이 있나?</div>
-        <h2>Checkpoint, WRITE owner, explicit caller, DWB는 별도 actor입니다</h2>
-        <ul>
-          <li>Log-checkpoint thread는 <code>oldest_unflush_lsa</code>로 page를 선택하고 직접 <code>pgbuf_flush_checkpoint()</code>를 호출합니다.</li>
-          <li>Foreground storage, recovery, shutdown, volume operation은 page 하나 또는 whole-pool flush를 synchronous하게 호출할 수 있습니다.</li>
-          <li>Foreign WRITE owner는 <code>PGBUF_BCB_ASYNC_FLUSH_REQ</code>를 받고 unfix 시점에 safe copy를 수행할 수 있습니다.</li>
-          <li>DWB의 선택적인 flush-block/file-sync daemon은 downstream storage-integrity helper이지 page-buffer daemon worker가 아닙니다.</li>
-        </ul>
-        <p class="big-claim">Debug할 때는 두 가지를 물어야 합니다. 이 generation을 누가 선택했는가? Configured persistence boundary를 어떤 thread가 실행하거나 완료했는가?</p>
+      <section class="section" id="routes">
+        <div class="eyebrow">04 · 다음 lesson 고르기</div>
+        <h2>서로 협력하는 두 역할씩 나누어 봅니다</h2>
+        <div class="callout"><strong>Lesson 6B — page-flush와 post-flush:</strong> allocator pressure에서 dirty LRU3 선택, WAL, DWB/direct submission, 조건부 <code>flushed_bcbs</code> handoff, protected BCB recheck, allocator wake까지 따라갑니다.</div>
+        <div class="callout"><strong>Lesson 6C — maintenance와 flush-control:</strong> replacement sample이 quota/zone으로 바뀌는 과정과 completed file write가 새 soft-pacing token budget으로 바뀌는 과정을 봅니다. 두 경로 모두 page image를 전달하지 않습니다.</div>
+        <p>checkpoint, log-flush daemon, foreground/WRITE-owner flush, DWB helper daemon은 이 네 역할 밖에 있습니다. 같은 durability mechanism을 지원하거나 재사용해도 page-buffer daemon worker가 되는 것은 아닙니다.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">08 · Retrieval 연습</div>
-        <h2>네 증상을 네 owner에게 route합니다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="daemon object 네 개는 네 flush worker가 아니라 동등한 loop 네 개다 -> maintain은 주기적으로 quota를 조정하고 pinned loop가 VS-20에 막힌 intended backup을 호출한다 -> page-flush만 dirty cold candidate를 골라 page generation을 제출한다 -> post-flush는 flushed_bcbs를 drain하고 새 I/O 없이 BCB completion/direct handoff를 recheck한다 -> flush-control은 file-I/O token bucket을 갱신하고 page를 고르지 않은 채 pacing waiter를 깨운다 -> 모든 task는 recovery gate를 따른다 -> checkpoint, explicit caller, WRITE owner, DWB helper는 별도 actor다 -> structural cost는 descriptor/candidate/queue traversal이고 실제 page flush는 WAL과 I/O bound다." data-concepts='[{"label":"동등한 loop","terms":["four","peer","loop","not workers"]},{"label":"maintenance 역할과 boundary","terms":["quota","vs-20","backup"]},{"label":"page-flush 역할","terms":["dirty","lru3","submit"]},{"label":"post-flush 역할","terms":["flushed_bcbs","recheck","handoff"]},{"label":"flush-control 역할","terms":["token","pacing","no page"]},{"label":"lifecycle gate","terms":["recovery","gate"]},{"label":"다른 actor","terms":["checkpoint","write owner","dwb"]},{"label":"cost boundary","terms":["candidate","queue","i/o"]}]'>
-          <h3>문제</h3>
-          <p>서버에서 allocator wait가 많고, dirty-page write가 잦고, file-I/O pacing wait도 보입니다. 어떤 daemon이 어떤 progress를 담당하는지, page-flush와 post-flush가 어떻게 연결되는지, 왜 네 daemon을 모두 깨우는 것이 올바른 수정이 아닌지 설명하세요.</p>
-          <textarea aria-label="page-buffer daemon 설명 답안" placeholder="Topology → maintain → page-flush → flushed_bcbs → post-flush → token control → 다른 actor → cost와 evidence boundary."></textarea>
-          <button type="button" data-check>daemon 범위 확인</button>
-          <button type="button" class="secondary" data-reveal>Model route 보기</button>
-          <div class="feedback" aria-live="polite"></div>
+        <div class="eyebrow">05 · Retrieval 연습</div>
+        <h2>thread lifecycle 하나와 네 역할을 직접 설명합니다</h2>
+        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="daemon 하나는 OS thread, task, looper, waiter 하나를 가진다 -> 생성 직후 task가 실행되지만 recovery gate가 닫혀 있어 반환한다 -> gate를 여는 것과 sleeper wake는 별개다 -> timer는 실행 기회를 줄 뿐 task가 아무 일도 하지 않을 수 있다 -> maintenance는 100 ms마다 quota policy를 시도한다 -> page-flush는 기본 1000 ms timer와 pressure wake를 가지며 page image를 submit하는 유일한 역할이다 -> post-flush는 1, 10, 100 ms 뒤 wake-only로 backoff하며 BCB state를 끝낸다 -> flush-control은 50 ms를 목표로 post-write pacing을 갱신한다 -> shutdown은 pool teardown 전에 thread를 stop, wake, join, retire한다." data-concepts='[{"label":"one-thread daemon model","terms":["one","thread","task","looper"]},{"label":"recovery gate lifecycle","terms":["recovery","gate","immediate","open"]},{"label":"timer is an opportunity","terms":["timer","may","no work"]},{"label":"four distinct roles","terms":["maintain","page-flush","post-flush","flush-control"]},{"label":"only page-flush submits","terms":["only","page-flush","submit","image"]},{"label":"joined destruction","terms":["stop","wake","join","pool"]}]'>
+          <h3>문제</h3><p>recovery 중 daemon 생성부터 정상 shutdown까지 설명하세요. 그 다음 네 daemon의 역할, cadence, I/O 책임을 각각 말하세요.</p>
+          <textarea aria-label="daemon lifecycle 설명" placeholder="생성 → 즉시 gate 확인 → 대기와 깨우기 → 담당 작업 → 중지·깨우기·종료 대기 순서로 적으세요."></textarea>
+          <button type="button" data-check>Lifecycle coverage 확인</button><button type="button" class="secondary" data-reveal>Model route 보기</button><div class="feedback" aria-live="polite"></div>
         </div>
       </section>
 
       <section class="section" id="primary-reading">
-        <div class="eyebrow">Primary reading</div>
-        <h2>각 loop를 initializer부터 추적합니다</h2>
-        <ul>
-          <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16972-L17255">Daemon task, period, initialization, destruction</a>.</li>
-          <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3826-L4165">Victim candidate collection과 page-flush submission</a>.</li>
-          <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9608-L9648">Maintenance direct-victim loop condition</a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15489-L15556">post-flush recheck/handoff</a>.</li>
-          <li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L671-L929">File-I/O token-bucket control</a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L4123-L4370">post-write call order</a>.</li>
-        </ul>
-        <p><a href="../../reference/dirty-page-flush-actors.md">Pinned-source research note 전체 열기 →</a></p>
-        <p><a href="0006-flush-one-generation.html">← Lesson 0006으로 돌아가기</a></p>
+        <div class="eyebrow">핵심 읽을거리</div>
+        <h2>각 역할보다 generic loop를 먼저 읽습니다</h2>
+        <p>Pinned <code>thread_daemon.cpp:208–245</code>, <code>thread_looper.cpp:118–224</code>, <code>thread_waiter.cpp:76–224</code>부터 읽습니다. 그 다음 <code>page_buffer.c:16971–17228</code>의 네 task body와 initializer를 읽습니다.</p>
+        <p><a href="../../reference/page-buffer-daemon-lifecycle-audit.md">전체 pinned-source lifecycle audit 열기 →</a></p>
+        <p><a href="0006-flush-one-generation.html">← Lesson 0006</a> · <a href="0006b-follow-page-flush-handoff.html">Lesson 0006B로 계속 →</a></p>
       </section>
     </article>
-
-    <nav class="lesson-nav" aria-label="Lesson 목차">
-      <strong>Lesson map</strong>
-      <a href="#map">1. 네 loop</a>
-      <a href="#ledger">2. Responsibility ledger</a>
-      <a href="#flush-post">3. Flush → post-flush</a>
-      <a href="#maintain">4. Maintenance와 VS-20</a>
-      <a href="#control">5. Token control</a>
-      <a href="#cost">6. Structural cost</a>
-      <a href="#not-daemon">7. 다른 actor</a>
-      <a href="#retrieval">8. 증상 route</a>
-      <a href="#primary-reading">Primary reading</a>
-      <hr>
-      <a href="0006-flush-one-generation.html">Flush generation</a>
-      <a href="0012-prove-replacement-progress.html">Replacement progress</a>
-      <a href="../../unresolved-or-version-sensitive-findings.md">Uncertainty registry</a>
-      <a href="../index.html">Course 홈</a>
-    </nav>
+    <nav class="lesson-nav" aria-label="Lesson 목차"><strong>Lesson map</strong><a href="#daemon">1. Daemon 하나</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#routes">4. 집중 경로</a><a href="#retrieval">5. 직접 설명</a><a href="#primary-reading">핵심 읽을거리</a><hr><a href="0006b-follow-page-flush-handoff.html">Lesson 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lesson 6C</a><a href="../index.html">과정 홈</a></nav>
   </div>
-
-  <footer class="footer">Daemon 이름이 trigger, shared state, completion boundary, cost를 가린다면 teaching agent에게 질문하세요.</footer>
+  <footer class="footer">timer, wake, gate, useful-work condition이 헷갈리면 바로 질문하세요.</footer>
 </main>
 </body>
 </html>

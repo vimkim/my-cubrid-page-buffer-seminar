@@ -30,7 +30,7 @@
       </section>
 
       <section class="section" id="objects">
-        <div class="eyebrow">02 · 명사를 섞지 않기</div>
+        <div class="eyebrow">02 · 핵심 명사 구분하기</div>
         <h2>“page”라는 한 단어 뒤에는 서로 다른 여섯 객체가 있습니다</h2>
         <img class="diagram" src="../../assets/object-ownership-map.svg" alt="VPID, BCB, frame, PAGE_PTR, global fix count, per-thread holder의 ownership 관계도">
         <p class="caption">call flow가 아니라 관계와 lifetime을 보여 주는 그림으로 읽으세요.</p>
@@ -40,7 +40,7 @@
 
       <section class="section" id="journey">
         <div class="eyebrow">03 · 여섯 단계 이야기</div>
-        <h2>source file 순서가 아니라 logical page 하나를 따라갑니다</h2>
+        <h2>logical page 하나의 전체 여정을 따라갑니다</h2>
         <div class="journey">
           <article><span class="step">1</span><h3>객체를 모델링합니다</h3><p>algorithm을 논하기 전에 identity, residency, ownership, concurrency, durability를 분리합니다.</p><a href="../../learning/01-contract-and-objects.md">Core 1 →</a></article>
           <article><span class="step">2</span><h3>빌리고 갚습니다</h3><p>hit 또는 miss 준비 과정이 하나의 latch grant, 두 ownership ledger, borrowed pointer, matching release로 이어지는 흐름을 추적합니다.</p><a href="../../learning/02-fix-hold-release.md">Core 2 →</a></article>

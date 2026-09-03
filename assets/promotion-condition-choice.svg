@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 820" role="img" aria-labelledby="title desc">
+  <title id="title">Promotion condition decision tree</title>
+  <desc id="desc">Both conditions promote in place for the only reader. With other readers, ONLY_READER fails while retaining READ ownership and SHARED_READER transfers the existing fix count through a queue-head WRITE request. Both reject a second promoter.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f5ef}.box{fill:#fff;stroke:#26384a;stroke-width:2}.start{fill:#eaf3ff;stroke:#2563a8}.only{fill:#fff2dc;stroke:#a86413}.shared{fill:#eaf8ef;stroke:#287a45}.fail{fill:#fff0f0;stroke:#b33b3b}.ok{fill:#eaf8ef;stroke:#287a45}.h{font:700 27px system-ui,sans-serif;fill:#172331}.t{font:700 19px system-ui,sans-serif;fill:#172331}.s{font:15px system-ui,sans-serif;fill:#334155}.tiny{font:13px system-ui,sans-serif;fill:#475569}.arrow{stroke:#526273;stroke-width:2.5;fill:none;marker-end:url(#m)}.dash{stroke-dasharray:7 6}.label{font:700 13px system-ui,sans-serif;fill:#526273}
+    </style>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0l10 5-10 5z" fill="#526273"/></marker>
+  </defs>
+  <rect class="bg" width="1240" height="820" rx="24"/>
+  <text class="h" x="54" y="52">Choose whether contention should fail now or transfer ownership through a wait</text>
+
+  <rect class="box start" x="390" y="78" width="460" height="92" rx="16"/>
+  <text class="t" x="431" y="113">Caller T already holds READ, fix_count = k</text>
+  <text class="s" x="431" y="143">Question: does T own every current fix on this BCB?</text>
+
+  <path class="arrow" d="M620 170v60"/>
+  <rect class="box" x="420" y="230" width="400" height="74" rx="15"/>
+  <text class="t" x="480" y="260">holder.fix_count == BCB.fcnt ?</text>
+  <text class="tiny" x="503" y="285">also reject if a promoter is already first</text>
+
+  <path class="arrow" d="M500 304v62h-185v54"/>
+  <text class="label" x="431" y="350">YES · T is the only fixer</text>
+  <rect class="box ok" x="70" y="420" width="490" height="105" rx="16"/>
+  <text class="t" x="111" y="453">Both conditions: in-place success</text>
+  <text class="s" x="111" y="482">READ → WRITE; holder and fix_count k stay in place</text>
+  <text class="tiny" x="111" y="506">No sleep, no ownership gap, same unfix debt</text>
+
+  <path class="arrow" d="M740 304v62h185v54"/>
+  <path class="arrow" d="M740 304v62h470v287h-40"/>
+  <text class="label" x="777" y="350">NO · another reader exists</text>
+  <rect class="box only" x="680" y="420" width="490" height="105" rx="16"/>
+  <text class="t" x="718" y="453">PGBUF_PROMOTE_ONLY_READER</text>
+  <text class="s" x="718" y="482">Return ER_PAGE_LATCH_PROMOTE_FAIL immediately</text>
+  <text class="tiny" x="718" y="506">T keeps READ holder + fix_count k; caller may restart/skip</text>
+
+  <rect class="box shared" x="680" y="580" width="490" height="146" rx="16"/>
+  <text class="t" x="718" y="613">PGBUF_PROMOTE_SHARED_READER</text>
+  <text class="s" x="718" y="642">1 · subtract k from BCB.fcnt and remove T's holder</text>
+  <text class="s" x="718" y="670">2 · queue WRITE(k) at the head and sleep</text>
+  <text class="s" x="718" y="698">3 · after readers drain, restore WRITE holder count k</text>
+
+  <path class="arrow dash" d="M680 653H530"/>
+  <rect class="box fail" x="70" y="590" width="460" height="126" rx="16"/>
+  <text class="t" x="108" y="623">Second-promoter rule</text>
+  <text class="s" x="108" y="653">If queue head is already a promoter, both choices fail.</text>
+  <text class="tiny" x="108" y="680">The current caller keeps its READ ownership.</text>
+  <text class="tiny" x="108" y="702">One BCB has at most one waiting continuity bridge.</text>
+
+  <rect class="box" x="260" y="758" width="720" height="42" rx="14"/>
+  <text class="s" x="302" y="785">Condition changes the contended path; it does not change the uncontended in-place path.</text>
+</svg>

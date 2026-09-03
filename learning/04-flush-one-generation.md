@@ -18,7 +18,7 @@ Flush is not commit, unfix, eviction, or page deallocation. A successful flush m
 
 ![Page-buffer daemon roles and all major actors that converge on the common generation-flush path](../assets/dirty-page-flush-actors.svg)
 
-### Four page-buffer daemons are independent roles, not master and slaves
+### Four independent page-buffer daemon roles
 
 In server mode, the pinned `pgbuf_daemons_init()` attempts to create four daemon objects through the common thread manager. They do not form a page-flush master with four worker slaves:
 
@@ -31,13 +31,24 @@ In server mode, the pinned `pgbuf_daemons_init()` attempts to create four daemon
 
 The objects are created before log recovery, but their tasks return while the boot-level flush-daemon gate is closed; boot enables them after recovery. Stand-alone builds do not create these page-buffer daemons. Counts, periods, thresholds, and batching are revision-bound **Implementation policy**, not a fix/unfix Interface contract.
 
+Their pause rules are deliberately different: maintenance attempts a task on a
+100 ms start-to-start target; page-flush uses a configurable timer (1,000 ms by
+default, with zero meaning wake-only) plus replacement-pressure wakes;
+post-flush backs off through 1, 10, and 100 ms before wake-only sleep; and
+flush-control targets 50 ms. A timer supplies an execution opportunity, not a
+guarantee of useful work. The generic daemon executes once immediately after
+construction, subtracts prior task time from a fixed period, accepts a wake only
+while sleeping, and stops through stop → wake → join before pool teardown.
+
 The exact trigger, shared-state, output, and structural-cost ledger belongs in
 the [Dirty-page Flush Actors evidence reference](../reference/dirty-page-flush-actors.md#four-independent-control-loops).
+Thread lifecycle, exact pause/wake semantics, default-size examples, and the
+two focused HTML routes are in the [Page-Buffer Daemon Lifecycle Audit](../reference/page-buffer-daemon-lifecycle-audit.md).
 That reference also keeps `VS-20` separate from the verified quota work; do not
 turn the helper's comment into a claim that maintenance-owned direct assignment
 actually runs at the pinned revision.
 
-### The background flusher is not the only flusher
+### All actors that can initiate a flush
 
 The important distinction is **who selects the dirty page**, not whether every path has a daemon name:
 
@@ -55,7 +66,7 @@ If DWB is enabled, the page-buffer actor may finish its submission by calling `d
 
 Source: daemon tasks and creation at `src/storage/page_buffer.c:16972-17255`; boot gating at `src/transaction/boot_sr.c:2415-2440`; direct and whole-pool interfaces at `src/storage/page_buffer.c:3570-3751`; checkpoint selection/execution at `4173-4610`; deferred-owner handoff at `6815-6890,8810-8901`; stand-alone fallback at `11678-11702`; DWB submission and daemon roles at `src/storage/double_write_buffer.cpp:2715-2820,4017-4120`. Detailed evidence: [Dirty-page Flush Actors](../reference/dirty-page-flush-actors.md).
 
-## Four moments that must not collapse into “written”
+## Four distinct moments in one propagation
 
 | Moment | What it establishes | What it does not establish |
 |---|---|---|
@@ -103,7 +114,7 @@ Assume P is unfixed and otherwise flushable when scanned:
 
 Selection by 100 does not mean writing a historical page version. Flush copies the current image containing A+B+C, carries lower bound 100 for checkpoint accounting, and uses copied page LSA 170 as the WAL force target. The lower bound decides whether the generation crosses the checkpoint boundary; the page LSA decides how far WAL must precede that captured image.
 
-### Newer than the checkpoint boundary is not unsafe to flush
+### Flushing a generation newer than the checkpoint boundary
 
 `flush_upto_lsa` is a **checkpoint selection boundary**, not the WAL force target. If P has `oldest_unflush_lsa = 200` and the checkpoint boundary is 150, this dirty generation began after the boundary. `pgbuf_flush_checkpoint()` may skip P because the current checkpoint does not need that propagation to cover its chosen history.
 
@@ -228,5 +239,5 @@ On an ordinary post-submission failure, the code restores G’s dirty bit if it 
 - [Evidence and uncertainty registry](../unresolved-or-version-sensitive-findings.md)
 - [Maintainer Invariant Index](../reference/invariant-index.md)
 - [Recovery, Allocation State, and Module Lifecycle](../advanced/recovery-and-lifecycle.md)
-- [Replacement Policy and Background Progress](../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive)
+- [Replacement Policy and Background Progress](../advanced/replacement-progress.md#what-happens-when-every-scan-fails)
 - [Dirty-page Flush Actors](../reference/dirty-page-flush-actors.md)

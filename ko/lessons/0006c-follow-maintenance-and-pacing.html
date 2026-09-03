@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 0006C — maintenance와 I/O pacing 따라가기</title><link rel="stylesheet" href="../../assets/teach-course.css"><script defer src="../../assets/teach-retrieval.js"></script></head>
+<body><nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0006c-follow-maintenance-and-pacing.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell"><div class="topline"><span>CUBRID page buffer · Lesson 0006C</span><a href="../index.html">과정 홈</a></div>
+<header class="hero"><div class="eyebrow">Core 심화 · control plane</div><h1>replacement maintenance와 post-write pacing을 따로 따라갑니다</h1><p>두 daemon 모두 dirty page image 하나를 선택하거나 전달하지 않은 채 미래 동작을 바꿉니다. admission rule, 기본 수치, lock, source-visible boundary를 배웁니다.</p><div class="pills"><span class="pill">100 ms attempt</span><span class="pill">Quota epoch</span><span class="pill">50 ms target</span><span class="pill">Token replace</span><span class="pill">Soft pacing</span></div></header>
+<div class="lesson-grid"><article class="lesson-main">
+<section class="section" id="two-planes"><div class="eyebrow">01 · 독립적인 두 plane</div><h2>maintenance는 replacement policy를, flush-control은 이후 file I/O 속도를 조정합니다</h2>
+<img class="diagram" src="../../assets/maintenance-and-pacing-control.svg" alt="분리된 replacement maintenance와 post-write pacing control plane">
+<p>두 lane 사이로 BCB pointer가 이동하지 않습니다. Maintenance는 replacement sample을 소비하여 quota/zone policy를 publish합니다. Flush-control은 elapsed-time과 write-demand 통계를 사용해 shared token budget을 교체하고 post-write waiter를 깨웁니다.</p></section>
+
+<section class="section" id="maintain"><div class="eyebrow">02 · pgbuf-maintain</div><h2>100 ms마다 quota 갱신 조건을 확인합니다</h2>
+<p>task는 fixed 100 ms start-to-start target을 가지며 ordinary explicit wake가 없습니다. gate-open pass마다 <code>pgbuf_adjust_quotas()</code>를 호출한 뒤 intended low-activity backup인 <code>pgbuf_direct_victims_maintenance()</code>를 호출합니다.</p>
+<p>private quota disabled, 다른 adjustment active, elapsed time 1 ms 미만, 또는 activity가 <code>B/4</code> 아래이면서 500 ms 미만이면 quota adjustment가 early return합니다. accepted pass만 unfix shard를 reset하고 <code>adjust_age</code>를 증가시키며 LRU hit counter를 소비하고 activity smoothing, quota 계산, zone threshold 변경, 초과 zone demotion을 합니다.</p>
+<p><code>B=32,768</code>이면 high-activity threshold는 counted final unfix 8,192개입니다. accepted pass에서 81개 미만이면 low-activity case입니다. low activity에서는 scheduling을 제외하면 500 ms 이후 첫 100 ms attempt 정도에 executable guard가 통과합니다.</p>
+<p>normal timing/activity check 비용은 O(T), accepted adjustment는 O(T + L + D)에 LRU mutex wait가 더해집니다. page copy, WAL force, file I/O는 하지 않습니다.</p></section>
+
+<section class="section" id="maintenance-boundary"><div class="eyebrow">03 · Source boundary</div><h2>실행 가능한 조건을 가르치고 anomaly를 명시합니다</h2>
+<div class="callout warn"><strong>VS-20:</strong> intended direct-victim backup의 두 outer loop는 <code>index</code>를 <code>start_index</code>로 초기화한 직후 <code>index != start_index</code>를 요구합니다. 현재 코드 그대로라면 body에 들어가지 않습니다. 다른 victim producer가 있으므로 이것만으로 runtime starvation을 증명하지는 않습니다.</div>
+<div class="callout warn"><strong>VS-21:</strong> comment는 5분 quota condition을 말하지만 visible executable admission code에는 1 ms와 500 ms 비교가 있습니다. lesson은 executable 500 ms 동작을 사용합니다.</div></section>
+
+<section class="section" id="control"><div class="eyebrow">04 · pgbuf-flush-control</div><h2>첫 active pass는 timestamp만 기록하고 이후 50 ms target에서 token을 교체합니다</h2>
+<p>초기화는 mutex와 condition variable을 가진 zero-token bucket을 만듭니다. 실패하면 이 daemon이 없고 token acquisition은 no-op이 되지만 page flushing은 계속 동작합니다. 첫 gate-open task pass는 time origin만 기록합니다. 이후 pass가 elapsed time을 측정하고 bucket을 갱신합니다.</p>
+<ol><li>token bucket을 lock합니다.</li><li>consumed-token과 page-write 통계를 읽고 clear합니다.</li><li>adaptive 또는 configured interval budget을 계산합니다.</li><li>새 budget을 이전 balance에 더하지 않고 <code>tokens</code>를 교체합니다.</li><li>interval 통계를 reset하고 condition variable을 broadcast합니다.</li></ol>
+<p>16 KiB/page에서 adaptive 40 MiB/s floor는 2,560 page/s, 50 ms마다 약 128 token입니다. non-adaptive internal 10,000-page/s 기본값은 50 ms마다 약 500 token입니다. 실제 값은 elapsed time, integer truncation, feedback에 따라 달라집니다.</p></section>
+
+<section class="section" id="soft"><div class="eyebrow">05 · Writer 동작</div><h2>token은 OS write 이후의 다음 진행을 지연합니다</h2>
+<p><code>fileio_write()</code>와 <code>fileio_write_pages()</code>는 successful OS write 뒤 <code>fileio_compensate_flush()</code>를 호출합니다. normal caller는 budget을 기다릴 수 있지만 최대 열 번 broadcast/retry 뒤 진행합니다. log critical section을 가진 caller는 demand를 account하되 missing token을 기다리지 않습니다.</p>
+<p>따라서 correctness authorization이나 strict throughput ceiling이 아니라 soft pacing입니다. CPU accounting은 O(1)이고 condition broadcast와 awakened waiter scheduling 비용은 waiter 수에 따라 커집니다.</p></section>
+
+<section class="section" id="outside"><div class="eyebrow">06 · 관련 actor</div><h2>Checkpoint, log flush, foreground flush, DWB는 각자의 ownership을 가집니다</h2>
+<p><code>log-checkpoint</code>는 기본 360초인 자체 configurable timer를 가지며 <code>oldest_unflush_lsa</code>로 data page를 선택합니다. <code>log-flush</code>는 WAL을 위해 append-log page를 durable하게 만듭니다. Foreground/WRITE-owner path는 data-page generation을 copy할 수 있습니다. DWB helper daemon은 stable image가 DWB seam을 넘은 뒤 downstream에서 동작합니다. 어느 것도 maintenance나 token-control lane에 속하지 않습니다.</p></section>
+
+<section class="section" id="primary-reading"><div class="eyebrow">핵심 읽을거리</div><h2>각 task body와 실제 갱신 state를 비교합니다</h2><p>Pinned <code>page_buffer.c:14251–14511,16994–17143,17146–17228</code>과 <code>file_io.c:626–929,4122–4373</code>을 읽습니다.</p><p><a href="../../reference/page-buffer-daemon-lifecycle-audit.md#1-pgbuf-maintain-update-replacement-policy">상세 daemon evidence 열기 →</a></p><p><a href="0006b-follow-page-flush-handoff.html">← Lesson 6B</a> · <a href="0007-replace-one-frame.html">Lesson 7로 계속 →</a></p></section>
+</article><nav class="lesson-nav" aria-label="Lesson 목차"><strong>Lesson map</strong><a href="#two-planes">1. 두 plane</a><a href="#maintain">2. Maintenance</a><a href="#maintenance-boundary">3. Boundary</a><a href="#control">4. Flush control</a><a href="#soft">5. Soft pacing</a><a href="#outside">6. Other actors</a><a href="#primary-reading">핵심 읽을거리</a><hr><a href="0006a-understand-page-buffer-daemons.html">Lesson 6A</a><a href="0006b-follow-page-flush-handoff.html">Lesson 6B</a><a href="0007-replace-one-frame.html">Lesson 7</a></nav></div>
+<footer class="footer">daemon 이름만 보고 책임을 정하기 전에 어떤 shared state가 바뀌는지 확인하세요.</footer></main></body></html>

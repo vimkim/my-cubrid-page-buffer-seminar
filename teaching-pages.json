@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "expectedPageCount": 44,
+  "expectedPageCount": 47,
   "canonicalLanguage": "en",
   "legacyRedirectMinimumDays": 90,
   "pages": [
@@ -13,12 +13,15 @@
     { "path": "lessons/0005-audit-a-logged-mutation.html", "en": "en/lessons/0005-audit-a-logged-mutation.html", "ko": "ko/lessons/0005-audit-a-logged-mutation.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0006-flush-one-generation.html", "en": "en/lessons/0006-flush-one-generation.html", "ko": "ko/lessons/0006-flush-one-generation.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0006a-understand-page-buffer-daemons.html", "en": "en/lessons/0006a-understand-page-buffer-daemons.html", "ko": "ko/lessons/0006a-understand-page-buffer-daemons.html", "review": { "state": "pending" }, "fingerprints": {} },
+    { "path": "lessons/0006b-follow-page-flush-handoff.html", "en": "en/lessons/0006b-follow-page-flush-handoff.html", "ko": "ko/lessons/0006b-follow-page-flush-handoff.html", "review": { "state": "pending" }, "fingerprints": {} },
+    { "path": "lessons/0006c-follow-maintenance-and-pacing.html", "en": "en/lessons/0006c-follow-maintenance-and-pacing.html", "ko": "ko/lessons/0006c-follow-maintenance-and-pacing.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0007-replace-one-frame.html", "en": "en/lessons/0007-replace-one-frame.html", "ko": "ko/lessons/0007-replace-one-frame.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0008-defend-a-safe-change.html", "en": "en/lessons/0008-defend-a-safe-change.html", "ko": "ko/lessons/0008-defend-a-safe-change.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0009-classify-latch-wait.html", "en": "en/lessons/0009-classify-latch-wait.html", "ko": "ko/lessons/0009-classify-latch-wait.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0010-revalidate-after-promotion.html", "en": "en/lessons/0010-revalidate-after-promotion.html", "ko": "ko/lessons/0010-revalidate-after-promotion.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0011-rebuild-after-ordered-refix.html", "en": "en/lessons/0011-rebuild-after-ordered-refix.html", "ko": "ko/lessons/0011-rebuild-after-ordered-refix.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0012-prove-replacement-progress.html", "en": "en/lessons/0012-prove-replacement-progress.html", "ko": "ko/lessons/0012-prove-replacement-progress.html", "review": { "state": "pending" }, "fingerprints": {} },
+    { "path": "lessons/0012a-understand-aout-ghost-history.html", "en": "en/lessons/0012a-understand-aout-ghost-history.html", "ko": "ko/lessons/0012a-understand-aout-ghost-history.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0013-gate-redo-by-page-lsa.html", "en": "en/lessons/0013-gate-redo-by-page-lsa.html", "ko": "ko/lessons/0013-gate-redo-by-page-lsa.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0014-preserve-lifecycle-order.html", "en": "en/lessons/0014-preserve-lifecycle-order.html", "ko": "ko/lessons/0014-preserve-lifecycle-order.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0015-route-a-specialized-interface.html", "en": "en/lessons/0015-route-a-specialized-interface.html", "ko": "ko/lessons/0015-route-a-specialized-interface.html", "review": { "state": "pending" }, "fingerprints": {} },

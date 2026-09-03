@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">The three independent inputs to a page-buffer fix request</title>
+  <desc id="desc">Fetch mode describes page knowledge, latch mode describes content access, and latch condition describes conflict handling. The three choices combine into one fix request.</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f5ef}.card{fill:#fff;stroke:#243447;stroke-width:2}.fetch{fill:#eaf3ff;stroke:#2563a8}.latch{fill:#eaf8ef;stroke:#287a45}.cond{fill:#fff3dc;stroke:#a86413}.out{fill:#243447}.h{font:700 27px system-ui,sans-serif;fill:#172331}.t{font:600 20px system-ui,sans-serif;fill:#172331}.s{font:16px system-ui,sans-serif;fill:#334155}.tiny{font:14px system-ui,sans-serif;fill:#475569}.white{font:700 21px system-ui,sans-serif;fill:white}.light{font:14px system-ui,sans-serif;fill:#dbe7f3}.arrow{stroke:#526273;stroke-width:3;fill:none;marker-end:url(#m)}
+    </style>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0l10 5-10 5z" fill="#526273"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="760" rx="24"/>
+  <text class="h" x="54" y="55">One fix call answers three different questions</text>
+
+  <rect class="card fetch" x="54" y="90" width="515" height="360" rx="18"/>
+  <text class="t" x="82" y="126">1 · PAGE_FETCH_MODE</text>
+  <text class="s" x="82" y="154">What does the caller know about this VPID?</text>
+  <text class="tiny" x="82" y="194">OLD_PAGE · allocated existing page; load bytes on a miss</text>
+  <text class="tiny" x="82" y="229">NEW_PAGE · already allocated new page; initialize on a miss</text>
+  <text class="tiny" x="82" y="264">OLD_PAGE_IF_IN_BUFFER · resident-only probe</text>
+  <text class="tiny" x="82" y="299">OLD_PAGE_PREVENT_DEALLOC · bridge a deallocation race</text>
+  <text class="tiny" x="82" y="334">OLD_PAGE_DEALLOCATED · deallocation-aware recovery work</text>
+  <text class="tiny" x="82" y="369">OLD_PAGE_MAYBE_DEALLOCATED · return NULL if deallocated</text>
+  <text class="tiny" x="82" y="404">RECOVERY_PAGE · accept any allocation state during recovery</text>
+
+  <rect class="card latch" x="631" y="90" width="515" height="210" rx="18"/>
+  <text class="t" x="659" y="126">2 · PGBUF_LATCH_MODE</text>
+  <text class="s" x="659" y="154">How may the returned page bytes be accessed?</text>
+  <text class="tiny" x="659" y="194">READ · shared content access</text>
+  <text class="tiny" x="659" y="229">WRITE · exclusive content access</text>
+  <text class="tiny" x="659" y="264">NO_LATCH / FLUSH / INVALID are not valid fix requests</text>
+
+  <rect class="card cond" x="631" y="330" width="515" height="120" rx="18"/>
+  <text class="t" x="659" y="366">3 · PGBUF_LATCH_CONDITION</text>
+  <text class="s" x="659" y="394">What happens if the latch conflicts?</text>
+  <text class="tiny" x="659" y="426">UNCONDITIONAL · may wait   |   CONDITIONAL · return now</text>
+
+  <path class="arrow" d="M310 468v75h210"/>
+  <path class="arrow" d="M888 468v75H680"/>
+  <rect class="out" x="420" y="520" width="360" height="92" rx="18"/>
+  <text class="white" x="479" y="557">one pgbuf_fix request</text>
+  <text class="light" x="493" y="588">fetch × latch × condition</text>
+  <path class="arrow" d="M600 612v52"/>
+  <rect class="card" x="240" y="678" width="720" height="54" rx="16"/>
+  <text class="s" x="285" y="712">Success returns PAGE_PTR + one unfix debt; non-acquisition creates no debt.</text>
+</svg>

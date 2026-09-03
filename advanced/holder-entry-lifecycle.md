@@ -12,6 +12,57 @@ The Core material already establishes the two-ledger contract: a BCB's global `f
 
 That is enough to use fix/unfix correctly, but not enough to answer structure, storage lifetime, growth, list maintenance, or cost questions. This page owns those implementation details.
 
+## Read the design questions in this order
+
+### 1. Can the traversal become expensive?
+
+Yes. Let `H` be the number of distinct BCBs currently held by one thread.
+`pgbuf_find_thrd_holder()` starts at that thread's `thrd_hold_list` head and
+follows `thrd_link`, so one lookup costs O(`H`) in the worst case. A final unfix
+of a non-head entry can walk again to find its predecessor. Holding `N` new,
+distinct pages without releasing earlier ones performs
+`0 + 1 + ... + (N-1) = N(N-1)/2` unsuccessful comparisons, an O(`N²`)
+accumulation.
+
+That shape is a source-proven risk, not proof of a production bottleneck. The
+list is thread-local, `H` is often small, and I/O, atomic-latch cache-line
+contention, waiter wakeup, or LRU/flush work may dominate. Measure per-thread
+hold depth and samples in `pgbuf_find_thrd_holder()` and
+`pgbuf_remove_thrd_holder()` before attributing elapsed time to the ledger.
+
+### 2. Can the representation be redesigned?
+
+Yes. The singly linked list is policy, not an Interface contract. A per-thread
+hash can provide expected O(1) lookup; an acquisition handle can identify one
+release directly; a BCB-side WRITE owner plus reader map can reverse the index.
+Each design must still preserve one fact: which thread owns how many nested fixes
+of each BCB. WRITE needs one owner and count. Shared READ needs a set of
+`<thread_id, fix_count>` records. Moving that tuple does not eliminate it.
+
+### 3. What is the entry's size, count, and lifetime?
+
+At the pinned source layout on the normal 64-bit ABI, a release-build
+`PGBUF_HOLDER` is 56 bytes. A non-release build adds a 64 KiB `fixed_at` array
+and `fixed_at_size`, making the entry roughly 65.6 KiB; exact ABI size remains a
+build property. `PGBUF_HOLDER_ANCHOR` is source-asserted to exactly 64 bytes.
+
+Initialization reserves seven entries per configured thread. Seven is a starting
+capacity, not a maximum. When one thread's free list is empty, a process-wide
+allocator creates sets of ten entries and hands entries to requesting threads.
+There is no small compile-time maximum number of general active holders per
+thread; growth stops on allocation failure or a surrounding protocol limit. The
+ordered-fix helper has its own separate 64-page save-array limit and must not be
+mistaken for a general holder limit.
+
+Backing storage normally lives until page-buffer finalization. A logical binding
+lives only from the first successful fix of a thread–BCB pair through the final
+matching unfix. Nested fixes reuse the same entry and increase `fix_count`; final
+unfix moves the entry to that thread's free list without freeing its storage.
+
+Source: layout and constants at `src/storage/page_buffer.c:86-94,438-497`;
+initial reservation and ten-entry expansion at `5922-6086`; lookup/removal at
+`6090-6275`; ordered-fix's separate limit at `317-319,12284-12474`.
+
 ## Structure: one entry has two mutually exclusive list roles
 
 ![Per-thread holder entry structure and lifetime](../assets/holder-entry-lifetime.svg)
@@ -57,7 +108,7 @@ That attribution is required because the public release operation receives a `TH
 
 Removing the entry without replacing its information would therefore leave global replacement protection but break caller-specific ownership accounting. The same `PAGE_PTR` may have been returned by multiple nested fixes and may also be held by other threads; pointer equality and global `fcnt` do not provide a release ledger.
 
-### This ledger is not a complete misuse guard
+### Release-build misuse detection boundary
 
 The holder is used in release builds, but that does not mean every fix/unfix programming error is prevented:
 
@@ -98,13 +149,13 @@ The codebase also contains a useful counterexample: `pgbuf_simple_fix()`/`pgbuf_
 
 Source: holder/BCB fields at `src/storage/page_buffer.c:460-535`; holder-free simple protocol at `2688-2811`; caller-aware promotion at `2850-3024` and grant at `6312-6634`; missing-holder detection and nested decrement at `6128-6184`; ordinary unfix at `3062-3201` and global decrement at `6636-6703`; legacy cleanup at `3277-3357`; progress classification at `11705-11785`; ordered fixing/callback at `12250-13350`; watcher attachment through the holder at `13613-13709`.
 
-## Two lifetimes must be distinguished
+## Detailed lifecycle: storage and one binding
 
 ### Backing-storage lifetime
 
-`pgbuf_initialize_thrd_holder()` runs during page-buffer initialization. It allocates one anchor per configured thread and reserves seven `PGBUF_HOLDER` entries per thread (`PGBUF_DEFAULT_FIX_COUNT == 7`). Every thread starts with those seven entries on its free list and an empty hold list.
+`pgbuf_initialize_thrd_holder()` runs during page-buffer initialization. It allocates one 64-byte anchor per configured thread and reserves seven `PGBUF_HOLDER` entries per thread (`PGBUF_DEFAULT_FIX_COUNT == 7`). Every thread starts with those seven entries on its free list and an empty hold list. On the pinned 64-bit layout, the release entry is 56 bytes; non-release builds add the 64 KiB fix-site buffer described above.
 
-If a thread has more than seven distinct held BCBs, `pgbuf_allocate_thrd_holder_entry()` takes an entry from a process-wide expansion set. Expansion is serialized by `free_holder_set_mutex` and allocates `PGBUF_NUM_ALLOC_HOLDER == 10` entries at a time. Once an entry is assigned and later released, it goes to that thread's free list. Reserved storage and every expansion set remain allocated until `pgbuf_finalize()` frees the pool; an individual final unfix does not free heap memory.
+If a thread has more than seven distinct held BCBs, `pgbuf_allocate_thrd_holder_entry()` takes an entry from a process-wide expansion set. Expansion is serialized by `free_holder_set_mutex` and allocates `PGBUF_NUM_ALLOC_HOLDER == 10` entries at a time. Ten is the allocation batch size, not a per-thread cap. Once an entry is assigned and later released, it goes to that thread's free list. Reserved storage and every expansion set remain allocated until `pgbuf_finalize()` frees the pool; an individual final unfix does not free heap memory.
 
 Source: initialization call at `src/storage/page_buffer.c:1641-1778`; holder initialization at `src/storage/page_buffer.c:5922-5994`; expansion at `src/storage/page_buffer.c:6000-6085`; teardown at `src/storage/page_buffer.c:1921-2003`.
 
@@ -122,7 +173,7 @@ The backing address can therefore survive many unrelated logical holds. A holder
 
 Source: find/decrement/remove at `src/storage/page_buffer.c:6098-6275`; normal grant maintenance at `src/storage/page_buffer.c:6298-6634`; lock-free READ grant at `src/storage/page_buffer.c:7735-7798`; normal unfix at `src/storage/page_buffer.c:3062-3201`; watcher lookup at `src/storage/page_buffer.c:13673-13699`.
 
-## Can holder maintenance make `pgbuf_unfix()` a bottleneck?
+## Detailed cost derivation for fix and unfix
 
 **Short answer:** yes, the concern is mechanically plausible for some ownership shapes, but it is not proven for a workload merely because many fixes and unfixes occur.
 

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Data and log pages use separate buffer pools joined by WAL</title>
+  <desc id="desc">The data page buffer uses BCBs, hash lookup, replacement lists, and fix debt. The log page buffer uses LOG_BUFFER descriptors, modulo indexing, log critical-section synchronization, and caller copies. WAL is the durability bridge between them.</desc>
+  <defs><style>.bg{fill:#f7f5ef}.panel{fill:#fff;stroke:#26384a;stroke-width:2}.data{fill:#eaf3ff;stroke:#2563a8}.log{fill:#fff3dc;stroke:#a86413}.wal{fill:#eaf8ef;stroke:#287a45}.h{font:700 28px system-ui,sans-serif;fill:#172331}.t{font:700 19px system-ui,sans-serif;fill:#172331}.s{font:15px system-ui,sans-serif;fill:#334155}.tiny{font:13px system-ui,sans-serif;fill:#475569}.arrow{stroke:#526273;stroke-width:3;fill:none;marker-end:url(#m)}</style><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0l10 5-10 5z" fill="#526273"/></marker></defs>
+  <rect class="bg" width="1200" height="700" rx="24"/><text class="h" x="55" y="58">Two independent memory pools, one durability ordering rule</text>
+  <rect class="panel data" x="55" y="100" width="500" height="390" rx="20"/><text class="t" x="90" y="142">DATA PAGE BUFFER · page_buffer.c</text>
+  <rect class="panel" x="95" y="180" width="190" height="82" rx="13"/><text class="t" x="120" y="212">PGBUF_BCB</text><text class="tiny" x="120" y="239">VPID · latch · fcnt · DIRTY</text>
+  <path class="arrow" d="M285 220h70"/><rect class="panel" x="355" y="180" width="155" height="82" rx="13"/><text class="t" x="389" y="212">frame</text><text class="tiny" x="380" y="239">shared PAGE_PTR</text>
+  <text class="s" x="95" y="315">lookup: resident hash</text><text class="s" x="95" y="349">reuse: INVALID + private/shared LRU</text><text class="s" x="95" y="383">ownership: fix/unfix + holder debt</text><text class="s" x="95" y="417">write: data-volume home page</text>
+  <rect class="panel log" x="645" y="100" width="500" height="390" rx="20"/><text class="t" x="680" y="142">LOG PAGE BUFFER · log_page_buffer.c</text>
+  <rect class="panel" x="685" y="180" width="190" height="82" rx="13"/><text class="t" x="710" y="212">LOG_BUFFER</text><text class="tiny" x="710" y="239">pageid · phy id · dirty</text>
+  <path class="arrow" d="M875 220h70"/><rect class="panel" x="945" y="180" width="155" height="82" rx="13"/><text class="t" x="979" y="212">frame</text><text class="tiny" x="967" y="239">LOG_PAGE bytes</text>
+  <text class="s" x="685" y="315">lookup: logical pageid % num_buffers</text><text class="s" x="685" y="349">reuse: predetermined slot, flush before reuse</text><text class="s" x="685" y="383">ownership: LOG_CS; readers normally get a copy</text><text class="s" x="685" y="417">write: active-log ring, then archives</text>
+  <path class="arrow" d="M300 490v80h195"/><path class="arrow" d="M900 490v80H705"/>
+  <rect class="panel wal" x="355" y="550" width="490" height="100" rx="18"/><text class="t" x="405" y="590">WAL bridge · logpb_flush_log_for_wal()</text><text class="s" x="405" y="620">Make required log LSA durable before writing the data page.</text>
+  <text class="tiny" x="377" y="678">The bridge orders writes. It does not move either frame into the other pool.</text>
+</svg>

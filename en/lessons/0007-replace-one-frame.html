@@ -73,31 +73,10 @@
       </section>
 
       <section class="section" id="aout">
-        <div class="eyebrow">01B · Ghost history</div>
-        <h2>AOUT remembers that a page left; it does not keep the page</h2>
-        <img class="diagram" src="../../assets/aout-ghost-admission.svg" alt="An evicted VPID and former LRU index entering the AOUT FIFO and hash, then changing first-unfix admission on miss, same-private hit, or other-private hit, followed by the historical disablement chain">
-        <p class="caption">The dormant path changes admission preference. It never relaxes the victim safety gate.</p>
-        <p>AOUT is CUBRID's implementation of the out-history idea from 2Q. One global FIFO plus hash stores small ghost records: <code>{ VPID, former lru_idx }</code>. There is no BCB, frame, page image, fix, latch, or dirty state in the record. If enabled, capacity would be <code>min(floor(num_buffers × data_aout_ratio), 32768)</code>.</p>
-        <p>When a page is victimized, its identity can enter AOUT. If that VPID is loaded again, its first final unfix consumes the ghost and uses the former list index as admission evidence:</p>
-        <table>
-          <thead><tr><th>Ordinary private-domain case</th><th>Placement</th><th>Meaning</th></tr></thead>
-          <tbody>
-            <tr><td>AOUT off—the current pinned path</td><td>Private LRU1 top</td><td>Every new private page bypasses the ghost filter.</td></tr>
-            <tr><td>AOUT on, miss</td><td>Current private LRU middle</td><td>A first-seen identity starts below the hot top.</td></tr>
-            <tr><td>AOUT on, same-private hit</td><td>Current private LRU1 top</td><td>A refault after eviction has demonstrated reuse.</td></tr>
-            <tr><td>AOUT on, other-private hit</td><td>Shared LRU middle</td><td>Reuse across private domains becomes shared.</td></tr>
-          </tbody>
-        </table>
-        <h3>Why is it disabled?</h3>
-        <ol>
-          <li><a href="http://jira.cubrid.org/browse/CBRD-20741">CBRD-20741</a> recorded repeated older 10.1 crashes/assertions in <code>pgbuf_add_vpid_to_aout_list()</code> and corrupted/cyclic queue links. The issue is Confirmed and Unresolved; its discussion says the root cause was unknown.</li>
-          <li><a href="http://jira.cubrid.org/browse/CBRD-21135">CBRD-21135</a> chose to disable <code>data_aout_ratio</code> until that defect was fixed. Commit <a href="https://github.com/CUBRID/cubrid/commit/d3554deee3a5e2e6d2030113db550eaea42a5fa4"><code>d3554deee</code></a> implemented the workaround.</li>
-          <li>Pinned <code>prm_tune_parameters()</code> still unconditionally sets the ratio to zero. Initialization then sets <code>max_count = 0</code> and returns before allocating FIFO/hash storage; add and lookup paths become no-ops.</li>
-        </ol>
-        <div class="callout warn"><strong>Evidence boundary:</strong> this proves that the pinned revision deliberately keeps AOUT off because of the historical unresolved crash. It does not prove that the dormant pinned implementation still reproduces the old crash, and it does not identify a root cause that the issue itself says was unknown.</div>
-        <h3>Would reviving it help?</h3>
-        <p>Potentially, but only after a correctness repair. The dormant branches could reduce one-pass scan pollution by admitting ghost misses at private middle, reward same-private refaults at the hot top, and recognize cross-private reuse. These are source-derived effects, not measured gains. Revival also adds one global <code>Aout_mutex</code> on eviction/refault, bounded metadata and hash work, and the risk of discarding useful first-seen pages sooner. The queue corruption, concurrent list/hash/free-list invariants, private-list reassignment, startup/shutdown, and ratio boundaries need stress tests before any performance comparison.</p>
-        <p class="source-note"><strong>Verified mechanism and historical evidence:</strong> AOUT structures and capacity are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L635-L666"><code>page_buffer.c:635–666</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5802-L5882"><code>5802–5882</code></a>; admission is at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6885-L6994"><code>6885–6994</code></a>; forced zero is at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L9975-L9987"><code>system_parameter.c:9975–9987</code></a>. See the <a href="../../reference/victim-scan-cap-and-aout-evidence.md">full evidence audit</a>.</p>
+        <div class="eyebrow">01B · Separate historical topic</div>
+        <h2>Continue to the dedicated AOUT lesson only when you need dormant ghost history</h2>
+        <p>The pinned startup path forces AOUT off, so it is not part of the active safety path taught here. Lesson 0012A owns the ghost-entry structure, dormant admission branches, historical disablement, and revival boundary.</p>
+        <p><a href="0012a-understand-aout-ghost-history.html">Open Lesson 0012A: dormant AOUT ghost history →</a></p>
       </section>
 
       <section class="section" id="slot">
@@ -147,7 +126,7 @@
 
       <section class="section" id="no-victim">
         <div class="eyebrow">05 · When no slot is safe</div>
-        <h2>The allocator waits or retries; it does not steal a fixed page</h2>
+        <h2>The allocator waits until a reusable BCB becomes available</h2>
         <p>If every candidate is fixed, dirty, flushing, waiting, or in another handoff, victim search returns nothing. A flush can make a dirty candidate clean. An unfix can end ownership. In server mode, an allocating thread may wait for a directly assigned victim and retry if that candidate is fixed again before consumption.</p>
         <p>The LRU policy decides which safe candidate to prefer and how to make progress. It may change across revisions. The safety rule does not: a successful fixer or incomplete flush generation must not survive the slot's rebind.</p>
         <table>
@@ -162,7 +141,7 @@
       </section>
 
       <section class="section" id="verbs">
-        <div class="eyebrow">06 · Do not mix up the verbs</div>
+        <div class="eyebrow">06 · Keep replacement verbs distinct</div>
         <h2>Unfix, flush, and victimize solve different debts</h2>
         <table>
           <thead><tr><th>Operation</th><th>What ends</th><th>What can remain</th></tr></thead>
@@ -201,7 +180,7 @@
       <strong>Lesson map</strong>
       <a href="#story">1. Why a slot is needed</a>
       <a href="#structures-cost">1A. Structures and cost</a>
-      <a href="#aout">1B. AOUT ghost history</a>
+      <a href="#aout">1B. AOUT route</a>
       <a href="#slot">2. What gets reused</a>
       <a href="#gate">3. Four safety questions</a>
       <a href="#handoff-details">4. Protected recheck</a>

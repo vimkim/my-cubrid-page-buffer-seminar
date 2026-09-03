@@ -21,8 +21,10 @@
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="outcomes">
-        <div class="eyebrow">01 · Start with the result</div>
-        <h2>Five paths do not create the same ownership</h2>
+        <div class="eyebrow">01 · What happens after the resident BCB is found?</div>
+        <h2>A fix request ends in one of five caller-visible outcomes</h2>
+        <p>Earlier lessons stopped after saying “request a READ or WRITE latch.” This lesson opens that step. Once CUBRID finds the resident BCB, it compares the requested latch with the current owners and wait queue. A compatible request can finish immediately. A conflicting request either fails immediately or waits, depending on the caller's condition.</p>
+        <p>The table follows one request from the caller's point of view. The practical question is simple: <em>did this call return a page that I now own and must later unfix?</em></p>
         <table>
           <thead><tr><th>Outcome</th><th>Caller result</th><th>Fix debt?</th></tr></thead>
           <tbody>
@@ -33,7 +35,7 @@
             <tr><td>Wakeup and grant</td><td>Waker updates latch tuple; resumed thread records its holder.</td><td>Yes—the same postcondition as immediate success.</td></tr>
           </tbody>
         </table>
-        <p class="big-claim">Being queued is a pending request, not ownership. Only the completed grant creates release debt.</p>
+        <p class="big-claim">Only “immediate grant” and “wakeup and grant” return successful ownership. Queueing by itself records a request and creates no new unfix debt.</p>
       </section>
 
       <section class="section" id="structures">
@@ -55,9 +57,30 @@
         <p class="source-note"><strong>Verified mechanism:</strong> the BCB queue head and holder structures are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L528"><code>page_buffer.c:460–528</code></a>; the thread request fields are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_entry.hpp#L228-L256"><code>thread_entry.hpp:228–256</code></a>; holder allocation is at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5922-L6086"><code>page_buffer.c:5922–6086</code></a>.</p>
       </section>
 
+      <section class="section" id="no-latch">
+        <div class="eyebrow">03 · One enum value in three fields</div>
+        <h2>NO_LATCH is a real idle BCB mode and a separate queue tombstone</h2>
+        <table>
+          <thead><tr><th>Owning field</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>PGBUF_BCB.atomic_latch.latch_mode</code></td><td>No READ or WRITE page-content latch is currently granted. After final unfix, a resident BCB can stay in this state for a long time.</td></tr>
+            <tr><td><code>THREAD_ENTRY.request_latch_mode</code></td><td>Default before a request; while queue-linked, timeout/interrupt writes NO_LATCH as a cancellation tombstone.</td></tr>
+            <tr><td><code>PGBUF_WATCHER.latch_mode</code></td><td>Initialization metadata before an ordered fix records READ or WRITE. Use the watcher pointer and links to determine active state.</td></tr>
+          </tbody>
+        </table>
+        <pre>resident idle BCB:
+latch_mode = NO_LATCH, fcnt = 0
+
+free BCB:
+latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
+        <p>BCB latch mode <code>PGBUF_NO_LATCH</code> says only that no READ/WRITE page latch is granted. It does not imply clean, free, VOID, LRU3, queue-empty, mutex-free, or victimizable. During zero-count handoff, the BCB can briefly be NO_LATCH with a nonempty waiter queue.</p>
+        <p><code>PGBUF_LATCH_FLUSH</code> belongs to a waiting thread's request field. The BCB's in-flight page write is the <code>PGBUF_BCB_FLUSHING</code> flag; FLUSH is never a granted page-content latch.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.h:124–160,189–197</code>; <code>thread_entry.cpp:85–111</code>; <code>page_buffer.c:6277–6703,7281–7590,9255–9475</code>. <a href="../../reference/no-latch-semantics-audit.md">Open the complete NO_LATCH audit →</a></p>
+      </section>
+
       <section class="section" id="request-matrix">
-        <div class="eyebrow">03 · READ, WRITE, and unconditional</div>
-        <h2>Unconditional means “wait on conflict,” not “always wait”</h2>
+        <div class="eyebrow">04 · READ, WRITE, and unconditional</div>
+        <h2>Unconditional requests wait only when they conflict</h2>
         <p>Before latch work, a transaction with zero-wait policy converts even an unconditional fix to conditional behavior. Otherwise, a compatible request succeeds immediately and an incompatible request queues.</p>
         <table>
           <thead><tr><th>Current BCB state</th><th>READ request</th><th>WRITE request</th></tr></thead>
@@ -152,7 +175,7 @@
           <tbody>
             <tr><td>WRITE</td><td>Grant that writer only, then stop.</td><td>Other readers/writers stay queued.</td></tr>
             <tr><td>READ</td><td>Grant it, keep scanning, leave incompatible WRITE/FLUSH entries linked, and grant later READ entries.</td><td>Skipped writers and FLUSH waiters remain; granted/cancelled entries are removed.</td></tr>
-            <tr><td>Cancelled <code>NO_LATCH</code></td><td>Skip it.</td><td>Continue scanning.</td></tr>
+            <tr><td>Cancelled waiter: <code>THREAD_ENTRY.request_latch_mode=NO_LATCH</code> tombstone</td><td>Remove without granting.</td><td>Continue scanning.</td></tr>
             <tr><td>FLUSH waiter</td><td>Leave it for the flush-completion protocol.</td><td>It is not granted by unfix.</td></tr>
           </tbody>
         </table>
@@ -161,7 +184,7 @@
 
       <section class="section" id="fairness">
         <div class="eyebrow">07 · Evidence boundary</div>
-        <h2>“Roughly arrival order” is not FIFO or starvation freedom</h2>
+        <h2>The queue provides only approximate arrival order</h2>
         <p>One hundred writers are normally served one per zero-crossing in queue order. A mixed queue behaves differently: <code>R1 → R2 → W1 → R3</code> grants R1, R2, and R3 in one READ scan while W1 stays queued. Three mechanisms can therefore reorder apparent service:</p>
         <ul>
           <li><strong>Holder re-entry:</strong> an existing holder can acquire nested ownership past waiters.</li>
@@ -173,7 +196,7 @@
 
       <section class="section" id="failure">
         <div class="eyebrow">08 · Failed waits leave no debt</div>
-        <h2>Timeout and interrupt are cleanup paths, not late grants</h2>
+        <h2>Timeout and interrupt remove an ungranted request</h2>
         <p>A timeout resets/cancels the request and reports a page-latch timeout that is mapped according to transaction wait policy. An interrupted waiter removes itself. Neither returns a page pointer or creates a holder that the caller must unfix.</p>
         <p>Review both sides of every wakeup: the waker’s tuple transition and the resumed thread’s holder allocation. Lesson 8’s <code>VS-11</code> candidate exists exactly at that post-grant holder-recording seam; queue success is not complete until both ledgers agree.</p>
       </section>
@@ -206,7 +229,8 @@
       <strong>Lesson map</strong>
       <a href="#outcomes">1. Five outcomes</a>
       <a href="#structures">2. Two linked lists</a>
-      <a href="#request-matrix">3. READ/WRITE matrix and cost</a>
+      <a href="#no-latch">3. NO_LATCH by field</a>
+      <a href="#request-matrix">4. READ/WRITE matrix and cost</a>
       <a href="#queue">4. Queue and handoff</a>
       <a href="#mixed-queue">5. Six alternating requests</a>
       <a href="#head">6. Wakeup scan rule</a>

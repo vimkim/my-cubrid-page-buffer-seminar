@@ -22,17 +22,51 @@
     <article class="lesson-main">
       <section class="section" id="intent">
         <div class="eyebrow">01 · 서로 독립적인 세 input</div>
-        <h2>caller가 무엇을 알고 무엇을 원하는지에서 시작합니다</h2>
+        <h2>Fix 호출 하나를 서로 다른 세 답으로 나누어 읽습니다</h2>
+        <p>Hit와 miss를 따라가기 전에 질문 세 개를 먼저 던집니다. Caller는 어떤 종류의 logical page라고 알고 있는가? 반환된 bytes에 어떻게 접근할 것인가? 그 접근이 충돌하면 기다려도 되는가? 세 답은 호출 하나에 함께 들어가지만 어느 하나도 다른 답을 대신할 수 없습니다.</p>
+        <img class="diagram" src="../../assets/fix-request-inputs.svg" alt="일곱 fetch mode, 두 valid content latch request, 두 conflict condition이 하나의 fix request로 합쳐지는 그림">
         <table>
-          <thead><tr><th>Choice</th><th>답하는 질문</th><th>중요한 결과</th></tr></thead>
+          <thead><tr><th>Choice</th><th>답하는 질문</th><th>짧은 답</th></tr></thead>
           <tbody>
-            <tr><td><code>PAGE_FETCH_MODE</code></td><td>caller가 allocation 또는 residency에 관해 무엇을 아는가?</td><td><code>OLD_PAGE</code>는 기존 bytes를 materialize할 수 있고, <code>NEW_PAGE</code>는 기존 bytes를 읽지 않고 초기화하며, <code>OLD_PAGE_IF_IN_BUFFER</code>는 materialization을 하지 않습니다.</td></tr>
-            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>borrower가 resident bytes에 어떤 방식으로 접근할 수 있는가?</td><td>READ는 compatible reader를 허용하고, WRITE는 exclusive content access를 요청합니다.</td></tr>
-            <tr><td><code>PGBUF_LATCH_CONDITION</code></td><td>incompatible request가 기다릴 수 있는가?</td><td>Conditional은 wait path에 들어가지 않고 거절하며, unconditional은 wait path를 허용합니다.</td></tr>
+            <tr><td><code>PAGE_FETCH_MODE</code></td><td>어떤 page이며, miss에서 materialize해도 되는가?</td><td>Caller knowledge를 나타내는 일곱 mode 중 하나를 고릅니다.</td></tr>
+            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>READ를 공유할 것인가, exclusive WRITE가 필요한가?</td><td>Public fix는 READ 또는 WRITE를 받습니다.</td></tr>
+            <tr><td><code>PGBUF_LATCH_CONDITION</code></td><td>Incompatible request가 잠들어도 되는가?</td><td>Conditional은 바로 반환하고, unconditional은 기다릴 수 있습니다.</td></tr>
           </tbody>
         </table>
+
+        <h3>일곱 fetch mode를 하나씩 봅니다</h3>
+        <p>Fetch mode는 allocation과 residency에 관한 caller의 진술입니다. READ 또는 WRITE를 고르는 값이 아닙니다.</p>
+        <table>
+          <thead><tr><th>Mode</th><th>쉬운 의미</th><th>중요한 결과</th></tr></thead>
+          <tbody>
+            <tr><td><code>OLD_PAGE</code></td><td>할당된 기존 page가 있습니다.</td><td>Miss이면 DWB 또는 data volume에서 기존 bytes를 읽습니다. <code>PAGE_UNKNOWN</code> image는 error입니다.</td></tr>
+            <tr><td><code>NEW_PAGE</code></td><td>Allocation이 이 새 VPID를 이미 만들었습니다.</td><td>Miss이면 기존 page bytes를 읽지 않고 BCB/frame을 초기화합니다. Caller가 page type을 초기화하기 전의 <code>PAGE_UNKNOWN</code>을 허용합니다.</td></tr>
+            <tr><td><code>OLD_PAGE_IF_IN_BUFFER</code></td><td>지금 resident일 때만 page가 필요합니다.</td><td>Hash miss이면 BCB를 claim하거나 volume을 읽지 않고 <code>NULL</code>을 반환합니다.</td></tr>
+            <tr><td><code>OLD_PAGE_PREVENT_DEALLOC</code></td><td>기존 page가 latch grant 전 틈에서 deallocation되지 않아야 합니다.</td><td>Identity validation부터 fix 성공까지 임시 avoid-deallocation count로 잇고, grant 뒤 제거합니다.</td></tr>
+            <tr><td><code>OLD_PAGE_DEALLOCATED</code></td><td>Recovery 작업이 deallocated image에 접근해야 합니다.</td><td>Common path가 <code>PAGE_UNKNOWN</code> image를 반환할 수 있습니다. Deallocation undo는 이를 받아 예전 type을 복구합니다.</td></tr>
+            <tr><td><code>OLD_PAGE_MAYBE_DEALLOCATED</code></td><td>보통 존재하지만 이미 deallocate되었을 수도 있습니다.</td><td>Normal image는 반환합니다. <code>PAGE_UNKNOWN</code>이면 임시 fix를 되돌리고 caller에게 <code>NULL</code>을 반환합니다.</td></tr>
+            <tr><td><code>RECOVERY_PAGE</code></td><td>Recovery가 어떤 allocation state든 받아야 합니다.</td><td>일반 allocation validation을 생략하고 normal, immature/new, <code>PAGE_UNKNOWN</code> image를 모두 허용합니다.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Latch-mode enum의 다섯 값을 구분합니다</h3>
+        <p>이 enum은 여러 structure에서 쓰이지만 public fix request가 받는 값은 READ와 WRITE뿐입니다.</p>
+        <table>
+          <thead><tr><th>Mode</th><th>의미</th><th>Valid fix request?</th></tr></thead>
+          <tbody>
+            <tr><td><code>PGBUF_NO_LATCH</code></td><td>BCB field에서는 현재 grant된 READ/WRITE content latch가 없다는 뜻입니다. 다른 owning field에서는 initialization 또는 cancellation 의미로 재사용됩니다.</td><td>아니요.</td></tr>
+            <tr><td><code>PGBUF_LATCH_READ</code></td><td>Shared page-content access이며 compatible reader가 함께 존재할 수 있습니다.</td><td>예.</td></tr>
+            <tr><td><code>PGBUF_LATCH_WRITE</code></td><td>Exclusive page-content access이며 다른 thread의 READ/WRITE request와 충돌합니다.</td><td>예.</td></tr>
+            <tr><td><code>PGBUF_LATCH_FLUSH</code></td><td>Flush 완료를 기다리는 queue request이며 grant되는 content latch가 아닙니다.</td><td>아니요.</td></tr>
+            <tr><td><code>PGBUF_LATCH_INVALID</code></td><td>BCB에 사용할 수 있는 resident identity가 없습니다.</td><td>아니요.</td></tr>
+          </tbody>
+        </table>
+        <p><code>PGBUF_NO_LATCH</code>를 설명할 때는 반드시 owning field를 함께 말하세요. <a href="../../reference/no-latch-semantics-audit.md">NO_LATCH audit</a>은 resident-idle BCB state, waiter cancellation, watcher initialization을 나누어 설명합니다.</p>
+
+        <h3>Conditional과 unconditional은 충돌 처리 방법입니다</h3>
+        <p><code>PGBUF_CONDITIONAL_LATCH</code>는 “latch가 충돌하면 잠들지 않는다”는 뜻입니다. Compatible request는 정상적으로 성공합니다. <code>PGBUF_UNCONDITIONAL_LATCH</code>는 “필요하면 기다려도 된다”는 뜻이므로 compatible request는 여전히 즉시 grant됩니다. Zero-wait로 설정된 transaction은 lookup 전에 unconditional을 conditional로 바꿉니다.</p>
         <div class="callout warn"><strong>Debt rule:</strong> 예상된 non-acquisition은 debt를 만들지 않습니다. <code>OLD_PAGE_IF_IN_BUFFER</code> miss나 conditional conflict는 matching unfix 의무 없이 <code>NULL</code>을 반환할 수 있습니다. <code>NULL</code>을 하나의 보편적 error로 해석하지 말고 caller가 선택한 protocol에 맞춰 해석하세요.</div>
-        <p class="source-note"><strong>Interface contract:</strong> 세 choice type은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a>에서 분리되어 있습니다. Validation, zero-wait conversion, resident-only miss는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2260-L2413"><code>page_buffer.c:2260–2413</code></a>에 있습니다.</p>
+        <p class="source-note"><strong>Interface contract and Verified mechanism:</strong> 모든 enum 값은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a>에 있습니다. Request validation, zero-wait conversion, fast-path eligibility, resident-only miss, deallocation bridge, post-latch page-type outcome은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2285-L2615"><code>page_buffer.c:2285–2615</code></a>에 있습니다.</p>
       </section>
 
       <section class="section" id="convergence">
@@ -65,7 +99,7 @@
 
       <section class="section" id="miss">
         <div class="eyebrow">04 · Serialized cold miss</div>
-        <h2>waiter는 재시도하며 provisional BCB를 그대로 넘겨받지 않습니다</h2>
+        <h2>waiter는 깨어난 뒤 normal lookup을 다시 시도합니다</h2>
         <img class="diagram" src="../../assets/load-owner-waiter.svg" alt="하나의 cold miss에서 VPID load owner와 waiter">
         <p class="caption">하나의 hash-anchor mutex가 in-flight load-lock chain과 resident BCB chain을 보호합니다.</p>
         <ol>
@@ -137,7 +171,7 @@
 
       <section class="section" id="retrieval">
         <div class="eyebrow">07 · Retrieval practice</div>
-        <h2>contract의 의미는 바꾸지 않고 차이를 설명합니다</h2>
+        <h2>하나의 contract 안에서 경로 차이를 설명합니다</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="caller가 fetch knowledge, latch mode, wait condition을 선택함 -> protected hit가 hash candidate를 recheck함 -> cold miss는 VPID load owner 하나를 선출하고 waiter는 잠든 뒤 retry함 -> 두 path 모두 BCB와 page-header identity를 비교함 -> latch와 두 debt ledger를 grant함 -> unfix 하나를 빚진 borrowed PAGE_PTR 하나를 반환함. 이 protocol은 resident identity를 serialize하며 physical I/O를 serialize한다고 단정할 수 없음." data-concepts='[{"label":"분리된 세 caller choice","terms":["fetch","latch","condition","wait"]},{"label":"protected hit와 stale-observation boundary","terms":["hit","candidate","mutex","recheck","stale"]},{"label":"VPID load owner와 waiter retry","terms":["load owner","waiter","retry","provisional","publish"]},{"label":"BCB와 page-header identity 일치","terms":["bcb","header","identity","vpid"]},{"label":"공통 grant와 release debt","terms":["fcnt","holder","page_ptr","unfix","debt"]},{"label":"명시적인 evidence 한계","terms":["physical","i/o","fairness","durability","does not prove"]}]'>
           <h3>문제</h3>
           <p>“일반 resident hit와 cold miss는 무엇이 다르고, 어느 postcondition이 같으며, miss protocol이 physical disk read가 정확히 한 번임을 증명하지 못하는 이유는 무엇인가요?”</p>

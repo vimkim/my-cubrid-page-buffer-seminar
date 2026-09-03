@@ -53,7 +53,7 @@ test("the heap insert trace covers the entire caller-completed mutation", async 
 test("the contract ledger separates page-buffer guarantees from caller obligations", async () => {
   const markdown = await readFile(pagePath, "utf8");
 
-  assert.match(markdown, /## Contract ledger: acquisition is necessary, not sufficient/);
+  assert.match(markdown, /## Contract ledger from acquisition through durable mutation/);
   assert.match(markdown, /\| Page-buffer or log-layer guarantee \| Caller obligation \|/);
   for (const obligation of [
     "page type",
@@ -114,7 +114,7 @@ test("the contract ledger shows the page latch and the transaction lock as diffe
     readFile(latchVersusLockPath, "utf8"),
   ]);
 
-  const ledgerAt = markdown.indexOf("## Contract ledger: acquisition is necessary, not sufficient");
+  const ledgerAt = markdown.indexOf("## Contract ledger from acquisition through durable mutation");
   const visualAt = markdown.indexOf("](../assets/latch-versus-lock.svg)");
   const traceAt = markdown.indexOf("## One complete caller trace");
   assert.ok(ledgerAt > 0, "contract ledger");

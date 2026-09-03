@@ -292,7 +292,7 @@
           <div class="model-answer">
             <p><strong>답변:</strong> allocator가 안전한 LRU victim을 찾습니다. 바로 eligible한 대상이 없으면 server mode는 flush progress를 요청하고 direct victim을 기다릴 수 있으며, stand-alone 또는 recovery path는 동기식으로 flush하고 재시도합니다. assignment, retry, interrupt, timeout, <code>ER_PB_ALL_BUFFERS_DIRTY</code>가 bounded outcome입니다. 선택 정책은 hard gate를 우회하지 않습니다. unsafe fixed, dirty, flushing, waited-on, transient 또는 identity-changed BCB는 재사용할 수 없습니다.</p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:8181-8403,9067-9538,15420-15660</code></p>
-            <p class="answer-route"><a href="../../advanced/replacement-progress.md#no-free-bcb-the-allocation-progress-loop">Canonical progress loop</a></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#what-happens-when-every-scan-fails">Canonical progress loop</a></p>
           </div>
         </details>
       </article>
@@ -306,7 +306,7 @@
             <p><strong>답변:</strong> 개수는 설정과 실행 mode에 따라 달라집니다. Shared 자동 개수는 <code>MAX_NTRANS</code>에서 시작해 list당 약 1,000 buffers를 목표로 하며 최소 네 개이고, 명시 shared count 상한은 1,000입니다. 이 숫자는 private list의 상한이 아닙니다. Server mode에서 private count <code>-1</code>은 <code>MAX_NTRANS + 50</code>이 되고, <code>0</code>은 private quota를 끄며, 명시 양수는 이 baseline에서 4–4,050입니다. Automatic <code>MAX_NTRANS</code>에는 reserved connection도 들어가며 initializer가 1,000으로 clamp하지 않습니다. 한 BCB는 한 list에만 속합니다. Quota는 placement와 search를 이끌 뿐 fix 수를 제한하거나 reuse를 허가하지 않습니다.</p>
             <p><strong>답변:</strong> shared LRU1/LRU2 기본 비율은 40%/5%이고 private quota target은 5%/5%를 확보합니다. activity-weighted private quota는 smoothing되며 5,000 pages와 pool 절반으로 제한되고, shared remainder는 list당 최소 target 50을 둡니다. 이 숫자는 모두 고정 revision의 policy이지 Interface contract가 아닙니다.</p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:1071-1118,5744-5903,13942-14624</code></p>
-            <p class="answer-route"><a href="../../advanced/replacement-progress.md#counts-quotas-and-zone-boundaries-at-the-pinned-revision">Canonical LRU 상세 설명</a></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#put-real-default-numbers-on-the-picture">Canonical LRU 상세 설명</a></p>
           </div>
         </details>
       </article>
@@ -333,7 +333,7 @@
             <p><strong>답변:</strong> server mode는 명목상 네 개를 등록합니다. Maintenance는 100 ms마다 quota 작업과 의도상 direct-victim backup 호출을 수행하고, page flush는 요청 시 또는 기본 1,000 ms 간격으로 실행하며, post-flush는 1/10/100 ms adaptive wait 뒤 wake-only로 전환하고, flush control은 50 ms마다 post-write soft pacing을 갱신합니다. Pinned maintenance backup loop는 작성된 그대로라면 실행되지 않습니다(<code>VS-20</code>). Recovery gate, 설정, flush-control initialization 실패에 따라 실제 개수는 달라질 수 있습니다. Stand-alone mode에는 page-buffer daemon이 없고 synchronous progress를 사용합니다.</p>
             <p><a href="../lessons/0006a-understand-page-buffer-daemons.html">각 daemon의 trigger, shared state, handoff, cost는 Lesson 6A에서 추적 →</a></p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:16972-17255</code></p>
-            <p class="answer-route"><a href="../../advanced/replacement-progress.md#daemons-ownership-is-source-visible-cadence-is-version-sensitive">Canonical daemon 표</a></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#what-happens-when-every-scan-fails">Canonical daemon 표</a></p>
           </div>
         </details>
       </article>
@@ -372,7 +372,7 @@
           <div class="model-answer">
             <p><strong>답변:</strong> 단일 priority number는 없습니다. 순서는 계층적입니다. Domain pressure가 own over-quota private, other private, shared, own under-quota private 순서를 정하고, 이미 선택된 LRU3 하나를 hint 또는 가장 오래된 끝에서 BCB node 최대 1,000개까지 걸으며, 마지막 safety gate가 선호 candidate를 거절할 수 있습니다. 별도의 high/low queue는 direct-victim waiter의 순서를 정할 뿐 BCB eligibility를 정하지 않습니다.</p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:9067-9538,11734-11790</code></p>
-            <p class="answer-route"><a href="../../advanced/replacement-progress.md#how-the-victim-search-assigns-priority">Canonical priority 설명</a></p>
+            <p class="answer-route"><a href="../../advanced/replacement-progress.md#the-replacement-search-from-beginning-to-end">Canonical priority 설명</a></p>
           </div>
         </details>
       </article>
@@ -402,7 +402,7 @@
             <p><strong>Pressure:</strong> nonresident materialization은 invalid list를 먼저 시도하고 free slot이 없을 때만 victim을 찾습니다. 모든 BCB가 fixed이면 하나도 빼앗지 않습니다. Server mode는 이후 unfix를 기다리거나 timeout/interrupt/shutdown으로 끝나며, no-daemon path는 동기식으로 retry하고 victim이 없으면 실패합니다.</p>
             <p><strong>One LRU:</strong> 한 BCB에는 link 한 쌍과 encoded list index/zone 하나가 있습니다. Private-to-shared move는 새 list에 add하기 전에 VOID로 remove합니다. LRU object는 pool lifetime을 가지며 context assignment와 BCB membership은 더 짧습니다.</p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:499-623,8181-8403,9265-9538,9695-10415,14513-14650,15900-16030</code></p>
-            <p class="answer-route"><a href="../lessons/0007-replace-one-frame.html#handoff-details">Bilingual protected-handoff 설명</a> · <a href="../../advanced/replacement-progress.md#lru-object-assignment-and-membership-lifetimes">Canonical LRU lifetime</a></p>
+            <p class="answer-route"><a href="../lessons/0007-replace-one-frame.html#handoff-details">Bilingual protected-handoff 설명</a> · <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical LRU lifetime</a></p>
           </div>
         </details>
       </article>
@@ -417,7 +417,7 @@
             <p><strong>Locking:</strong> 선택한 list 하나만 lock하고 LRU3 entry를 최대 1,000개 scan하며 BCB를 try-lock합니다. 집중된 hot list에서는 contention이 가능하지만 모든 private LRU mutex를 도는 sweep은 없습니다. 심한 bottleneck 주장은 측정 evidence가 필요합니다.</p>
             <p><strong>Zones:</strong> new private BCB는 보통 LRU1 top, new shared BCB는 LRU2 middle에 들어갑니다. Threshold pressure는 LRU1→LRU2→LRU3로 demote합니다. 충분히 old인 LRU2 hit와 ordinary LRU3 hit는 LRU1으로 boost됩니다. Private LRU1/LRU2 target은 quota의 5%/5%이고 shared 기본값은 shared target의 40%/5%입니다.</p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:9330-9538,9695-10353,14251-14511,15674-15728,16370-16506</code></p>
-            <p class="answer-route"><a href="../lessons/0012-prove-replacement-progress.html#cross-private-search">Bilingual cross-private와 zone visual</a> · <a href="../../advanced/replacement-progress.md#how-a-caller-finds-another-private-list">Canonical mechanism</a></p>
+            <p class="answer-route"><a href="../lessons/0012-prove-replacement-progress.html#private">Bilingual cross-private와 zone visual</a> · <a href="../../advanced/replacement-progress.md#the-replacement-search-from-beginning-to-end">Canonical mechanism</a></p>
           </div>
         </details>
       </article>

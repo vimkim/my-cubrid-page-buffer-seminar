@@ -52,7 +52,7 @@
 
       <section class="section" id="area">
         <div class="eyebrow">03 · Area-copy hazards</div>
-        <h2>A parameter name is not a supported mode</h2>
+        <h2>Verify supported modes at the implementation boundary</h2>
         <p><code>VS-02</code> and <code>VS-03</code> are uncertainty-registry identifiers for pinned source drift. They are not runtime error codes.</p>
         <table>
           <thead><tr><th>Helper</th><th>Pinned executable path</th><th>Review treatment</th></tr></thead>
@@ -75,7 +75,7 @@
 
       <section class="section" id="unavailable">
         <div class="eyebrow">05 · Dead or incomplete interface</div>
-        <h2>Declared does not mean available</h2>
+        <h2>Availability requires a complete implementation path</h2>
         <p>At the pinned revision, release headers macro-map and declare <code>pgbuf_fix_without_validation_release()</code>, but a repository-wide search locates no definition or caller. <code>VS-01</code> records that verified source fact.</p>
         <p class="callout warn">Do not characterize it as a faster bypass. Calling it would fail at link time unless the target branch supplies a definition and a complete, tested owner protocol.</p>
         <p class="source-note"><strong>Interface inventory:</strong> declaration at <code>page_buffer.h:320–326</code>; availability status belongs to <code>VS-01</code>.</p>
@@ -112,7 +112,7 @@
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
-        <h2>Read by owner protocol, not by declaration order</h2>
+        <h2>Read specialized interfaces through their owner protocol</h2>
         <p>Use <a href="../../advanced/specialized-interfaces.md">Specialized Interfaces and Approximate Observability</a> as the Canonical explanation. Then inspect pinned <code>page_buffer.c:2688–2811,4701–4912,14748–14847</code> and ask which assumptions each helper leaves to its owner.</p>
         <p><a href="../reference/specialized-interface-card.html">Open the printable specialized-interface card →</a></p>
         <p><a href="0016-close-a-failure-proof.html">Continue to Lesson 0016 →</a></p>

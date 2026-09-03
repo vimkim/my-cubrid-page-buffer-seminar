@@ -42,7 +42,7 @@ test("the state model keeps four axes and eight maintenance terms independent", 
   ]);
 
   assert.match(markdown, /## Four independent state axes/);
-  assert.match(markdown, /## Terms that must not collapse/);
+  assert.match(markdown, /## Keep the core terms distinct/);
   assert.match(
     markdown,
     /!\[Four independent page-buffer state axes\]\(\.\.\/assets\/state-axes\.svg\)/,

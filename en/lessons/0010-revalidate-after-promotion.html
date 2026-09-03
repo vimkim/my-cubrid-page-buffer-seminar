@@ -39,8 +39,25 @@
         <p class="source-note"><strong>Verified mechanism:</strong> ordinary nested WRITE handling is pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>page_buffer.c:6277–6634</code></a>; dedicated promotion is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2842-L3050"><code>2842–3050</code></a>.</p>
       </section>
 
+      <section class="section" id="condition-choice">
+        <div class="eyebrow">02A · Choose the contended behavior</div>
+        <h2>ONLY_READER fails in place; SHARED_READER may transfer and wait</h2>
+        <img class="diagram" src="../../assets/promotion-condition-choice.svg" alt="Decision tree comparing only-reader and shared-reader promotion conditions">
+        <p>When this thread owns every current fix, both conditions do exactly the same thing: change READ to WRITE in place and preserve its holder count. The difference appears only when another reader exists.</p>
+        <table>
+          <thead><tr><th>Starting state</th><th><code>PGBUF_PROMOTE_ONLY_READER</code></th><th><code>PGBUF_PROMOTE_SHARED_READER</code></th></tr></thead>
+          <tbody>
+            <tr><td>This thread owns all fixes</td><td>Promote in place; same pointer and debt.</td><td>The same in-place result.</td></tr>
+            <tr><td>Another reader; no promoter waiting</td><td>Return <code>ER_PAGE_LATCH_PROMOTE_FAIL</code>. Keep READ ownership, pointer, and debt.</td><td>Subtract this thread's <code>k</code> fixes, remove its holder, queue WRITE(<code>k</code>) at the head, and sleep. Successful grant restores a WRITE holder with count <code>k</code>.</td></tr>
+            <tr><td>A promoter is already first</td><td>Reject the second promotion and keep READ ownership.</td><td>The same rejection; only one continuity-preserving promoter may wait.</td></tr>
+          </tbody>
+        </table>
+        <p>Choose ONLY_READER when blocking while related pages are held could create a multi-page latch cycle and the caller can restart or skip. Choose SHARED_READER when waiting is acceptable and successful queue-head handoff must preserve the inspected page state. The condition selects contended behavior, not the fast path.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> condition definition is at <code>page_buffer.h:205–209</code>; only-owner test, conditional failure, ownership subtraction, and blocking transfer are at <code>page_buffer.c:2905–3030</code>.</p>
+      </section>
+
       <section class="section" id="btree-strategy">
-        <div class="eyebrow">02A · Why B-tree uses it</div>
+        <div class="eyebrow">02B · Why B-tree uses it</div>
         <h2>Start optimistic under READ; pay for WRITE only when structure must change</h2>
         <p>The B-tree insertion source states the strategy directly. Non-leaf traversal normally assumes that no structural change is required and uses READ latches. Only after inspecting a node can it know that maximum-key metadata must change or a split is required. At that point it needs WRITE on the <em>same already-fixed page</em>.</p>
         <p>Promotion matches that transition: keep the same logical fix debt when uncontended, or make contention an explicit outcome that the access method can handle. A nested WRITE fix would mean a second acquisition, would add another unfix obligation, and—if it waited—would use the ordinary queue path while the B-tree may still hold related pages. It does not express “upgrade this existing traversal ownership.”</p>
@@ -90,7 +107,7 @@
 
       <section class="section" id="debt">
         <div class="eyebrow">05 · Ownership accounting</div>
-        <h2>The saved fix count moves; it does not multiply</h2>
+        <h2>The saved fix count moves as one ownership debt</h2>
         <p>Suppose the caller has nested-fix count 2. Blocking promotion:</p>
         <ol>
           <li>subtracts 2 from the BCB’s global <code>fcnt</code>,</li>
@@ -152,7 +169,8 @@
       <strong>Lesson map</strong>
       <a href="#meaning">1. Promotion meaning</a>
       <a href="#why-api">2. Why a dedicated API</a>
-      <a href="#btree-strategy">2A. B-tree strategy</a>
+      <a href="#condition-choice">2A. ONLY versus SHARED</a>
+      <a href="#btree-strategy">2B. B-tree strategy</a>
       <a href="#outcomes">3. Four outcomes</a>
       <a href="#decision">4. Decision rule</a>
       <a href="#debt">5. Debt conservation</a>

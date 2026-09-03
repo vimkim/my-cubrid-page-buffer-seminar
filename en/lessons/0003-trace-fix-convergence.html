@@ -22,21 +22,55 @@
     <article class="lesson-main">
       <section class="section" id="intent">
         <div class="eyebrow">01 · Three independent inputs</div>
-        <h2>Start from what the caller knows and wants</h2>
+        <h2>Read one fix call as three separate answers</h2>
+        <p>Before following hit and miss, ask three questions. What kind of logical page does the caller expect? How may it access the returned bytes? If that access conflicts, may it wait? These answers combine in one call, but none can substitute for another.</p>
+        <img class="diagram" src="../../assets/fix-request-inputs.svg" alt="Seven fetch modes, two valid content latch requests, and two conflict conditions combining into one fix request">
         <table>
-          <thead><tr><th>Choice</th><th>Question answered</th><th>One Core consequence</th></tr></thead>
+          <thead><tr><th>Choice</th><th>Question answered</th><th>Short answer</th></tr></thead>
           <tbody>
-            <tr><td><code>PAGE_FETCH_MODE</code></td><td>What does the caller know about allocation or residency?</td><td><code>OLD_PAGE</code> may materialize existing bytes; <code>NEW_PAGE</code> initializes without reading old bytes; <code>OLD_PAGE_IF_IN_BUFFER</code> declines materialization.</td></tr>
-            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>How may this borrower access resident bytes?</td><td>READ permits compatible readers; WRITE requests exclusive content access.</td></tr>
-            <tr><td><code>PGBUF_LATCH_CONDITION</code></td><td>May an incompatible request wait?</td><td>Conditional rejects rather than joining the wait path; unconditional permits the wait path.</td></tr>
+            <tr><td><code>PAGE_FETCH_MODE</code></td><td>What kind of page is this, and may a miss materialize it?</td><td>Select one of seven caller-knowledge modes.</td></tr>
+            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>May I share READ access or need exclusive WRITE access?</td><td>A public fix accepts READ or WRITE.</td></tr>
+            <tr><td><code>PGBUF_LATCH_CONDITION</code></td><td>May an incompatible request sleep?</td><td>Conditional returns now; unconditional may wait.</td></tr>
           </tbody>
         </table>
+
+        <h3>All seven fetch modes</h3>
+        <p>A fetch mode is the caller's statement about allocation and residency. It does not choose READ or WRITE.</p>
+        <table>
+          <thead><tr><th>Mode</th><th>Plain meaning</th><th>Important outcome</th></tr></thead>
+          <tbody>
+            <tr><td><code>OLD_PAGE</code></td><td>An allocated page already exists.</td><td>A miss reads its existing bytes from DWB or the data volume. A <code>PAGE_UNKNOWN</code> image is an error.</td></tr>
+            <tr><td><code>NEW_PAGE</code></td><td>Allocation already produced this new VPID.</td><td>A miss initializes a BCB/frame without reading old page bytes. <code>PAGE_UNKNOWN</code> is accepted until the caller initializes the page type.</td></tr>
+            <tr><td><code>OLD_PAGE_IF_IN_BUFFER</code></td><td>I want the page only if it is resident now.</td><td>A hash miss returns <code>NULL</code> without claiming a BCB or reading the volume.</td></tr>
+            <tr><td><code>OLD_PAGE_PREVENT_DEALLOC</code></td><td>An existing page must survive the gap before latch grant.</td><td>A temporary avoid-deallocation count bridges identity validation to successful fix; it is removed after grant.</td></tr>
+            <tr><td><code>OLD_PAGE_DEALLOCATED</code></td><td>Recovery work needs a deallocated image.</td><td>The common path may return a <code>PAGE_UNKNOWN</code> image. Deallocation undo uses it to restore the old type.</td></tr>
+            <tr><td><code>OLD_PAGE_MAYBE_DEALLOCATED</code></td><td>The page usually exists but may have been deallocated.</td><td>A normal image returns. For <code>PAGE_UNKNOWN</code>, the temporary fix is undone and the caller receives <code>NULL</code>.</td></tr>
+            <tr><td><code>RECOVERY_PAGE</code></td><td>Recovery must accept any allocation state.</td><td>It skips ordinary allocation validation and accepts normal, immature/new, or <code>PAGE_UNKNOWN</code> images.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>The five latch-mode enum values</h3>
+        <p>The enum appears in several structures, but the public fix request accepts only READ and WRITE.</p>
+        <table>
+          <thead><tr><th>Mode</th><th>Meaning</th><th>Valid fix request?</th></tr></thead>
+          <tbody>
+            <tr><td><code>PGBUF_NO_LATCH</code></td><td>In the BCB field, no READ/WRITE content latch is currently granted. Other owning fields reuse the value for initialization or cancellation.</td><td>No.</td></tr>
+            <tr><td><code>PGBUF_LATCH_READ</code></td><td>Shared page-content access; compatible readers can coexist.</td><td>Yes.</td></tr>
+            <tr><td><code>PGBUF_LATCH_WRITE</code></td><td>Exclusive page-content access; other threads' READ/WRITE requests conflict.</td><td>Yes.</td></tr>
+            <tr><td><code>PGBUF_LATCH_FLUSH</code></td><td>A queue request that waits for flush completion, never a granted content latch.</td><td>No.</td></tr>
+            <tr><td><code>PGBUF_LATCH_INVALID</code></td><td>The BCB has no usable resident identity.</td><td>No.</td></tr>
+          </tbody>
+        </table>
+        <p>Always qualify <code>PGBUF_NO_LATCH</code> by its owning field. <a href="../../reference/no-latch-semantics-audit.md">The NO_LATCH audit</a> separates resident-idle BCB state, waiter cancellation, and watcher initialization.</p>
+
+        <h3>Conditional and unconditional describe conflict handling</h3>
+        <p><code>PGBUF_CONDITIONAL_LATCH</code> means “do not sleep if the latch conflicts.” A compatible request still succeeds normally. <code>PGBUF_UNCONDITIONAL_LATCH</code> means “waiting is allowed if needed,” so a compatible request still grants immediately. A transaction configured for zero wait converts unconditional to conditional before lookup.</p>
         <div class="callout warn"><strong>Debt rule:</strong> expected non-acquisition creates no debt. An <code>OLD_PAGE_IF_IN_BUFFER</code> miss or a conditional conflict can return <code>NULL</code> without any matching unfix obligation. Interpret <code>NULL</code> through the caller's chosen protocol, not as one universal error.</div>
-        <p class="source-note"><strong>Interface contract:</strong> the three choice types are separate at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a>. Validation, zero-wait conversion, and the resident-only miss are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2260-L2413"><code>page_buffer.c:2260–2413</code></a>.</p>
+        <p class="source-note"><strong>Interface contract and Verified mechanism:</strong> all enum values are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a>. Request validation, zero-wait conversion, fast-path eligibility, resident-only miss, deallocation bridge, and post-latch page-type outcomes are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2285-L2615"><code>page_buffer.c:2285–2615</code></a>.</p>
       </section>
 
       <section class="section" id="convergence">
-        <div class="eyebrow">02 · Preparation differs; success does not</div>
+        <div class="eyebrow">02 · Different preparation, one success contract</div>
         <h2>Two paths converge on one postcondition</h2>
         <img class="diagram" src="../../assets/fix-contract.svg" alt="Normal resident hit and cold miss converging on one fix contract">
         <p class="caption">The normal mutex-protected path is shown; the lock-free READ path is an Advanced continuation.</p>
@@ -56,7 +90,7 @@
 
       <section class="section" id="hit">
         <div class="eyebrow">03 · Protected hit</div>
-        <h2>A hash candidate is an observation, not proof</h2>
+        <h2>A hash candidate still needs identity validation</h2>
         <p>The hash chain can identify a BCB whose <code>vpid</code> appears to match. That first comparison is not protected by the BCB mutex. Before the thread acquires that mutex, a victimizer may unlink the BCB and another loader may rebind the reusable slot to a different VPID.</p>
         <p>The hit path therefore locks the BCB and compares its VPID again. If it changed, the thread releases that candidate and searches again. BCB storage itself remains safe to inspect because the table lives for the pool lifetime; what may have changed is the identity the slot represents.</p>
         <div class="callout"><strong>Stale-observation boundary:</strong> the protected VPID recheck turns an unprotected candidate observation into trustworthy resident-identity evidence for this path.</div>
@@ -65,7 +99,7 @@
 
       <section class="section" id="miss">
         <div class="eyebrow">04 · Serialized cold miss</div>
-        <h2>The waiter retries; it does not inherit the provisional BCB</h2>
+        <h2>The waiter wakes and retries the normal lookup</h2>
         <img class="diagram" src="../../assets/load-owner-waiter.svg" alt="VPID load owner and waiter on one cold miss">
         <p class="caption">One hash-anchor mutex protects the in-flight load-lock chain and the resident BCB chain.</p>
         <ol>
@@ -108,7 +142,7 @@
 
       <section class="section" id="identity">
         <div class="eyebrow">05 · Three checks, three gaps</div>
-        <h2>Do not collapse identity validation into one check</h2>
+        <h2>Keep the three identity checks explicit</h2>
         <img class="diagram" src="../../assets/identity-check-timeline.svg" alt="Three identity checks closing three different protection gaps">
         <p class="caption">Each check validates a different observation under different protection.</p>
         <table>

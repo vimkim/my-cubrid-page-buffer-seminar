@@ -13,7 +13,7 @@
   <div class="topline"><span>CUBRID page buffer · lesson 0007</span><a href="../index.html">강의 홈</a></div>
   <header class="hero">
     <div class="eyebrow">Core capability · replacement</div>
-    <h1>사용 중인 일을 빼앗지 않고 missing page의 자리를 찾습니다</h1>
+    <h1>missing page를 위한 안전한 BCB를 찾습니다</h1>
     <p>이 lesson을 마치면 replacement의 간단한 흐름을 말하고, unsafe victim을 제외하며, 마지막 확인을 protection 아래에서 해야 하는 이유를 설명할 수 있습니다.</p>
     <div class="pills"><span class="pill">Invalid list 먼저</span><span class="pill">Victim</span><span class="pill">fcnt</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Recheck</span></div>
   </header>
@@ -73,31 +73,10 @@
       </section>
 
       <section class="section" id="aout">
-        <div class="eyebrow">01B · Ghost history</div>
-        <h2>AOUT은 page가 떠났다는 사실만 기억하며 page 자체를 보관하지 않습니다</h2>
-        <img class="diagram" src="../../assets/aout-ghost-admission.svg" alt="축출된 VPID와 과거 LRU index가 AOUT FIFO와 hash에 들어가고, 이후 miss, same-private hit, other-private hit에 따라 first-unfix admission이 달라지는 과정과 과거 비활성화 근거를 보여 주는 그림">
-        <p class="caption">Dormant path는 admission preference만 바꿉니다. Victim safety gate를 느슨하게 만들지 않습니다.</p>
-        <p>AOUT은 2Q의 out-history idea를 CUBRID가 구현한 구조입니다. Global FIFO 하나와 hash가 작은 ghost record <code>{ VPID, former lru_idx }</code>를 저장합니다. Record 안에는 BCB, frame, page image, fix, latch, dirty state가 없습니다. 활성화된다면 capacity는 <code>min(floor(num_buffers × data_aout_ratio), 32768)</code>입니다.</p>
-        <p>Page가 victimized되면 identity가 AOUT에 들어갈 수 있습니다. 그 VPID가 다시 load되면 첫 final unfix가 ghost를 consume하고 과거 list index를 admission evidence로 사용합니다.</p>
-        <table>
-          <thead><tr><th>일반 private-domain case</th><th>Placement</th><th>의미</th></tr></thead>
-          <tbody>
-            <tr><td>AOUT off—현재 pinned path</td><td>Private LRU1 top</td><td>모든 new private page가 ghost filter를 건너뜁니다.</td></tr>
-            <tr><td>AOUT on, miss</td><td>Current private LRU middle</td><td>처음 본 identity를 hot top 아래에서 시작시킵니다.</td></tr>
-            <tr><td>AOUT on, same-private hit</td><td>Current private LRU1 top</td><td>Eviction 뒤 refault가 reuse를 증명했습니다.</td></tr>
-            <tr><td>AOUT on, other-private hit</td><td>Shared LRU middle</td><td>Private domain을 가로지른 reuse를 shared로 분류합니다.</td></tr>
-          </tbody>
-        </table>
-        <h3>왜 꺼져 있나요?</h3>
-        <ol>
-          <li><a href="http://jira.cubrid.org/browse/CBRD-20741">CBRD-20741</a>은 과거 10.1 build 여러 개에서 <code>pgbuf_add_vpid_to_aout_list()</code> crash/assertion과 깨진 cyclic queue link를 기록했습니다. Issue는 Confirmed, Unresolved 상태이며 discussion은 root cause를 알지 못한다고 명시합니다.</li>
-          <li><a href="http://jira.cubrid.org/browse/CBRD-21135">CBRD-21135</a>는 defect가 해결될 때까지 <code>data_aout_ratio</code>를 끄기로 결정했습니다. Commit <a href="https://github.com/CUBRID/cubrid/commit/d3554deee3a5e2e6d2030113db550eaea42a5fa4"><code>d3554deee</code></a>가 이 workaround를 구현했습니다.</li>
-          <li>Pinned <code>prm_tune_parameters()</code>도 ratio를 무조건 0으로 설정합니다. Initialization은 <code>max_count = 0</code>으로 두고 FIFO/hash storage를 할당하기 전에 return하며 add와 lookup path는 no-op이 됩니다.</li>
-        </ol>
-        <div class="callout warn"><strong>Evidence boundary:</strong> pinned revision이 과거 unresolved crash 때문에 AOUT을 의도적으로 끈 사실은 증명됩니다. 그러나 dormant pinned implementation이 그 오래된 crash를 여전히 재현한다는 뜻은 아니며, issue 자체가 모른다고 한 root cause를 새로 단정할 수도 없습니다.</div>
-        <h3>되살리면 좋아질까요?</h3>
-        <p>Correctness를 먼저 고친다면 가능성이 있습니다. Dormant branch는 ghost miss를 private middle에 넣어 one-pass scan pollution을 줄이고, same-private refault를 hot top에서 보상하며, cross-private reuse를 알아볼 수 있습니다. 이는 source에서 유도한 효과이지 측정된 성능 향상이 아닙니다. 반대로 eviction/refault마다 global <code>Aout_mutex</code>를 거치고 bounded metadata와 hash work가 생기며, 유용한 first-seen page가 더 빨리 밀릴 수 있습니다. Queue corruption, concurrent list/hash/free-list invariant, private-list reassignment, startup/shutdown, ratio boundary를 stress test한 뒤에 hit rate, victim-search work, mutex contention, tail latency를 비교해야 합니다.</p>
-        <p class="source-note"><strong>Verified mechanism and historical evidence:</strong> AOUT structure와 capacity는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L635-L666"><code>page_buffer.c:635–666</code></a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5802-L5882"><code>5802–5882</code></a>, admission은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6885-L6994"><code>6885–6994</code></a>, forced zero는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L9975-L9987"><code>system_parameter.c:9975–9987</code></a>에 있습니다. <a href="../../reference/victim-scan-cap-and-aout-evidence.md">전체 evidence audit</a>도 참고하세요.</p>
+        <div class="eyebrow">01B · 별도 historical topic</div>
+        <h2>비활성 ghost history가 필요할 때만 AOUT 전용 lesson으로 이동하세요</h2>
+        <p>Pinned startup path는 AOUT을 강제로 끄므로 여기서 배우는 active safety path에 포함되지 않습니다. Lesson 0012A가 ghost-entry structure, dormant admission branch, historical disablement, revival boundary를 담당합니다.</p>
+        <p><a href="0012a-understand-aout-ghost-history.html">Lesson 0012A: 비활성 AOUT ghost history 열기 →</a></p>
       </section>
 
       <section class="section" id="slot">
@@ -147,7 +126,7 @@
 
       <section class="section" id="no-victim">
         <div class="eyebrow">05 · 안전한 slot이 없을 때</div>
-        <h2>Allocator는 기다리거나 재시도하며 fixed page를 빼앗지 않습니다</h2>
+        <h2>Allocator는 재사용 가능한 BCB가 생길 때까지 기다립니다</h2>
         <p>모든 candidate가 fixed, dirty, flushing, waiting 또는 다른 handoff 상태라면 victim search는 아무것도 반환하지 않습니다. Flush는 dirty candidate를 clean하게 만들 수 있고 unfix는 ownership을 끝낼 수 있습니다. Server mode에서 allocating thread는 direct-assigned victim을 기다릴 수 있고, 소비 전에 그 candidate가 다시 fixed되면 재시도합니다.</p>
         <p>LRU policy는 안전한 candidate 중 무엇을 선호하고 어떻게 progress를 만들지 결정합니다. Revision마다 바뀔 수 있습니다. Safety rule은 바뀌지 않습니다. Successful fixer나 incomplete flush generation이 slot rebind 뒤까지 살아남아서는 안 됩니다.</p>
         <table>
@@ -162,7 +141,7 @@
       </section>
 
       <section class="section" id="verbs">
-        <div class="eyebrow">06 · 동사를 섞지 않기</div>
+        <div class="eyebrow">06 · replacement 동사 구분하기</div>
         <h2>Unfix, flush, victimize는 서로 다른 debt를 끝냅니다</h2>
         <table>
           <thead><tr><th>Operation</th><th>끝나는 것</th><th>남을 수 있는 것</th></tr></thead>
@@ -201,7 +180,7 @@
       <strong>강의 지도</strong>
       <a href="#story">1. Slot이 필요한 이유</a>
       <a href="#structures-cost">1A. 자료구조와 비용</a>
-      <a href="#aout">1B. AOUT ghost history</a>
+      <a href="#aout">1B. AOUT 안내</a>
       <a href="#slot">2. 재사용되는 것</a>
       <a href="#gate">3. Safety 질문 네 개</a>
       <a href="#handoff-details">4. Protected recheck</a>

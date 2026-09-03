@@ -39,8 +39,25 @@
         <p class="source-note"><strong>검증된 mechanism:</strong> ordinary nested WRITE 처리는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>page_buffer.c:6277–6634</code></a>, dedicated promotion은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2842-L3050"><code>2842–3050</code></a>입니다.</p>
       </section>
 
+      <section class="section" id="condition-choice">
+        <div class="eyebrow">02A · 경합 상황의 동작을 고릅니다</div>
+        <h2>ONLY_READER는 ownership을 유지하고 실패하며, SHARED_READER는 넘겨주고 기다릴 수 있습니다</h2>
+        <img class="diagram" src="../../assets/promotion-condition-choice.svg" alt="Only-reader와 shared-reader promotion condition을 비교하는 decision tree">
+        <p>이 thread가 현재 fix를 전부 소유하면 두 condition은 완전히 똑같이 동작합니다. READ를 제자리에서 WRITE로 바꾸고 holder count를 보존합니다. 차이는 다른 reader가 있을 때만 나타납니다.</p>
+        <table>
+          <thead><tr><th>시작 상태</th><th><code>PGBUF_PROMOTE_ONLY_READER</code></th><th><code>PGBUF_PROMOTE_SHARED_READER</code></th></tr></thead>
+          <tbody>
+            <tr><td>이 thread가 fix 전부를 소유</td><td>제자리에서 promote하며 pointer와 debt가 같습니다.</td><td>동일한 in-place 결과입니다.</td></tr>
+            <tr><td>다른 reader가 있고 promoter는 없음</td><td><code>ER_PAGE_LATCH_PROMOTE_FAIL</code>을 반환합니다. READ ownership, pointer, debt를 유지합니다.</td><td>이 thread의 fix <code>k</code>개를 빼고 holder를 제거한 뒤 WRITE(<code>k</code>)를 queue head에 넣고 잠듭니다. 성공하면 count <code>k</code>인 WRITE holder를 복구합니다.</td></tr>
+            <tr><td>이미 promoter가 queue 첫머리에 있음</td><td>두 번째 promotion을 거절하고 READ ownership을 유지합니다.</td><td>동일하게 거절합니다. Continuity를 보존하며 기다리는 promoter는 하나뿐입니다.</td></tr>
+          </tbody>
+        </table>
+        <p>Related page를 hold한 채 block하면 multi-page latch cycle이 생길 수 있고 caller가 restart/skip할 수 있다면 ONLY_READER를 고릅니다. 기다려도 되며 성공한 queue-head handoff가 이미 관찰한 page state를 보존해야 한다면 SHARED_READER를 고릅니다. Condition은 contended behavior를 고르며 fast path를 바꾸지 않습니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> condition 정의는 <code>page_buffer.h:205–209</code>, only-owner test, conditional failure, ownership subtraction, blocking transfer는 <code>page_buffer.c:2905–3030</code>에 있습니다.</p>
+      </section>
+
       <section class="section" id="btree-strategy">
-        <div class="eyebrow">02A · B-tree가 사용하는 이유</div>
+        <div class="eyebrow">02B · B-tree가 사용하는 이유</div>
         <h2>READ로 낙관적으로 시작하고 구조 변경이 필요할 때만 WRITE 비용을 낸다</h2>
         <p>B-tree insertion source가 전략을 직접 설명합니다. Non-leaf traversal은 보통 구조 변경이 없다고 가정하고 READ latch를 사용합니다. Node를 검사한 뒤에야 maximum-key metadata update나 split 필요성을 알 수 있습니다. 그 순간 <em>이미 fix한 같은 page</em>에 WRITE가 필요합니다.</p>
         <p>Promotion이 이 전이에 맞습니다. 경합이 없으면 같은 logical fix debt를 유지하고, 경합은 access method가 처리할 수 있는 명시적 outcome으로 만듭니다. Nested WRITE fix는 두 번째 acquisition이므로 unfix 의무를 하나 더 만들고, 기다리면 B-tree가 related page를 잡은 상태에서 ordinary queue path를 사용합니다. 이는 “현재 traversal ownership을 upgrade한다”는 의미가 아닙니다.</p>
@@ -90,7 +107,7 @@
 
       <section class="section" id="debt">
         <div class="eyebrow">05 · Ownership accounting</div>
-        <h2>저장한 fix count는 이동할 뿐 늘어나지 않는다</h2>
+        <h2>저장한 fix count는 하나의 ownership debt로 이동합니다</h2>
         <p>caller의 nested-fix count가 2라고 하자. Blocking promotion은 다음과 같이 동작한다.</p>
         <ol>
           <li>BCB의 global <code>fcnt</code>에서 2를 뺀다.</li>
@@ -152,7 +169,8 @@
       <strong>Lesson map</strong>
       <a href="#meaning">1. Promotion 의미</a>
       <a href="#why-api">2. 전용 API가 필요한 이유</a>
-      <a href="#btree-strategy">2A. B-tree 전략</a>
+      <a href="#condition-choice">2A. ONLY와 SHARED 비교</a>
+      <a href="#btree-strategy">2B. B-tree 전략</a>
       <a href="#outcomes">3. 네 가지 outcome</a>
       <a href="#decision">4. Decision rule</a>
       <a href="#debt">5. Debt conservation</a>

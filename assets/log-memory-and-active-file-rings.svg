@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 690" role="img" aria-labelledby="title desc">
+  <title id="title">Log memory slots and active file slots use different modulo mappings</title>
+  <desc id="desc">Logical log page 12 maps to memory slot zero in a four-buffer pool, while the active file maps logical pages into its own fixed ring relative to the current base. The two capacities and mappings are independent.</desc>
+  <defs><style>.bg{fill:#f7f5ef}.box{fill:#fff;stroke:#26384a;stroke-width:2}.mem{fill:#eaf3ff;stroke:#2563a8}.disk{fill:#fff3dc;stroke:#a86413}.sel{fill:#eaf8ef;stroke:#287a45}.h{font:700 28px system-ui,sans-serif;fill:#172331}.t{font:700 18px system-ui,sans-serif;fill:#172331}.s{font:15px system-ui,sans-serif;fill:#334155}.tiny{font:13px system-ui,sans-serif;fill:#475569}.arrow{stroke:#526273;stroke-width:3;fill:none;marker-end:url(#m)}</style><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0l10 5-10 5z" fill="#526273"/></marker></defs>
+  <rect class="bg" width="1200" height="690" rx="24"/><text class="h" x="55" y="58">One logical log page, two independent physical mappings</text>
+  <rect class="box sel" x="445" y="88" width="310" height="75" rx="15"/><text class="t" x="493" y="120">logical LOG_PAGEID = 12</text><text class="tiny" x="493" y="145">an ordering coordinate, not stored bytes</text>
+  <path class="arrow" d="M530 163l-235 95"/><path class="arrow" d="M670 163l235 95"/>
+  <rect class="box mem" x="55" y="235" width="515" height="315" rx="20"/><text class="t" x="90" y="278">IN-MEMORY LOG BUFFER · 4 frames</text><text class="s" x="90" y="312">index = 12 % 4 = 0</text>
+  <rect class="box sel" x="90" y="355" width="100" height="90" rx="12"/><text class="t" x="130" y="388">0</text><text class="s" x="112" y="419">L12</text>
+  <rect class="box" x="205" y="355" width="100" height="90" rx="12"/><text class="t" x="245" y="388">1</text><text class="tiny" x="226" y="419">other</text>
+  <rect class="box" x="320" y="355" width="100" height="90" rx="12"/><text class="t" x="360" y="388">2</text><text class="tiny" x="341" y="419">other</text>
+  <rect class="box" x="435" y="355" width="100" height="90" rx="12"/><text class="t" x="475" y="388">3</text><text class="tiny" x="456" y="419">other</text>
+  <text class="tiny" x="90" y="500">No hash and no victim search: page 12 has exactly one candidate slot.</text>
+  <rect class="box disk" x="630" y="235" width="515" height="315" rx="20"/><text class="t" x="665" y="278">ON-DISK ACTIVE LOG · fixed ring</text><text class="s" x="665" y="312">mapping uses fpageid and LOG_HEADER.npages</text>
+  <rect class="box" x="665" y="355" width="55" height="90" rx="10"/><text class="t" x="686" y="388">0</text><text class="tiny" x="675" y="419">hdr</text>
+  <rect class="box" x="730" y="355" width="55" height="90" rx="10"/><text class="t" x="751" y="388">1</text><text class="tiny" x="745" y="419">L7</text>
+  <rect class="box" x="795" y="355" width="55" height="90" rx="10"/><text class="t" x="816" y="388">2</text><text class="tiny" x="810" y="419">L8</text>
+  <rect class="box" x="860" y="355" width="55" height="90" rx="10"/><text class="t" x="881" y="388">3</text><text class="tiny" x="875" y="419">L9</text>
+  <rect class="box" x="925" y="355" width="55" height="90" rx="10"/><text class="t" x="946" y="388">4</text><text class="tiny" x="937" y="419">L10</text>
+  <rect class="box" x="990" y="355" width="55" height="90" rx="10"/><text class="t" x="1011" y="388">5</text><text class="tiny" x="1002" y="419">L11</text>
+  <rect class="box sel" x="1055" y="355" width="55" height="90" rx="10"/><text class="t" x="1076" y="388">6</text><text class="tiny" x="1067" y="419">L12</text>
+  <text class="tiny" x="665" y="500">Header slot 0 is reserved; old logical ranges are archived before overwrite.</text>
+  <rect class="box" x="220" y="590" width="760" height="65" rx="14"/><text class="s" x="263" y="630">log_Pb.num_buffers and LOG_HEADER.npages are different capacities. Never mix their modulo arithmetic.</text>
+</svg>

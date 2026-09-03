@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">Default 512 MiB page-buffer topology</title>
+  <desc id="desc">At the pinned default, 512 MiB divided by a 16 KiB I/O page gives 32,768 permanent BCB and frame pairs. With max clients 100 and high availability off, 100 normal client slots plus one admin connection plus one system transaction give MAX_NTRANS 102. Automatic shared LRU count becomes 32, private LRU count becomes 152 after adding 50 vacuum-worker slots, and the single LRU descriptor array contains 184 lists.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#48626f"/></marker>
+    <style>
+      .panel{fill:#f8fafb;stroke:#cbd7dc;stroke-width:2}.input{fill:#edf0ff;stroke:#5968bd;stroke-width:2.5}.result{fill:#e7f5f2;stroke:#16847d;stroke-width:2.5}.formula{fill:#fff3df;stroke:#b86b22;stroke-width:2.5}.note{fill:#f4effb;stroke:#7955a6;stroke-width:2}.title{font:800 28px Inter,Arial,sans-serif;fill:#173443}.h{font:750 19px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.mono{font:700 16px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#173443}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <text x="640" y="40" text-anchor="middle" class="title">Default example: from configuration to BCBs and LRU descriptors</text>
+
+  <rect x="30" y="72" width="1220" height="255" rx="22" class="panel"/>
+  <text x="60" y="108" class="h">A · Capacity: one configured page becomes one permanent BCB/frame pair</text>
+  <rect x="70" y="140" width="245" height="118" rx="16" class="input"/>
+  <text x="192" y="175" text-anchor="middle" class="h">data_buffer_size</text>
+  <text x="192" y="207" text-anchor="middle" class="mono">512 MiB</text>
+  <text x="192" y="235" text-anchor="middle" class="tiny">pinned default</text>
+  <path d="M315 199H385" class="line"/>
+  <rect x="395" y="140" width="420" height="118" rx="16" class="formula"/>
+  <text x="605" y="175" text-anchor="middle" class="h">512 × 1,024 × 1,024 ÷ 16,384</text>
+  <text x="605" y="207" text-anchor="middle" class="mono">= 32,768 I/O pages</text>
+  <text x="605" y="235" text-anchor="middle" class="tiny">default I/O page size = 16 KiB</text>
+  <path d="M815 199H885" class="line"/>
+  <rect x="895" y="140" width="315" height="118" rx="16" class="result"/>
+  <text x="1052" y="175" text-anchor="middle" class="h">N = 32,768 pairs</text>
+  <text x="1052" y="207" text-anchor="middle" class="s">32,768 BCBs + 32,768 frames</text>
+  <text x="1052" y="235" text-anchor="middle" class="tiny">frame bytes = 512 MiB; metadata is extra</text>
+
+  <rect x="30" y="357" width="1220" height="345" rx="22" class="panel"/>
+  <text x="60" y="393" class="h">B · Topology: derive transaction slots, then shared and private LRU counts</text>
+  <rect x="65" y="430" width="315" height="125" rx="16" class="input"/>
+  <text x="222" y="464" text-anchor="middle" class="h">Default connection inputs</text>
+  <text x="222" y="495" text-anchor="middle" class="s">max_clients = 100 · ha_mode = off</text>
+  <text x="222" y="526" text-anchor="middle" class="mono">100 + admin 1 + system 1</text>
+  <path d="M380 492H440" class="line"/>
+  <rect x="450" y="430" width="300" height="125" rx="16" class="formula"/>
+  <text x="600" y="464" text-anchor="middle" class="h">MAX_NTRANS = 102</text>
+  <text x="600" y="495" text-anchor="middle" class="s">HA-reserved connections = 0</text>
+  <text x="600" y="526" text-anchor="middle" class="tiny">also makes minimum buffers = 1,020</text>
+  <path d="M750 492H810" class="line"/>
+  <rect x="820" y="415" width="390" height="155" rx="16" class="result"/>
+  <text x="1015" y="451" text-anchor="middle" class="h">Persistent LRU descriptor array</text>
+  <text x="1015" y="484" text-anchor="middle" class="mono">S = min(102, 32768/1000) = 32</text>
+  <text x="1015" y="515" text-anchor="middle" class="mono">P = 102 + 50 = 152</text>
+  <text x="1015" y="546" text-anchor="middle" class="s">L = S + P = 184 descriptors</text>
+
+  <rect x="65" y="605" width="1145" height="63" rx="14" class="note"/>
+  <text x="637" y="631" text-anchor="middle" class="s">These are boot-time object counts, not occupancy or ownership: all BCBs start on INVALID; private LRUs may be idle or shared.</text>
+  <text x="637" y="655" text-anchor="middle" class="tiny">Change page size, max_clients, HA topology, or LRU parameters and the derived values change.</text>
+</svg>

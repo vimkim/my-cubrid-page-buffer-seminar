@@ -91,7 +91,7 @@ Stress without the target interleaving—and absence of observed failure—canno
 
 Follow [Verify at the Risk Boundary](../playbooks/verify-a-change.md) and record what the seam does not observe.
 
-## Historical evidence is not a current ticket
+## Separate historical evidence from current ticket status
 
 Historical findings are revision-bound to their recorded source/experiment. A historical row can teach a review method, but this guide does not create a current ticket from it. Re-establish source presence, reachability, surviving state, and impact on the target branch before proposing work.
 

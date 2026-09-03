@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lesson 0006B — page-flush와 post-flush 따라가기</title><link rel="stylesheet" href="../../assets/teach-course.css"><script defer src="../../assets/teach-retrieval.js"></script></head>
+<body><nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0006b-follow-page-flush-handoff.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell"><div class="topline"><span>CUBRID page buffer · Lesson 0006B</span><a href="../index.html">과정 홈</a></div>
+<header class="hero"><div class="eyebrow">Core 심화 · clean victim supply</div><h1>allocator wait 하나를 page-flush와 post-flush까지 따라갑니다</h1><p>page-flush가 언제 실행되고 몇 candidate를 볼 수 있는지, 언제 BCB pointer를 post-flush에 넘기는지, post-flush가 왜 모든 조건을 다시 확인하는지 봅니다.</p><div class="pills"><span class="pill">Pressure wake</span><span class="pill">LRU3</span><span class="pill">WAL</span><span class="pill">flushed_bcbs</span><span class="pill">Recheck</span></div></header>
+<div class="lesson-grid"><article class="lesson-main">
+<section class="section" id="trigger"><div class="eyebrow">01 · Trigger</div><h2>timer pass와 demand wake는 서로 다른 admission rule을 가집니다</h2>
+<p><code>pgbuf-page-flush</code>는 기본 1,000 ms인 <code>page_bg_flush_interval</code>만큼 pause합니다. 0이면 wake가 올 때까지 무기한 기다립니다. normal victim search가 실패하거나, clean bottom 제거 뒤 dirty bottom이 드러나거나, 선택한 victim scan이 reusable BCB를 못 찾으면 allocation/victim pressure가 깨웁니다.</p>
+<p>sleep 중 관찰된 demand wake는 <code>pgbuf_flush_victim_candidates()</code>를 최소 한 번 호출하게 합니다. timer timeout은 direct-victim waiter가 있거나 충분한 victim request 뒤 sampled hit ratio가 99.9% 아래일 때만 호출합니다. pressure가 남으면 task 한 번에 여러 call을 반복할 수 있고, timed pass가 page를 하나도 submit하지 않을 수도 있습니다.</p></section>
+
+<section class="section" id="selection"><div class="eyebrow">02 · Page-flush iteration</div><h2>selection은 candidate를 기록하고 protected recheck가 submission을 허가합니다</h2>
+<ol><li>pressure를 읽고 LRU별 priority와 scan budget을 계산합니다.</li><li>LRU mutex를 하나씩 잡고 cold LRU3 node를 따라가며 candidate BCB pointer와 VPID를 저장합니다.</li><li>LRU lock을 놓고 sequentiality를 위해 candidate를 VPID로 sort할 수 있습니다.</li><li>candidate마다 BCB를 lock하고 같은 VPID, DIRTY, 현재 FLUSHING 없음, 여전히 LRU3, fix 0을 다시 확인합니다.</li><li>WAL boundary가 준비되지 않았으면 skip하고 log-flush를 깨웁니다. allocator pressure에서는 필요한 log boundary를 한 번 force하고 재시도할 수 있습니다.</li><li>하나의 stable generation을 copy하여 DWB 또는 direct I/O로 submit하고 필요하면 neighbor page도 포함합니다.</li></ol>
+<p>512 MiB/16 KiB 예에서 <code>B=32,768</code>입니다. 기본 1% unboosted selection budget은 327개 check이고, 최대 10× boost는 3,270개로 12,800-page 200 MiB cap보다 작습니다. 이것은 inspection budget이지 write 개수 보장이 아닙니다.</p></section>
+
+<section class="section" id="handoff"><div class="eyebrow">03 · Conditional handoff</div><h2>네 조건이 모두 맞을 때만 post-flush가 BCB를 받습니다</h2>
+<img class="diagram" src="../../assets/page-flush-post-flush-handoff.svg" alt="page-flush에서 post-flush로 가는 조건부 handoff와 local completion fallback">
+<p>producer가 page-flush thread이고, post-flush daemon이 존재하며, allocator가 기다리고, 8,192-entry <code>flushed_bcbs</code> queue가 pointer를 받아야 합니다. 하나라도 거짓이면 page-flush가 old FLUSHING을 clear하고 flush waiter를 깨우는 BCB completion을 직접 합니다.</p>
+<p>DWB가 켜져 있으면 successful submission은 stable image가 DWB에 들어갔다는 뜻일 수 있어 home-volume write보다 앞섭니다. Post-flush는 두 번째 page write를 시작하지 않습니다.</p></section>
+
+<section class="section" id="post"><div class="eyebrow">04 · Post-flush 작업</div><h2>consumer는 allocator handoff 전에 현재 BCB state를 다시 확인합니다</h2>
+<p>Post-flush는 queue가 빌 때까지 drain합니다. pointer마다 BCB를 lock하고 fix 0, LRU3 membership, clean/eligible flag, private list라면 quota를 다시 봅니다. submission 뒤 resident page가 fix되거나 다시 dirty해지거나 hot해졌을 수 있습니다.</p>
+<p>현재도 eligible해야 live direct-victim waiter 하나에게 reserve할 수 있습니다. 결과와 무관하게 old FLUSHING generation을 끝내고 BCB flush waiter를 깨웁니다. work를 consume하면 다음 pause는 1 ms로 reset되고, 연속 idle timeout은 10 ms, 100 ms를 거쳐 wake-only infinite sleep으로 갑니다.</p></section>
+
+<section class="section" id="cost"><div class="eyebrow">05 · 비용</div><h2>local traversal은 bounded이고 elapsed time은 WAL과 storage가 좌우합니다</h2>
+<table><thead><tr><th>역할</th><th>Structural work</th><th>Wall-time 추가 요소</th></tr></thead><tbody><tr><td>Page-flush</td><td><code>O(T + L + K + C log C + C·N)</code></td><td>LRU/BCB contention, WAL, DWB, file I/O, scheduling</td></tr><tr><td>Post-flush</td><td><code>O(Q + S + F)</code></td><td>queue CAS, BCB/thread mutex, allocator와 flush waiter wake</td></tr></tbody></table>
+<p><code>T</code>는 thread-counter shard, <code>L</code>은 LRU, <code>K</code>는 inspected node, <code>C</code>는 candidate, <code>N</code>은 neighbor span, <code>Q</code>는 consumed BCB pointer, <code>S</code>는 stale allocator wait record, <code>F</code>는 flush waiter입니다.</p></section>
+
+<section class="section" id="primary-reading"><div class="eyebrow">핵심 읽을거리</div><h2>selection과 completion을 별도 ownership step으로 trace합니다</h2><p>Pinned <code>page_buffer.c:3780–4169,10925–10952,15420–15589,16971–17204</code>를 읽습니다.</p><p><a href="../../reference/page-buffer-daemon-lifecycle-audit.md#2-pgbuf-page-flush-create-clean-replacement-supply">상세 lifecycle evidence 열기 →</a></p><p><a href="0006a-understand-page-buffer-daemons.html">← Lesson 6A</a> · <a href="0006c-follow-maintenance-and-pacing.html">Lesson 6C로 계속 →</a></p></section>
+</article><nav class="lesson-nav" aria-label="Lesson 목차"><strong>Lesson map</strong><a href="#trigger">1. Trigger</a><a href="#selection">2. Selection</a><a href="#handoff">3. Handoff</a><a href="#post">4. Post-flush</a><a href="#cost">5. 비용</a><a href="#primary-reading">핵심 읽을거리</a><hr><a href="0006a-understand-page-buffer-daemons.html">Lesson 6A</a><a href="0006c-follow-maintenance-and-pacing.html">Lesson 6C</a><a href="../index.html">과정 홈</a></nav></div>
+<footer class="footer">selection, generation submission, BCB completion, allocator reservation을 네 사건으로 구분하세요.</footer></main></body></html>

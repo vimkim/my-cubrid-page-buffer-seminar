@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0013 — Gate redo by page LSA</title>
+  <title>Lesson 0013 — Connect log pages, WAL, and redo</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <script defer src="../../assets/teach-retrieval.js"></script>
 </head>
@@ -13,16 +13,82 @@
   <div class="topline"><span>CUBRID page buffer · lesson 0013</span><a href="../index.html">Course home</a></div>
   <header class="hero">
     <div class="eyebrow">Advanced capability · recovery ownership</div>
-    <h1>Apply redo only when the page is behind</h1>
-    <p>By the end, you can explain selective checkpoint coordination, trace the page-LSA idempotence gate, and keep recovery-specific fetch rules with their owner.</p>
-    <div class="pills"><span class="pill">Checkpoint</span><span class="pill">RECOVERY_PAGE</span><span class="pill">Record LSA</span><span class="pill">Page LSA</span><span class="pill">Skip</span><span class="pill">Apply once</span></div>
+    <h1>Follow a log record from its own buffer to data-page redo</h1>
+    <p>By the end, you can separate the data and log page pools, trace direct-mapped log frames into a fixed active ring and archives, explain WAL, and then apply the page-LSA redo gate.</p>
+    <div class="pills"><span class="pill">LOG_BUFFER</span><span class="pill">Active ring</span><span class="pill">Archive</span><span class="pill">WAL</span><span class="pill">RECOVERY_PAGE</span><span class="pill">Page LSA</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
+      <section class="section" id="two-pools">
+        <div class="eyebrow">01 · Separate the two buffers</div>
+        <h2>Log pages have their own descriptors and frames</h2>
+        <img class="diagram" src="../../assets/data-and-log-buffer-separation.svg" alt="Separate data-page and log-page buffer pools joined by the WAL rule">
+        <p><code>page_buffer.c</code> and <code>log_page_buffer.c</code> are independent buffering subsystems. The include and call relationships coordinate them; they do not place log pages in the data-page pool.</p>
+        <table>
+          <thead><tr><th>Question</th><th>Data page</th><th>Log page</th></tr></thead>
+          <tbody>
+            <tr><td>Descriptor</td><td><code>PGBUF_BCB</code></td><td><code>LOG_BUFFER</code>: logical page ID, active physical ID, dirty bit, frame pointer</td></tr>
+            <tr><td>Lookup/reuse</td><td>VPID hash, INVALID and LRU policy</td><td><code>logical_pageid % num_buffers</code>; predetermined slot, flush before reuse</td></tr>
+            <tr><td>Caller ownership</td><td>Shared pointer, latch, fix/unfix, holder debt</td><td>Reader normally gets a copy in caller storage; no BCB fix ledger</td></tr>
+            <tr><td>Disk home</td><td>Data-volume page</td><td>Fixed active-log ring or archive</td></tr>
+          </tbody>
+        </table>
+        <p>The append code sometimes calls its current page “fixed,” but <code>LOG_BUFFER</code> has no <code>fcnt</code>, holder, BCB waiter queue, hash link, or LRU link. It means that the log append protocol retains that frame under log synchronization.</p>
+        <p class="big-claim">WAL joins the pools by ordering durability. It never moves one pool's frame into the other.</p>
+      </section>
+
+      <section class="section" id="memory-pool">
+        <div class="eyebrow">02 · In-memory log pages</div>
+        <h2>Modulo indexing replaces hash lookup and victim selection</h2>
+        <img class="diagram" src="../../assets/log-memory-and-active-file-rings.svg" alt="Different modulo mappings for the in-memory log pool and on-disk active ring">
+        <p>For a four-frame toy pool, pages 0–3 map to slots 0–3 and page 4 maps back to slot 0. A log page has exactly one candidate memory slot, so there is no LRU scan for a victim. A hit uses that frame; a clean collision changes identity and reads or initializes the requested page. A dirty collision is unexpected and has a defensive flush path.</p>
+        <p>Modified append pages are retained in logical order in <code>toflush[]</code>. Its usable maximum is <code>num_buffers - 1</code>; reaching it forces an append-page flush before modulo wrap can collide with an unflushed page.</p>
+        <p>At the pinned default, <code>log_buffer_size=16,384</code> pages. With 16 KiB log pages, the frame area is 256 MiB, plus descriptors and auxiliary state. This memory is separate from the default 512 MiB data page buffer.</p>
+      </section>
+
+      <section class="section" id="append-flush">
+        <div class="eyebrow">03 · Append and log flush</div>
+        <h2>Records are staged, copied into append pages, and made durable in order</h2>
+        <ol>
+          <li>A <code>LOG_PRIOR_NODE</code> stages the record and receives a logical LSA.</li>
+          <li>The append path copies its header and undo/redo bytes into the current direct-mapped <code>LOG_PAGE</code>.</li>
+          <li>Crossing a page boundary advances <code>append_lsa.pageid</code> and adds the next frame to <code>toflush[]</code>.</li>
+          <li><code>logpb_flush_all_append_pages()</code> batches pages but writes the page containing <code>nxio_lsa</code> last, then syncs the active-log file.</li>
+          <li><code>nxio_lsa</code> advances to the lowest address not yet known durable.</li>
+        </ol>
+        <p>An ordinary reader supplies its own <code>LOG_PAGE</code> storage. <code>logpb_fetch_page()</code> normally copies a resident or on-disk log page into it, so there is no later <code>pgbuf_unfix()</code>. The append writer is the distinct path that directly retains and mutates the current pool frame.</p>
+      </section>
+
+      <section class="section" id="ring-archive">
+        <div class="eyebrow">04 · Logical length and physical storage</div>
+        <h2>The active log is a fixed ring; archives preserve older ranges</h2>
+        <img class="diagram" src="../../assets/log-ring-archive-retention.svg" alt="Increasing logical LSAs across a fixed active ring and archive files">
+        <p>At the default 512 MiB log volume and 16 KiB pages, the active file has 32,768 physical pages: one header and 32,767 data-log slots. Logical page IDs keep increasing while physical slots wrap relative to <code>fpageid</code>.</p>
+        <p>Before a slot is reused, the older logical range is copied and synced into a numbered archive. Background archiving incrementally prepares a temporary archive to smooth this copy cost. It is not the data-page double-write buffer.</p>
+        <table>
+          <thead><tr><th>Frontier</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>append_lsa</code></td><td>Current/next logical append position</td></tr>
+            <tr><td><code>nxio_lsa</code></td><td>Lowest log address not yet known durable</td></tr>
+            <tr><td><code>nxarv_pageid</code></td><td>Next logical page that must enter an archive</td></tr>
+            <tr><td><code>fpageid</code></td><td>Logical page currently stored at active physical slot 1</td></tr>
+          </tbody>
+        </table>
+        <p>An LSA names the logical coordinate <code>(page ID, offset)</code>. It does not allocate or retain storage. The representation is extremely large but finite; readable history depends on the active ring, archive files, and recovery/vacuum/HA/CDC/flashback/retention constraints.</p>
+      </section>
+
+      <section class="section" id="wal">
+        <div class="eyebrow">05 · The bridge</div>
+        <h2>WAL makes the log durable before the changed data page</h2>
+        <p>A dirty data page carries the LSA of the newest logged change in its bytes. Before writing that BCB frame to its data volume, page buffer calls <code>logpb_flush_log_for_wal()</code>. If the page LSA is at or beyond <code>nxio_lsa</code>, append log pages are flushed and synced first.</p>
+        <p class="big-claim">After a crash, recovery must be able to find the record that explains every changed data page already on disk. This write order provides that prerequisite.</p>
+        <p class="source-note"><strong>Pinned-source audit:</strong> <a href="../../reference/log-page-buffer-first-principles-audit.md">CUBRID log page buffering from first principles</a>.</p>
+      </section>
+
       <section class="section" id="checkpoint">
-        <div class="eyebrow">01 · Boundary first</div>
-        <h2>Checkpoint is coordination, not “flush every page”</h2>
+        <div class="eyebrow">06 · Checkpoint boundary</div>
+        <h2>Checkpoint coordinates a selective page propagation</h2>
         <ol>
           <li>Log code flushes append state and records checkpoint start.</li>
           <li>Page buffer selectively flushes qualifying dirty pages up to the checkpoint boundary and reports the remaining redo floor.</li>
@@ -35,7 +101,7 @@
       </section>
 
       <section class="section" id="gate">
-        <div class="eyebrow">02 · Redo idempotence</div>
+        <div class="eyebrow">07 · Redo idempotence</div>
         <h2>Compare before applying</h2>
         <img class="diagram" src="../../assets/redo-lsa-gate.svg" alt="Recovery fixes a page, compares record LSA to page LSA, skips old/equal records, and applies only a newer record">
         <p class="caption">Equal means already represented: record LSA ≤ page LSA is skipped.</p>
@@ -50,7 +116,7 @@
       </section>
 
       <section class="section" id="example">
-        <div class="eyebrow">03 · Worked sequence</div>
+        <div class="eyebrow">08 · Worked sequence</div>
         <h2>Page LSA 140: skip 120, skip 140, apply 170</h2>
         <table>
           <thead><tr><th>Redo record</th><th>Compare with page LSA</th><th>Action</th><th>New page LSA</th></tr></thead>
@@ -64,22 +130,22 @@
       </section>
 
       <section class="section" id="fetch">
-        <div class="eyebrow">04 · Special fetch ownership</div>
-        <h2>Recovery knows allocation history that ordinary callers do not</h2>
+        <div class="eyebrow">09 · Special fetch ownership</div>
+        <h2>Recovery-specific allocation history selects the fetch mode</h2>
         <p><code>RECOVERY_PAGE</code>, <code>OLD_PAGE_DEALLOCATED</code>, and <code>OLD_PAGE_MAYBE_DEALLOCATED</code> encode recovery’s knowledge of redo/undo and allocation history. They may accept or skip states that ordinary <code>OLD_PAGE</code> validation rejects.</p>
         <p>If a page was deallocated after the logged record, redo can skip it; that skip creates no fix debt. File/disk code still owns logical allocation and deallocation. Page buffer materializes or coherently invalidates the identity chosen by those owners.</p>
         <div class="callout warn"><strong>Do not generalize:</strong> relaxed recovery or temporary-page validation/logging behavior is not permission for ordinary permanent-page callers to bypass allocation, type, or logging contracts.</div>
       </section>
 
       <section class="section" id="mutation">
-        <div class="eyebrow">05 · Reuse the caller contract</div>
+        <div class="eyebrow">10 · Reuse the caller contract</div>
         <h2>Recovery still performs a logged-page-style state transition</h2>
         <p>Once the gate chooses to apply, the familiar ownership sequence returns: WRITE-protected bytes are modified, page LSA records the latest represented log action, DIRTY publishes propagation debt, and scope cleanup repays the fix on every exit.</p>
         <p>The difference is who chooses meaning. Recovery selects the callback and special fetch mode from the log record; the generic page-buffer Module supplies resident identity, byte protection, LSA interface, dirty state, and release mechanics.</p>
       </section>
 
       <section class="section" id="scope-cleanup">
-        <div class="eyebrow">06 · Scope cleanup decoded</div>
+        <div class="eyebrow">11 · Scope cleanup decoded</div>
         <h2>A stack guard unfixes the pointer when this function scope ends</h2>
         <p>After the fix/gate says redo should continue, <code>log_rv_redo_record_sync()</code> constructs a local <code>scope_exit unfix_rcv_pgptr</code>. The guard captures <code>thread_p</code> and the stack-local <code>rcv</code> by reference. Its destructor calls <code>pgbuf_unfix_and_init_after_check(thread_p, rcv.pgptr)</code>.</p>
         <ol>
@@ -93,13 +159,13 @@
       </section>
 
       <section class="section" id="evidence">
-        <div class="eyebrow">07 · Crash evidence</div>
-        <h2>Checkpoint-like success does not prove crash redo</h2>
+        <div class="eyebrow">12 · Crash evidence</div>
+        <h2>Crash redo needs controlled restart evidence</h2>
         <p>Existing checkpoint/backup observations do not prove restart redo, per-page WAL ordering, DWB recovery, torn-page handling, or home-page persistence. Source establishes intended gates. Runtime evidence for crash safety requires controlled crash points, exact build/configuration, and post-restart state validation at the claimed boundary.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">08 · Retrieval practice</div>
+        <div class="eyebrow">13 · Retrieval practice</div>
         <h2>Decide skip, apply, or no-debt absence</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="checkpoint asks page buffer to flush qualifying pages and return a redo floor; it does not mean every page is flushed or that page buffer owns the whole checkpoint -> recovery fixes with RECOVERY_PAGE and WRITE because recovery owns special allocation-state knowledge -> with page LSA 140, records 120 and 140 are skipped because record LSA less than or equal to page LSA is already represented -> record 170 is applied, page LSA advances to 170, the page is marked DIRTY as required, and the fix is released -> replaying 170 then skips -> a deallocated page can be skipped without creating fix debt -> this gate proves idempotence of the page change, not arbitrary callback side effects -> existing checkpoint/backup observations do not prove crash redo or DWB recovery." data-concepts='[{"label":"checkpoint is selective coordination","terms":["selective","qualifying","redo floor","not every"]},{"label":"recovery owns special fetch","terms":["RECOVERY_PAGE","allocation","recovery","write"]},{"label":"less-than-or-equal records skip","terms":["120","140","skip","less","equal"]},{"label":"newer record applies and dirties","terms":["170","apply","page lsa","dirty","release"]},{"label":"deallocated absence creates no debt","terms":["deallocated","skip","no debt","no fix"]},{"label":"idempotence and crash evidence bounded","terms":["idempotence","callback","crash","not prove","dwb"]}]'>
           <h3>Prompt</h3>
@@ -118,20 +184,25 @@
         <h2>Trace the skip before the callback</h2>
         <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_recovery.c#L497-L536"><code>log_recovery.c:497–536</code></a> and <code>log_recovery_redo.hpp:587–668</code>. Mark special fix, absent-page skip, page-LSA comparison, callback, LSA advance, DIRTY publication, and scope cleanup.</p>
         <p><a href="../reference/redo-recovery-card.html">Open the printable redo-recovery card →</a></p>
-        <p><a href="0012-prove-replacement-progress.html">← Return to Lesson 0012</a> · <a href="0014-preserve-lifecycle-order.html">Continue to Lesson 0014 →</a></p>
+        <p><a href="0012a-understand-aout-ghost-history.html">← Return to Lesson 0012A</a> · <a href="0014-preserve-lifecycle-order.html">Continue to Lesson 0014 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lesson map</strong>
-      <a href="#checkpoint">1. Selective checkpoint</a>
-      <a href="#gate">2. Redo gate</a>
-      <a href="#example">3. LSA example</a>
-      <a href="#fetch">4. Special fetch owner</a>
-      <a href="#mutation">5. Apply contract</a>
-      <a href="#scope-cleanup">6. Scope cleanup</a>
-      <a href="#evidence">7. Crash evidence</a>
-      <a href="#retrieval">8. Decide it back</a>
+      <a href="#two-pools">1. Two buffer pools</a>
+      <a href="#memory-pool">2. Log memory slots</a>
+      <a href="#append-flush">3. Append and flush</a>
+      <a href="#ring-archive">4. Ring and archives</a>
+      <a href="#wal">5. WAL bridge</a>
+      <a href="#checkpoint">6. Selective checkpoint</a>
+      <a href="#gate">7. Redo gate</a>
+      <a href="#example">8. LSA example</a>
+      <a href="#fetch">9. Special fetch owner</a>
+      <a href="#mutation">10. Apply contract</a>
+      <a href="#scope-cleanup">11. Scope cleanup</a>
+      <a href="#evidence">12. Crash evidence</a>
+      <a href="#retrieval">13. Decide it back</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/redo-recovery-card.html">Redo-recovery card</a>
@@ -141,7 +212,7 @@
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever checkpoint scope, LSA comparison direction, special fetch ownership, or crash evidence is unclear.</footer>
+  <footer class="footer">Ask the teaching agent whenever the two buffer pools, active-ring/archive storage, WAL, LSA direction, or crash evidence is unclear.</footer>
 </main>
 </body>
 </html>

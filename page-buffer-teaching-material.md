@@ -42,6 +42,7 @@ Treat the first-week Advanced route as task-selected study after Core, not as a 
 - [Acquisition Concurrency and Multi-page Ownership](./advanced/acquisition-concurrency.md)
 - [Holder Entry Structure, Lifetime, and Unfix Cost](./advanced/holder-entry-lifecycle.md)
 - [Replacement Policy and Background Progress](./advanced/replacement-progress.md)
+- [Dormant AOUT Ghost History](./advanced/aout-ghost-history.md)
 - [Recovery, Allocation State, and Module Lifecycle](./advanced/recovery-and-lifecycle.md)
 - [Specialized Interfaces and Approximate Observability](./advanced/specialized-interfaces.md)
 - [Failure Unwind and Open Proof Obligations](./advanced/failure-and-proof-obligations.md)

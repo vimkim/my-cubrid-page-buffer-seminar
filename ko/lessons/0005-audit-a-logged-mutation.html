@@ -77,7 +77,7 @@
 
       <section class="section" id="exits">
         <div class="eyebrow">05 · 누적된 state audit하기</div>
-        <h2>exit의 코드 형태만으로는 correctness가 증명되지 않습니다</h2>
+        <h2>모든 exit에서 ownership cleanup을 증명합니다</h2>
         <table>
           <thead><tr><th>Exit seam</th><th>Home watcher?</th><th>그 밖의 obligation</th><th>Cleanup owner</th></tr></thead>
           <tbody>
@@ -100,7 +100,7 @@
 
       <section class="section" id="retrieval">
         <div class="eyebrow">07 · Retrieval practice</div>
-        <h2>“fix가 안전하게 만들었다”라고 말하지 않고 mutation을 audit합니다</h2>
+        <h2>mutation의 전체 contract를 audit합니다</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="transaction lock은 logical object를, page latch는 resident bytes를 보호함 -> heap이 destination을 validate하고 page-format state를 mutate함 -> caller가 recovery 의미를 선택하고 필요하면 log append가 page LSA를 전진시킴 -> caller가 별도로 resident generation을 DIRTY로 표시함 -> success와 failure에서 모든 watcher를 transfer하거나 release함 -> exit ledger가 누적 state와 cleanup owner를 기록함." data-concepts='[{"label":"logical lock과 page latch의 차이","terms":["transaction lock","logical","page latch","bytes"]},{"label":"caller가 맡는 destination 및 record validation","terms":["validate","space","slot","record","heap"]},{"label":"WRITE access 아래의 physical mutation","terms":["mutate","physical","write","spage"]},{"label":"dirtying보다 앞선 recovery log와 page LSA","terms":["log","lsa","recovery","dirty"]},{"label":"watcher transfer 또는 모든 exit의 cleanup","terms":["watcher","transfer","unfix","cleanup","exit"]},{"label":"명시적인 acquisition 한계","terms":["fix","not prove","not sufficient","caller"]}]'>
           <h3>문제</h3>
           <p>“WRITE fix가 성공한 뒤에도 logged mutation이 올바르려면 heap caller가 무엇을 더 증명하고 수행해야 하며, 모든 exit를 어떻게 audit해야 하나요?”</p>
@@ -116,7 +116,7 @@
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">필수 읽기</div>
-        <h2>page-buffer 내부가 아니라 caller를 annotate합니다</h2>
+        <h2>caller의 전체 mutation protocol을 annotate합니다</h2>
         <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/heap_file.c#L23120-L23324"><code>heap_file.c:23120–23324</code></a>를 읽으세요. 여섯 success step과 모든 direct return 또는 <code>goto error</code>를 표시합니다. 각 exit마다 acquired state, cleanup/transfer owner, 남은 recovery 또는 retry 결과를 기록하세요.</p>
         <p><a href="../reference/caller-mutation-card.html">인쇄용 caller-mutation card 열기 →</a></p>
         <p><a href="0004a-understand-holder-anchor.html">← Lesson 4A로 돌아가기</a> · <a href="0006-flush-one-generation.html">Lesson 0006으로 계속 →</a></p>

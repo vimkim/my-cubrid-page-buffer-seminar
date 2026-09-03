@@ -59,7 +59,7 @@ test("guide pages route VS IDs without copying mutable statuses", async () => {
 
 test("the final asset seam contains and displays exactly the canonical visual roster", async () => {
   const expected = [...canonicalVisualNames];
-  assert.equal(expected.length, 44);
+  assert.equal(expected.length, 60);
   const assets = (await readdir(path.join(guideRoot, "assets")))
     .filter((entry) => entry.endsWith(".svg"))
     .sort();
@@ -114,8 +114,8 @@ test("core summaries route advanced replacement and lifecycle detail to one owne
   assert.match(core, /direct-victim assignment.*revocable/is);
   assert.ok(core.includes("](../advanced/replacement-progress.md)"));
   assert.doesNotMatch(core, /src\/storage\/page_buffer\.c:15420-15627/);
-  assert.match(replacement, /## Direct victim assignment and revocation/);
-  assert.match(replacement, /src\/storage\/page_buffer\.c:15420-15627/);
+  assert.match(replacement, /## What happens when every scan fails/);
+  assert.match(replacement, /src\/storage\/page_buffer\.c:15420-15652/);
 
   assert.match(core, /## Similar verbs, different operations/);
   assert.doesNotMatch(lifecycle, /\| \*\*Victimization\*\* \|/);

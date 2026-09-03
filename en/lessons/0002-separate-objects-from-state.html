@@ -22,7 +22,7 @@
     <article class="lesson-main">
       <section class="section" id="six-objects">
         <div class="eyebrow">01 · Name before tracing</div>
-        <h2>“Page” is not one object</h2>
+        <h2>“Page” names several distinct objects</h2>
         <img class="diagram" src="../../assets/object-ownership-map.svg" alt="Six page-buffer objects and their ownership relationships">
         <p class="caption">Solid relationships belong to the resident structure; dashed relationships are temporary borrowing or debt.</p>
         <table>
@@ -86,7 +86,7 @@
 
       <section class="section" id="success">
         <div class="eyebrow">05 · Apply it to successful fix</div>
-        <h2>What success establishes—and what it cannot</h2>
+        <h2>The guarantees and limits of a successful lookup</h2>
         <p>A successful normal READ fix establishes a resident identity mapping, positive fix debt that includes this acquisition, a granted READ page latch, and a borrowed pointer lifetime. Success alone does <em>not</em> establish clean versus dirty, durable versus not durable, record existence, correct transaction locking, or caller correctness.</p>
         <div class="callout"><strong>After matching unfix:</strong> this acquisition's debt and pointer-use lifetime end. The BCB/frame may stay resident; another fix may keep global <code>fcnt</code> positive; and durability state does not change merely because ownership was released.</div>
         <p class="source-note"><strong>Interface contract and Verified mechanism:</strong> the normal successful-fix postcondition and matching release are routed through <a href="../../learning/01-contract-and-objects.md">the canonical Core explanation</a>, with pinned paths at <code>page_buffer.c:2260–2685</code>, <code>6277–6634</code>, and <code>3062–3201</code>.</p>
@@ -110,7 +110,7 @@
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
-        <h2>Read structures, not algorithms</h2>
+        <h2>Start by reading the structures</h2>
         <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a>. Locate exactly five stored facts: holder debt, global <code>fcnt</code>, current BCB VPID, frame linkage, and dirty/LSA state. Stop before tracing acquisition control flow.</p>
         <p><a href="../reference/object-and-state-map.html">Open the printable object-and-state card →</a></p>
         <p><a href="0003-trace-fix-convergence.html">After your teach-back, continue to Lesson 0003 →</a></p>

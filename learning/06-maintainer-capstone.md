@@ -74,7 +74,7 @@ The [uncertainty registry](../unresolved-or-version-sensitive-findings.md) alone
 
 Source supports a control-flow gap between generation setup and ordinary rollback. It does not establish reachability, surviving state after surrounding cleanup, or production impact. Do not copy or change registry status; test both exceptional callees and observe the ownership/flush ledgers before deciding whether any fix is required.
 
-## Review rubric: argument is not observation
+## Review rubric: separate source reasoning from runtime observation
 
 | Criterion | Source-grounded argument | Runtime observation |
 |---|---|---|

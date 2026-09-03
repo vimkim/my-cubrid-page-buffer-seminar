@@ -31,6 +31,33 @@ test("lifecycle and allocation owners stay ordered and distinct", async () => {
 
 const assetDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets");
 
+test("log-page buffering is separate from BCBs and explains memory, ring, archive, and WAL", async () => {
+  const [m, separationSvg, ringsSvg, archiveSvg] = await Promise.all([
+    readFile(page, "utf8"),
+    readFile(path.join(assetDir, "data-and-log-buffer-separation.svg"), "utf8"),
+    readFile(path.join(assetDir, "log-memory-and-active-file-rings.svg"), "utf8"),
+    readFile(path.join(assetDir, "log-ring-archive-retention.svg"), "utf8"),
+  ]);
+  for (const asset of ["data-and-log-buffer-separation.svg", "log-memory-and-active-file-rings.svg", "log-ring-archive-retention.svg"]) assert.ok(m.includes(`](../assets/${asset})`), asset);
+  assert.match(m, /does not reuse the data-page BCB pool/i);
+  assert.match(m, /logical_pageid % log_Pb\.num_buffers/);
+  assert.match(m, /16,384 pages.*256 MiB/is);
+  assert.match(m, /1 header page \+ 32,767 active data-log slots/);
+  assert.match(m, /background archiving.*not the data-page double-write buffer/is);
+  assert.match(m, /LSA.*does not allocate disk space or promise.*bytes.*retained/is);
+  assert.match(m, /WAL orders the two writes.*does not copy a data page into the log buffer/is);
+  assert.ok(m.includes("](../reference/log-page-buffer-first-principles-audit.md)"));
+  for (const svg of [separationSvg, ringsSvg, archiveSvg]) {
+    assert.match(svg, /<svg[^>]+viewBox=/);
+    assert.match(svg, /<title[^>]*>[^<]{10,}<\/title>/);
+    assert.match(svg, /<desc[^>]*>[^<]{20,}<\/desc>/);
+    assert.doesNotMatch(svg, /[\uac00-\ud7a3]/u);
+  }
+  for (const label of ["PGBUF_BCB", "LOG_BUFFER", "WAL bridge"]) assert.ok(separationSvg.includes(label), label);
+  for (const label of ["logical LOG_PAGEID = 12", "index = 12 % 4 = 0", "LOG_HEADER.npages"]) assert.ok(ringsSvg.includes(label), label);
+  for (const label of ["append_lsa", "nxio_lsa", "nxarv_pageid", "fpageid", "retention floors"]) assert.ok(archiveSvg.includes(label), label);
+});
+
 test("the redo gate visual shows the comparison direction with a worked example", async () => {
   const m = await readFile(page, "utf8");
   const svg = await readFile(path.join(assetDir, "redo-lsa-gate.svg"), "utf8");

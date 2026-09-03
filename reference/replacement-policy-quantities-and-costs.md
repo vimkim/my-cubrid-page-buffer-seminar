@@ -151,7 +151,7 @@ For the question's 2,000-session example, automatic configuration gives about
 exclusive lists. Session creation does inspect those descriptors once, but an
 ordinary cross-private victim request does not.
 
-## What a quota is—and is not
+## Exact scope of a quota
 
 A private `quota` is an adaptive target that controls zone thresholds and
 where a victimizer may take pages. It is not a hard allocation ceiling: the
@@ -298,7 +298,7 @@ There **are** all-list passes elsewhere:
 Those should not be conflated with every allocation request scanning 2,000
 transactions.
 
-## Plausible bottlenecks: what the source proves and what it does not
+## Plausible bottlenecks and the source-evidence boundary
 
 The pinned source supports these **static risk candidates**:
 

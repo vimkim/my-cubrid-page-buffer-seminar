@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Logical LSA order spans a fixed active ring and retained archives</title>
+  <desc id="desc">Increasing logical log page IDs cross a fixed active ring. Older ranges are copied to archives before ring overwrite. LSA names order, while ring and archive metadata plus retention policy determine where bytes can still be read.</desc>
+  <defs><style>.bg{fill:#f7f5ef}.box{fill:#fff;stroke:#26384a;stroke-width:2}.active{fill:#eaf3ff;stroke:#2563a8}.archive{fill:#fff3dc;stroke:#a86413}.keep{fill:#eaf8ef;stroke:#287a45}.h{font:700 28px system-ui,sans-serif;fill:#172331}.t{font:700 18px system-ui,sans-serif;fill:#172331}.s{font:15px system-ui,sans-serif;fill:#334155}.tiny{font:13px system-ui,sans-serif;fill:#475569}.arrow{stroke:#526273;stroke-width:3;fill:none;marker-end:url(#m)}.dash{stroke-dasharray:7 6}</style><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0l10 5-10 5z" fill="#526273"/></marker></defs>
+  <rect class="bg" width="1200" height="720" rx="24"/><text class="h" x="55" y="58">LSA keeps increasing; storage is a fixed ring plus retained archives</text>
+  <text class="t" x="65" y="125">Logical order</text>
+  <path class="arrow" d="M215 120h870"/><text class="s" x="260" y="105">L100</text><text class="s" x="375" y="105">L103</text><text class="s" x="520" y="105">L104</text><text class="s" x="800" y="105">L107</text><text class="s" x="1025" y="105">L108…</text>
+  <rect class="box archive" x="65" y="190" width="440" height="155" rx="18"/><text class="t" x="100" y="230">ARCHIVE.7 · logical L100…L103</text><text class="s" x="100" y="270">copied and synced before active-slot overwrite</text><text class="tiny" x="100" y="305">LOG_ARV_HEADER records first page and range length</text>
+  <rect class="box active" x="550" y="190" width="585" height="155" rx="18"/><text class="t" x="585" y="230">FIXED ACTIVE-LOG RING</text>
+  <rect class="box keep" x="585" y="265" width="110" height="55" rx="10"/><text class="s" x="622" y="299">L104</text><rect class="box" x="705" y="265" width="110" height="55" rx="10"/><text class="s" x="742" y="299">L105</text><rect class="box" x="825" y="265" width="110" height="55" rx="10"/><text class="s" x="862" y="299">L106</text><rect class="box" x="945" y="265" width="110" height="55" rx="10"/><text class="s" x="982" y="299">L107</text>
+  <path class="arrow dash" d="M1070 320c70 70-40 105-480 70"/><text class="tiny" x="775" y="414">next wrap reuses a slot only after its older range is archived</text>
+  <rect class="box" x="65" y="455" width="1070" height="175" rx="18"/><text class="t" x="100" y="495">Different frontiers answer different questions</text>
+  <text class="s" x="100" y="535">append_lsa</text><text class="tiny" x="250" y="535">where new logical records are appended</text>
+  <text class="s" x="100" y="568">nxio_lsa</text><text class="tiny" x="250" y="568">lowest address not yet known durable in the active file</text>
+  <text class="s" x="620" y="535">nxarv_pageid</text><text class="tiny" x="785" y="535">next logical page that must enter an archive</text>
+  <text class="s" x="620" y="568">fpageid</text><text class="tiny" x="785" y="568">logical page currently mapped at active physical slot 1</text>
+  <text class="s" x="100" y="604">retention floors</text><text class="tiny" x="250" y="604">recovery, vacuum, HA, CDC, flashback, and configured archive limit decide deletion</text>
+  <text class="tiny" x="255" y="680">LSA locates a point in logical order. It neither allocates storage nor promises that an old archive still exists.</text>
+</svg>

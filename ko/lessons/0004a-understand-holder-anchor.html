@@ -20,8 +20,29 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+      <section class="section" id="questions-first">
+        <div class="eyebrow">01 · 세 design question부터 시작합니다</div>
+        <h2>비용, redesign, lifetime 순서로 읽습니다</h2>
+        <h3>1. 순회 비용이 커질 수 있습니까?</h3>
+        <p>그렇습니다. 이 thread가 서로 다른 BCB <code>H</code>개를 hold하고 있으면 <code>pgbuf_find_thrd_holder()</code>는 <code>thrd_hold_list</code>에서 시작해 <code>thrd_link</code>를 따라가므로 lookup 하나가 worst-case O(H)입니다. 앞선 page를 release하지 않고 서로 다른 새 page N개를 얻으면 비교 횟수가 <code>N(N−1)/2</code>, 즉 <code>O(N²)</code>로 누적됩니다. 실제 bottleneck이라고 하려면 큰 hold depth와 <code>pgbuf_find_thrd_holder()</code> 또는 <code>pgbuf_remove_thrd_holder()</code>의 profile sample도 함께 보여야 합니다.</p>
+        <h3>2. Redesign할 수 있습니까?</h3>
+        <p>그렇습니다. Per-thread hash, acquisition handle, BCB-side owner map으로 lookup 방향과 비용을 바꿀 수 있습니다. 다만 동일한 <code>&lt;thread_id, fix_count&gt;</code> 정보는 보존해야 합니다. WRITE에는 owner/count 하나가 필요하고 shared READ에는 reader마다 nested count가 필요합니다. Linked list는 없앨 수 있지만 현재 API semantics를 유지하면서 owner attribution까지 없앨 수는 없습니다.</p>
+        <h3>3. 크기와 개수는 얼마이고 얼마나 오래 삽니까?</h3>
+        <table>
+          <thead><tr><th>질문</th><th>Pinned 답</th></tr></thead>
+          <tbody>
+            <tr><td>Entry 크기</td><td>일반 64-bit ABI의 release build에서 <code>PGBUF_HOLDER</code>는 56 bytes입니다. Non-release build는 64 KiB <code>fixed_at</code> array를 더하므로 정확한 크기는 build에 따라 달라지고 약 65.6 KiB가 됩니다.</td></tr>
+            <tr><td>Anchor 크기</td><td><code>PGBUF_HOLDER_ANCHOR</code>는 정확히 64 bytes라는 source static assertion이 있습니다.</td></tr>
+            <tr><td>초기 개수</td><td>설정된 thread마다 reserved entry <code>PGBUF_DEFAULT_FIX_COUNT == 7</code>개입니다.</td></tr>
+            <tr><td>증가와 최대값</td><td>Shared extension set 하나에 <code>PGBUF_NUM_ALLOC_HOLDER == 10</code>개씩 추가합니다. 7과 10은 capacity이지 maximum이 아닙니다. General holder는 allocation failure 또는 바깥 protocol limit까지 증가합니다.</td></tr>
+            <tr><td>Lifetime</td><td>Storage는 page-buffer finalization까지 남습니다. Logical thread–BCB binding 하나는 첫 successful fix부터 마지막 matching unfix까지 유지되며 nested fix는 <code>fix_count</code>만 바꿉니다.</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note"><strong>Verified mechanism and inferred cost:</strong> layout/constant는 <code>page_buffer.c:86–94,438–497</code>, reservation/expansion은 <code>5922–6086</code>, lookup/removal은 <code>6090–6275</code>에 있습니다. 별개의 ordered-fix save-array limit 64는 <code>317–319,12284–12474</code>에 있으며 general holder maximum이 아닙니다.</p>
+      </section>
+
       <section class="section" id="two-objects">
-        <div class="eyebrow">01 · 먼저 한 문장으로</div>
+        <div class="eyebrow">02 · 두 object의 이름을 구분합니다</div>
         <h2>Anchor는 list를 소유하고, entry는 thread–BCB 관계 하나를 기록합니다</h2>
         <p class="big-claim"><code>PGBUF_HOLDER_ANCHOR</code>는 한 thread의 작은 directory입니다. <code>PGBUF_HOLDER</code>는 “이 thread가 이 BCB에 unfix N개를 빚지고 있다”는 재사용 가능한 record 하나입니다.</p>
         <img class="diagram" src="../../assets/holder-anchor-vs-entry.svg" alt="Thread 17의 holder anchor가 BCB X와 BCB Y의 active holder entry 및 재사용 가능한 free entry를 가리키는 그림">
@@ -36,7 +57,7 @@
       </section>
 
       <section class="section" id="read-snapshot">
-        <div class="eyebrow">02 · snapshot 읽기</div>
+        <div class="eyebrow">03 · snapshot 읽기</div>
         <h2>Active entry 두 개가 성공한 fix 네 번을 나타낼 수 있습니다</h2>
         <p>그림에서 Thread 17은 BCB X를 세 번, BCB Y를 한 번 fix했습니다. 서로 다른 <em>active entry</em>가 두 개이므로 anchor의 <code>num_hold_cnt = 2</code>입니다. 하지만 nested debt의 합은 <code>3 + 1 = 4</code>입니다.</p>
         <div class="callout"><strong>두 count를 같다고 보면 안 됩니다.</strong> <code>num_hold_cnt</code>는 active-list length이지 holder <code>fix_count</code>들의 합이 아닙니다.</div>
@@ -44,8 +65,8 @@
       </section>
 
       <section class="section" id="find-existing">
-        <div class="eyebrow">03 · lookup 질문에 답하기</div>
-        <h2>BCB 주소로 scan하며 position을 기억하지 않습니다</h2>
+        <div class="eyebrow">04 · lookup 하나를 추적합니다</div>
+        <h2>BCB 주소를 scan하여 기존 holder를 찾습니다</h2>
         <p class="big-claim">BCB A를 다시 fix할 때 <code>pgbuf_find_thrd_holder(thread_p, bufptr_A)</code>는 현재 thread의 active list를 순회하며 <code>holder-&gt;bufptr == bufptr_A</code>인지 비교합니다.</p>
         <ol>
           <li>현재 thread의 anchor를 찾습니다. <code>thread_p-&gt;m_holder_anchor</code>는 <code>&amp;pgbuf_Pool.thrd_holder_info[thread_p-&gt;index]</code>를 lazy cache합니다.</li>
@@ -67,7 +88,7 @@
       </section>
 
       <section class="section" id="why-holder">
-        <div class="eyebrow">04 · Thread별 ledger가 필요한 이유</div>
+        <div class="eyebrow">05 · Thread별 ledger가 필요한 이유</div>
         <h2>Global fcnt는 residency를 보호하고, holder는 debt의 주인을 구분합니다</h2>
         <p class="big-claim">BCB는 “fix가 세 개 있다”는 사실만 알 뿐, Thread A가 두 개, Thread B가 한 개를 소유하고 Thread C는 하나도 없다는 사실을 구분하지 못합니다. Holder가 이 빠진 attribution을 제공합니다.</p>
         <img class="diagram" src="../../assets/why-thread-holder.svg" alt="BCB의 global fix count 3을 Thread A의 debt 2, Thread B의 debt 1, Thread C의 debt 0으로 구분하는 그림">
@@ -120,7 +141,7 @@
       </section>
 
       <section class="section" id="two-links">
-        <div class="eyebrow">05 · 두 list 역할</div>
+        <div class="eyebrow">06 · 두 list 역할</div>
         <h2>같은 entry storage가 list와 link field를 바꿉니다</h2>
         <table>
           <thead><tr><th>Entry state</th><th>소속 list</th><th>사용하는 link</th><th>BCB 의미</th></tr></thead>
@@ -133,16 +154,16 @@
       </section>
 
       <section class="section" id="lifetime">
-        <div class="eyebrow">06 · Storage lifetime과 binding lifetime</div>
-        <h2>마지막 unfix는 binding을 제거하지만 backing allocation은 제거하지 않습니다</h2>
+        <div class="eyebrow">07 · Storage lifetime과 binding lifetime</div>
+        <h2>마지막 unfix는 active binding을 제거합니다</h2>
         <img class="diagram" src="../../assets/holder-entry-lifetime.svg" alt="Holder entry가 thread free list에서 active list로 이동했다가 다시 돌아오는 그림">
         <p class="caption">Entry는 재활용되고, 하나의 논리적 thread–BCB binding은 일시적입니다.</p>
-        <p>Initialization은 각 thread에 reserved free entry 일곱 개를 줍니다. Free list를 모두 쓰면 shared extension set에서 열 개 단위로 만든 entry를 얻습니다. 첫 successful fix가 entry 하나를 active로 만들고, 반복 successful fix마다 count가 늘어납니다. Matching unfix마다 count가 줄고 0이 되면 active list에서 unlink하여 그 thread의 free list head로 돌려보냅니다. 그 전에 watcher는 모두 detach되어 있어야 합니다.</p>
+        <p>Initialization은 각 thread에 reserved free entry 일곱 개를 줍니다. 64-byte anchor는 cache-line 크기이고, 일반 64-bit ABI의 release holder는 56 bytes이며 non-release fix-site tracking은 64 KiB를 더합니다. Free list를 모두 쓰면 shared extension set에서 열 개 단위로 만든 entry를 얻습니다. 7과 10은 모두 maximum이 아닙니다. 첫 successful fix가 entry 하나를 active로 만들고, 반복 successful fix마다 count가 늘어납니다. Matching unfix마다 count가 줄고 0이 되면 active list에서 unlink하여 그 thread의 free list head로 돌려보냅니다. 그 전에 watcher는 모두 detach되어 있어야 합니다.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> initialization과 allocation은 <code>page_buffer.c:5922–6086</code>, 마지막 debt 제거와 recycling은 <code>6128–6275</code>에 있습니다. Backing holder storage는 일반 unfix가 아니라 page-buffer finalization에서 회수합니다.</p>
       </section>
 
       <section class="section" id="unfix-cost">
-        <div class="eyebrow">07 · Unfix와 cost</div>
+        <div class="eyebrow">08 · 상세 cost derivation</div>
         <h2>아주 느려질 수 있나요? 한 thread가 서로 다른 page를 많이 hold하면 그렇습니다</h2>
         <p><code>H</code>를 이 thread가 현재 hold 중인 서로 다른 BCB 수라고 하겠습니다. Buffer-pool size, lifetime fix count, nested debt의 합이 아닙니다. Active list에는 BCB-to-holder index가 없으므로 entry position이 작업량을 결정합니다.</p>
         <table>
@@ -169,8 +190,8 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">08 · Retrieval practice</div>
-        <h2>“anchor가 position을 찾는다”라고 말하지 않고 A×3을 설명합니다</h2>
+        <div class="eyebrow">09 · Retrieval practice</div>
+        <h2>A×3을 holder scan과 fix count로 설명합니다</h2>
         <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 그림 없이 다시 설명하세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="thread는 자기 anchor 하나를 찾음 -> pgbuf_find_thrd_holder가 thrd_hold_list에서 시작해 각 holder bufptr를 BCB A와 linear comparison함 -> 첫 successful fix는 holder 하나를 할당하고 head에 붙여 fix_count 1로 만듦 -> 두 번의 반복 successful fix는 같은 entry를 찾아 fix_count를 3으로 늘리지만 num_hold_cnt는 바꾸지 않음 -> 각 unfix는 entry를 scan해 count를 줄임 -> 세 번째 unfix가 zero-count entry를 제거해 thrd_free_list로 돌려보냄." data-concepts='[{"label":"thread마다 anchor 하나","terms":["anchor","thread","one","index"]},{"label":"list head부터 linear lookup","terms":["linear","scan","head","thrd_hold_list"]},{"label":"BCB pointer 비교","terms":["bufptr","bcb","pointer","compare"]},{"label":"같은 entry가 nested fix를 셈","terms":["same","entry","fix_count","3"]},{"label":"num_hold_cnt는 1 유지","terms":["num_hold_cnt","one","length","distinct"]},{"label":"마지막 unfix가 entry를 재활용","terms":["unfix","zero","remove","free list","recycle"]}]'>
           <h3>문제</h3>
           <p>한 thread가 현재 BCB B를 hold하며, 이어 BCB A를 세 번 성공적으로 fix합니다. Grant마다 active list가 어떻게 되는지, A lookup이 어떻게 동작하는지, <code>num_hold_cnt</code>와 A의 <code>fix_count</code>가 각각 무엇을 뜻하는지, 세 번째 matching unfix에서 무엇이 일어나는지 설명하세요.</p>
@@ -192,14 +213,15 @@
 
     <nav class="lesson-nav" aria-label="강의 목차">
       <strong>강의 지도</strong>
-      <a href="#two-objects">1. Anchor와 entry</a>
-      <a href="#read-snapshot">2. Snapshot 읽기</a>
-      <a href="#find-existing">3. Existing debt 찾기</a>
-      <a href="#why-holder">4. Holder가 필요한 이유</a>
-      <a href="#two-links">5. 두 list 역할</a>
-      <a href="#lifetime">6. Entry lifetime</a>
-      <a href="#unfix-cost">7. Release cost</a>
-      <a href="#retrieval">8. Teach-back</a>
+      <a href="#questions-first">1. Cost → redesign → lifetime</a>
+      <a href="#two-objects">2. Anchor와 entry</a>
+      <a href="#read-snapshot">3. Snapshot 읽기</a>
+      <a href="#find-existing">4. Existing debt 찾기</a>
+      <a href="#why-holder">5. Holder가 필요한 이유</a>
+      <a href="#two-links">6. 두 list 역할</a>
+      <a href="#lifetime">7. Entry lifetime</a>
+      <a href="#unfix-cost">8. Cost derivation</a>
+      <a href="#retrieval">9. Teach-back</a>
       <a href="#primary-reading">필수 읽기</a>
       <hr>
       <a href="../../learning/02-fix-hold-release.md">Canonical Core 문서</a>

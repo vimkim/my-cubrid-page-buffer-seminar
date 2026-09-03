@@ -12,6 +12,7 @@ const guideRoot = path.resolve(scriptDir, "..");
 const expectedPages = {
   advanced: [
     "acquisition-concurrency.md",
+    "aout-ghost-history.md",
     "failure-and-proof-obligations.md",
     "holder-entry-lifecycle.md",
     "recovery-and-lifecycle.md",
@@ -36,8 +37,13 @@ const expectedPages = {
     "cross-database-replacement-policy-comparison.md",
     "dirty-page-flush-actors.md",
     "invariant-index.md",
+    "log-page-buffer-first-principles-audit.md",
+    "no-latch-semantics-audit.md",
+    "ordered-fix-first-principles-audit.md",
+    "page-buffer-daemon-lifecycle-audit.md",
     "private-lru-domain-hit-age-and-unfix-placement.md",
     "read-to-write-promotion-rationale.md",
+    "replacement-policy-first-principles-audit.md",
     "replacement-policy-quantities-and-costs.md",
     "source-map.md",
     "victim-scan-cap-and-aout-evidence.md",
@@ -52,6 +58,10 @@ const pageContracts = {
   "advanced/acquisition-concurrency.md": {
     level: "Advanced",
     title: "Acquisition Concurrency and Multi-page Ownership",
+  },
+  "advanced/aout-ghost-history.md": {
+    level: "Advanced",
+    title: "Dormant AOUT Ghost History",
   },
   "advanced/failure-and-proof-obligations.md": {
     level: "Advanced",
@@ -148,6 +158,9 @@ const advancedPrerequisites = {
   "advanced/acquisition-concurrency.md": [
     "../learning/02-fix-hold-release.md",
   ],
+  "advanced/aout-ghost-history.md": [
+    "./replacement-progress.md",
+  ],
   "advanced/failure-and-proof-obligations.md": [
     "../learning/01-contract-and-objects.md",
     "../learning/02-fix-hold-release.md",
@@ -180,6 +193,12 @@ const advancedCrossLinks = {
     "../playbooks/change-safely.md",
     "../playbooks/debug-by-symptom.md",
     "../reference/source-map.md",
+  ],
+  "advanced/aout-ghost-history.md": [
+    "./replacement-progress.md",
+    "../learning/05-replace-one-frame.md",
+    "../reference/replacement-policy-first-principles-audit.md",
+    "../reference/victim-scan-cap-and-aout-evidence.md",
   ],
   "advanced/failure-and-proof-obligations.md": [
     "../learning/06-maintainer-capstone.md",

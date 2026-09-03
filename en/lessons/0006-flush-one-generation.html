@@ -22,7 +22,7 @@
     <article class="lesson-main">
       <section class="section" id="flush-purpose">
         <div class="eyebrow">Start here · The entire lesson in one picture</div>
-        <h2>Memory changed; disk has not caught up</h2>
+        <h2>DIRTY records the gap between memory and disk</h2>
         <p class="big-claim"><strong>Flush</strong> means: make a stable copy of a changed resident page and send that copy toward persistent page storage.</p>
         <table>
           <thead><tr><th>Place</th><th>State</th><th>Why it matters</th></tr></thead>
@@ -82,7 +82,7 @@
       </section>
 
       <section class="section" id="why-flushing">
-        <div class="eyebrow">03 · Why DIRTY alone is not enough</div>
+        <div class="eyebrow">03 · Track in-flight I/O separately</div>
         <h2>Two facts can be true at the same time</h2>
         <p>When flush starts, it marks <code>FLUSHING</code> and clears the old <code>DIRTY</code>. This does not lose the work: the flusher now owns copy G. The cleared DIRTY bit becomes an empty signal slot for the next writer.</p>
         <ol>
@@ -96,7 +96,7 @@
       </section>
 
       <section class="section" id="moments">
-        <div class="eyebrow">04 · Do not call all of this “written”</div>
+        <div class="eyebrow">04 · Four distinct propagation moments</div>
         <h2>Log durability and page propagation are different</h2>
         <img class="diagram" src="../../assets/durability-chain.svg" alt="Separate boundaries for mutation, recovery logging, commit durability, and page propagation">
         <p class="caption">A transaction can commit before every changed page reaches its home location. WAL makes that safe.</p>
@@ -158,8 +158,8 @@
       </section>
 
       <section class="section" id="copy-versus-dwb">
-        <div class="eyebrow">08 · Copy is not DWB</div>
-        <h2>DWB changes the route, not the meaning of flush</h2>
+        <div class="eyebrow">08 · Copy generation and DWB routing</div>
+        <h2>DWB changes the physical write route</h2>
         <p>The private copy isolates G from later writers. DWB is an optional protected destination for that copy. When DWB is unavailable or the page is temporary, the page-buffer path uses direct <code>fileio_write()</code> instead. Flush still happens, and logged non-temporary pages still obey WAL.</p>
         <table>
           <thead><tr><th>DWB path</th><th>Direct path</th></tr></thead>

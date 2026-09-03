@@ -56,7 +56,7 @@ These are guide terms for several concrete source states, not one field named `t
 
 `pgbuf_is_bcb_fixed_by_any()` implements the first three checks, with different latch-mode treatment depending on whether the caller owns the BCB mutex. The invalid-victim flag mask adds DIRTY, FLUSHING, and the two direct-victim flags. Source: `src/storage/page_buffer.c:225-263,9265-9325,16217-16231`.
 
-### Why clean and not FLUSHING are separate requirements
+### Clean state and completed I/O are separate requirements
 
 A DIRTY BCB contains a resident generation whose bytes have not completed the configured page-image propagation boundary. Detaching and overwriting that frame would lose those bytes.
 
@@ -135,9 +135,9 @@ Direct-victim assignment is revocable: if the candidate is fixed again before co
 
 Avoid-deallocation bookkeeping for vacuum is not, by itself, the ordinary victim blocker. Source: `src/storage/page_buffer.c:16262-16296` as reconciled by the [inventory](../source-inventory.md).
 
-## Evidence boundary: the existing runs did not evict
+## Evidence boundary of the existing non-eviction runs
 
-Existing runtime observations did not force eviction or identify a physical victim, so they are not victim evidence. The [advanced replacement page](../advanced/replacement-progress.md#runtime-evidence-no-eviction-was-forced) owns the bounded interpretation; the [source inventory](../source-inventory.md) owns the receipts.
+Existing runtime observations did not force eviction or identify a physical victim, so they are not victim evidence. The [advanced replacement page](../advanced/replacement-progress.md#evidence-boundary) owns the bounded interpretation; the [source inventory](../source-inventory.md) owns the receipts.
 
 ## Understanding check: predicate or policy
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0012 — Prove replacement progress</title>
+  <title>Lesson 0012 — Understand CUBRID replacement</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <script defer src="../../assets/teach-retrieval.js"></script>
 </head>
@@ -12,264 +12,184 @@
 <main class="course-shell">
   <div class="topline"><span>CUBRID page buffer · lesson 0012</span><a href="../index.html">Course home</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced capability · replacement policy and cost</div>
-    <h1>Follow one BCB from final unfix to replacement</h1>
-    <p>Start with the concrete path—who carries a private-LRU number, where the BCB is linked, and what final unfix changes. Then use quotas and costs to explain replacement progress.</p>
-    <div class="pills"><span class="pill">Private is not ownership</span><span class="pill">Final unfix</span><span class="pill">Hit epoch</span><span class="pill">Private → shared</span><span class="pill">Cost model</span><span class="pill">Bounded exit</span></div>
+    <div class="eyebrow">Advanced capability · replacement from first principles</div>
+    <h1>Watch one BCB become cold, become a victim, and receive another page</h1>
+    <p>We will begin with real default counts, define VOID in plain language, and then follow one BCB. The formulas come only after the concrete story.</p>
+    <div class="pills"><span class="pill">32,768 pairs</span><span class="pill">INVALID first</span><span class="pill">VOID is unlinked</span><span class="pill">LRU3 only</span><span class="pill">Private is a domain</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
-      <section class="section" id="boundary">
-        <div class="eyebrow">01 · Keep the layers</div>
-        <h2>Policy finds candidates; eligibility authorizes reuse</h2>
-        <p>Replacement progress decides where to search, who should flush, whether an allocator waits, and how a candidate reaches it. None of those choices weakens Lesson 7’s hard gate: stable identity, no owner/waiter conflict, no DIRTY/FLUSHING debt, and protected final revalidation.</p>
-        <p class="big-claim">A fast candidate hint and a direct reservation are search results—not permission to rebind a frame.</p>
-        <h3>The 30-second model</h3>
+      <section class="section" id="purpose">
+        <div class="eyebrow">01 · The one question</div>
+        <h2>A page miss needs a frame; where does that frame come from?</h2>
+        <p>If an unused BCB/frame pair exists on the INVALID list, CUBRID pops it. No resident page is removed. Only after INVALID is empty does CUBRID search the cold end of an LRU for a resident page that is safe to replace.</p>
+        <p class="big-claim">Replacement changes the VPID and bytes inside a fixed BCB/frame pair. It does not manufacture a new pair and does not swap BCB A to another frame.</p>
+        <p>The short route is: INVALID pop → load in VOID → final unfix places the BCB in an LRU → list pressure demotes it toward LRU3 → a clean idle LRU3 BCB may be detached → its old hash identity is removed → the same pair is rebound.</p>
+      </section>
+
+      <section class="section" id="defaults">
+        <div class="eyebrow">02 · Pinned defaults, calculated</div>
+        <h2>512 MiB means 32,768 BCB/frame pairs at the default 16 KiB page size</h2>
+        <img class="diagram" src="../../assets/default-replacement-topology.svg" alt="Default 512 MiB configuration converted into BCB, transaction, shared LRU, and private LRU counts">
+        <p class="caption">This example assumes <code>data_buffer_size = 512M</code>, <code>max_clients = 100</code>, <code>ha_mode = off</code>, and the default 16 KiB I/O page.</p>
+        <pre>512 × 1,024 × 1,024 / 16,384 = 32,768 pages
+
+normal clients 100 + admin 1 + HA 0 + system 1 = MAX_NTRANS 102
+minimum buffers = 10 × 102 = 1,020, so configured 32,768 remains
+
+shared S  = max(4, min(102, floor(32,768 / 1,000))) = 32
+private P = 102 + VACUUM_MAX_WORKER_COUNT 50 = 152
+all LRU descriptors L = S + P = 184</pre>
+        <p><code>max_clients</code> is still 100. The internal page-buffer formulas use <code>MAX_NTRANS = 102</code> because they also include one admin connection and one system transaction. HA can add more reserved connections. The 512 MiB covers frame bytes; BCBs, mutexes, hashes, and list metadata are additional memory.</p>
+        <div class="callout"><strong>Startup snapshot:</strong> all 32,768 BCBs are on INVALID. The 184 LRU descriptors already exist but are empty. “152 private LRUs” does not mean 152 owners or 152 prefilled partitions.</div>
+        <p class="source-note"><strong>Verified defaults:</strong> <code>system_parameter.c:1169–1189,1569–1582,2329–2342</code>; <code>storage_common.h:91–99</code>; <code>connection_globals.c:84–112,158–245</code>; <code>log_common_impl.h:48–52</code>; <code>page_buffer.c:81–84,1713–1721,5740–5766,13941–13985</code>.</p>
+      </section>
+
+      <section class="section" id="states">
+        <div class="eyebrow">03 · Five list-membership states</div>
+        <h2>VOID means the BCB is outside every management list</h2>
+        <img class="diagram" src="../../assets/bcb-replacement-state-machine.svg" alt="One BCB moving through INVALID, VOID, LRU1, LRU2, LRU3, protected detach, and rebind">
+        <table>
+          <thead><tr><th>State</th><th>Plain meaning</th><th>Victim search?</th></tr></thead>
+          <tbody>
+            <tr><td><code>INVALID</code></td><td>On the global free/invalid singly linked list; no resident VPID.</td><td>Allocation pops it directly in O(1).</td></tr>
+            <tr><td><code>VOID</code></td><td>On neither INVALID nor any LRU. It may be loading, fixed before first placement, moving, or detached under protection.</td><td>No LRU scan can see it.</td></tr>
+            <tr><td><code>LRU1</code></td><td>Hot protected part of one LRU.</td><td>No.</td></tr>
+            <tr><td><code>LRU2</code></td><td>Protected second-chance part.</td><td>No.</td></tr>
+            <tr><td><code>LRU3</code></td><td>Cold part and the only ordinary victim-search zone.</td><td>Yes, but safety checks may reject every node.</td></tr>
+          </tbody>
+        </table>
+        <p>A newly loaded resident page can remain VOID during its entire first fix. Its VPID may already be in the resident hash and its <code>fcnt</code> may be positive. VOID says nothing about identity, ownership, dirty state, or whether overwriting is legal. It says only that <code>prev_BCB</code>/<code>next_BCB</code> do not currently link the BCB into INVALID or an LRU.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:174–216,5559–5667,6636–6994,8904–8952,15860–15986</code>.</p>
+      </section>
+
+      <section class="section" id="trip">
+        <div class="eyebrow">04 · One BCB's complete trip</div>
+        <h2>BCB A can age without a clock ticking it down</h2>
+        <img class="diagram" src="../../assets/replacement-lifecycle-quantities.svg" alt="Pool initialization, first use, LRU residency, and replacement pressure across one BCB lifetime">
         <ol>
-          <li>A session or vacuum worker borrows a private-LRU number.</li>
-          <li>The executing thread carries that number in <code>private_lru_index</code>.</li>
-          <li>The BCB stores only its current LRU index and zone—not a session owner.</li>
-          <li>Only final unfix, when global <code>fcnt</code> reaches zero, performs ordinary placement or movement.</li>
+          <li><strong>Startup:</strong> A is an INVALID-list node paired permanently with frame A.</li>
+          <li><strong>First miss for page P:</strong> <code>pgbuf_get_bcb_from_invalid_list()</code> pops A. A becomes VOID, receives VPID P, loads P's bytes, and is fixed.</li>
+          <li><strong>First final unfix:</strong> when global <code>fcnt</code> reaches zero, A enters private LRU1 top when the thread has a private domain; otherwise it enters shared LRU2 middle.</li>
+          <li><strong>Cooling:</strong> later insertions make protected zones exceed their thresholds. <code>pgbuf_lru_adjust_zones()</code> demotes old boundary nodes LRU1 → LRU2 → LRU3. Time alone does not move A.</li>
+          <li><strong>Second chance:</strong> if P is fixed again, a final unfix from LRU3 normally boosts A to LRU1. A must cool again.</li>
+          <li><strong>Victim:</strong> if A stays clean and idle in LRU3, a selected scan may lock and detach it to protected VOID.</li>
+          <li><strong>Rebind:</strong> <code>pgbuf_victimize_bcb()</code> rechecks A, removes P from the resident hash, and the miss path binds the same A/frame pair to page Q.</li>
         </ol>
+        <p>“Candidate,” “detached,” and “victimized” are different moments. LRU3 membership makes A searchable. Detach removes it from the LRU but old P is still hash-visible. Victimization removes P's identity. Only then can Q own the pair.</p>
       </section>
 
-      <section class="section" id="objects">
-        <div class="eyebrow">02 · Objects and lifetime</div>
-        <h2>LRUs are created at pool initialization; transactions only borrow a private-list assignment</h2>
-        <img class="diagram" src="../../assets/replacement-lifecycle-quantities.svg" alt="BCBs and LRU objects at initialization, first use, and sustained pressure">
-        <p class="caption"><code>N</code> BCB/frame slots and <code>S + P</code> LRU objects have pool lifetime. A resident BCB is linked into exactly one doubly linked LRU only after its first zero-crossing unfix.</p>
-        <ol>
-          <li><strong>Startup:</strong> <code>pgbuf_initialize_bcb_table()</code> chains all <code>N = num_buffers</code> BCBs through <code>next_BCB</code>. <code>invalid_top</code> points at BCB 0 and <code>invalid_cnt = N</code>. Every shared/private LRU object already exists but has null top/bottom/boundaries and zero counts.</li>
-          <li><strong>First miss:</strong> allocation pops the invalid head in O(1), loads a page into that fixed BCB/frame slot, and leaves it in VOID while fixed. The BCB and its frame remain the same array-index pair for pool lifetime; the page identity stored in that pair changes after legal victimization.</li>
-          <li><strong>First unfix to zero:</strong> with the pinned default AOUT-disabled path, a private-domain page joins that private LRU1 top; a page without a private domain joins a shared LRU2 middle.</li>
-          <li><strong>Heavy pressure:</strong> the invalid list can reach zero. Resident BCBs occupy the LRU zones, dirty LRU3 pages require flush progress, clean eligible LRU3 pages are advertised as candidates, and allocators search or wait. There is no second hidden reserve of BCB/frame pairs.</li>
-        </ol>
-        <div class="callout"><strong>Three lifetimes:</strong> the LRU array lives from page-buffer initialization to finalization; a context-to-private-LRU assignment lives from assignment to release and can be shared by several contexts; a BCB's list membership changes on placement, boost, demotion, removal, and reuse.</div>
-        <img class="diagram" src="../../assets/private-lru-domain.svg" alt="A session or worker lends a private LRU number to a thread entry while BCBs record list membership rather than session ownership">
-        <p class="caption">“Private” is a locality/quota domain. It is not a private frame pool, access isolation, or BCB ownership.</p>
-        <p>Session creation and vacuum setup call <code>pgbuf_assign_private_lru()</code>. The returned private-list-local number is copied into the executing thread's <code>private_lru_index</code>. Assignment scans the P private descriptors, preferring an idle list with the fewest pages and otherwise the least-active list. Multiple sessions can use the same private LRU.</p>
-        <p>When a session releases that assignment, <code>pgbuf_release_private_lru()</code> decreases the session count. Release does not empty or move the BCBs and does not destroy the list. The list and its resident BCBs may outlive that assignment. Any thread may still fix those pages; the BCB does not record that the former session owns them.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> BCB chain <code>page_buffer.c:5590–5650</code>; invalid-list initialization/pop <code>5907–5920,8923–8950</code>; LRU array initialization <code>5744–5800</code>; placement <code>6636–7040</code>.</p>
-      </section>
-
-      <section class="section" id="quantities">
-        <div class="eyebrow">03 · Counts, quota, and thresholds</div>
-        <h2>“Quota” is a moving target for placement and search—not reserved memory</h2>
+      <section class="section" id="decision">
+        <div class="eyebrow">05 · Will BCB A be a victim?</div>
+        <h2>LRU3 is only the first eligibility checkpoint</h2>
+        <img class="diagram" src="../../assets/one-bcb-victim-decision.svg" alt="Decision path that either skips one LRU3 BCB or detaches it as a victim">
         <table>
-          <thead><tr><th>Quantity</th><th>Exact pinned rule</th><th>What it does not mean</th></tr></thead>
+          <thead><tr><th>BCB A now</th><th>Result now</th><th>Why</th></tr></thead>
           <tbody>
-            <tr><td><code>S</code>: shared lists</td><td>With <code>num_LRU_chains = 0</code>, <code>S = max(4, min(MAX_NTRANS, floor(N/1000)))</code>. Explicit input is capped at 1,000.</td><td>Not one shared list per active transaction.</td></tr>
-            <tr><td><code>P</code>: private lists</td><td>Server default <code>num_private_chains = -1</code> becomes <code>MAX_NTRANS + VACUUM_MAX_WORKER_COUNT</code>; 0 disables private quotas; positive values below 4 become 4. Stand-alone mode uses 0.</td><td>Not one permanently exclusive list per transaction. Assignment scans for an idle/least-active list and increments a session count.</td></tr>
-            <tr><td>Pool-wide private target</td><td><code>(N − invalid_cnt) × private_pages_ratio</code>. The ratio is derived from private/shared LRU hits, clamped to 1%–99.8%, and smoothed over 10 seconds.</td><td>Not a hard capacity; resident counts can exceed it.</td></tr>
-            <tr><td>One private quota <code>Q</code></td><td>Private target × this list's activity share, capped at 5,000 and at <code>N/2</code>.</td><td>Not memory preallocated for the assigned context.</td></tr>
-            <tr><td>Private zone thresholds</td><td><code>LRU1 = floor(0.05Q)</code>, <code>LRU2 = floor(0.05Q)</code>. Older excess falls into LRU3.</td><td>Not 5%/5% of the physical pool unless <code>Q = N</code>.</td></tr>
-            <tr><td>Shared zone thresholds</td><td>Shared target is <code>max((N − all_private_quota)/S, 50)</code>; defaults are 40% LRU1 and 5% LRU2, leaving the rest for LRU3.</td><td>Not a per-page protection guarantee.</td></tr>
+            <tr><td>INVALID</td><td>Allocate directly, not a victim</td><td>No old resident page exists.</td></tr>
+            <tr><td>VOID, LRU1, or LRU2</td><td>Not inspected</td><td>Ordinary victim search follows only one LRU3 chain.</td></tr>
+            <tr><td>LRU3 + <code>DIRTY</code></td><td>Skip</td><td>Changed bytes must be flushed successfully first.</td></tr>
+            <tr><td>LRU3 + <code>FLUSHING</code></td><td>Skip</td><td>A write generation is still in flight.</td></tr>
+            <tr><td>LRU3 + <code>fcnt &gt; 0</code> or waiter</td><td>Skip</td><td>A caller owns or waits for the bytes.</td></tr>
+            <tr><td>LRU3 + non-<code>NO_LATCH</code> sample</td><td>Skip</td><td>The zero count may be inside a latch transition.</td></tr>
+            <tr><td>LRU3 + direct-victim flag</td><td>Skip ordinary scan</td><td>Another allocator handoff refers to A.</td></tr>
+            <tr><td>LRU3 + BCB try-lock failure</td><td>Skip this visit</td><td>The scan never blocks on A while holding the LRU mutex.</td></tr>
+            <tr><td>Clean idle LRU3, no flags/waiters, mutex and protected recheck succeed</td><td><strong>Detach A</strong></td><td>A changes LRU3 → VOID with the BCB mutex retained.</td></tr>
           </tbody>
         </table>
-        <div class="callout"><strong>Worked private-list example:</strong> if quota adjustment gives one private list <code>Q = 1,000</code>, its LRU1 threshold is 50 and LRU2 threshold is 50. If the list currently contains 1,000 resident BCBs, roughly 900 positions remain in LRU3 after adjustment. If it contains 1,150, quota does not reject 150 pages; it makes the list over quota and therefore an earlier victim source.</div>
-        <p>Quota adjustment normally returns early before doing this work unless enough activity/time has accumulated. When it runs, it traverses T thread-entry activity shards and all <code>L = S + P</code> LRU descriptors, and may demote the current excess of LRU1/LRU2 nodes. Therefore its structural cost is O(T + L + D), where D is the number of nodes demoted in that adjustment—not O(1).</p>
-        <p class="source-note"><strong>Pinned policy:</strong> counts and initialization <code>page_buffer.c:1071–1120,5744–5800,13942–14030</code>; adjustment <code>14252–14511</code>; parameter defaults <code>system_parameter.c:1794–1829,3754–3777,4171–4182</code>.</p>
+        <p><code>pgbuf_get_victim_from_lru_list()</code> receives one already selected LRU index. It starts at <code>victim_hint</code> or bottom and follows <code>prev_BCB</code> through at most 1,000 BCB nodes. It does not scan 1,000 lists or all transactions. Private threshold demotions <code>D</code> can happen before this bounded walk.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:221–263,9256–9538,16217–16228</code>.</p>
       </section>
 
-      <section class="section" id="domains">
-        <div class="eyebrow">04 · Final unfix decides placement</div>
-        <h2>Fix protects the current membership; final unfix may move it</h2>
-        <img class="diagram" src="../../assets/unfix-lru-placement.svg" alt="Final unfix decision tree for first placement and private-to-shared movement">
-        <p class="caption">Movement happens only when global <code>fcnt</code> becomes zero and the ordinary path is allowed. A non-final unfix does not relink the BCB.</p>
-        <p>A first-loaded BCB stays in VOID while fixed. At final unfix, the AOUT-disabled path inserts it at private LRU1 top when the thread has a private assignment, or at shared LRU2 middle otherwise. A BCB already in shared stays shared; ordinary zone rules may keep or boost it.</p>
-        <p>For a private member, <code>pgbuf_should_move_private_to_shared()</code> requests movement when the unfixing thread's private LRU differs from the BCB's list—including a thread with no private assignment—or when the same-domain BCB is both hot and old enough. The nearby source comment summarizes the first case as “more than one transaction,” but the executable check is domain-index mismatch; the BCB has no reverse owner set.</p>
-        <p>The movement is <strong>private → VOID → shared LRU2 middle</strong>. It unlinks under the private-list mutex, releases that mutex, then links under one shared-list mutex. The caller's BCB mutex remains held between the two operations, so transient VOID is protected and the two list mutexes are never nested. Known-node edits plus D zone demotions cost O(1 + D). Shared destination choice is amortized O(1), but periodically scans S shared descriptors; shared placement/migration therefore has a periodic O(S + D) case. Mutex wait is separate.</p>
-        <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private and shared LRU domains with LRU1, LRU2, and LRU3 zones and victim search order">
-        <p class="caption">After placement, each doubly linked list is divided in place: LRU1 is hot, LRU2 is the buffer/boost zone, and LRU3 is the only ordinary victim-scan zone.</p>
-        <table>
-          <thead><tr><th>Mechanism</th><th>Pinned meaning</th><th>Evidence label</th></tr></thead>
-          <tbody>
-            <tr><td>Private versus shared LRU</td><td>Alternative resident domains; private lists carry context quota policy.</td><td>Implementation policy.</td></tr>
-            <tr><td>LRU1 / LRU2 / LRU3</td><td>Hot, buffer/boost, and victim-search zones in this revision.</td><td>Implementation policy.</td></tr>
-            <tr><td>Quota and search order</td><td>Over-quota context searches its own list early; under-quota ownership receives protection until later fallback.</td><td>Implementation policy.</td></tr>
-            <tr><td>Victim hint/count/queue</td><td>Reduce scan work or route candidates.</td><td>Verified mechanism, never eligibility proof.</td></tr>
-          </tbody>
-        </table>
-        <p class="source-note"><strong>Pinned sources:</strong> final-unfix dispatch and migration predicate <code>page_buffer.c:6636–7038</code>; link/move helpers <code>9695–10417</code>; zone semantics <code>185–200</code>; ordinary selection <code>9293–9538</code>.</p>
+      <section class="section" id="private">
+        <div class="eyebrow">06 · Private LRU assignment and activity</div>
+        <h2>A context borrows a private-LRU index</h2>
+        <img class="diagram" src="../../assets/private-lru-domain.svg" alt="Session or worker assignment, thread private LRU index, private domain, and independent BCB membership">
+        <img class="diagram" src="../../assets/private-lru-assignment-activity.svg" alt="Private LRU assignment scan, index conversion, final-unfix hit sampling, and quota feedback">
+        <p><code>pgbuf_assign_private_lru()</code> scans all <code>P</code> private descriptors: first choose a zero-session list with the fewest BCBs; if none is idle, choose the least-active list. It increments <code>session_cnt[p]</code> and returns private-local <code>p</code>. The executing thread carries <code>private_lru_index = p</code>; a BCB stores the full index <code>S + p</code>.</p>
+        <p>The scan is O(P), with one initial attempt and up to five retries if an idle candidate is stolen concurrently. It runs when a session/vacuum context receives an assignment, not on every fix. Multiple sessions can use the same private LRU. When a session releases the assignment, <code>pgbuf_release_private_lru()</code> decrements its count; release does not empty or move its BCBs.</p>
+        <h3>What “activity” measures</h3>
+        <p>On an ordinary final unfix, <code>pgbuf_bcb_register_hit_for_lru()</code> lets one BCB contribute at most one hit in one accepted adjustment epoch. Only an accepted <code>pgbuf_adjust_quotas()</code> increments <code>adjust_age</code>; a daemon call every 100 ms does not necessarily increment it because early-return conditions can reject the pass.</p>
+        <p>An accepted pass uses <code>ATOMIC_TAS_32</code> to take and reset each list's <code>lru_hits</code>, converts hits to a per-second rate, and smooths private activity over ten seconds. Quota follows each private list's activity share, capped at 5,000 BCBs and <code>N/2</code>. LRU1 and LRU2 thresholds are each 5% of that quota. The structural work is O(T + L + D).</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:14251–14624,16594–16610,16994–17009,17146–17161</code>; <code>session.c:729–744</code>; <code>server_support.c:2069–2087</code>.</p>
       </section>
 
-      <section class="section" id="cross-private-search">
-        <div class="eyebrow">05 · Other-private discovery</div>
-        <h2>Consume a list index; do not enumerate transactions</h2>
-        <img class="diagram" src="../../assets/lru-cross-search-and-aging.svg" alt="Lock-free discovery of another private LRU and LRU1, LRU2, LRU3 movement rules">
-        <p class="caption">Candidate producers advertise integer LRU indices. A victimizer locks only the selected list, scans bounded LRU3 state, and uses BCB try-locks.</p>
-        <ol>
-          <li>An eligible clean LRU3 BCB increases <code>count_vict_cand</code>. An over-quota private list atomically enlists its index in <code>private_lrus_with_victims</code>; quota adjustment can republish it.</li>
-          <li><code>pgbuf_lfcq_get_victim_from_private_lru()</code> consumes <code>big_private_lrus_with_victims</code> first, then the regular queue when allowed. It maps the integer directly to <code>buf_LRU_list[lru_idx]</code>; the caller never walks another transaction’s object.</li>
-          <li><code>pgbuf_get_victim_from_lru_list()</code> locks that one LRU mutex, scans at most 1,000 LRU3 entries, and try-locks each BCB before the final safety recheck.</li>
-          <li>If candidates and quota still justify another search, the index is requeued. Otherwise its enlistment flag is cleared so a later candidate can advertise it again.</li>
-        </ol>
-        <div class="callout warn"><strong>The 2,000-transaction answer:</strong> victim search does not inspect 2,000 transaction entries or 2,000 private-LRU descriptors. It consumes one advertised integer index in O(1), locks that one list, then walks at most 1,000 <em>BCB nodes in its LRU3</em>. A hot selected-list mutex, repeated failed try-locks, or many 1,000-node attempts can cost CPU, but the cost is not O(number of open transactions). The separate, infrequent <code>pgbuf_assign_private_lru()</code> operation does linearly inspect all P private-list descriptors—O(P), up to five retries after an assignment race—when a context receives an assignment.</div>
-        <table>
-          <thead><tr><th>BCB state/event</th><th>Pinned placement or movement</th><th>Quota relation</th></tr></thead>
-          <tbody>
-            <tr><td>New private BCB, default AOUT disabled</td><td>First zero-crossing unfix inserts at LRU1 top.</td><td>Private LRU1 target is 5% of current quota.</td></tr>
-            <tr><td>New BCB without private domain</td><td>Insert at shared LRU2 middle.</td><td>Shared default LRU1/LRU2 targets are 40%/5% of shared target.</td></tr>
-            <tr><td>LRU1 ordinary unfix</td><td>Keep; do not boost an already-hot BCB.</td><td>Over-threshold oldest edge demotes to LRU2.</td></tr>
-            <tr><td>LRU2 ordinary unfix</td><td>Boost to LRU1 only when old enough.</td><td>Over-threshold oldest edge demotes to LRU3.</td></tr>
-            <tr><td>LRU3 ordinary unfix</td><td>Boost to LRU1; vacuum/direct paths have explicit exceptions.</td><td>Clean hard-eligible entries may be victimized.</td></tr>
-            <tr><td>Private page used from another private context, or hot and old enough</td><td>Remove to VOID, then add at shared LRU2 middle.</td><td>Membership moves; quota never duplicates the BCB.</td></tr>
-          </tbody>
-        </table>
-        <p class="source-note"><strong>Verified mechanism and pinned policy:</strong> queue advertisement/consumption <code>page_buffer.c:15674–15728,16370–16506</code>; bounded list scan <code>9330–9538</code>; placement/aging <code>6636–7040,9695–10353</code>; quotas <code>14251–14511</code>.</p>
+      <section class="section" id="movement">
+        <div class="eyebrow">07 · Final-unfix movement</div>
+        <h2>Private → shared preserves single-list membership</h2>
+        <img class="diagram" src="../../assets/unfix-lru-placement.svg" alt="Final unfix placement and private to VOID to shared movement">
+        <p>Ordinary movement happens only when an unfix changes global <code>fcnt</code> to zero. <code>pgbuf_should_move_private_to_shared()</code> requests migration when the unfixing thread's private index differs from the BCB's private list, or when a same-domain page is both hot and old enough.</p>
+        <p>The path is private LRU → VOID → shared LRU2 middle. The source unlinks under the private-list mutex, releases it, chooses a destination with <code>pgbuf_get_shared_lru_index_for_add()</code>, and links under the shared-list mutex. The BCB mutex remains held between the two list operations.</p>
+        <p>A known-node unlink/link is O(1), plus <code>D</code> zone demotions: O(1 + D). Shared destination choice is amortized O(1) and has a periodic O(S) balance scan, so migration has a periodic O(S + D) case, excluding lock wait.</p>
+        <div class="callout"><strong>Do not read “private” as access control.</strong> A different transaction can fix the page. Domain mismatch on its final unfix is exactly one reason the BCB migrates to shared.</div>
       </section>
 
-      <section class="section" id="second-read">
-        <div class="eyebrow">06 · Read the same page twice</div>
-        <h2>Reuse changes zone/position conditionally; it does not store “frequency = 2”</h2>
-        <img class="diagram" src="../../assets/repeated-read-lru-effects.svg" alt="Zone-dependent effects of reading and unfixing the same BCB again">
-        <p class="caption">The meaningful event is the ordinary unfix that returns the BCB's fix count to zero. Its current zone and age decide the movement.</p>
-        <p><code>quota.adjust_age</code> is an epoch number, not elapsed time. It starts at zero, and only an accepted <code>pgbuf_adjust_quotas()</code> pass increments <code>adjust_age</code>. The maintenance daemon calls that function every 100 ms, and assignment/release can call it too, but quota-disabled, already-adjusting, sub-1-ms, and low-activity-before-500-ms gates return without incrementing. Therefore the epoch does not advance every 100 ms.</p>
-        <p>At ordinary final unfix, <code>pgbuf_bcb_register_hit_for_lru()</code> counts one BCB at most once per accepted epoch: when <code>bcb-&gt;hit_age &lt; quota.adjust_age</code>, it increments <code>monitor.lru_hits[current_lru]</code> and copies the epoch into the BCB. The next accepted adjustment uses <code>ATOMIC_TAS_32</code> to take and reset every list counter, derives hits per second, smooths activity, and recalculates quotas. This is sample de-duplication, not a per-page frequency rank. If the BCB just moved private → shared, the hit is credited to its new shared list.</p>
-        <p>A second, separate signal is the high half of <code>count_fix_and_avoid_dealloc</code>. The general fix path increments this approximate hotness counter up to 64; the overlapping-reader fast path bypasses that registration, so it is not an exact successful-read count. Reaching 64 participates only in the old private-to-shared migration rule—it is not compared by the LRU3 victim scan. The counter resets when the BCB returns to the invalid list.</p>
-        <table>
-          <thead><tr><th>Where the BCB is at the second unfix</th><th>Movement</th><th>Victim effect</th></tr></thead>
-          <tbody>
-            <tr><td>LRU1</td><td>Keep its current position; register list activity when eligible.</td><td>Already outside the victim zone; no extra boost is needed.</td></tr>
-            <tr><td>LRU2, too young</td><td>Stay in LRU2. “Old enough” means list tick distance at least half the current LRU2 count.</td><td>An immediate reread does not automatically earn LRU1 protection.</td></tr>
-            <tr><td>LRU2, old enough</td><td>Remove and add at LRU1 top.</td><td>Becomes less likely to be selected because it must age through zones again.</td></tr>
-            <tr><td>LRU3, ordinary path</td><td>Boost to LRU1 top.</td><td>Leaves the only ordinary victim-scan zone.</td></tr>
-          </tbody>
-        </table>
-        <p>So the concise answer is: <strong>sometimes</strong>. A later read can make the page less victimizable through position/zone, and its hit can influence the containing private LRU's future quota. Two rapid reads while the page is young in LRU2 may leave its placement unchanged. AOUT would add ghost-history behavior, but the analyzed default forces its ratio to zero.</p>
-        <p>For an accepted maintenance pass, let T be thread entries inspected for unfix activity, L the LRU descriptors, and D the zone demotions caused by new thresholds. Its structural work is O(T + L + D): thread-counter scans, one all-LRU hit/quota pass, and the actual demotions.</p>
-        <p class="source-note"><strong>Verified mechanism and pinned policy:</strong> epoch initialization/producer <code>page_buffer.c:13942–13985,14251–14511</code>; 100-ms caller <code>16994–17009,17146–17161</code>; hit registration <code>16595–16610</code>; movement and later-read behavior <code>6730–7038,10210–10360,16313–16367</code>.</p>
+      <section class="section" id="progress">
+        <div class="eyebrow">08 · When no safe victim exists</div>
+        <h2>CUBRID waits until a BCB becomes safe to reuse</h2>
+        <img class="diagram" src="../../assets/allocation-progress.svg" alt="Allocation path from invalid list through victim search, direct-victim wait, retry, timeout, and error">
+        <p>If INVALID is empty and normal search finds nothing, <code>pgbuf_allocate_bcb()</code> can enter a direct-victim waiter queue and wake the flush daemon. A producer may clean and reserve a BCB. If another fix reaches it before consumption, the reservation is revoked and the allocator retries.</p>
+        <p>A DIRTY LRU3 BCB becomes reusable only after WAL-safe page write completion. During the write, <code>FLUSHING</code> still blocks replacement. If the page is dirtied again as generation G+1, that newer debt prevents direct assignment.</p>
+        <p>Every allocation path ends in assignment, retry, interrupt, timeout, or explicit error. <code>ER_PB_ALL_BUFFERS_DIRTY</code> is a fallback error name and does not prove that every BCB was literally dirty. The source does not prove wall-clock fairness for one waiter.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:8181–8403,9067–9253,10925–10952,15420–15652,16972–17255</code>.</p>
       </section>
 
       <section class="section" id="costs">
-        <div class="eyebrow">07 · Structural cost model</div>
-        <h2>Distinguish array scans, list walks, pointer edits, and I/O</h2>
+        <div class="eyebrow">09 · What is actually traversed?</div>
+        <h2>Derive cost from the actual data structure</h2>
         <table>
-          <thead><tr><th>Operation</th><th>Structure actually touched</th><th>Time</th></tr></thead>
+          <thead><tr><th>Operation</th><th>Structure</th><th>CPU work, excluding waits/I/O</th></tr></thead>
           <tbody>
-            <tr><td>Pool initialization</td><td>BCB/frame arrays plus <code>L = S + P</code> LRU descriptors</td><td>O(N + L)</td></tr>
-            <tr><td>Invalid-list pop/push</td><td>Singly linked head under one mutex</td><td>O(1)</td></tr>
-            <tr><td>Private-LRU assignment</td><td>Array of P private descriptors; optional retries</td><td>O(P) per attempt; at most 6 total attempts in this loop</td></tr>
-            <tr><td><code>pgbuf_bcb_register_hit_for_lru()</code></td><td>One BCB epoch and its current-LRU counter</td><td>O(1) structural work</td></tr>
-            <tr><td><code>pgbuf_should_move_private_to_shared()</code></td><td>List index, hotness, and list-age fields</td><td>O(1)</td></tr>
-            <tr><td>LRU add/remove/boost of a known BCB</td><td>Doubly linked neighbors and boundary/count fields</td><td>O(1), excluding zone adjustment</td></tr>
-            <tr><td><code>pgbuf_get_shared_lru_index_for_add()</code></td><td>Atomic round-robin; periodic all-S rebalance sample</td><td>Amortized O(1); periodic O(S)</td></tr>
-            <tr><td>Final-unfix shared placement or private → shared move</td><td>Shared selection plus known-list edits while the BCB mutex remains held</td><td>Amortized O(1 + D); periodic O(S + D)</td></tr>
-            <tr><td>Resident ordinary fix</td><td>Hash chain H and the current thread's R-holder list</td><td>O(H + R), excluding latch wait</td></tr>
-            <tr><td>Ordinary unfix bookkeeping</td><td>Holder lookup/removal, W waiter wake scan, then possible LRU work</td><td>O(R + W), plus placement/zone work</td></tr>
-            <tr><td>Zone adjustment</td><td>Oldest LRU1/LRU2 nodes demoted one by one</td><td>O(D) for D demotions</td></tr>
-            <tr><td>Advertise/consume an LRU index</td><td>Bounded lock-free circular queue</td><td>No P/S traversal; CAS retry makes wall-clock cost contention-dependent</td></tr>
-            <tr><td>Victim attempt on one list</td><td>Backward walk in that selected doubly linked LRU3</td><td>O(min(Z3, 1,000)); BCB locks are try-locks</td></tr>
-            <tr><td>Quota adjustment when it runs</td><td>T thread counters, all L descriptors, and any demoted nodes</td><td>O(T + L + D)</td></tr>
-            <tr><td>Flush or page load</td><td>Storage/log/DWB path in addition to metadata</td><td>Latency-bound I/O; do not label O(1)</td></tr>
+            <tr><td>INVALID pop/push</td><td>Singly linked head</td><td>O(1)</td></tr>
+            <tr><td>Private assignment</td><td><code>P</code>-descriptor array</td><td>O(P), retry up to five times</td></tr>
+            <tr><td>Shared insertion index</td><td>Atomic round-robin counter</td><td>Amortized O(1), periodic O(S)</td></tr>
+            <tr><td>Known BCB move</td><td>Intrusive doubly linked LRU</td><td>O(1 + D)</td></tr>
+            <tr><td>One victim attempt</td><td>One chosen LRU3's <code>prev_BCB</code> links</td><td>O(D + min(Z3, 1,000))</td></tr>
+            <tr><td>Old identity deletion</td><td>One resident hash bucket</td><td>O(H)</td></tr>
+            <tr><td>Accepted quota pass</td><td>Thread shards, all LRUs, demoted nodes</td><td>O(T + L + D)</td></tr>
           </tbody>
         </table>
-        <p><strong>Space:</strong> pool-owned BCBs and frames are O(N); LRU descriptors, hit/activity arrays, and victim-index queues are O(L); private session counters are O(P). List nodes are the BCBs themselves, so LRU membership does not allocate another O(N) node array.</p>
-        <p class="source-note"><strong>Derived complexity from verified structures:</strong> <code>page_buffer.c:499–773,5590–5920,9330–9538,9695–10415,14252–14650,16370–16567</code>. Big-O excludes mutex contention and I/O latency unless stated.</p>
+        <p>The explicit private-list parameter can reach 4,050. The automatic formula <code>MAX_NTRANS + 50</code> is derived separately and is not clamped by the shared-list 1,000 limit. Victim search still consumes an advertised list index; it does not enumerate those descriptors on every miss.</p>
       </section>
 
-      <section class="section" id="loop">
-        <div class="eyebrow">08 · No free BCB</div>
-        <h2>The allocator enters a progress loop with explicit exits</h2>
-        <img class="diagram" src="../../assets/allocation-progress.svg" alt="Allocation progress loop from invalid list through victim search, direct wait, revalidation, retry, and error exits">
-        <ol>
-          <li><strong>Take invalid/free BCB:</strong> immediate reusable storage; no resident mapping needs flush or victim proof.</li>
-          <li><strong>Search LRUs:</strong> follow pinned private/shared/quota order; every chosen resident candidate still passes protected eligibility.</li>
-          <li><strong>Wait for direct victim:</strong> in server mode with a flush daemon, enqueue the allocator, wake the producer, and sleep with a bounded/interrupt-aware wait.</li>
-          <li><strong>Revalidate assignment:</strong> lock the assigned BCB. If a worker fixed it again, revoke the reservation and retry—normally with elevated priority.</li>
-          <li><strong>No daemon:</strong> during stand-alone/recovery conditions, flush synchronously and search again.</li>
-          <li><strong>Terminate:</strong> return a frame, retry, report interrupt/timeout, or emit explicit no-buffer error. Failure returns no page pointer.</li>
-        </ol>
-        <p class="source-note"><strong>Verified mechanism:</strong> allocation loop <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403"><code>page_buffer.c:8181–8403</code></a>; victim search order <code>9067–9265</code>; direct-victim consumption/revocation <code>15592–15660</code>.</p>
-      </section>
-
-      <section class="section" id="reservation">
-        <div class="eyebrow">09 · Revocable direct victim</div>
-        <h2>Reservation loses to newly acquired ownership</h2>
-        <p>A producer can reserve an eligible BCB for a waiting allocator. Between assignment and consumption, another active worker may fix the resident page. That new ownership invalidates the reservation.</p>
-        <table>
-          <thead><tr><th>Moment</th><th>What is true</th><th>What the allocator may do</th></tr></thead>
-          <tbody>
-            <tr><td>Producer assigns</td><td>Candidate was eligible at producer’s protected check.</td><td>Wake waiter with a reservation.</td></tr>
-            <tr><td>Worker fixes before consumption</td><td>Candidate now has ownership and is unsafe to reuse.</td><td>Mark/revoke direct assignment.</td></tr>
-            <tr><td>Allocator consumes</td><td>Protected revalidation detects invalid assignment.</td><td>Release reservation state and request another candidate.</td></tr>
-          </tbody>
-        </table>
-        <p>Forcing reuse would violate the fix contract. Retrying is not wasted correctness; it is the mechanism honoring a newer, stronger fact.</p>
-      </section>
-
-      <section class="section" id="generation">
-        <div class="eyebrow">10 · Flush coordination</div>
-        <h2>Old-generation completion cannot victimize G+1</h2>
-        <p>Under pressure, victim flush can propagate copied generation G and hand the BCB toward post-flush assignment. Post-flush must recheck that the resident page is still clean, unfixed, in the victim zone, and policy-eligible.</p>
-        <p>If a writer created DIRTY generation G+1 while G was in flight, the direct-victim handoff must fail. Completing old bytes does not authorize discarding newer resident bytes.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> flush handoff <code>page_buffer.c:10925–10952</code>; post-flush assignment <code>15489–15556</code>.</p>
-      </section>
-
-      <section class="section" id="limits">
-        <div class="eyebrow">11 · Evidence boundary</div>
-        <h2>Bounded exits are not starvation freedom</h2>
-        <table>
-          <thead><tr><th>Source supports</th><th>Source/runtime does not establish</th></tr></thead>
-          <tbody>
-            <tr><td>Concrete search, wait, retry, timeout, interrupt, and error branches.</td><td>A bound on how many revocations/retries precede success.</td></tr>
-            <tr><td>Maintenance, page-flush, post-flush, and flush-control daemon ownership at the pinned revision.</td><td>Stable cadence, priority, batch size, or target-branch formula.</td></tr>
-            <tr><td>AOUT structures and code exist.</td><td>That current/default operation uses 2Q; pinned analyzed default forces its ratio to zero.</td></tr>
-            <tr><td>Existing workload observed reuse/counters.</td><td>Actual eviction, victim order, direct assignment, daemon timing, or fairness—it forced no physical victim.</td></tr>
-          </tbody>
-        </table>
-        <div class="callout warn"><strong>Liveness limit:</strong> the source acknowledges a possible forgotten waiter whose escape is timeout. Queue priority and producers make progress plausible; they do not prove starvation freedom.</div>
-      </section>
-
-      <section class="section" id="retrieval">
-        <div class="eyebrow">12 · Retrieval practice</div>
-        <h2>Trace a revoked assignment to its legal exits</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="an under-quota allocator with an empty invalid list follows the pinned LRU search policy, but every resident candidate still needs the hard eligibility gate -> when no candidate is available in server mode, it may enter the direct-victim wait queue and wake the flush daemon -> a producer's assignment is only a reservation based on eligibility at that earlier instant -> if another worker fixes the BCB before consumption, protected revalidation revokes the assignment and the allocator requests another candidate, commonly at high priority -> if the next wait times out, it exits with an error and no frame or page pointer -> these branches are verified mechanisms, while domain/quota/search priority and daemon cadence are implementation policy -> retry and timeout exits do not prove starvation freedom, and the existing runtime evidence did not force eviction." data-concepts='[{"label":"policy never bypasses eligibility","terms":["policy","eligibility","hard","recheck"]},{"label":"empty free list enters direct wait","terms":["invalid","empty","direct victim","queue","daemon"]},{"label":"assignment is revocable reservation","terms":["reservation","fixed","revoke","revalidate"]},{"label":"timeout returns no frame","terms":["timeout","error","no frame","no pointer"]},{"label":"mechanism versus policy","terms":["verified mechanism","implementation policy","quota","cadence"]},{"label":"no fairness or eviction proof","terms":["starvation","fairness","no eviction","runtime"]}]'>
-          <h3>Prompt</h3>
-          <p>An under-quota thread needs a BCB. The invalid list is empty, all scans fail, and it waits for a direct victim. A candidate is assigned, but another worker fixes it before consumption. The next wait times out.</p>
-          <p><strong>Your task:</strong> trace every protected decision and final result; label mechanism versus policy; then state exactly why this does not prove either infinite wait or starvation freedom.</p>
-          <textarea aria-label="Your replacement progress trace" placeholder="Trace candidate, reservation, revocation, retry, timeout, and caller result."></textarea>
-          <button type="button" data-check>Check progress argument</button>
-          <button type="button" class="secondary" data-reveal>Reveal model route</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>Paste your answer into the chat. I will check eligibility/policy separation, revocation, exits, and liveness language before recording Advanced progress.</p>
+      <section class="section" id="practice">
+        <div class="eyebrow">10 · Check your model</div>
+        <h2>Can BCB A be reused now?</h2>
+        <p>Start with default startup. Load page P into BCB A, final-unfix it, demote it to LRU3, then consider three variants: A is clean and idle; A is DIRTY; another thread fixes A just before the scan. For each variant, name the current list/zone, the first rejecting field or lock, and the event required before A can be rebound to page Q.</p>
+        <div class="callout"><strong>Model spine:</strong> INVALID avoids victimization → VOID is unlinked, not free → only LRU3 is searched → flags/owners/waiters/try-lock/final recheck decide → detach to VOID precedes hash removal → the fixed pair receives Q.</div>
       </section>
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
-        <h2>Annotate every terminal edge of allocation</h2>
-        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403"><code>page_buffer.c:8181–8403</code></a> together with direct-victim consumption at <code>15592–15660</code>. Mark success, retry, revocation, interrupt, timeout, no-daemon, and explicit-error results.</p>
-        <p><a href="../reference/replacement-progress-card.html">Open the printable replacement-progress card →</a></p>
-        <p><a href="0011-rebuild-after-ordered-refix.html">← Return to Lesson 0011</a> · <a href="0013-gate-redo-by-page-lsa.html">Continue to Lesson 0013 →</a></p>
+        <h2>Trace only four functions first</h2>
+        <p>Read <code>pgbuf_allocate_bcb()</code>, <code>pgbuf_get_victim()</code>, <code>pgbuf_get_victim_from_lru_list()</code>, and <code>pgbuf_victimize_bcb()</code>. Then use the canonical Markdown for index assignment, quota activity, and the full cost map.</p>
+        <p><a href="../../advanced/replacement-progress.md">Open the canonical replacement page →</a></p>
+        <p><a href="0011-rebuild-after-ordered-refix.html">← Lesson 0011</a> · <a href="0012a-understand-aout-ghost-history.html">Continue to Lesson 0012A: AOUT →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lesson map</strong>
-      <a href="#boundary">1. Policy boundary</a>
-      <a href="#objects">2. Private-domain lifetime</a>
-      <a href="#quantities">3. Exact quantities</a>
-      <a href="#domains">4. Final-unfix placement</a>
-      <a href="#cross-private-search">5. Other-private search</a>
-      <a href="#second-read">6. Second read</a>
-      <a href="#costs">7. Cost model</a>
-      <a href="#loop">8. Allocation loop</a>
-      <a href="#reservation">9. Revocable victim</a>
-      <a href="#generation">10. G+1 coordination</a>
-      <a href="#limits">11. Liveness limits</a>
-      <a href="#retrieval">12. Trace it back</a>
+      <a href="#purpose">1. Why replace?</a>
+      <a href="#defaults">2. Default numbers</a>
+      <a href="#states">3. INVALID and VOID</a>
+      <a href="#trip">4. One BCB lifetime</a>
+      <a href="#decision">5. Victim scenarios</a>
+      <a href="#private">6. Private index/activity</a>
+      <a href="#movement">7. Private → shared</a>
+      <a href="#progress">8. No safe victim</a>
+      <a href="#costs">9. Traversal costs</a>
+      <a href="#practice">10. Check the model</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
-      <a href="../reference/replacement-progress-card.html">Replacement-progress card</a>
+      <a href="0012a-understand-aout-ghost-history.html">AOUT lesson →</a>
       <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a>
-      <a href="0013-gate-redo-by-page-lsa.html">Next lesson →</a>
       <a href="../index.html">Course home</a>
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever victim eligibility, search policy, direct reservation, daemon ownership, or liveness language is unclear.</footer>
+  <footer class="footer">Ask whenever a state word is unclear; replacement is easiest when identity, list membership, ownership, and durability are kept separate.</footer>
 </main>
 </body>
 </html>
