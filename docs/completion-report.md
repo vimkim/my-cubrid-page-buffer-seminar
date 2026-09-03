@@ -193,3 +193,29 @@ resistance benefits as inference, not measured improvement, and states that
 removing the override alone is not a safe revival plan. Exact derivations and
 version boundaries live in
 `reference/victim-scan-cap-and-aout-evidence.md`.
+
+## Private-domain, hit-age, and unfix-placement follow-up
+
+Reader questions 11 and 12 exposed that Lesson 0012 used “private domain” and
+`adjust_age` before establishing their concrete owners. The lesson now starts
+with a four-step model: a session or vacuum worker borrows a private-list-local
+number, an executing thread carries it in `private_lru_index`, a BCB records only
+one current full LRU index/zone, and ordinary placement or movement happens at
+the final global-`fcnt` zero crossing. Paired English/Korean pages and the quick
+reference now state that multiple sessions can share one private LRU and that
+releasing an assignment neither drains the list nor moves its BCBs.
+
+Two new English-only SVGs visualize the distinct lifetimes and the final-unfix
+state machine. The migration drawing makes the lock protocol explicit: unlink
+from private, publish transient VOID, then insert at shared LRU2 middle, while
+the BCB mutex remains held and the two LRU mutexes are acquired sequentially.
+The structural cost ledger now distinguishes O(1) intrusive edits, O(D) zone
+repair, O(P) private assignment, and O(T + L + D) accepted quota work.
+
+The `adjust_age` explanation now identifies its sole producer: only an accepted
+`pgbuf_adjust_quotas()` pass increments the epoch. The 100-ms maintenance loop
+only attempts the function, and several time/activity gates can return first.
+`hit_age` therefore de-duplicates a BCB to at most one current-LRU hit per
+accepted epoch; it is not elapsed time or a per-page victim score. Exact pinned
+derivation and unresolved sampling/wrap boundaries live in
+`reference/private-lru-domain-hit-age-and-unfix-placement.md` and `VS-21`.

@@ -13,9 +13,9 @@
   <div class="topline"><span>CUBRID page buffer · lesson 0012</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
     <div class="eyebrow">Advanced 역량 · replacement policy와 비용</div>
-    <h1>progress를 증명하기 전에 list, 수량, 실제 작업을 눈으로 본다</h1>
-    <p>이 lesson을 마치면 시작 직후와 pressure 상황의 pool을 직접 그리고, zone target을 계산하며, 같은 page를 두 번째 읽을 때 무엇이 달라지는지와 각 구조 연산의 비용 및 allocator의 모든 exit를 설명할 수 있다.</p>
-    <div class="pills"><span class="pill">Initial state</span><span class="pill">Exact quotas</span><span class="pill">Three LRU zones</span><span class="pill">Second read</span><span class="pill">Cost model</span><span class="pill">Bounded exit</span></div>
+    <h1>마지막 unfix부터 replacement까지 BCB 하나를 따라간다</h1>
+    <p>먼저 누가 private-LRU 번호를 들고 있는지, BCB는 어디에 연결되는지, 마지막 unfix가 무엇을 바꾸는지 본다. 그 다음 quota와 비용으로 replacement progress를 설명한다.</p>
+    <div class="pills"><span class="pill">Private ≠ 소유권</span><span class="pill">Final unfix</span><span class="pill">Hit epoch</span><span class="pill">Private → shared</span><span class="pill">Cost model</span><span class="pill">Bounded exit</span></div>
   </header>
 
   <div class="lesson-grid">
@@ -25,6 +25,13 @@
         <h2>Policy는 candidate를 찾고 eligibility는 재사용을 허가한다</h2>
         <p>Replacement progress는 어디를 search할지, 누가 flush할지, allocator가 기다릴지, candidate가 어떻게 전달될지를 결정한다. 어느 선택도 Lesson 7의 hard gate를 약화하지 않는다. stable identity, owner/waiter conflict 없음, DIRTY/FLUSHING debt 없음, protected final revalidation이 모두 필요하다.</p>
         <p class="big-claim">빠른 candidate hint와 direct reservation은 search 결과이지 frame rebind 허가가 아니다.</p>
+        <h3>30초 mental model</h3>
+        <ol>
+          <li>세션 또는 vacuum worker가 private-LRU 번호를 빌린다.</li>
+          <li>실행 thread가 그 번호를 <code>private_lru_index</code>에 들고 다닌다.</li>
+          <li>BCB는 세션 owner가 아니라 현재 LRU index와 zone만 저장한다.</li>
+          <li>Global <code>fcnt</code>가 0이 되는 마지막 unfix에서만 ordinary placement/movement를 수행한다.</li>
+        </ol>
       </section>
 
       <section class="section" id="objects">
@@ -39,6 +46,10 @@
           <li><strong>Heavy pressure:</strong> invalid list가 0이 될 수 있다. Resident BCB는 LRU zone에 분포하고, dirty LRU3 page는 flush progress를 필요로 하며, clean eligible LRU3 page는 candidate로 advertise된다. Allocator는 search하거나 기다린다. 숨겨진 두 번째 BCB/frame 예비 pool은 없다.</li>
         </ol>
         <div class="callout"><strong>서로 다른 세 lifetime:</strong> LRU array는 page-buffer 초기화부터 finalization까지 산다. Context-to-private-LRU assignment는 assign부터 release까지이며 여러 context가 한 list를 공유할 수 있다. BCB의 list membership은 placement, boost, demotion, removal, reuse 때 바뀐다.</div>
+        <img class="diagram" src="../../assets/private-lru-domain.svg" alt="세션 또는 worker가 private LRU 번호를 thread entry에 전달하지만 BCB는 세션 소유권이 아니라 list membership을 기록하는 구조">
+        <p class="caption">“Private”는 locality/quota domain이다. Private frame pool도, 접근 격리도, BCB 소유권도 아니다.</p>
+        <p>Session 생성과 vacuum setup은 <code>pgbuf_assign_private_lru()</code>를 호출한다. 반환된 private-list-local 번호를 실행 thread의 <code>private_lru_index</code>로 복사한다. Assignment는 P개 private descriptor를 훑어 BCB가 가장 적은 idle list를 우선하고, 없으면 activity가 가장 낮은 list를 고른다. 여러 세션이 같은 private LRU를 사용할 수 있다.</p>
+        <p>세션이 해제되면 <code>pgbuf_release_private_lru()</code>가 session count를 줄인다. 이 release는 BCB를 비우거나 이동하지 않고 list를 파괴하지도 않는다. 따라서 list와 resident BCB는 assignment보다 오래 남을 수 있다. 다른 thread도 그 page를 fix할 수 있으며 BCB에는 이전 세션을 owner로 기록하는 필드가 없다.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> BCB chain <code>page_buffer.c:5590–5650</code>, invalid-list initialization/pop <code>5907–5920,8923–8950</code>, LRU array initialization <code>5744–5800</code>, placement <code>6636–7040</code>.</p>
       </section>
 
@@ -57,15 +68,20 @@
           </tbody>
         </table>
         <div class="callout"><strong>Private-list 계산 예:</strong> quota adjustment가 한 private list에 <code>Q = 1,000</code>을 주면 LRU1 threshold는 50, LRU2 threshold도 50이다. 현재 resident BCB가 1,000개라면 adjustment 뒤 대략 900개 위치가 LRU3에 남는다. 현재 1,150개라 해도 quota가 150개를 거절하지 않는다. 다만 over quota가 되어 더 이른 victim source가 된다.</div>
-        <p>Quota adjustment는 충분한 activity/time이 누적되지 않으면 일찍 return한다. 실제 실행되면 <code>L = S + P</code>개의 LRU descriptor를 모두 순회하고, 현재 LRU1/LRU2 초과분을 demote할 수 있다. 따라서 구조적 비용은 O(1)이 아니라 O(L + D)다. 여기서 D는 그 adjustment가 demote한 node 수다.</p>
+        <p>Quota adjustment는 충분한 activity/time이 누적되지 않으면 일찍 return한다. 실제 실행되면 T개 thread-entry activity shard와 <code>L = S + P</code>개의 LRU descriptor를 순회하고, 현재 LRU1/LRU2 초과분을 demote할 수 있다. 따라서 구조적 비용은 O(1)이 아니라 O(T + L + D)다. 여기서 D는 그 adjustment가 demote한 node 수다.</p>
         <p class="source-note"><strong>Pinned policy:</strong> count와 initialization <code>page_buffer.c:1071–1120,5744–5800,13942–14030</code>, adjustment <code>14252–14511</code>, parameter default <code>system_parameter.c:1794–1829,3754–3777,4171–4182</code>.</p>
       </section>
 
       <section class="section" id="domains">
-        <div class="eyebrow">04 · Pinned search policy</div>
-        <h2>domain에는 list가, list에는 세 zone이 있다</h2>
+        <div class="eyebrow">04 · 마지막 unfix가 placement를 결정한다</div>
+        <h2>Fix는 현재 membership을 보호하고, 마지막 unfix는 이를 옮길 수 있다</h2>
+        <img class="diagram" src="../../assets/unfix-lru-placement.svg" alt="첫 placement와 private-to-shared movement를 결정하는 마지막 unfix 흐름">
+        <p class="caption">Global <code>fcnt</code>가 0이 되고 ordinary path가 허용될 때만 movement가 일어난다. 마지막이 아닌 unfix는 BCB를 relink하지 않는다.</p>
+        <p>처음 load한 BCB는 fix 중에 VOID에 머문다. 마지막 unfix에서 AOUT-disabled path는 thread에 private assignment가 있으면 private LRU1 top, 없으면 shared LRU2 middle에 insert한다. 이미 shared인 BCB는 shared에 남고 zone rule에 따라 keep 또는 boost된다.</p>
+        <p>Private member에 대해 <code>pgbuf_should_move_private_to_shared()</code>는 unfix하는 thread의 private LRU가 BCB의 list와 다르면 이동을 요청한다. Private assignment가 없는 thread도 여기에 포함된다. 또는 같은 domain이라도 BCB가 hot하면서 old enough이면 이동한다. 인접 source comment는 첫 조건을 “more than one transaction”이라고 요약하지만 실제 검사는 domain-index mismatch다. BCB가 owner set을 역참조하는 구조가 아니다.</p>
+        <p>이동은 <strong>private → VOID → shared LRU2 middle</strong> 순서다. Private-list mutex 아래 unlink하고 그 mutex를 푼 뒤, shared-list mutex 하나를 잡아 link한다. 그 사이에도 caller가 BCB mutex를 계속 들고 있으므로 transient VOID는 보호되고 두 list mutex를 동시에 잡지 않는다. Known-node edit와 D개 zone demotion은 O(1 + D)다. Shared destination 선택은 amortized O(1)이지만 주기적으로 S개 shared descriptor를 훑으므로 shared placement/migration에는 O(S + D)인 periodic case가 있다. Mutex wait는 별도다.</p>
         <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private/shared LRU domain 안의 LRU1, LRU2, LRU3 zone과 victim search order">
-        <p class="caption">LRU3은 victimization zone이다. victim hint는 scan을 빠르게 할 뿐 현재 ownership을 증명하지 않는다.</p>
+        <p class="caption">Placement 뒤 각 doubly linked list는 제자리에서 세 zone으로 나뉜다. LRU1은 hot, LRU2는 buffer/boost, LRU3만 ordinary victim-scan zone이다.</p>
         <table>
           <thead><tr><th>Mechanism</th><th>Pinned revision에서의 의미</th><th>Evidence label</th></tr></thead>
           <tbody>
@@ -75,7 +91,7 @@
             <tr><td>Victim hint/count/queue</td><td>scan 작업을 줄이거나 candidate를 전달한다.</td><td>Verified mechanism이며 eligibility proof는 아니다.</td></tr>
           </tbody>
         </table>
-        <p class="source-note"><strong>Pinned source:</strong> zone semantics <code>page_buffer.c:185–200</code>, structure <code>560–773</code>, ordinary selection <code>9293–9538</code>, quota policy <code>13942–14440</code>.</p>
+        <p class="source-note"><strong>Pinned source:</strong> final-unfix dispatch와 migration predicate <code>page_buffer.c:6636–7038</code>, link/move helper <code>9695–10417</code>, zone semantics <code>185–200</code>, ordinary selection <code>9293–9538</code>.</p>
       </section>
 
       <section class="section" id="cross-private-search">
@@ -109,7 +125,8 @@
         <h2>Reuse는 조건에 따라 zone/position을 바꾸지만 “frequency = 2”를 저장하지 않는다</h2>
         <img class="diagram" src="../../assets/repeated-read-lru-effects.svg" alt="같은 BCB를 다시 읽고 unfix할 때 현재 zone에 따라 달라지는 결과">
         <p class="caption">중요한 event는 BCB fix count를 다시 0으로 만드는 ordinary unfix다. 현재 zone과 age가 movement를 결정한다.</p>
-        <p><code>pgbuf_bcb_register_hit_for_lru()</code>는 <code>quota.adjust_age</code>마다 containing LRU에 hit 하나를 기록할 수 있다. <code>bcb-&gt;hit_age</code>가 더 오래됐으면 <code>monitor.lru_hits[lru_idx]</code>를 증가시키고 그 BCB의 hit age를 현재 값으로 옮긴다. Quota adjustment가 이 per-list hit를 소비해 activity를 추정한다. 이 값은 계속 증가하는 per-BCB read-frequency score가 아니며 victim을 frequency 순으로 sort하지 않는다.</p>
+        <p><code>quota.adjust_age</code>는 elapsed time이 아니라 epoch 번호다. 0에서 시작하고, 오직 실제로 실행된 <code>pgbuf_adjust_quotas()</code> pass만 <code>adjust_age</code>를 증가시킨다. Maintenance daemon은 100 ms마다 함수를 호출하고 assignment/release도 호출할 수 있지만 quota-disabled, already-adjusting, 1 ms 미만, 500 ms 이전 low-activity gate에서 return하면 증가하지 않는다. 즉 epoch이 무조건 100 ms마다 증가하는 것은 아니다.</p>
+        <p>Ordinary 마지막 unfix에서 <code>pgbuf_bcb_register_hit_for_lru()</code>는 BCB 하나를 epoch 하나당 최대 hit 하나로 센다. <code>bcb-&gt;hit_age &lt; quota.adjust_age</code>이면 <code>monitor.lru_hits[current_lru]</code>를 증가시키고 현재 epoch을 BCB에 복사한다. 다음 accepted adjustment는 <code>ATOMIC_TAS_32</code>로 각 list counter를 가져오면서 0으로 만들고, hits/second와 smoothed activity를 계산해 quota를 갱신한다. 이는 sample de-duplication이지 per-page frequency rank가 아니다. BCB가 방금 private → shared로 이동했다면 새 shared list의 hit로 기록된다.</p>
         <p>두 번째 독립 signal은 <code>count_fix_and_avoid_dealloc</code>의 상위 절반이다. General fix path가 이 approximate hotness counter를 64까지 증가시키지만 overlapping-reader fast path는 registration을 건너뛴다. 따라서 정확한 successful-read count가 아니다. 64 도달은 old private-to-shared migration rule에만 참여하며 LRU3 victim scan이 비교하는 score가 아니다. BCB가 invalid list로 돌아가면 reset된다.</p>
         <table>
           <thead><tr><th>두 번째 unfix 시 BCB 위치</th><th>Movement</th><th>Victim 효과</th></tr></thead>
@@ -121,7 +138,8 @@
           </tbody>
         </table>
         <p>짧게 답하면 <strong>경우에 따라 그렇다</strong>. 이후 read는 position/zone을 통해 page를 덜 victimizable하게 만들 수 있고, hit는 containing private LRU의 미래 quota에도 영향을 줄 수 있다. 그러나 young LRU2 page를 빠르게 두 번 읽으면 placement가 그대로일 수 있다. AOUT은 ghost-history behavior를 추가할 수 있지만 분석한 default는 ratio를 0으로 강제한다.</p>
-        <p class="source-note"><strong>Verified mechanism과 pinned policy:</strong> fix registration/fast path <code>page_buffer.c:2408–2489,7724–7787</code>, zero-crossing case <code>6730–7005</code>, old-enough formula <code>1053–1061</code>, hotness counter/migration <code>16313–16367,6996–7038</code>, boost <code>10210–10360</code>, hit registration <code>16595–16610</code>, quota use <code>14337–14467</code>.</p>
+        <p>Accepted maintenance pass의 비용을 T = 확인하는 thread entry 수, L = LRU descriptor 수, D = 새 threshold 때문에 demote한 node 수로 두면 O(T + L + D)다. Thread counter scan, all-LRU hit/quota pass, 실제 demotion을 각각 포함한다.</p>
+        <p class="source-note"><strong>Verified mechanism과 pinned policy:</strong> epoch initialization/producer <code>page_buffer.c:13942–13985,14251–14511</code>, 100-ms caller <code>16994–17009,17146–17161</code>, hit registration <code>16595–16610</code>, movement/later-read behavior <code>6730–7038,10210–10360,16313–16367</code>.</p>
       </section>
 
       <section class="section" id="costs">
@@ -133,11 +151,17 @@
             <tr><td>Pool initialization</td><td>BCB/frame array와 <code>L = S + P</code> LRU descriptor</td><td>O(N + L)</td></tr>
             <tr><td>Invalid-list pop/push</td><td>한 mutex 아래 singly linked head</td><td>O(1)</td></tr>
             <tr><td>Private-LRU assignment</td><td>P개 private descriptor array와 optional retry</td><td>Attempt당 O(P), 이 loop의 총 attempt는 최대 6회</td></tr>
+            <tr><td><code>pgbuf_bcb_register_hit_for_lru()</code></td><td>BCB epoch 하나와 현재-LRU counter</td><td>구조적 O(1)</td></tr>
+            <tr><td><code>pgbuf_should_move_private_to_shared()</code></td><td>List index, hotness, list-age field</td><td>O(1)</td></tr>
             <tr><td>Known BCB의 LRU add/remove/boost</td><td>Doubly linked neighbor와 boundary/count field</td><td>Zone adjustment를 빼면 O(1)</td></tr>
+            <tr><td><code>pgbuf_get_shared_lru_index_for_add()</code></td><td>Atomic round-robin과 periodic all-S rebalance sample</td><td>Amortized O(1), periodic O(S)</td></tr>
+            <tr><td>마지막 unfix의 shared placement 또는 private → shared</td><td>BCB mutex를 유지하며 shared 선택과 known-list edit</td><td>Amortized O(1 + D), periodic O(S + D)</td></tr>
+            <tr><td>Resident ordinary fix</td><td>Hash chain H와 현재 thread의 R-holder list</td><td>Latch wait를 빼면 O(H + R)</td></tr>
+            <tr><td>Ordinary unfix bookkeeping</td><td>Holder lookup/removal, W waiter wake scan, 이후 possible LRU work</td><td>O(R + W) + placement/zone work</td></tr>
             <tr><td>Zone adjustment</td><td>Oldest LRU1/LRU2 node를 하나씩 demote</td><td>D개 demotion에 O(D)</td></tr>
             <tr><td>LRU index advertise/consume</td><td>Bounded lock-free circular queue</td><td>P/S traversal은 없지만 CAS retry 때문에 wall-clock cost는 contention-dependent</td></tr>
             <tr><td>List 하나의 victim attempt</td><td>선택된 doubly linked LRU3를 뒤에서 앞으로 walk</td><td>O(min(Z3, 1,000)); BCB lock은 try-lock</td></tr>
-            <tr><td>실행된 quota adjustment</td><td>모든 L descriptor와 demote되는 node</td><td>O(L + D)</td></tr>
+            <tr><td>실행된 quota adjustment</td><td>T개 thread counter, 모든 L descriptor, demote되는 node</td><td>O(T + L + D)</td></tr>
             <tr><td>Flush 또는 page load</td><td>Metadata 외에 storage/log/DWB path</td><td>Latency-bound I/O이므로 O(1)이라 부르지 않는다</td></tr>
           </tbody>
         </table>
@@ -225,9 +249,9 @@
     <nav class="lesson-nav" aria-label="Lesson 목차">
       <strong>Lesson map</strong>
       <a href="#boundary">1. Policy 경계</a>
-      <a href="#objects">2. Object와 lifetime</a>
+      <a href="#objects">2. Private-domain lifetime</a>
       <a href="#quantities">3. 정확한 수량</a>
-      <a href="#domains">4. Domain과 zone</a>
+      <a href="#domains">4. Final-unfix placement</a>
       <a href="#cross-private-search">5. Other-private search</a>
       <a href="#second-read">6. 두 번째 read</a>
       <a href="#costs">7. Cost model</a>

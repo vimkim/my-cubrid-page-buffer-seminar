@@ -168,6 +168,6 @@ The stable entry was cut over only after each former section had a complete cano
 | Deep references | Flat list replaced by intent routes and the source map |
 | Symptom-to-source index | Owned by the symptom playbook and source map |
 | Before you close an issue | Owned by the change and verification playbooks plus the capstone rubric |
-| Legacy pool, latch, and WAL-flush visuals | Useful relationships absorbed by the canonical English visuals (six at cutover; three more added from Reader question intake; five more added by the Learning-path visual pass; seven more added by the Advanced visual pass; two replacement-quantity/reuse visuals added from the quantitative reader follow-up); obsolete files and language exemptions removed |
+| Legacy pool, latch, and WAL-flush visuals | Useful relationships absorbed by the canonical English visuals (six at cutover; three more added from Reader question intake; five more added by the Learning-path visual pass; seven more added by the Advanced visual pass; two replacement-quantity/reuse visuals added from the quantitative reader follow-up; two private-domain/final-unfix visuals added from the next replacement follow-up); obsolete files and language exemptions removed |
 
 Exhaustive catalogs, raw receipts, historical question banks, and full comparison material remain linked evidence. No parallel legacy monolith is maintained.

@@ -81,10 +81,10 @@ test("replacement quantities, lifecycle, repeated reads, and costs are concrete"
     "invalid_cnt = N",
     "`L = S + P`",
     "O(P)",
-    "O(L + D)",
+    "O(T + L + D)",
     "at most 1,000 BCB nodes",
     "count_fix_and_avoid_dealloc",
-    "per quota-adjustment age",
+    "accepted adjustment epoch",
   ]) assert.ok(m.includes(term), term);
   assert.ok(m.includes("](../assets/replacement-lifecycle-quantities.svg)"));
   assert.ok(m.includes("](../assets/repeated-read-lru-effects.svg)"));

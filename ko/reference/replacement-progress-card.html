@@ -19,6 +19,16 @@
 
   <section class="reference-grid">
     <article class="reference-card full">
+      <h2>“Private domain”의 의미</h2>
+      <img class="diagram" src="../../assets/private-lru-domain.svg" alt="private LRU assignment, thread field, BCB membership의 서로 다른 lifetime">
+      <p>세션/worker는 private-list 번호를 빌리고 thread는 이를 <code>private_lru_index</code>에 들고 다닌다. BCB는 세션 owner가 아니라 현재 LRU/zone 하나만 저장한다. 여러 세션이 같은 private LRU를 공유할 수 있고, 세션이 해제되어 assignment를 release해도 BCB를 비우거나 옮기지 않는다.</p>
+    </article>
+    <article class="reference-card full">
+      <h2>마지막 unfix의 placement</h2>
+      <img class="diagram" src="../../assets/unfix-lru-placement.svg" alt="마지막 unfix의 first placement와 private-to-shared movement">
+      <p>Ordinary movement는 global <code>fcnt</code>가 0일 때만 시작한다. 첫 placement는 private LRU1 top 또는 shared LRU2 middle이다. Domain mismatch 또는 hot+old인 private member는 BCB mutex를 유지한 채 private → VOID → shared middle로 이동한다.</p>
+    </article>
+    <article class="reference-card full">
       <h2>Domain과 search policy</h2>
       <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="private/shared LRU domain과 zone, search order">
     </article>
@@ -43,7 +53,12 @@
         <li>invalid head: O(1)</li>
         <li>known LRU link edit: O(1) + demotion</li>
         <li>private assignment: O(P)</li>
-        <li>quota pass: O(S + P + demotion)</li>
+        <li>quota pass: O(T + S + P + demotion)</li>
+        <li>shared 선택: amortized O(1), periodic O(S)</li>
+        <li>shared placement/migration: amortized O(1 + D), periodic O(S + D)</li>
+        <li>hit registrar / move predicate: O(1)</li>
+        <li>resident fix: wait 전 O(hash chain H + holder list R)</li>
+        <li>unfix: O(R + waiter scan W) + placement work</li>
         <li>selected-list scan 1회: LRU3 BCB visit 최대 1,000개</li>
         <li>helper 전체: O(demotion + bounded scan)</li>
         <li>cross-private discovery: all-P scan 없음</li>
@@ -65,6 +80,10 @@
         <li>daemon 없이 synchronous flush/search</li>
         <li>명시적인 no-buffer error</li>
       </ol>
+    </article>
+    <article class="reference-card">
+      <h2><code>adjust_age</code></h2>
+      <p>실제로 실행된 <code>pgbuf_adjust_quotas()</code> pass만 이 epoch을 증가시킨다. 100-ms daemon call도 gate에서 return할 수 있다. BCB 하나는 epoch마다 현재 LRU에 hit를 최대 하나만 더하고, 다음 pass는 <code>ATOMIC_TAS_32</code>로 list hit를 가져오면서 reset한다.</p>
     </article>
     <article class="reference-card">
       <h2>Direct victim 규칙</h2>
@@ -104,6 +123,7 @@
           <tr><td>victim search order</td><td><code>page_buffer.c:9067–9265</code></td></tr>
           <tr><td>LRU quantity, quota, assignment</td><td><code>page_buffer.c:5744–5800,14252–14650</code></td></tr>
           <tr><td>Repeated-read movement와 statistic</td><td><code>page_buffer.c:6730–7038,16313–16610</code></td></tr>
+          <tr><td>Private assignment, hit epoch, quota pass</td><td><code>page_buffer.c:13942–14624,16595–16610,16994–17009</code></td></tr>
           <tr><td>AOUT structure, admission, forced disable</td><td><code>page_buffer.c:635–666,5802–5903,6885–6994,10468–10721</code>; <code>system_parameter.c:9975–9987</code></td></tr>
           <tr><td>direct assignment</td><td><code>page_buffer.c:15420–15627</code></td></tr>
           <tr><td>flush/post-flush handoff</td><td><code>page_buffer.c:10925–10952,15489–15556</code></td></tr>

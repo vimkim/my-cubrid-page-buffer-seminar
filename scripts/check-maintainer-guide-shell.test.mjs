@@ -36,6 +36,7 @@ const expectedPages = {
     "cross-database-replacement-policy-comparison.md",
     "dirty-page-flush-actors.md",
     "invariant-index.md",
+    "private-lru-domain-hit-age-and-unfix-placement.md",
     "read-to-write-promotion-rationale.md",
     "replacement-policy-quantities-and-costs.md",
     "source-map.md",

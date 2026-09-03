@@ -36,6 +36,7 @@ export const canonicalVisualOwners = Object.freeze({
   "ownership-ledgers.svg": "learning/02-fix-hold-release.md",
   "page-buffer-daemon-control-loops.svg": "reference/dirty-page-flush-actors.md",
   "promotion-outcomes.svg": "advanced/acquisition-concurrency.md",
+  "private-lru-domain.svg": "advanced/replacement-progress.md",
   "redo-lsa-gate.svg": "advanced/recovery-and-lifecycle.md",
   "repeated-read-lru-effects.svg": "advanced/replacement-progress.md",
   "replacement-data-structures.svg": "learning/05-replace-one-frame.md",
@@ -46,6 +47,7 @@ export const canonicalVisualOwners = Object.freeze({
   "three-engine-responsibility-seams.svg": "reference/cross-database-replacement-policy-comparison.md",
   "two-lsa-timeline.svg": "learning/04-flush-one-generation.md",
   "unconditional-latch-scenarios.svg": "advanced/acquisition-concurrency.md",
+  "unfix-lru-placement.svg": "advanced/replacement-progress.md",
   "victim-eligibility.svg": "learning/05-replace-one-frame.md",
   "why-thread-holder.svg": "advanced/holder-entry-lifecycle.md",
 });

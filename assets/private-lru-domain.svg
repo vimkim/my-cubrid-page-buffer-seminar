@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="650" viewBox="0 0 1280 650" role="img" aria-labelledby="title desc">
+  <title id="title">A private LRU is an assigned policy domain, not BCB ownership</title>
+  <desc id="desc">A session or vacuum worker borrows a private LRU identifier, a running thread copies that identifier into its thread entry, and final unfix uses it for placement. Multiple contexts may share one persistent private LRU. A BCB records only its current list and zone membership, not a session owner.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#435d69"/></marker>
+    <style>.panel{fill:#fff;stroke:#c5d2d8;stroke-width:2}.context{fill:#eef0ff;stroke:#5968bd;stroke-width:2}.thread{fill:#fff6e8;stroke:#b86b22;stroke-width:2}.domain{fill:#e9f4f3;stroke:#16847d;stroke-width:2}.bcb{fill:#fde9e5;stroke:#b74b3c;stroke-width:2}.note{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.t{font:700 26px Inter,Arial,sans-serif;fill:#173443}.h{font:700 18px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.tiny{font:13px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#435d69;stroke-width:2.5;marker-end:url(#arrow)}.dash{fill:none;stroke:#7b8990;stroke-width:2;stroke-dasharray:8 6;marker-end:url(#arrow)}</style>
+  </defs>
+  <text x="640" y="38" text-anchor="middle" class="t">“Private” means an assigned locality/quota domain</text>
+
+  <rect x="35" y="70" rx="18" width="1210" height="425" class="panel"/>
+  <rect x="70" y="115" rx="14" width="245" height="125" class="context"/>
+  <text x="192" y="150" text-anchor="middle" class="h">SESSION OR WORKER</text>
+  <text x="192" y="184" text-anchor="middle" class="s">borrows private id 7</text>
+  <text x="192" y="214" text-anchor="middle" class="tiny">assignment lifetime</text>
+
+  <rect x="70" y="295" rx="14" width="245" height="125" class="context"/>
+  <text x="192" y="330" text-anchor="middle" class="h">ANOTHER SESSION</text>
+  <text x="192" y="364" text-anchor="middle" class="s">may also borrow id 7</text>
+  <text x="192" y="394" text-anchor="middle" class="tiny">the list is not exclusive</text>
+
+  <rect x="400" y="175" rx="14" width="265" height="160" class="thread"/>
+  <text x="532" y="210" text-anchor="middle" class="h">THREAD ENTRY</text>
+  <text x="532" y="245" text-anchor="middle" class="s">private_lru_index = 7</text>
+  <text x="532" y="277" text-anchor="middle" class="tiny">copied for current work</text>
+  <text x="532" y="307" text-anchor="middle" class="tiny">consulted on final unfix</text>
+  <text x="532" y="327" text-anchor="middle" class="tiny">one active request is shown</text>
+
+  <rect x="750" y="95" rx="14" width="430" height="205" class="domain"/>
+  <text x="965" y="132" text-anchor="middle" class="h">PRIVATE LRU DOMAIN 7</text>
+  <text x="965" y="165" text-anchor="middle" class="s">persistent pool-owned list + mutex</text>
+  <rect x="790" y="195" rx="10" width="105" height="60" class="bcb"/><text x="842" y="231" text-anchor="middle" class="h">BCB A</text>
+  <rect x="912" y="195" rx="10" width="105" height="60" class="bcb"/><text x="964" y="231" text-anchor="middle" class="h">BCB B</text>
+  <rect x="1035" y="195" rx="10" width="105" height="60" class="bcb"/><text x="1087" y="231" text-anchor="middle" class="h">BCB C</text>
+  <text x="965" y="284" text-anchor="middle" class="tiny">list lifetime: page-buffer initialization → finalization</text>
+
+  <rect x="750" y="340" rx="14" width="430" height="120" class="bcb"/>
+  <text x="965" y="374" text-anchor="middle" class="h">BCB MEMBERSHIP</text>
+  <text x="965" y="406" text-anchor="middle" class="s">stores one LRU index + one zone</text>
+  <text x="965" y="435" text-anchor="middle" class="tiny">no session owner id · no access isolation</text>
+
+  <path d="M315 178 H392" class="line"/><path d="M315 356 C355 356 360 290 392 290" class="line"/>
+  <path d="M665 255 H742" class="line"/>
+  <path d="M965 300 V332" class="dash"/>
+
+  <rect x="95" y="530" rx="14" width="1090" height="85" class="note"/>
+  <text x="640" y="563" text-anchor="middle" class="h">Release the assignment ≠ empty or destroy the list</text>
+  <text x="640" y="594" text-anchor="middle" class="s">Resident BCBs may remain; a later final unfix by another domain can move one to a shared LRU.</text>
+</svg>

@@ -8,9 +8,9 @@
 
 This note answers the quantitative questions in `my-questions-7.md` against
 CUBRID commit `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`. It is an evidence note,
-not a benchmark report. `B` below means `pgbuf_Pool.num_buffers`, `S` the
-number of shared LRU lists, `P` the number of private LRU lists, and `L = S +
-P`.
+not a benchmark report. `B` below means `pgbuf_Pool.num_buffers`, `T` the number
+of managed thread entries inspected for activity, `S` the number of shared LRU
+lists, `P` the number of private LRU lists, and `L = S + P`.
 
 ## Short answers
 
@@ -194,13 +194,12 @@ the list instantaneously has exactly those percentages.
 [shared thresholds](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14477-L14503),
 [ratio defaults](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L3754-L3777)
 
-`pgbuf_adjust_quotas` is called by the `pgbuf-maintain` daemon every 100 ms and
-also after private-list assignment/release. The executable gate suppresses an
-adjustment before 500 ms unless accumulated unfixes reach `B/4`; the adjustment
-marks activity low when the reset unfix count is below `B/400`. One adjustment
-scans all `L` descriptors and may relabel overflow BCBs from zones 1/2 into zone
-3. Therefore its base work is `O(L)`, while a shrink adds `O(M)` for the number
-`M` of BCB zone transitions made during that pass (bounded by `B` pool-wide).
+The exact `adjust_age` producer and its early-return gates are owned by the
+[focused evidence audit](private-lru-domain-hit-age-and-unfix-placement.md#2-who-advances-adjustage).
+The quantitative consequence is that one accepted pass scans `T` managed thread
+entries while summing activity, all `L` descriptors, and may relabel overflow
+BCBs from zones 1/2 into zone 3. Its work is `O(T + L + M)`, where `M` is the
+number of BCB zone transitions made during that pass (bounded by `B` pool-wide).
 [adjustment gate and full-list pass](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14288-L14374),
 [zone adjustment loops](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9881-L10048),
 [100-ms daemon](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17146-L17161)
@@ -254,7 +253,7 @@ CAS retry, I/O, and thread sleep/wakeup.
 | Zone-2 hit | `O(1)` if too young; otherwise `O(1)+O(M)` | `O(1)` | Boost is remove + add top + boundary adjustment. |
 | Zone-3 hit | `O(1)+O(M)` | `O(1)` | Always boosts on final ordinary unfix. |
 | Assign private LRU to session | `O(P)` | `O(1)` | Scans private descriptors, not BCB chains. |
-| Recompute quotas | `O(L+M)` | `O(1)` per pass | `M <= B` zone transitions; arrays are persistent `O(L)`. |
+| Recompute quotas | `O(T+L+M)` | `O(1)` per pass | `T` thread shards; `M <= B` zone transitions; arrays are persistent `O(L)`. |
 | Advertise/consume list index | no `P`/`S` traversal | `O(1)` per queued index | Lock-free CAS loops are retry-dependent under contention, so strict wall-clock `O(1)` is not promised. |
 | Search selected LRU for victim | `O(min(Z3,1000))` | `O(1)` | Holds that LRU mutex and tries each BCB mutex conditionally. |
 | Ordinary cross-private selection | queue retry + one selected-list search | `O(1)` | No all-private-list scan. |
@@ -291,7 +290,7 @@ entry yields a cheap failed list check rather than an all-list scan.
 There **are** all-list passes elsewhere:
 
 - `pgbuf_assign_private_lru` is `O(P)` on session/vacuum-worker assignment.
-- `pgbuf_adjust_quotas` is `O(L+M)` and is attempted by a 100-ms maintenance
+- `pgbuf_adjust_quotas` is `O(T+L+M)` and is attempted by a 100-ms maintenance
   daemon.
 - victim-flush target calculation and collection walk LRU descriptors/candidate
   regions as background progress work.
@@ -310,8 +309,8 @@ The pinned source supports these **static risk candidates**:
    victim candidate.
    [hint caveat](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L584-L600),
    [scan body](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9391-L9506)
-2. Private-list assignment is `O(P)` per session creation, and quota adjustment
-   is an `O(L)` base pass. With thousands of configured lists, these are more
+2. Private-list assignment is `O(P)` per session creation, and an accepted quota
+   adjustment is an `O(T+L)` base pass. With thousands of configured lists, these are more
    plausible list-count scaling costs than ordinary cross-private victim
    discovery.
 3. The uncertainty registry records `VS-19`: the separate
@@ -385,11 +384,10 @@ that a quick second unfix must not automatically promote a still-cold page.
 [age formula](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1052-L1058),
 [boost rationale](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10123-L10197)
 
-Separately, `hit_age` and `adjust_age` limit a BCB to one `lru_hits[list]`
-contribution per quota-adjust epoch. Two reads within one epoch count once for
-quota activity; after `adjust_age` advances, another unfix can count once in the
-new epoch. This statistic changes future list quotas but is not consulted by the
-victim scan for per-page ordering.
+Separately, `hit_age` de-duplicates a BCB's contribution to LRU activity. The
+exact epoch semantics and destination-list attribution are cataloged in [Private
+LRU domain, hit-age epochs, and unfix
+placement](private-lru-domain-hit-age-and-unfix-placement.md#hitage-and-lruhits).
 [one-hit-per-epoch registration](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16594-L16610),
 [`adjust_age` advance and hit reset](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14328-L14361)
 

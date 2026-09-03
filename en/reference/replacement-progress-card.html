@@ -19,6 +19,16 @@
 
   <section class="reference-grid">
     <article class="reference-card full">
+      <h2>What “private domain” means</h2>
+      <img class="diagram" src="../../assets/private-lru-domain.svg" alt="Private LRU assignment, thread field, and BCB membership are distinct lifetimes">
+      <p>A session or worker borrows a private-list number; the thread carries it in <code>private_lru_index</code>. The BCB stores one current LRU/zone, not a session owner. Multiple sessions may share one private LRU, and releasing an assignment does not empty or move its BCBs.</p>
+    </article>
+    <article class="reference-card full">
+      <h2>Final-unfix placement</h2>
+      <img class="diagram" src="../../assets/unfix-lru-placement.svg" alt="Final unfix first placement and private-to-shared movement">
+      <p>Ordinary movement starts only when global <code>fcnt</code> reaches zero. First placement is private LRU1 top or shared LRU2 middle. Domain mismatch and hot-plus-old private members move private → VOID → shared middle while the BCB mutex remains held.</p>
+    </article>
+    <article class="reference-card full">
       <h2>Domains and search policy</h2>
       <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private/shared LRU domains, zones, and search order">
     </article>
@@ -43,7 +53,12 @@
         <li>invalid head: O(1)</li>
         <li>known LRU link edit: O(1) + demotions</li>
         <li>private assignment: O(P)</li>
-        <li>quota pass: O(S + P + demotions)</li>
+        <li>quota pass: O(T + S + P + demotions)</li>
+        <li>shared choice: amortized O(1), periodic O(S)</li>
+        <li>shared placement/migration: amortized O(1 + D), periodic O(S + D)</li>
+        <li>hit registrar / move predicate: O(1)</li>
+        <li>resident fix: O(hash chain H + holder list R), before waits</li>
+        <li>unfix: O(R + waiter scan W) + placement work</li>
         <li>one selected-list scan: ≤ 1,000 LRU3 BCB visits</li>
         <li>whole helper: O(demotions + bounded scan)</li>
         <li>cross-private discovery: no all-P scan</li>
@@ -65,6 +80,10 @@
         <li>Synchronous flush/search without daemon</li>
         <li>Explicit no-buffer error</li>
       </ol>
+    </article>
+    <article class="reference-card">
+      <h2><code>adjust_age</code></h2>
+      <p>Only an accepted <code>pgbuf_adjust_quotas()</code> pass increments this epoch. A 100-ms daemon call may return at a gate. One BCB contributes at most one hit to its current LRU per epoch; the next pass takes and resets list hits with <code>ATOMIC_TAS_32</code>.</p>
     </article>
     <article class="reference-card">
       <h2>Direct-victim rule</h2>
@@ -104,6 +123,7 @@
           <tr><td>Victim search order</td><td><code>page_buffer.c:9067–9265</code></td></tr>
           <tr><td>LRU quantities, quotas, and assignment</td><td><code>page_buffer.c:5744–5800,14252–14650</code></td></tr>
           <tr><td>Repeated-read movement and statistics</td><td><code>page_buffer.c:6730–7038,16313–16610</code></td></tr>
+          <tr><td>Private assignment, hit epoch, and quota pass</td><td><code>page_buffer.c:13942–14624,16595–16610,16994–17009</code></td></tr>
           <tr><td>AOUT structure, admission, and forced disable</td><td><code>page_buffer.c:635–666,5802–5903,6885–6994,10468–10721</code>; <code>system_parameter.c:9975–9987</code></td></tr>
           <tr><td>Direct assignment</td><td><code>page_buffer.c:15420–15627</code></td></tr>
           <tr><td>Flush/post-flush handoff</td><td><code>page_buffer.c:10925–10952,15489–15556</code></td></tr>

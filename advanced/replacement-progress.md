@@ -8,6 +8,17 @@
 
 Eligibility comes before every mechanism on this page. A policy may decide where to look and how to make progress; only the [core eligibility gate](../learning/05-replace-one-frame.md) decides whether a frame is safe to reuse.
 
+Use this simple model before reading the policy details:
+
+- A **session or vacuum worker** borrows a private-LRU number.
+- A **thread entry** carries that number while it performs the work.
+- A **BCB** does not record that session or worker as its owner. It records only
+  the LRU list and zone in which it is currently linked.
+- The final `unfix` uses the current thread's number as one input to placement.
+
+“Private” therefore describes a locality/quota domain. It does not mean a
+private frame pool, an access-control boundary, or a page-ownership ledger.
+
 ## Pinned implementation policy: domains, zones, and hints
 
 The pinned revision distributes resident frames across private LRU domains assigned to active contexts and shared LRU domains. Each list uses three zones: LRU1 is the hot zone, LRU2 is a buffer zone in which a fallen BCB can be boosted back, and LRU3 is the victimization zone, so "victim zone" in this guide always means LRU3. The victim scan starts in LRU3 and may use a victim hint (`victim_hint`) to avoid rescanning known-ineligible candidates.
@@ -34,13 +45,84 @@ The maintenance path samples fix activity, clamps the pool-wide private share to
 
 ### LRU object, assignment, and membership lifetimes
 
+![A private LRU is an assigned policy domain rather than BCB ownership](../assets/private-lru-domain.svg)
+
 The LRU objects do not come and go with transactions. `pgbuf_initialize_lru_list()` allocates one contiguous `PGBUF_LRU_LIST` array containing all shared indices followed by all private indices. Every list has one mutex; top/bottom and LRU1/LRU2 boundaries; one victim hint; zone/candidate counts; thresholds, quota, ticks, flags, and its immutable array index. The array and mutexes live from page-buffer initialization until `pgbuf_finalize()`.
 
-A private list's **context assignment** is shorter than the object lifetime. `pgbuf_assign_private_lru()` chooses an idle list with the fewest pages when possible, otherwise the least-active list, and increments that list's session count. `pgbuf_release_private_lru()` decrements the session count and resets activity when the last assignment leaves. It does not destroy the list object or immediately empty its resident BCBs. Several contexts can therefore be assigned the same private list under pressure; “private” is a quota/locality domain, not exclusive ownership of every member.
+A private list's **context assignment** is shorter than the object lifetime.
+Session creation and vacuum-worker setup call `pgbuf_assign_private_lru()`. The
+returned private-list-local number is stored on that context and copied into
+`THREAD_ENTRY.private_lru_index`; the page-buffer macro converts it to the full
+LRU-array index when needed. Assignment chooses an idle list with the fewest
+pages when possible, otherwise the least-active list, and increments that list's
+session count. It is an O(P) descriptor-array scan per attempt, not a linked-list
+walk over BCBs.
+
+`pgbuf_release_private_lru()` decrements the session count and resets activity
+when the last assignment leaves. Release does not destroy the list and does not
+empty or move its BCBs; the source comment claiming that it “puts BCB to the
+bottom” does not match the executable body at this baseline. Multiple sessions
+can therefore share the same private LRU, and resident BCBs can remain after a
+session releases its assignment. The list is private only as a replacement
+policy domain. It is not the owner of a BCB and does not restrict which thread
+may fix the resident page.
 
 A BCB's **membership lifetime** is shorter again. It has only one `prev_BCB`/`next_BCB` pair, and its atomic `flags` value encodes exactly one zone plus one 16-bit LRU index. Add helpers assert that the BCB is not already in an LRU, lock the target list, link it, and atomically publish one index/zone. Removal under that list's mutex clears both links and changes the zone to `PGBUF_VOID_ZONE`. Private-to-shared movement is explicitly remove-then-add, so the BCB passes through VOID instead of belonging to both lists. Zone/index assertions, counters, victim hints, and `pgbuf_lru_sanity_check()` detect protocol violations in diagnostic builds.
 
 Source: structures at `src/storage/page_buffer.c:499-623`; array initialization at `src/storage/page_buffer.c:5744-5800`; finalization at `src/storage/page_buffer.c:1921-1985`; add/remove/move at `src/storage/page_buffer.c:9695-9879,10200-10415`; encoded zone/index update at `src/storage/page_buffer.c:15900-16030`; private assignment/release at `src/storage/page_buffer.c:14513-14650`.
+
+### Fix, final unfix, and private-to-shared movement
+
+![Final unfix placement and private-to-shared movement](../assets/unfix-lru-placement.svg)
+
+Fixing a resident page normally does not relink it. The BCB stays in its current
+LRU while fixed; positive `fcnt` makes it ineligible for replacement. Ordinary
+placement work begins only when an `unfix` makes the global `fcnt` zero. Even
+then, a blocked reader/writer or an explicit move-to-bottom request selects a
+special handoff path instead of the ordinary placement branch.
+
+On the ordinary zero crossing, `pgbuf_unlatch_bcb_upon_unfix()` reads the current
+thread's full private-LRU index, or `-1` when it has none, and dispatches by the
+BCB's current zone:
+
+| Current state | Final-unfix action at the pinned AOUT-disabled baseline |
+|---|---|
+| VOID, thread has a private assignment | Add at that private LRU1 top. |
+| VOID, thread has no private assignment | Add at a selected shared LRU2 middle. |
+| LRU1 | Keep its position unless private-to-shared movement applies. |
+| LRU2 | Move private-to-shared when required; otherwise boost to LRU1 only when old enough. |
+| LRU3 | Move private-to-shared when required; otherwise ordinarily boost to LRU1. |
+| Already shared | Never moves “back” to private on this path; ordinary zone keep/boost rules apply. |
+
+`pgbuf_should_move_private_to_shared()` first rejects an already-shared BCB. For
+a private member it returns true when the unfixing thread's private LRU array
+index differs from the BCB's current list index—including `-1`, meaning no
+private assignment. This executable test is a domain-mismatch proxy; it does not
+store or prove a set of transaction owners despite the nearby source comment.
+It also returns true when the same-domain BCB has reached the saturating hotness
+threshold and is old enough in its list.
+
+Movement is two list operations, not a simultaneous dual membership:
+
+```text
+lock private list → unlink BCB → publish VOID → unlock private list
+lock chosen shared list → insert at LRU2 middle → publish shared index/zone → unlock
+```
+
+The caller holds the BCB mutex between those list locks, so another page-buffer
+operation cannot treat the transient VOID state as an unprotected free BCB. The
+two LRU mutexes are never held together. Each known-node unlink or insertion is
+O(1), and zone adjustment can demote D boundary nodes. Choosing a shared
+destination is amortized O(1), but periodically scans all S shared descriptors
+in O(S) to identify an oversized list. Thus a private-only placement or known-
+list boost is O(1 + D); shared placement/migration is amortized O(1 + D) and has
+a periodic O(S + D) case. Mutex wait time is contention-dependent and is not
+represented by that Big-O.
+
+Source: zero crossing and dispatch at `src/storage/page_buffer.c:6636-6883`;
+VOID placement and migration predicate at `src/storage/page_buffer.c:6885-7038`;
+link helpers and private-to-shared movement at
+`src/storage/page_buffer.c:9695-10417`.
 
 ### Concrete pool shape: empty startup, first use, and pressure
 
@@ -76,12 +158,38 @@ First unfix is also policy-visible. With the analyzed default AOUT-disabled path
 ![Zone-dependent effects of reading and unfixing the same BCB again](../assets/repeated-read-lru-effects.svg)
 
 There is no exact per-BCB successful-read counter that turns from one to two and
-directly ranks victims. On an ordinary zero-crossing unfix,
-`pgbuf_bcb_register_hit_for_lru()` may record
-one hit for the containing LRU per quota-adjustment age. It increments
-`monitor.lru_hits[lru_idx]` only when the BCB's `hit_age` is older than
-`quota.adjust_age`, then advances `hit_age`. Quota adjustment consumes the
-per-list hit counters to estimate activity and distribute private quotas.
+directly ranks victims. `quota.adjust_age` is an epoch number, not wall-clock
+time. It starts at zero, and only an accepted `pgbuf_adjust_quotas()` pass
+increments `adjust_age`. The 100 ms maintenance daemon calls that function, and
+assignment/release may call it too, but a call does not necessarily increment
+the epoch: quota-disabled, already-adjusting, sub-1-ms, and insufficient-
+activity-before-500-ms gates all return first. Thus “one age per 100 ms” is
+incorrect.
+
+On an ordinary zero-crossing unfix, `pgbuf_bcb_register_hit_for_lru()` compares
+the BCB's last sampled epoch with the pool epoch:
+
+```text
+if bcb.hit_age < quota.adjust_age:
+    monitor.lru_hits[current_lru] += 1
+    bcb.hit_age = quota.adjust_age
+```
+
+The purpose is sample de-duplication: one BCB contributes at most one hit in one
+accepted adjustment epoch, no matter how many qualifying final unfixes occur in
+that epoch. At the next accepted pass, `ATOMIC_TAS_32` takes and resets every
+list's `lru_hits`, converts the sample to hits per second, smooths private-list
+activity, and derives quotas. The BCB's `hit_age` is not a recency clock and does
+not order the victim scan. When a private BCB first moves to shared, hit
+registration occurs after insertion, so the sample belongs to the new shared
+LRU.
+
+Let T be the number of managed thread entries inspected for unfix activity, L
+the number of LRU descriptors, and D the number of zone demotions caused by new
+thresholds. A maintenance-triggered accepted pass is O(T + L + D): O(T) for the
+two unfix-counter sums, O(L) for consuming hit arrays and updating lists, and
+O(D) for demotions. Assignment/release-triggered calls have the same gate and
+accepted-pass work in addition to assignment's O(P) scan.
 
 The immediate per-page effect depends on the current zone:
 
@@ -104,7 +212,12 @@ exact count of successful reads. Reaching 64 participates in an old
 private-to-shared migration condition; the LRU3 victim scan does not rank BCBs
 by this counter. It resets when the BCB returns to the invalid list.
 
-Source: `src/storage/page_buffer.c:1053-1061,2408-2489,6730-7038,7724-7787,10210-10360,14337-14467,16313-16367,16595-16610`.
+Source: epoch initialization and accepted adjustment at
+`src/storage/page_buffer.c:13942-13985,14251-14511`; 100 ms caller at
+`src/storage/page_buffer.c:16994-17009,17146-17161`; assignment/release callers
+at `src/storage/page_buffer.c:14513-14624`; hit registration at
+`src/storage/page_buffer.c:16595-16610`; movement and later-read behavior at
+`src/storage/page_buffer.c:1053-1061,2408-2489,6730-7038,7724-7787,10210-10360,16313-16367`.
 
 ### How the victim search assigns priority
 
@@ -143,19 +256,27 @@ Source: queue allocation at `src/storage/page_buffer.c:1825-1898`; candidate adv
 
 ### Structural cost and space ledger
 
-Let `L = S + P`, `Z3` be the selected list's LRU3 length, and `D` the number of
-nodes demoted during one zone adjustment.
+Let `H` be a resident hash-bucket chain length, `R` the number of distinct BCBs
+held by one thread, `W` a BCB waiter count, `T` the number of thread entries
+inspected for activity, `L = S + P`, `Z3` the selected list's LRU3 length, and
+`D` the number of nodes demoted during one zone adjustment.
 
 | Operation | Structure touched | Derived time |
 |---|---|---|
 | Pool initialization | BCB/frame arrays and all LRU descriptors | O(N + L) |
 | Invalid-list pop/push | Singly linked head under one mutex | O(1) |
 | Private-LRU assignment | Array of all P private descriptors | O(P) per attempt; at most six attempts in that loop |
+| `pgbuf_bcb_register_hit_for_lru()` | BCB epoch plus one current-LRU counter | O(1) structural work |
+| `pgbuf_should_move_private_to_shared()` | Encoded list index, hotness, and age fields | O(1) |
 | Add/remove/boost a known BCB | Doubly linked neighbors plus boundaries/counts | O(1), excluding adjustment it triggers |
 | Zone adjustment | Oldest LRU1/LRU2 nodes, one by one | O(D) |
+| `pgbuf_get_shared_lru_index_for_add()` | Atomic round-robin counter; periodic shared-descriptor rebalance sample | Amortized O(1); periodic O(S) |
+| First shared placement or private-to-shared movement | Shared selection plus known-node edits and zone repair | Amortized O(1 + D); periodic O(S + D) |
+| Resident ordinary fix | One hash chain and the thread's holder list | O(H + R), excluding latch wait |
+| Ordinary unfix bookkeeping | Holder lookup/removal, optional waiter wake, then possible LRU work | O(R + W), plus the selected placement/zone work |
 | Advertise/consume an LRU index | Bounded lock-free circular queue | No P/S traversal; CAS retry makes wall-clock cost contention-dependent |
 | Victim attempt on one selected list | Optional zone demotion, then backward walk in its LRU3 | O(D + min(Z3, 1,000)); `D` is demotion work outside the scan cap, and BCB mutex acquisition is nonblocking |
-| Quota adjustment when it runs | All L descriptors plus demotions | O(L + D) |
+| Quota adjustment when it runs | T thread-entry shards, all L descriptors, plus demotions | O(T + L + D) |
 | Page load or flush | Storage/log/DWB path | Latency-bound I/O; not meaningfully described as O(1) |
 
 Space is O(N) for pool-owned BCBs and frames, O(L) for LRU descriptors,
@@ -164,7 +285,7 @@ counters. The BCB itself supplies the list links, so LRU membership does not
 allocate a second O(N) node set. Big-O here describes structure traversal and
 excludes mutex contention and I/O latency unless the row says otherwise.
 
-Primary-source derivation and caveats: [Replacement quantities and cost](../reference/replacement-policy-quantities-and-costs.md).
+Primary-source derivation and caveats: [Replacement quantities and cost](../reference/replacement-policy-quantities-and-costs.md) and [Private LRU domain, hit-age epochs, and unfix placement](../reference/private-lru-domain-hit-age-and-unfix-placement.md).
 
 ### Promotion and demotion rules in one table
 
