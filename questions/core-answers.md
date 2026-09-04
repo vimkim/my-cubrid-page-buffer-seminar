@@ -257,14 +257,14 @@ Use IDs rather than page position to pair answers with [Core prompts](./core.md)
 ### PGBUF-QB-021 — What does NEW_PAGE not do?
 
 - **Evidence:** Interface contract; Verified mechanism
-- **Canonical guide:** [Caller Completes Correctness](../learning/03-caller-completes-correctness.md)
-- **Source anchors:** `src/storage/file_manager.c:5420-5590`
-- **Confidence/limit:** Shows representative file allocation; exact initialization/logging remains subsystem-specific.
+- **Canonical guide:** [`NEW_PAGE` means materialize after allocation](../learning/03-caller-completes-correctness.md#newpage-means-materialize-after-allocation)
+- **Source anchors:** `src/storage/page_buffer.c:2380-2416,2572-2616,8470-8634`; `src/storage/file_manager.c:5360-5590`
+- **Confidence/limit:** Pinned behavior and representative file allocation; the WRITE/unconditional combination is a caller inventory finding, not a type-system restriction.
 - **Prompt:** [Attempt this question](./core.md#pgbuf-qb-021-what-does-newpage-not-do)
 
-**Model answer:** File management allocates the identity before fixing it as `NEW_PAGE`. That mode avoids reading an old image while materializing already allocated storage; it does not allocate, choose type/layout, initialize bytes, establish TDE/recovery policy, set the right LSA, mark dirty, or decide release.
+**Model answer:** File management allocates the identity before fixing it as `NEW_PAGE`. On a miss, that mode avoids DWB/home-volume I/O and initializes only page-buffer metadata while materializing already allocated storage; on a hit, it does not reinitialize the resident image. It accepts the expected `PAGE_UNKNOWN` state but does not allocate, initialize the logical payload/type/layout, establish TDE/recovery policy, mark dirty, or decide release. Replacing it with `OLD_PAGE` changes both I/O and validity behavior.
 
-**Why:** `NEW_PAGE` communicates caller knowledge to the page buffer rather than transferring allocation ownership into it.
+**Why:** `NEW_PAGE` communicates allocation knowledge across the server-module Interface. The semantic no-read creation operation is necessary even if a future API hides the enum behind a narrower function.
 
 ### PGBUF-QB-022 — What becomes stale after ordered release and refix?
 

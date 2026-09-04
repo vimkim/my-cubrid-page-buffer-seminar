@@ -45,7 +45,7 @@
       <ol>
         <li>Register first to become VPID load owner.</li>
         <li>Obtain and assign an unpublished provisional BCB.</li>
-        <li>OLD_PAGE: DWB then volume; NEW_PAGE: initialize.</li>
+        <li>OLD_PAGE: DWB then volume; NEW_PAGE: skip old-byte I/O and initialize Module metadata while the payload remains caller-owned.</li>
         <li>Confirm, grant, publish, release load lock.</li>
         <li>Wake waiters; each retries and earns its own debt.</li>
       </ol>
@@ -87,7 +87,7 @@
     </article>
   </section>
 
-  <footer class="footer">Canonical explanation: <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a>. Ask the teaching agent when preparation and postcondition become blurred.</footer>
+  <footer class="footer">Canonical explanation: <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a>. <code>NEW_PAGE</code> details: <a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Lesson 5</a>. Ask the teaching agent when preparation and postcondition become blurred.</footer>
 </main>
 </body>
 </html>

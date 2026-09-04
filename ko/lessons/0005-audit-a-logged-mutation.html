@@ -92,10 +92,43 @@
 
       <section class="section" id="new-page">
         <div class="eyebrow">06 · Caller knowledge</div>
-        <h2><code>NEW_PAGE</code> materialization은 allocation 다음입니다</h2>
-        <p><code>PAGE_FETCH_MODE::NEW_PAGE</code>는 caller가 allocated page identity를 이미 소유하고 있고, 기존 bytes를 읽지 않은 채 resident frame을 초기화하려 한다는 뜻입니다. logical page를 allocate하는 mode가 아닙니다.</p>
-        <p>allocation state, 초기 page type/layout, TDE state, recovery semantics, dirtying, 최종 ownership은 file management가 담당합니다. page-buffer Module은 frame을 materialize하고 보호합니다.</p>
-        <p class="source-note"><strong>Representative source:</strong> pinned <code>file_alloc()</code>가 allocation을 수행한 뒤 <code>pgbuf_fix(..., NEW_PAGE, WRITE, ...)</code>를 호출하는 흐름은 <code>file_manager.c:5420–5590</code>에서 확인할 수 있습니다.</p>
+        <h2><code>NEW_PAGE</code>는 allocation과 buffer를 잇는 contract입니다</h2>
+        <p class="big-claim">VPID는 이미 allocate되었지만 logical page는 아직 initialize되지 않았습니다. <code>NEW_PAGE</code>는 obsolete home-page image를 읽지 않고 보호된 resident storage를 materialize하라고 page-buffer Module에 알립니다.</p>
+        <p>이 이름은 두 ownership boundary를 가로지릅니다. 먼저 file 또는 disk code가 identity를 reserve합니다. 그다음 page buffer가 resident BCB/frame과 Module-owned metadata를 준비합니다. 마지막으로 owning subsystem이 page type/layout을 초기화하고 TDE와 recovery 동작을 고르며 generation을 dirty로 표시한 뒤 fix debt를 transfer하거나 갚습니다.</p>
+
+        <h3>Miss와 hit은 의도적으로 서로 다르게 준비됩니다</h3>
+        <table>
+          <thead><tr><th>상황</th><th>검증된 page-buffer 작업</th><th>여전히 caller가 맡는 작업</th></tr></thead>
+          <tbody>
+            <tr><td>Buffer miss</td><td>재사용할 BCB/frame을 claim하고 VPID를 bind합니다. DWB, home-volume read, decryption, read statistics를 건너뛰고 LSA/identity metadata를 초기화합니다. <code>PAGE_UNKNOWN</code>을 허용한 뒤 요청 latch 아래에서 grant하고 publish합니다.</td><td>Logical payload, page type/layout을 초기화하고 TDE/recovery logging을 선택합니다. Dirty, failure 처리, ownership release/transfer도 caller 책임입니다.</td></tr>
+            <tr><td>Resident hit</td><td>기존 mapping을 사용해 일반 fix/latch를 얻습니다. Miss 전용 metadata initialization은 다시 실행하지 않습니다. Resident <code>PAGE_UNKNOWN</code> image는 정상적인 reallocation case입니다.</td><td>이 mode가 frame을 지웠다고 가정하지 않습니다. 같은 owner-specific initialization과 cleanup protocol을 끝까지 수행합니다.</td></tr>
+          </tbody>
+        </table>
+        <p>Pinned revision의 direct creation call 열 개는 모두 file/disk owner에 있고 WRITE와 unconditional acquisition을 요청합니다. 이는 검증된 caller pattern이지 type-system restriction은 아닙니다. Zero-wait policy 때문에 conditional <code>NULL</code> outcome이 생길 수도 있습니다.</p>
+        <p class="source-note"><strong>Representative source:</strong> pinned <code>file_alloc()</code>는 먼저 allocate하고 <code>NEW_PAGE</code>로 fix한 뒤 owner initializer를 실행하고 known type을 요구하며 TDE를 적용한 다음 transfer 또는 unfix합니다. 범위는 <code>file_manager.c:5360–5590</code>입니다. Miss/hit branch는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2380-L2616"><code>page_buffer.c:2380–2616</code></a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8634"><code>8392–8634</code></a>입니다.</p>
+
+        <h3>No-read operation이 존재하는 이유</h3>
+        <table>
+          <thead><tr><th>대체 제안</th><th>동일하지 않은 이유</th></tr></thead>
+          <tbody>
+            <tr><td><code>OLD_PAGE</code></td><td>Miss이면 DWB 또는 data volume을 읽고 필요하면 decrypt하며 <code>PAGE_UNKNOWN</code>을 reject합니다. 의미 없는 I/O와 failure path가 늘어나고 resident deallocated image를 재사용하는 지원 경로도 깨집니다.</td></tr>
+            <tr><td><code>RECOVERY_PAGE</code></td><td>더 넓은 allocation state를 허용하지만 miss에서는 여전히 읽습니다. 또한 creation contract가 아니라 recovery 전용 validation boundary를 우회합니다.</td></tr>
+            <tr><td>Cache miss에서 “new” 추론</td><td>Not resident는 newly allocated와 다릅니다. Old image를 보기 전에 read 여부를 결정해야 하므로 allocation owner만 intent를 알고 있습니다.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>다른 engine도 같은 내부 responsibility를 노출합니다</h3>
+        <table>
+          <thead><tr><th>Engine</th><th>Internal Interface 형태</th><th>공통 responsibility</th></tr></thead>
+          <tbody>
+            <tr><td>CUBRID</td><td><code>PAGE_FETCH_MODE::NEW_PAGE</code></td><td>Allocated identity를 no-read로 resident materialize하고 caller가 WRITE를 hold한 채 initialize합니다.</td></tr>
+            <tr><td>PostgreSQL</td><td><code>RBM_ZERO_AND_LOCK</code></td><td>Old bytes를 읽지 않고 caller initialization을 위해 exclusive lock된 buffer를 반환합니다.</td></tr>
+            <tr><td>MySQL/InnoDB</td><td><code>buf_page_create()</code></td><td>별도 creation function으로 normal read 없이 새 buffer-pool page를 publish하고 latch합니다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>“Public API”에는 boundary가 필요합니다.</strong> <code>page_buffer.h</code>는 Server-module Interface이며 설치되는 SQL, CCI, application API가 아닙니다. 실제 design 질문은 creation을 넓게 조합할 수 있는 enum으로 유지할지, 더 좁은 internal function으로 만들지입니다.</div>
+        <p><strong>Recommendation:</strong> semantic no-read creation operation은 유지합니다. 더 deep한 Interface가 필요하다면 WRITE를 암시하고 caller initialization obligation을 이름에 드러내는 creation function 뒤로 숨기거나 분리합니다. External sort의 specialized full-page overwrite는 allocation contract가 다르므로 별도로 유지해야 합니다.</p>
+        <p><a href="../../reference/new-page-fetch-mode-audit.md">전체 pinned call-site, PostgreSQL/InnoDB, counterfactual, design option, regression audit 열기 →</a></p>
       </section>
 
       <section class="section" id="retrieval">
@@ -130,7 +163,7 @@
       <a href="#spine">3. 여섯 step caller</a>
       <a href="#ordering">4. Mutation ordering</a>
       <a href="#exits">5. Exit ledger</a>
-      <a href="#new-page">6. NEW_PAGE boundary</a>
+      <a href="#new-page">6. NEW_PAGE contract</a>
       <a href="#retrieval">7. teach-back</a>
       <a href="#primary-reading">필수 읽기</a>
       <hr>

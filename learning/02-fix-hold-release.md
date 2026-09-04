@@ -22,7 +22,7 @@ what to do only when that access conflicts with somebody else.
 | Choice | Question answered | Core examples and consequence |
 |---|---|---|
 | `PAGE_FETCH_MODE` | What kind of page is this, and may a miss materialize it? | Select one of the seven modes in the next table. |
-| `PGBUF_LATCH_MODE` | May the borrower read shared bytes or change them exclusively? | A public fix accepts READ or WRITE. |
+| `PGBUF_LATCH_MODE` | May the borrower read shared bytes or change them exclusively? | The `pgbuf_fix()` Server-module Interface accepts READ or WRITE. |
 | `PGBUF_LATCH_CONDITION` | May an incompatible request sleep? | Conditional returns now; unconditional may enter the wait path. |
 
 ### All seven fetch modes
@@ -43,6 +43,10 @@ weak to strong, and it does not select READ or WRITE.
 The table describes the pinned implementation, including deliberately specialized
 modes. Most ordinary callers should be explainable with `OLD_PAGE` or `NEW_PAGE`;
 choosing a deallocation or recovery mode requires the corresponding owner protocol.
+The complete `NEW_PAGE` allocation, materialization, and redesign boundary is owned
+by [Caller Completes Correctness](./03-caller-completes-correctness.md#newpage-means-materialize-after-allocation);
+the [pinned evidence audit](../reference/new-page-fetch-mode-audit.md) owns the
+call-site inventory and cross-engine comparison.
 
 ### The five latch-mode enum values
 

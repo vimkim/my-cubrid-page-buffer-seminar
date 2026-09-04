@@ -70,13 +70,13 @@
           <tr><td>physical insert와 recovery 의미</td><td><code>heap_file.c:20821–20939</code></td></tr>
           <tr><td>log manager의 page-LSA handoff</td><td><code>log_manager.c:2194–2226</code></td></tr>
           <tr><td>page buffer LSA interface</td><td><code>page_buffer.c:4983–5055</code></td></tr>
-          <tr><td>NEW_PAGE materialization 전 allocation</td><td><code>file_manager.c:5420–5590</code></td></tr>
+          <tr><td><a href="../lessons/0005-audit-a-logged-mutation.html#new-page">NEW_PAGE materialization 전 allocation</a></td><td><code>file_manager.c:5360–5590</code></td></tr>
         </tbody>
       </table>
     </article>
   </section>
 
-  <footer class="footer">Canonical explanation: <a href="../../learning/03-caller-completes-correctness.md">Caller Completes Correctness</a>. layer나 exit owner가 불분명하면 teaching agent에게 질문한다.</footer>
+  <footer class="footer">Canonical explanation: <a href="../../learning/03-caller-completes-correctness.md">Caller Completes Correctness</a>. 전체 근거: <a href="../../reference/new-page-fetch-mode-audit.md"><code>NEW_PAGE</code> fetch-mode audit</a>. layer나 exit owner가 불분명하면 teaching agent에게 질문한다.</footer>
 </main>
 </body>
 </html>

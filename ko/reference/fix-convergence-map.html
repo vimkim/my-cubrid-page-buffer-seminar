@@ -45,7 +45,7 @@
       <ol>
         <li>먼저 등록하여 해당 VPID의 load owner가 됩니다.</li>
         <li>아직 publish하지 않은 provisional BCB를 확보해 배정합니다.</li>
-        <li>OLD_PAGE라면 DWB, 그다음 volume에서 읽고, NEW_PAGE라면 초기화합니다.</li>
+        <li>OLD_PAGE라면 DWB, 그다음 volume에서 읽고, NEW_PAGE라면 old-byte I/O를 건너뛰고 Module metadata를 초기화합니다. Payload는 caller가 계속 소유합니다.</li>
         <li>확인하고 grant한 뒤 publish하고 load lock을 해제합니다.</li>
         <li>Waiter를 깨웁니다. 각 waiter는 다시 시도해 자신의 debt를 얻습니다.</li>
       </ol>
@@ -87,7 +87,7 @@
     </article>
   </section>
 
-  <footer class="footer">Canonical 설명: <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a>. 준비 과정과 postcondition의 경계가 흐려진다면 teaching agent에게 질문하세요.</footer>
+  <footer class="footer">Canonical 설명: <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a>. <code>NEW_PAGE</code> 상세 설명: <a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Lesson 5</a>. 준비 과정과 postcondition의 경계가 흐려진다면 teaching agent에게 질문하세요.</footer>
 </main>
 </body>
 </html>

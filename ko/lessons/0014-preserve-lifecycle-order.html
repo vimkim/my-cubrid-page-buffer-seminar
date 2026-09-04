@@ -27,7 +27,7 @@
           <thead><tr><th>결정</th><th>Owner</th><th>Page-buffer의 후속 동작</th></tr></thead>
           <tbody>
             <tr><td>Logical page identity를 allocate/deallocate</td><td>File/disk/recovery protocol</td><td>요청에 따라 resident mapping을 materialize, reject, invalidate한다.</td></tr>
-            <tr><td><code>NEW_PAGE</code> 또는 recovery fetch mode 선택</td><td>Allocation/recovery 지식을 가진 caller</td><td>그에 맞는 resident-byte initialization/validation contract를 적용한다.</td></tr>
+            <tr><td><a href="0005-audit-a-logged-mutation.html#new-page"><code>NEW_PAGE</code></a> 또는 recovery fetch mode 선택</td><td>Allocation/recovery 지식을 가진 caller</td><td>그에 맞는 resident-byte metadata/validation contract를 적용하며, logical payload 초기화는 여전히 caller가 소유한다.</td></tr>
             <tr><td>Raw/bypass overwrite</td><td>File/disk owner</td><td>외부 byte가 교체되기 전에 필요한 cached mapping을 flush/invalidate한다.</td></tr>
           </tbody>
         </table>

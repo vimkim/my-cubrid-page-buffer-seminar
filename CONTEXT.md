@@ -44,6 +44,18 @@ _Avoid_: Main guide, welcome guide
 The single page that owns the mental model and representative source path for a concept; playbooks and references link to it instead of reproducing it.
 _Avoid_: Primary copy, authoritative section
 
+**Newly allocated page identity**:
+A VPID that its file, disk, or recovery owner has already reserved and made valid. It does not yet imply an initialized logical page image.
+_Avoid_: New page, when allocation state and initialized content could be confused
+
+**Buffer materialization**:
+Establishing resident storage and Module-owned metadata for a logical page identity. It does not by itself allocate that identity or initialize the caller-owned page type and layout.
+_Avoid_: Page initialization, when only resident storage and metadata are prepared
+
+**Server-module Interface**:
+A caller-visible contract among CUBRID engine modules. It is internal to the server and distinct from an installed SQL, CCI, or application API.
+_Avoid_: Public API, unless the exact boundary is named
+
 ## Evidence language
 
 **Interface contract**:

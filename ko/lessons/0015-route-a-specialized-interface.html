@@ -61,6 +61,7 @@
             <tr><td><code>pgbuf_copy_from_area()</code><br><code>VS-03</code></td><td>일반 build에서 <code>do_fetch</code>는 direct I/O를 선택하지 않는다. Function은 <code>NEW_PAGE</code> WRITE로 fix하고 page type/TDE를 설정한 뒤 copy, logging skip, dirty, free를 수행한다.</td><td>기존 owner 전용이다. WAL-aware 일반 page writer로 사용하지 않는다.</td></tr>
           </tbody>
         </table>
+        <p><code>pgbuf_copy_from_area()</code>는 일반적인 newly allocated-page contract가 아니라 특수한 no-read overwrite 예외입니다. <a href="0005-audit-a-logged-mutation.html#new-page">Canonical <code>NEW_PAGE</code> creation semantics와 비교하기 →</a></p>
         <p class="source-note"><strong>Pinned revision에서 검증:</strong> <code>page_buffer.c:4701–4912</code>. Current status는 uncertainty registry가 소유하며 newer branch에서는 다시 확인해야 한다.</p>
       </section>
 

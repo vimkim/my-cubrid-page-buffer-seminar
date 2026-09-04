@@ -61,6 +61,7 @@
             <tr><td><code>pgbuf_copy_from_area()</code><br><code>VS-03</code></td><td>In the normal build, <code>do_fetch</code> does not select direct I/O. The function fixes <code>NEW_PAGE</code> WRITE, sets page type/TDE, copies, skips logging, dirties, and frees.</td><td>Existing owner only; never use it as a WAL-aware general page writer.</td></tr>
           </tbody>
         </table>
+        <p><code>pgbuf_copy_from_area()</code> is the specialized no-read overwrite exception, not the normal newly allocated-page contract. <a href="0005-audit-a-logged-mutation.html#new-page">Compare it with the canonical <code>NEW_PAGE</code> creation semantics →</a></p>
         <p class="source-note"><strong>Verified at the pinned revision:</strong> <code>page_buffer.c:4701–4912</code>. The uncertainty registry owns the current status; a newer branch must be rechecked.</p>
       </section>
 

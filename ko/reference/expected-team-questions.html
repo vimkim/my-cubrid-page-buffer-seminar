@@ -256,7 +256,7 @@
 
   <section class="section" id="reader-implementation-questions">
     <div class="eyebrow">독자의 구현 질문</div>
-    <h2>고정된 소스에서 확인한 열네 가지 직접 답변</h2>
+    <h2>고정된 소스에서 확인한 열다섯 가지 직접 답변</h2>
     <div class="question-stack">
       <article class="question-card" id="reader-q-01">
         <div class="question-meta"><span>조회</span><span>Reader Q1</span><span>Lesson 3</span></div>
@@ -447,6 +447,21 @@
             <p><strong>경계:</strong> C++ RAII이며 background phase, commit, dirtying step, delayed callback이 아니다. guard 생성 전에 skip하는 path는 이미 <code>rcv.pgptr</code>를 null로 남긴다.</p>
             <p><strong>소스:</strong> <code>src/transaction/log_recovery_redo.hpp:601-668</code>; <code>src/storage/page_buffer.h:64-71</code>; <code>src/base/scope_exit.hpp:28-80</code></p>
             <p class="answer-route"><a href="../lessons/0013-gate-redo-by-page-lsa.html#scope-cleanup">Bilingual scope-cleanup 설명</a> · <a href="../../advanced/recovery-and-lifecycle.md#what-release-through-scope-cleanup-means">Canonical mechanism</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-15">
+        <div class="question-meta"><span>Creation Interface</span><span>Reader Q15</span><span>Lessons 3 and 5</span></div>
+        <h3>15. <code>NEW_PAGE</code>는 왜 존재하며 제거할 수 있나요?</h3>
+        <details>
+          <summary>직접 답변 보기</summary>
+          <div class="model-answer">
+            <p><strong>Contract:</strong> allocation이 이미 VPID를 valid하게 만들었습니다. Miss에서 <code>NEW_PAGE</code>는 obsolete DWB/home bytes를 읽지 않고 resident storage를 claim하고 page-buffer metadata만 초기화하며 <code>PAGE_UNKNOWN</code>을 허용한 뒤 일반 fixed/latch-protected page를 반환하라고 알립니다. Type/layout, TDE, recovery logging, dirtying, release는 caller가 맡습니다. Resident hit에서는 frame을 다시 초기화하지 않습니다.</p>
+            <p><strong>제거 판단:</strong> semantic operation을 그대로 없앨 수는 없습니다. <code>OLD_PAGE</code>는 read/decrypt/failure path를 추가하고 <code>PAGE_UNKNOWN</code>을 reject합니다. <code>RECOVERY_PAGE</code>는 miss에서 여전히 읽으며 다른 validation boundary를 소유합니다. Cache absence만으로 allocation intent를 알 수도 없습니다. 안전한 redesign은 enum을 좁은 creation function 뒤로 숨길 수 있지만 no-read materialization을 보존하고 external-sort full-page overwrite를 분리해야 합니다.</p>
+            <p><strong>비교와 scope:</strong> PostgreSQL은 같은 internal responsibility를 <code>RBM_ZERO_AND_LOCK</code>으로 표현하고 InnoDB는 <code>buf_page_create()</code>를 사용합니다. CUBRID declaration은 server-module Interface이지 설치되는 SQL, CCI, application API가 아닙니다. 세 engine은 API 형태가 다를 뿐 creation과 existing-page read를 구분해야 한다는 점은 같습니다.</p>
+            <p><strong>Pinned evidence:</strong> CUBRID direct creation call 열 개가 모두 WRITE와 unconditional을 사용합니다. <code>src/storage/page_buffer.h:172-187</code>; <code>src/storage/page_buffer.c:2380-2616,8392-8634</code>; <code>src/storage/file_manager.c:5360-5590</code>.</p>
+            <p class="answer-route"><a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Bilingual canonical lesson</a> · <a href="../../learning/03-caller-completes-correctness.md#newpage-means-materialize-after-allocation">Canonical Markdown 설명</a> · <a href="../../reference/new-page-fetch-mode-audit.md">전체 pinned audit</a></p>
           </div>
         </details>
       </article>

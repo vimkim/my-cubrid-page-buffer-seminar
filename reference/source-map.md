@@ -16,7 +16,7 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 | `src/storage/page_buffer.h:172-258` | fetch/latch/promotion enums and ordered watcher types | [Contract and Objects](../learning/01-contract-and-objects.md) |
 | `src/storage/page_buffer.h:262-465` | exported interface families | [Specialized Interfaces](../advanced/specialized-interfaces.md) |
 | `src/storage/page_buffer.c:1641-1945` | pool initialization/finalization | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md) |
-| `src/storage/page_buffer.c:2125-3354` | public fix/unfix/invalidate entry region | [Fix, Hold, and Release](../learning/02-fix-hold-release.md) |
+| `src/storage/page_buffer.c:2125-3354` | server-module fix/unfix/invalidate entry region | [Fix, Hold, and Release](../learning/02-fix-hold-release.md) |
 | `src/storage/page_buffer.c:460-488,5911-6085` | BCB/holder ownership structures and holder allocation | [Contract and Objects](../learning/01-contract-and-objects.md) |
 | `src/storage/page_buffer.c:5922-6275,6298-6634,7807-7835` | holder initialization, growth, lookup/removal, grant reuse, and lock-free READ unfix | [Holder Entry Structure, Lifetime, and Unfix Cost](../advanced/holder-entry-lifecycle.md) |
 | `src/storage/page_buffer.c:295-300,1567-1602,5672-5699` | resident `VPID` hash formula and fixed hash-anchor initialization | [Fix, Hold, and Release](../learning/02-fix-hold-release.md#how-resident-hashing-narrows-the-lookup) |
@@ -39,7 +39,7 @@ This is a routing map. Follow a link for the bounded trace; do not infer a mecha
 |---|---|---|---|
 | Heap mutation | `src/storage/heap_file.c:23120-23324` | Full lock/acquire/mutate/log/dirty/release path | [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) |
 | B-tree traversal/update | `src/storage/btree.c:28365-28393,28638-28696` | Promotion failure and caller restart policy | [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) |
-| File allocation/materialization | `src/storage/file_manager.c:5420-5590` | Allocation before `NEW_PAGE`, initializer ownership | [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) |
+| File allocation/materialization | `src/storage/file_manager.c:5360-5590` | Allocation before `NEW_PAGE`, initializer ownership, and no-read creation semantics | [Caller Completes Correctness](../learning/03-caller-completes-correctness.md#newpage-means-materialize-after-allocation), then the [`NEW_PAGE` audit](./new-page-fetch-mode-audit.md) |
 | Log append/page LSA | `src/transaction/log_manager.c:2194-2226` | Recovery meaning crosses into page LSA update | [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) |
 | WAL forcing | `src/transaction/log_page_buffer.c:4150-4189` | Log durability gate before copied page submission | [Flush One Generation](../learning/04-flush-one-generation.md) |
 | Redo | `src/transaction/log_recovery_redo.hpp:587-668`; `src/base/scope_exit.hpp:28-80` | Recovery fix/gate, lexical scope cleanup, redo application, and page-LSA update | [Recovery and Lifecycle](../advanced/recovery-and-lifecycle.md#what-release-through-scope-cleanup-means) |

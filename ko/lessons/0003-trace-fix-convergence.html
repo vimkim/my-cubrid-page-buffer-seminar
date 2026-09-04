@@ -29,7 +29,7 @@
           <thead><tr><th>Choice</th><th>답하는 질문</th><th>짧은 답</th></tr></thead>
           <tbody>
             <tr><td><code>PAGE_FETCH_MODE</code></td><td>어떤 page이며, miss에서 materialize해도 되는가?</td><td>Caller knowledge를 나타내는 일곱 mode 중 하나를 고릅니다.</td></tr>
-            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>READ를 공유할 것인가, exclusive WRITE가 필요한가?</td><td>Public fix는 READ 또는 WRITE를 받습니다.</td></tr>
+            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>READ를 공유할 것인가, exclusive WRITE가 필요한가?</td><td><code>pgbuf_fix()</code> server-module Interface는 READ 또는 WRITE를 받습니다.</td></tr>
             <tr><td><code>PGBUF_LATCH_CONDITION</code></td><td>Incompatible request가 잠들어도 되는가?</td><td>Conditional은 바로 반환하고, unconditional은 기다릴 수 있습니다.</td></tr>
           </tbody>
         </table>
@@ -40,7 +40,7 @@
           <thead><tr><th>Mode</th><th>쉬운 의미</th><th>중요한 결과</th></tr></thead>
           <tbody>
             <tr><td><code>OLD_PAGE</code></td><td>할당된 기존 page가 있습니다.</td><td>Miss이면 DWB 또는 data volume에서 기존 bytes를 읽습니다. <code>PAGE_UNKNOWN</code> image는 error입니다.</td></tr>
-            <tr><td><code>NEW_PAGE</code></td><td>Allocation이 이 새 VPID를 이미 만들었습니다.</td><td>Miss이면 기존 page bytes를 읽지 않고 BCB/frame을 초기화합니다. Caller가 page type을 초기화하기 전의 <code>PAGE_UNKNOWN</code>을 허용합니다.</td></tr>
+            <tr><td><code>NEW_PAGE</code></td><td>Allocation이 이 새 VPID를 이미 만들었습니다.</td><td>Miss이면 old-byte I/O를 건너뛰고 logical payload가 아닌 page-buffer metadata만 초기화합니다. Caller가 page type을 초기화하기 전의 <code>PAGE_UNKNOWN</code>을 허용합니다.</td></tr>
             <tr><td><code>OLD_PAGE_IF_IN_BUFFER</code></td><td>지금 resident일 때만 page가 필요합니다.</td><td>Hash miss이면 BCB를 claim하거나 volume을 읽지 않고 <code>NULL</code>을 반환합니다.</td></tr>
             <tr><td><code>OLD_PAGE_PREVENT_DEALLOC</code></td><td>기존 page가 latch grant 전 틈에서 deallocation되지 않아야 합니다.</td><td>Identity validation부터 fix 성공까지 임시 avoid-deallocation count로 잇고, grant 뒤 제거합니다.</td></tr>
             <tr><td><code>OLD_PAGE_DEALLOCATED</code></td><td>Recovery 작업이 deallocated image에 접근해야 합니다.</td><td>Common path가 <code>PAGE_UNKNOWN</code> image를 반환할 수 있습니다. Deallocation undo는 이를 받아 예전 type을 복구합니다.</td></tr>
@@ -48,9 +48,10 @@
             <tr><td><code>RECOVERY_PAGE</code></td><td>Recovery가 어떤 allocation state든 받아야 합니다.</td><td>일반 allocation validation을 생략하고 normal, immature/new, <code>PAGE_UNKNOWN</code> image를 모두 허용합니다.</td></tr>
           </tbody>
         </table>
+        <p><a href="0005-audit-a-logged-mutation.html#new-page">Allocation, miss/hit, caller obligation, 다른 engine 비교, 제거 판단의 전체 설명은 Lesson 5에서 이어집니다 →</a></p>
 
         <h3>Latch-mode enum의 다섯 값을 구분합니다</h3>
-        <p>이 enum은 여러 structure에서 쓰이지만 public fix request가 받는 값은 READ와 WRITE뿐입니다.</p>
+        <p>이 enum은 여러 structure에서 쓰이지만 <code>pgbuf_fix()</code> server-module request가 받는 값은 READ와 WRITE뿐입니다.</p>
         <table>
           <thead><tr><th>Mode</th><th>의미</th><th>Valid fix request?</th></tr></thead>
           <tbody>
@@ -106,7 +107,7 @@
           <li>Thread A가 miss한 뒤 VPID load-lock record를 먼저 등록해 load owner가 됩니다.</li>
           <li>같은 VPID에서 miss한 Thread B는 A의 record를 찾아 자신을 waiter로 연결하고 잠듭니다.</li>
           <li>A는 재사용 가능한 BCB/frame을 얻어 VPID를 지정하고, 이 provisional object를 아직 publish하지 않습니다.</li>
-          <li><code>OLD_PAGE</code>라면 A는 DWB를 확인한 다음 data volume을 봅니다. <code>NEW_PAGE</code>라면 frame을 초기화합니다.</li>
+          <li><code>OLD_PAGE</code>라면 A는 DWB를 확인한 다음 data volume을 봅니다. <code>NEW_PAGE</code>라면 그 read를 건너뛰고 page-buffer metadata만 초기화합니다. Logical payload는 여전히 caller가 소유합니다.</li>
           <li>identity를 확인하고 자신의 ownership을 grant받은 뒤 A가 BCB를 publish하고 load lock을 release합니다.</li>
           <li>B는 깨어나 lookup을 재시도하고 resident hit를 찾은 뒤 별도의 grant와 debt를 얻습니다.</li>
         </ol>

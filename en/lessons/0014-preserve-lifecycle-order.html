@@ -27,7 +27,7 @@
           <thead><tr><th>Decision</th><th>Owner</th><th>Page-buffer consequence</th></tr></thead>
           <tbody>
             <tr><td>Allocate/deallocate logical page identity</td><td>File/disk/recovery protocol</td><td>Materialize, reject, or invalidate resident mapping as requested.</td></tr>
-            <tr><td>Select <code>NEW_PAGE</code> or recovery fetch mode</td><td>Caller with allocation/recovery knowledge</td><td>Apply the matching resident-byte initialization/validation contract.</td></tr>
+            <tr><td>Select <a href="0005-audit-a-logged-mutation.html#new-page"><code>NEW_PAGE</code></a> or recovery fetch mode</td><td>Caller with allocation/recovery knowledge</td><td>Apply the matching resident-byte metadata/validation contract; the caller still owns logical payload initialization.</td></tr>
             <tr><td>Raw/bypass overwrite</td><td>File/disk owner</td><td>Flush/invalidate cached mapping as required before external bytes replace it.</td></tr>
           </tbody>
         </table>

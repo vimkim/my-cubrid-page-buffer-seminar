@@ -256,7 +256,7 @@
 
   <section class="section" id="reader-implementation-questions">
     <div class="eyebrow">Reader implementation questions</div>
-    <h2>Fourteen direct answers from the pinned source</h2>
+    <h2>Fifteen direct answers from the pinned source</h2>
     <div class="question-stack">
       <article class="question-card" id="reader-q-01">
         <div class="question-meta"><span>Lookup</span><span>Reader Q1</span><span>Lesson 3</span></div>
@@ -447,6 +447,21 @@
             <p><strong>Boundary:</strong> this is C++ RAII, not a background phase, commit, dirtying step, or delayed callback. Paths that skip before guard construction already leave <code>rcv.pgptr</code> null.</p>
             <p><strong>Source:</strong> <code>src/transaction/log_recovery_redo.hpp:601-668</code>; <code>src/storage/page_buffer.h:64-71</code>; <code>src/base/scope_exit.hpp:28-80</code></p>
             <p class="answer-route"><a href="../lessons/0013-gate-redo-by-page-lsa.html#scope-cleanup">Bilingual scope-cleanup explanation</a> · <a href="../../advanced/recovery-and-lifecycle.md#what-release-through-scope-cleanup-means">Canonical mechanism</a></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="question-card" id="reader-q-15">
+        <div class="question-meta"><span>Creation Interface</span><span>Reader Q15</span><span>Lessons 3 and 5</span></div>
+        <h3>15. Why does <code>NEW_PAGE</code> exist, and can we remove it?</h3>
+        <details>
+          <summary>Show direct answer</summary>
+          <div class="model-answer">
+            <p><strong>Contract:</strong> allocation has already made the VPID valid. On a miss, <code>NEW_PAGE</code> tells page buffer to claim resident storage without reading obsolete DWB/home bytes, initialize only page-buffer metadata, accept <code>PAGE_UNKNOWN</code>, and return the ordinary fixed/latch-protected page. Type/layout, TDE, recovery logging, dirtying, and release remain caller work. On a resident hit, it does not reinitialize the frame.</p>
+            <p><strong>Removal:</strong> the semantic operation cannot simply disappear. <code>OLD_PAGE</code> adds read/decrypt/failure paths and rejects <code>PAGE_UNKNOWN</code>; <code>RECOVERY_PAGE</code> still reads on a miss and owns a different validation boundary; cache absence cannot prove allocation intent. A safe redesign may hide the enum behind a narrow creation function, but it must preserve no-read materialization and keep the external-sort full-page overwrite separate.</p>
+            <p><strong>Comparison and scope:</strong> PostgreSQL expresses the same internal responsibility with <code>RBM_ZERO_AND_LOCK</code>; InnoDB uses <code>buf_page_create()</code>. CUBRID's declaration is a server-module Interface, not an installed SQL, CCI, or application API. The engines differ in API shape, not in whether creation must be distinguished from reading an existing page.</p>
+            <p><strong>Pinned evidence:</strong> ten direct CUBRID creation calls, all WRITE plus unconditional; <code>src/storage/page_buffer.h:172-187</code>; <code>src/storage/page_buffer.c:2380-2616,8392-8634</code>; <code>src/storage/file_manager.c:5360-5590</code>.</p>
+            <p class="answer-route"><a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Bilingual canonical lesson</a> · <a href="../../learning/03-caller-completes-correctness.md#newpage-means-materialize-after-allocation">Canonical Markdown explanation</a> · <a href="../../reference/new-page-fetch-mode-audit.md">Complete pinned audit</a></p>
           </div>
         </details>
       </article>

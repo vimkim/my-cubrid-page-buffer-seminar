@@ -92,10 +92,43 @@
 
       <section class="section" id="new-page">
         <div class="eyebrow">06 · Caller knowledge</div>
-        <h2><code>NEW_PAGE</code> materializes after allocation</h2>
-        <p><code>PAGE_FETCH_MODE::NEW_PAGE</code> means the caller already owns an allocated page identity and wants a resident frame initialized without reading old bytes. It does not allocate the logical page.</p>
-        <p>File management owns allocation state, initial page type/layout, TDE state, recovery semantics, dirtying, and final ownership. The page-buffer Module materializes and protects the frame.</p>
-        <p class="source-note"><strong>Representative source:</strong> pinned <code>file_alloc()</code> performs allocation before <code>pgbuf_fix(..., NEW_PAGE, WRITE, ...)</code> at <code>file_manager.c:5420–5590</code>.</p>
+        <h2><code>NEW_PAGE</code> is the allocation-to-buffer contract</h2>
+        <p class="big-claim">The VPID is already allocated; the logical page is not initialized yet. <code>NEW_PAGE</code> asks the page-buffer Module to materialize protected resident storage without reading an obsolete home-page image.</p>
+        <p>The name crosses two ownership boundaries. File or disk code first reserves the identity. Page buffer then establishes a resident BCB/frame and its metadata. Finally, the owning subsystem initializes the page type and layout, chooses TDE and recovery behavior, marks the generation dirty, and transfers or repays the fix debt.</p>
+
+        <h3>Miss and hit have deliberately different preparation</h3>
+        <table>
+          <thead><tr><th>Situation</th><th>Verified page-buffer work</th><th>Work still owned by the caller</th></tr></thead>
+          <tbody>
+            <tr><td>Buffer miss</td><td>Claim and bind a reusable BCB/frame; skip DWB, home-volume read, decryption, and read statistics; initialize LSA/identity metadata; accept <code>PAGE_UNKNOWN</code>; grant and publish under the requested latch.</td><td>Initialize logical payload, page type, and layout; choose TDE/recovery logging; mark dirty; handle failure; release or transfer ownership.</td></tr>
+            <tr><td>Resident hit</td><td>Use the existing mapping and acquire the ordinary fix/latch. Do not repeat miss-only metadata initialization. A resident <code>PAGE_UNKNOWN</code> image is an expected reallocation case.</td><td>Do not assume the mode erased the frame. Complete the same owner-specific initialization and cleanup protocol.</td></tr>
+          </tbody>
+        </table>
+        <p>All ten direct creation calls at the pinned revision are in file/disk owners and request WRITE plus unconditional acquisition. That is a verified caller pattern, not a type-system restriction; zero-wait policy can still produce a conditional <code>NULL</code> outcome.</p>
+        <p class="source-note"><strong>Representative source:</strong> pinned <code>file_alloc()</code> allocates first, fixes <code>NEW_PAGE</code>, runs the owner initializer, requires a known type, applies TDE, then transfers or unfixes at <code>file_manager.c:5360–5590</code>. The miss/hit branches are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2380-L2616"><code>page_buffer.c:2380–2616</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8634"><code>8392–8634</code></a>.</p>
+
+        <h3>Why the no-read operation exists</h3>
+        <table>
+          <thead><tr><th>Proposed substitute</th><th>Why it is not equivalent</th></tr></thead>
+          <tbody>
+            <tr><td><code>OLD_PAGE</code></td><td>A miss reads DWB or the data volume, decrypts as needed, and rejects <code>PAGE_UNKNOWN</code>. It adds irrelevant I/O and failure paths and breaks the supported resident-deallocated-image case.</td></tr>
+            <tr><td><code>RECOVERY_PAGE</code></td><td>It accepts broader allocation states but still reads on a miss and bypasses recovery-specific validation, not creation-specific validation.</td></tr>
+            <tr><td>Infer “new” from a cache miss</td><td>Not resident does not mean newly allocated. The decision to read must happen before the old image can reveal anything; only the allocation owner knows the intent.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Other engines expose the same internal responsibility</h3>
+        <table>
+          <thead><tr><th>Engine</th><th>Internal Interface shape</th><th>Shared responsibility</th></tr></thead>
+          <tbody>
+            <tr><td>CUBRID</td><td><code>PAGE_FETCH_MODE::NEW_PAGE</code></td><td>Allocated identity; no-read resident materialization; caller initializes while holding WRITE.</td></tr>
+            <tr><td>PostgreSQL</td><td><code>RBM_ZERO_AND_LOCK</code></td><td>Do not read old bytes; return the buffer exclusively locked for caller initialization.</td></tr>
+            <tr><td>MySQL/InnoDB</td><td><code>buf_page_create()</code></td><td>Use a separate creation function that publishes and latches a new buffer-pool page without a normal read.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>“Public API” needs a boundary:</strong> <code>page_buffer.h</code> is a Server-module Interface. It is not an installed SQL, CCI, or application API. The useful design question is whether creation should remain a broadly composable enum value or become a narrower internal function.</div>
+        <p><strong>Recommendation:</strong> retain the semantic no-read creation operation. If maintainers want a deeper Interface, hide or split it behind a creation function that implies WRITE and names the caller's initialization obligation. Keep the specialized external-sort full-page overwrite separate; it shares the no-read mechanism but not the allocation contract.</p>
+        <p><a href="../../reference/new-page-fetch-mode-audit.md">Open the complete pinned call-site, PostgreSQL/InnoDB, counterfactual, design-option, and regression audit →</a></p>
       </section>
 
       <section class="section" id="retrieval">
@@ -130,7 +163,7 @@
       <a href="#spine">3. Six-step caller</a>
       <a href="#ordering">4. Mutation ordering</a>
       <a href="#exits">5. Exit ledger</a>
-      <a href="#new-page">6. NEW_PAGE boundary</a>
+      <a href="#new-page">6. NEW_PAGE contract</a>
       <a href="#retrieval">7. Teach it back</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>

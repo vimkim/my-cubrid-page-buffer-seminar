@@ -226,9 +226,9 @@ Prerequisite: [Caller Completes Correctness](../learning/03-caller-completes-cor
 - **Retrieval mode:** Trace
 - **Prerequisite:** [Caller Completes Correctness](../learning/03-caller-completes-correctness.md)
 - **Capability tested:** Trace allocation before materialization and caller-owned initialization.
-- **Inspect:** `src/storage/file_manager.c:5420-5590`
+- **Inspect:** `src/storage/page_buffer.c:2380-2616,8392-8634`; `src/storage/file_manager.c:5360-5590`; [NEW_PAGE fetch-mode audit](../reference/new-page-fetch-mode-audit.md)
 
-**Question:** Show why `NEW_PAGE` is caller knowledge after logical allocation, not an allocation, page-type, initialization, logging, or dirtying operation.
+**Question:** Show why `NEW_PAGE` is caller knowledge after logical allocation, not an allocation, page-type, payload-initialization, logging, or dirtying operation. Explain the different miss and hit behavior, why `OLD_PAGE` is not a safe substitute, and what could be narrowed without removing the no-read semantic operation.
 
 ### PGBUF-QB-022 — What becomes stale after ordered release and refix?
 

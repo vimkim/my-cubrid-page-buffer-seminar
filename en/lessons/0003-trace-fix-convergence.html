@@ -29,7 +29,7 @@
           <thead><tr><th>Choice</th><th>Question answered</th><th>Short answer</th></tr></thead>
           <tbody>
             <tr><td><code>PAGE_FETCH_MODE</code></td><td>What kind of page is this, and may a miss materialize it?</td><td>Select one of seven caller-knowledge modes.</td></tr>
-            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>May I share READ access or need exclusive WRITE access?</td><td>A public fix accepts READ or WRITE.</td></tr>
+            <tr><td><code>PGBUF_LATCH_MODE</code></td><td>May I share READ access or need exclusive WRITE access?</td><td>The <code>pgbuf_fix()</code> server-module Interface accepts READ or WRITE.</td></tr>
             <tr><td><code>PGBUF_LATCH_CONDITION</code></td><td>May an incompatible request sleep?</td><td>Conditional returns now; unconditional may wait.</td></tr>
           </tbody>
         </table>
@@ -40,7 +40,7 @@
           <thead><tr><th>Mode</th><th>Plain meaning</th><th>Important outcome</th></tr></thead>
           <tbody>
             <tr><td><code>OLD_PAGE</code></td><td>An allocated page already exists.</td><td>A miss reads its existing bytes from DWB or the data volume. A <code>PAGE_UNKNOWN</code> image is an error.</td></tr>
-            <tr><td><code>NEW_PAGE</code></td><td>Allocation already produced this new VPID.</td><td>A miss initializes a BCB/frame without reading old page bytes. <code>PAGE_UNKNOWN</code> is accepted until the caller initializes the page type.</td></tr>
+            <tr><td><code>NEW_PAGE</code></td><td>Allocation already produced this new VPID.</td><td>A miss skips old-byte I/O and initializes page-buffer metadata, not the logical payload. <code>PAGE_UNKNOWN</code> is accepted until the caller initializes the page type.</td></tr>
             <tr><td><code>OLD_PAGE_IF_IN_BUFFER</code></td><td>I want the page only if it is resident now.</td><td>A hash miss returns <code>NULL</code> without claiming a BCB or reading the volume.</td></tr>
             <tr><td><code>OLD_PAGE_PREVENT_DEALLOC</code></td><td>An existing page must survive the gap before latch grant.</td><td>A temporary avoid-deallocation count bridges identity validation to successful fix; it is removed after grant.</td></tr>
             <tr><td><code>OLD_PAGE_DEALLOCATED</code></td><td>Recovery work needs a deallocated image.</td><td>The common path may return a <code>PAGE_UNKNOWN</code> image. Deallocation undo uses it to restore the old type.</td></tr>
@@ -48,9 +48,10 @@
             <tr><td><code>RECOVERY_PAGE</code></td><td>Recovery must accept any allocation state.</td><td>It skips ordinary allocation validation and accepts normal, immature/new, or <code>PAGE_UNKNOWN</code> images.</td></tr>
           </tbody>
         </table>
+        <p><a href="0005-audit-a-logged-mutation.html#new-page">Lesson 5 owns the complete allocation, miss/hit, caller-obligation, cross-engine, and removal explanation →</a></p>
 
         <h3>The five latch-mode enum values</h3>
-        <p>The enum appears in several structures, but the public fix request accepts only READ and WRITE.</p>
+        <p>The enum appears in several structures, but the <code>pgbuf_fix()</code> server-module request accepts only READ and WRITE.</p>
         <table>
           <thead><tr><th>Mode</th><th>Meaning</th><th>Valid fix request?</th></tr></thead>
           <tbody>
@@ -106,7 +107,7 @@
           <li>Thread A misses and registers the VPID load-lock record first, becoming load owner.</li>
           <li>Thread B misses on the same VPID, finds A's record, links itself as a waiter, and sleeps.</li>
           <li>A obtains a reusable BCB/frame, assigns the VPID, and keeps that provisional object unpublished.</li>
-          <li>For <code>OLD_PAGE</code>, A consults DWB then the data volume; for <code>NEW_PAGE</code>, it initializes the frame instead.</li>
+          <li>For <code>OLD_PAGE</code>, A consults DWB then the data volume; for <code>NEW_PAGE</code>, it skips that read and initializes only page-buffer metadata. The caller still owns the logical payload.</li>
           <li>After identity confirmation and its own ownership grant, A publishes the BCB and releases the load lock.</li>
           <li>B wakes, retries lookup, finds a resident hit, and earns a separate grant and debt.</li>
         </ol>

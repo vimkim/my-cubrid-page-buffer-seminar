@@ -87,13 +87,62 @@ Source: `src/storage/heap_file.c:23262-23324`.
 
 ## `NEW_PAGE` means materialize after allocation
 
-`PAGE_FETCH_MODE::NEW_PAGE` is caller knowledge that an already allocated page identity is being materialized. It is not an allocation operation.
+`PAGE_FETCH_MODE::NEW_PAGE` is caller knowledge that a **newly allocated page
+identity** is ready for **buffer materialization**. It is not an allocation
+operation and it is not a request to initialize the caller's logical page
+payload. The name joins two events that a maintainer must keep separate:
 
-`file_alloc()` makes the ordering visible: file-manager code performs allocation before the `pgbuf_fix(..., NEW_PAGE, PGBUF_LATCH_WRITE, ...)` call. It updates the numerable-file table when needed, then uses the page initializer to supply type/layout and logging appropriate to that file. File management also handles TDE state and release/return ownership.
+```text
+file/disk owner reserves VPID
+  -> pgbuf_fix(..., NEW_PAGE, WRITE, ...)
+  -> caller initializes type/layout and chooses TDE/recovery behavior
+  -> caller marks dirty and transfers or repays the fix debt
+```
 
-Source: `src/storage/file_manager.c:5420-5590`.
+`file_alloc()` makes the ordering visible. File management allocates the VPID
+before the fix, invokes an owner-supplied initializer after the fix, requires a
+known page type, applies TDE state, and either transfers the still-fixed page or
+unfixes it. The usual permanent-page initializer separately appends the
+new-page recovery record and marks the page dirty. Source:
+`src/storage/file_manager.c:5360-5590`.
 
-**Caller rule:** allocation state, page type, initial on-page layout, recovery semantics, dirtying, and cleanup remain with the allocating subsystem. Page buffer materializes and protects the resident frame.
+### What the mode changes inside the page buffer
+
+| Situation | Verified `NEW_PAGE` behavior | What it deliberately does not do |
+|---|---|---|
+| Buffer miss | Claim and bind a reusable BCB/frame, skip the DWB and home-volume read, initialize page-buffer LSA/identity metadata, accept `PAGE_UNKNOWN`, then grant and publish under the requested latch. | Allocate the VPID, initialize logical payload/type/layout, append recovery logging, choose TDE, mark dirty, or release. |
+| Resident hit | Use the existing mapping and acquire the ordinary fix/latch; do not run the miss-only metadata initialization again. A resident `PAGE_UNKNOWN` image is an expected reallocation case. | Erase or recreate an already resident image. Passing an already-typed permanent page as `NEW_PAGE` is caller misuse caught by a debug assertion. |
+
+All ten direct creation calls at the pinned revision are confined to disk/file
+owners and request WRITE with unconditional acquisition. This is a verified
+caller pattern, not a type-system guarantee: `pgbuf_fix()` still accepts other
+combinations, and zero-wait policy can convert an unconditional request into a
+conditional outcome. The allocating caller must handle `NULL` and unwind its
+allocation protocol.
+
+### Why the distinction exists, and what could be redesigned
+
+Cache absence cannot tell the Module whether old bytes are meaningful. An
+ordinary `OLD_PAGE` miss reads DWB or the data volume, decrypts as needed, and
+rejects `PAGE_UNKNOWN`; substituting it adds failure and I/O paths and breaks
+the supported resident-deallocated-image case. `RECOVERY_PAGE` accepts broader
+states but still reads on a miss and bypasses a different validation boundary.
+The no-read creation responsibility therefore cannot simply be removed.
+
+This is a **Server-module Interface**, not a SQL, CCI, or installed application
+API. Other engines expose the same responsibility at a comparable internal
+boundary: PostgreSQL uses `RBM_ZERO_AND_LOCK`, while InnoDB uses a separate
+`buf_page_create()` operation. Their spelling supports a possible CUBRID
+redesign: retain the semantics, but hide the broad enum choice behind a narrow
+creation function that implies WRITE and states the initialization obligation.
+The specialized full-page overwrite path must remain separate because it uses
+the no-read machinery under a different owner protocol.
+
+**Inference / recommendation:** document and retain the semantic operation.
+Consider splitting creation from ordinary fetch rather than replacing
+`NEW_PAGE` with `OLD_PAGE`. The exhaustive [pinned `NEW_PAGE` audit](../reference/new-page-fetch-mode-audit.md)
+owns the complete call-site ledger, PostgreSQL/InnoDB source comparison,
+counterfactuals, design options, and regression matrix.
 
 ## B-tree contrast: failed promotion can mean restart
 
