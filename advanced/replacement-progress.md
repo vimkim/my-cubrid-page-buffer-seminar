@@ -129,9 +129,8 @@ Read the diagram from INVALID and follow the arrows:
 3. **The new page is loaded and fixed — still VOID.** The BCB can already contain
    a valid resident page and have `fcnt > 0`. It simply has not joined an LRU.
 4. **The last unfix places it.** When global `fcnt` becomes zero on the ordinary
-   path, a new BCB joins exactly one LRU. In the active pinned path, a thread with
-   a private assignment puts it at private LRU1 top. A thread without one puts it
-   at shared LRU2 middle.
+   path, a new BCB joins exactly one LRU according to the
+   [final-unfix execution context](#how-the-final-unfix-context-chooses-first-placement).
 5. **List pressure makes it colder.** When zone sizes exceed their targets,
    `pgbuf_lru_adjust_zones()` moves the oldest LRU1 boundary into LRU2 and the
    oldest LRU2 boundary into LRU3. A wall-clock timer alone does not move it.
@@ -354,17 +353,67 @@ activity shards, all `L = S + P` descriptors, and D actual zone demotions.
 
 Source: `src/storage/page_buffer.c:14251-14511,14513-14624,16594-16610,16994-17009,17146-17161`.
 
+## How the final-unfix context chooses first placement
+
+“Private-domain page” is misleading shorthand. Private domain is not an
+intrinsic page or BCB property. The precise subject is **a newly loaded VOID BCB
+whose final-unfixing execution context has an enabled private-LRU assignment**.
+The BCB is already safely allocated and loaded, but it has not joined any LRU.
+
+A session receives a private-local index `p`. A request worker copies it to
+`THREAD_ENTRY.private_lru_index`, and `pgbuf_thread_variables_init()` sets
+`m_is_private_lru_enabled` only when private chains exist and `p != -1`. On the
+first eligible final unfix that changes global `fcnt` to zero,
+`PGBUF_THREAD_HAS_PRIVATE_LRU()` supplies the gate. An enabled assignment is
+converted to the full private-list index `S+p`; otherwise the placement helper
+receives `-1`.
+
+With AOUT disabled at the pinned baseline, both resulting branches execute:
+
+```text
+newly loaded BCB: VOID
+        |
+        | first eligible final unfix, global fcnt -> 0
+        v
+final-unfix context has enabled private-LRU assignment?
+        | yes                              | no
+        v                                  v
+private list S+p, LRU1 top          selected shared LRU, LRU2 middle
+```
+
+The BCB stores no session or transaction owner. After insertion, its flags store
+only its current full LRU index and zone. Multiple sessions may share the same
+private LRU, so a private LRU is a locality/quota domain, not an ownership
+domain. Stand-alone mode, or server mode with private chains disabled, has no
+enabled private assignment and ordinary first placement therefore uses only a
+selected shared LRU's LRU2 middle.
+
+This first placement is **admission ranking** after the allocator has already
+secured a reusable BCB and loaded the requested page. It does not choose the
+previous victim, prove ownership, or authorize frame reuse. Disabling AOUT did
+not remove the private-LRU1-top or shared-LRU2-middle branch; it disabled the
+finer ghost hit/miss ranking. In particular, the retained AOUT-miss branch that
+would put the BCB at private LRU2 middle when the final-unfix context has an
+enabled private-LRU assignment is dormant. The
+[AOUT page](./aout-ghost-history.md) owns that on/off comparison.
+
+Source: session assignment at `src/session/session.c:729-744`; request copy at
+`src/connection/server_support.c:2069-2087`; effective gate and index conversion
+at `src/storage/page_buffer.c:1079-1105,1545-1560,6713-6750`; BCB representation
+at `src/storage/page_buffer.c:499-543`; active VOID branches at
+`src/storage/page_buffer.c:6885-6994`; insertion zones at
+`src/storage/page_buffer.c:9694-9830`.
+
 ## How a BCB becomes cold and may move private → shared
 
-Ordinary placement or movement happens only when an unfix changes global `fcnt`
-to zero. A non-final unfix does not relink the BCB.
+The preceding rule covers only the first placement of a newly loaded VOID BCB.
+Later movement also happens only when an unfix changes global `fcnt` to zero. A
+non-final unfix does not relink the BCB.
 
 ![Final-unfix placement and private-to-shared movement](../assets/unfix-lru-placement.svg)
 
-Inside one list:
+After first placement:
 
-- new private-domain BCB: VOID → private LRU1 top;
-- new BCB without a private domain: VOID → selected shared LRU2 middle;
 - overfull LRU1: oldest boundary nodes move to LRU2;
 - overfull LRU2: oldest boundary nodes move to LRU3;
 - LRU1 reuse: keep position;
@@ -375,10 +424,11 @@ So a BCB becomes a likely victim because other insertions and quota changes push
 it through the zones while it receives too little useful reuse. Time alone does
 not flip it into a victim.
 
-`pgbuf_should_move_private_to_shared()` returns true for a private BCB when the
-unfixing thread's full private index differs from the BCB's list index—including
-a thread with no private assignment—or when the BCB is both approximately hot
-and old enough. An already-shared BCB does not move back to private here.
+`pgbuf_should_move_private_to_shared()` moves a private BCB to shared LRU2 middle
+when the unfixing thread's full private index differs from the BCB's list
+index—including a thread with no private assignment—or when the BCB is both
+approximately hot and old enough. An already-shared BCB does not move back to
+private here.
 
 Movement at final unfix is:
 

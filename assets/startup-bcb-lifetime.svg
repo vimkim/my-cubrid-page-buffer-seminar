@@ -43,7 +43,7 @@
   <text x="590" y="317" class="h">3. Publish, grant, then release</text>
   <text x="590" y="350" class="s">Publish BCB[0] in the VPID hash chain; grant latch and fix debt.</text>
   <text x="590" y="380" class="s">At final unfix, the resident slot enters replacement policy:</text>
-  <text x="590" y="408" class="code">assigned private LRU → LRU1 top</text>
+  <text x="590" y="408" class="code">enabled private assignment → S+p LRU1 top</text>
   <text x="590" y="435" class="code">otherwise → shared LRU middle</text>
   <path d="M885 245 V274" class="line"/>
 

@@ -39,21 +39,21 @@
   <rect class="red" x="48" y="320" width="304" height="176" rx="18"/>
   <text class="head ink" x="200" y="354" text-anchor="middle">AOUT OFF</text>
   <text class="mono ink" x="200" y="384" text-anchor="middle">max_count = 0</text>
-  <text class="body muted" x="76" y="420">Private domain → private LRU1 top</text>
-  <text class="body muted" x="76" y="450">No private domain → shared middle</text>
+  <text class="body muted" x="76" y="420">Enabled private assignment → private top</text>
+  <text class="body muted" x="76" y="450">No enabled assignment → shared middle</text>
   <text class="small muted" x="76" y="480">No first-touch filtering in private admission.</text>
 
   <rect class="amber" x="382" y="320" width="304" height="176" rx="18"/>
   <text class="head ink" x="534" y="354" text-anchor="middle">AOUT ON · miss</text>
   <text class="mono ink" x="534" y="384" text-anchor="middle">NOT_FOUND</text>
-  <text class="body muted" x="410" y="420">Private domain → private middle</text>
-  <text class="body muted" x="410" y="450">No private domain → shared middle</text>
+  <text class="body muted" x="410" y="420">Enabled private assignment → private middle</text>
+  <text class="body muted" x="410" y="450">No enabled assignment → shared middle</text>
   <text class="small muted" x="410" y="480">One-touch arrivals start below the hot zone.</text>
 
   <rect class="green" x="716" y="320" width="304" height="176" rx="18"/>
   <text class="head ink" x="868" y="354" text-anchor="middle">AOUT ON · same-private hit</text>
   <text class="mono ink" x="868" y="384" text-anchor="middle">current lru_idx == old j</text>
-  <text class="body muted" x="744" y="420">Private domain → private LRU1 top</text>
+  <text class="body muted" x="744" y="420">Enabled private assignment → private top</text>
   <text class="body muted" x="744" y="450">Re-reference evidence earns hot admission.</text>
   <text class="small muted" x="744" y="480">The ghost entry is removed during lookup.</text>
 
@@ -62,7 +62,7 @@
   <text class="mono ink" x="1201" y="384" text-anchor="middle">current lru_idx != old j</text>
   <text class="body muted" x="1078" y="420">Fall through → shared middle</text>
   <text class="body muted" x="1078" y="450">Cross-domain reuse becomes shared.</text>
-  <text class="small muted" x="1078" y="480">No private domain also uses shared middle.</text>
+  <text class="small muted" x="1078" y="480">No enabled assignment also uses shared middle.</text>
 
   <rect class="red" x="48" y="540" width="848" height="250" rx="18"/>
   <text class="head ink" x="472" y="577" text-anchor="middle">Why the pinned build is off</text>

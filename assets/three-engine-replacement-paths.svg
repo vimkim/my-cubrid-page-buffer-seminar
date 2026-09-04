@@ -7,7 +7,7 @@
 
   <rect x="30" y="105" rx="18" width="1260" height="190" class="cub"/>
   <text x="165" y="165" text-anchor="middle" class="h">CUBRID</text><text x="165" y="191" text-anchor="middle" class="tiny">sharded lists + 3 zones</text>
-  <rect x="285" y="132" rx="11" width="290" height="120" class="panel"/><text x="430" y="166" text-anchor="middle" class="s">private context → LRU1 top</text><text x="430" y="195" text-anchor="middle" class="s">otherwise → shared LRU2 middle</text><text x="430" y="225" text-anchor="middle" class="tiny">AOUT disabled at pinned default</text>
+  <rect x="285" y="132" rx="11" width="290" height="120" class="panel"/><text x="430" y="166" text-anchor="middle" class="s">enabled private assignment → LRU1 top</text><text x="430" y="195" text-anchor="middle" class="s">otherwise → shared LRU2 middle</text><text x="430" y="225" text-anchor="middle" class="tiny">AOUT disabled at pinned default</text>
   <rect x="615" y="132" rx="11" width="290" height="120" class="panel"/><text x="760" y="166" text-anchor="middle" class="s">LRU1 keep · old LRU2 boost</text><text x="760" y="195" text-anchor="middle" class="s">ordinary LRU3 hit → LRU1 top</text><text x="760" y="225" text-anchor="middle" class="tiny">quota adjusts zone thresholds</text>
   <rect x="945" y="132" rx="11" width="315" height="120" class="panel"/><text x="1102" y="166" text-anchor="middle" class="s">advertised list index → LRU3 scan</text><text x="1102" y="195" text-anchor="middle" class="s">clean + unfixed + protected recheck</text><text x="1102" y="225" text-anchor="middle" class="tiny">dirty candidate must be flushed first</text>
 

@@ -227,12 +227,15 @@ test ("the technical gate rejects an incomplete private-LRU index contract", asy
 <section id="index-space" data-shared-default="32" data-private-default="152" data-local-private-range="0-151" data-full-private-range="32-183"><p>Index ranges.</p></section>
 <section id="lifecycle" data-descriptor-lifetime="page-buffer" data-assignment-lifetime="session" data-assignment-creates-descriptor="false" data-release-moves-bcbs="false"><p>Lifetimes.</p></section>
 <section id="assignment" data-idle-choice="fewest-bcbs" data-fallback-choice="least-activity" data-sharing="allowed"><p>Assignment.</p></section>
+<section id="first-placement" data-bcb-start-zone="VOID" data-trigger="final-unfix-global-fcnt-zero" data-private-gate="enabled-private-lru-assignment" data-private-destination="private-S-plus-p-LRU1-top" data-shared-destination="selected-shared-LRU2-middle" data-aout-state="off"><p>First placement.</p></section>
 <section id="victim-search" data-search-order="own-over-quota,other-private,shared,own-fallback" data-list-scan-zone="LRU3" data-list-scan-max="1000" data-direct-victim-stage="after-search-failure"><p>Victim order.</p></section>
 <div>${[
   "p", "S + p", "private_lru_index", "PGBUF_LRU_INDEX_FROM_PRIVATE()",
   "pgbuf_initialize_page_quota_parameters()", "pgbuf_initialize_lru_list()",
   "pgbuf_assign_private_lru()", "pgbuf_release_private_lru()", "session_cnt[p]",
-  "THREAD_ENTRY.private_lru_index", "pgbuf_get_victim()", "pgbuf_get_victim_from_lru_list()"
+  "THREAD_ENTRY.private_lru_index", "p != -1", "pgbuf_thread_variables_init()",
+  "m_is_private_lru_enabled", "fcnt", "PGBUF_THREAD_HAS_PRIVATE_LRU()", "S+p",
+  "pgbuf_get_victim()", "pgbuf_get_victim_from_lru_list()"
 ].map ((value) => `<code>${value}</code>`).join ("")}</div>
 </body></html>\n`;
     await writeFile (path.join (root, "en/lessons", name), decoy.replace ("<html>", '<html lang="en">'));

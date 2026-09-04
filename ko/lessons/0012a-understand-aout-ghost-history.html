@@ -41,13 +41,14 @@ hash tables = max(floor(A / 1,000), 1)</pre>
         <table>
           <thead><tr><th>Reload context</th><th>Retained placement branch</th></tr></thead>
           <tbody>
-            <tr><td>Private domain; same-private ghost hit</td><td>현재 private LRU1 top</td></tr>
-            <tr><td>Private domain; AOUT miss</td><td>현재 private LRU2 middle</td></tr>
-            <tr><td>Private domain; 다른 former LRU</td><td>Shared LRU2 middle</td></tr>
-            <tr><td>Private domain 없음</td><td>Shared LRU2 middle</td></tr>
+            <tr><td>Enabled private-LRU assignment; same-private ghost hit</td><td>현재 private LRU1 top</td></tr>
+            <tr><td>Enabled private-LRU assignment; AOUT miss</td><td>현재 private LRU2 middle</td></tr>
+            <tr><td>Enabled private-LRU assignment; 다른 former LRU</td><td>Shared LRU2 middle</td></tr>
+            <tr><td>Enabled private-LRU assignment 없음</td><td>Shared LRU2 middle</td></tr>
           </tbody>
         </table>
-        <p>이것은 load 뒤의 admission ranking입니다. 이전 victim을 고르거나 ownership을 증명하거나 reuse를 허가하지 않습니다. 현재 AOUT-off path는 private-domain page를 private LRU1 top에, private domain이 없는 page를 shared LRU2 middle에 배치합니다.</p>
+        <p>이것은 load 뒤의 admission ranking입니다. 이전 victim을 고르거나 ownership을 증명하거나 reuse를 허가하지 않습니다. AOUT-off가 없앤 것은 ghost hit/miss 세분화이지 현재의 두 path가 아닙니다. Enabled assignment가 있으면 private LRU1 top, 없으면 shared LRU2 middle로 갑니다.</p>
+        <p><a href="0012b-understand-private-lru-index.html#first-placement">Session에서 worker로 assignment가 전달되는 과정과 assignment가 page가 아니라 final-unfix context에 속하는 이유는 Lesson 0012B의 canonical first-placement 설명에서 확인하세요 →</a></p>
       </section>
       <section class="section" id="boundary">
         <div class="eyebrow">04 · Evidence 경계</div>

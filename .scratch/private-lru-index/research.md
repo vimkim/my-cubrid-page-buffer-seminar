@@ -16,12 +16,22 @@ protocol.
 
 ## Short answer
 
+- An **advertised private LRU index** is not a per-thread value or a score that
+  is recomputed. It is the private descriptor's already assigned **full array
+  index** `i = S + p`, temporarily published in a lock-free candidate queue so
+  a victimizer can find one candidate-bearing list without scanning all `P`
+  private descriptors. Candidate creation and quota adjustment advertise it;
+  a CAS-protected list flag suppresses duplicate outstanding advertisements;
+  the consumer either requeues the same integer or clears the flag.
 - A BCB LRU index is the low 16-bit identifier of the one pool-global LRU
   descriptor whose intrusive list currently contains that BCB. Shared full
   indices are `[0, S)`; private full indices are `[S, S + P)`. A session or
   vacuum worker instead carries a private-local id `p` in `[0, P)`, converted by
   `S + p`. Neither form is a transaction-table index.
-- `P = 152` is the ordinary server-default example, not a universal constant:
+- With the pinned server defaults, startup initializes **`S = 32` shared +
+  `P = 152` private = 184 total LRU descriptors**. This is conditional, not a
+  universal constant. `S` comes from 32,768 buffers and the automatic target of
+  roughly 1,000 buffers per shared list. `P` comes from
   `max_clients 100 + admin 1 + system transaction 1 +
   VACUUM_MAX_WORKER_COUNT 50 = 152` when HA is off and
   `num_private_chains = -1` requests automatic sizing.
@@ -38,8 +48,81 @@ protocol.
   quota if it was skipped initially. If normal search fails in server mode with
   page-flush available, it waits for a revocable direct-victim reservation.
   Every actual reuse still requires protected clean/unfixed/waiter-free checks.
+  “Other private” is the intended phase name: the queue consumer does not
+  compare the popped index with the current thread's own index, so a queued own
+  list is not excluded by identity.
 
-## 1. “LRU index” names three different namespaces
+## 1. What “advertised private LRU index” means
+
+“Advertised” means **queued for discovery by a victimizer**. There is no field
+named `advertised_private_lru_index`, no private-index formula based on thread
+id or transaction id, and no index value periodically recomputed from activity.
+The integer placed in the queue is the stable `PGBUF_LRU_LIST.index` assigned
+when the descriptor array is initialized. For private-local association id `p`,
+that full index is:
+
+```text
+i = PGBUF_LRU_INDEX_FROM_PRIVATE(p) = S + p
+
+shared full indexes:  0       ... S - 1
+private full indexes: S       ... S + P - 1
+thread/session value: p = 0   ... P - 1, or -1 for none
+```
+
+Startup sets `buf_LRU_list[i].index = i` once for every descriptor. Later,
+`pgbuf_lru_add_victim_candidate()` increments a list's
+`count_vict_cand`. A shared list is eligible for advertisement immediately; a
+private list is eligible only while its total BCB count is greater than its
+current quota. Quota adjustment also revisits the condition and advertises an
+already candidate-bearing private list if a changed quota makes it over quota.
+([index construction and classification](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1069-L1118),
+[descriptor index initialization](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5740-L5799),
+[candidate-triggered advertisement](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15667-L15719),
+[quota-triggered advertisement](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14251-L14511))
+
+The publication operation is:
+
+1. Read `lru_list->flags`. If `PGBUF_LRU_VICTIM_LFCQ_FLAG` is already set,
+   treat the list as already advertised and do not enqueue another copy.
+2. CAS the flag from clear to set.
+3. Classify the stable full index as private or shared and enqueue exactly
+   `lru_list->index` in the corresponding lock-free circular queue.
+4. If enqueue fails, clear the flag so a later candidate/quota pass can retry.
+
+The regular private queue is requested with capacity `2P`; the shared queue is
+requested with capacity `2S`. A separate `2P` “big private” queue also exists.
+Those are queue capacities, not additional LRU domains and not page counts.
+([queue allocation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1864-L1892),
+[CAS and enqueue](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16369-L16414))
+
+The private consumer pops one full `lru_idx`, maps it directly to
+`buf_LRU_list[lru_idx]`, and scans that one list. If the list still has victim
+candidates and remains over quota, it requeues the **same integer**; otherwise
+it clears `PGBUF_LRU_VICTIM_LFCQ_FLAG`, permitting a later advertisement. The
+queue can contain a stale hint because candidate removal does not remove an
+entry; current candidate state and the hard victim predicate are rechecked at
+consumption/scan time. The function prefers the big-private queue and, when not
+restricted, falls back to the regular private queue.
+([candidate removal leaves the queued entry](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15721-L15736),
+[private consume and requeue](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16416-L16506))
+
+This advertised full index is different from `THREAD_ENTRY.private_lru_index`.
+The thread field carries the session or vacuum worker's **private-local** `p` so
+page placement and the own-private search can derive `S+p`. It is never what
+`pgbuf_lfcq_add_lru_with_victims()` reads; the queue producer reads the
+descriptor's full `lru_list->index`. Conversely, the queue consumer does not
+look at the current thread's `p` or filter out `S+p`. Thus the code labels this
+the “other private” search phase, but source control flow does not guarantee
+that the popped advertised index differs from the caller's own list.
+([thread-local value and conversion](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1081-L1105),
+[own versus queued-private search phases](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9184),
+[consumer has no own-index comparison](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16424-L16475))
+
+This whole advertisement scheme is **Implementation policy**. Its stale-hint
+tolerance and the protected victim rechecks are **Verified mechanism**; queue
+membership alone never authorizes reuse.
+
+## 2. “LRU index” names three different namespaces
 
 ### The BCB's full LRU-array index
 
@@ -98,7 +181,44 @@ The maintainable vocabulary is:
 | private-local id `p` | `[0, P)` or `-1` | Context association with one private domain |
 | full LRU index `i` | `[0, S+P)` while in LRU | Descriptor array slot stored in a BCB's flags and advertised to victimizers |
 
-## 2. Why the pinned default example is 152
+## 3. Startup count: 32 shared, 152 private, 184 total under pinned defaults
+
+The count is configuration- and build-dependent. Under the ordinary shipped
+server defaults at this baseline:
+
+```text
+N = data-buffer frames = 32,768
+
+MAX_NTRANS = max_clients 100 + admin reserve 1 + HA reserve 0 + system 1
+           = 102
+
+S starts at MAX_NTRANS = 102
+N / S = 32768 / 102 = 321, which is below 1,000
+S becomes integer(N / 1000) = 32; the minimum-four rule does not change it
+
+P = MAX_NTRANS + VACUUM_MAX_WORKER_COUNT
+  = 102 + 50
+  = 152
+
+total initialized LRU descriptors = S + P = 32 + 152 = 184
+```
+
+The 32,768-frame default is the parameter value corresponding to the shipped
+512 MiB data-buffer configuration at the default 16 KiB I/O page size.
+Automatic shared sizing starts at `MAX_NTRANS`, reduces the count to integer
+`N / 1000` when the initial lists would average fewer than 1,000 pages, and then
+enforces at least four shared lists. Automatic private sizing uses
+`MAX_NTRANS + 50` directly. Finally, one `S+P` descriptor array is allocated and
+all 184 elements are initialized empty; this does not allocate 184 page
+partitions.
+([buffer-count defaults](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L1169-L1190),
+[shipped data-buffer setting](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/conf/cubrid.conf#L35-L46),
+[default I/O page size](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/storage_common.h#L89-L101),
+[shared-list formula](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5740-L5766),
+[private-list formula](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L13941-L13985),
+[descriptor allocation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5765-L5799))
+
+### Why the automatic private count is 152
 
 With `num_private_chains = -1`, server-mode page-buffer initialization uses:
 
@@ -152,10 +272,18 @@ The value is configuration- and build-dependent:
 - A non-`SERVER_MODE`/stand-alone build forces `P = 0`. Therefore “152 private
   LRUs” is specifically an ordinary server-mode, default-configuration example.
 
+For shared lists, `num_LRU_chains = 0` selects the automatic formula above; a
+nonzero configured value is used directly. For private lists,
+`num_private_chains = -1` selects automatic sizing, zero disables the domain,
+and a positive configured value below four is raised to four. Therefore startup
+does not have one unconditional shared/private count; **32/152/184 is the
+pinned-default server example**, while the formulas above are the general
+answer.
+
 These are **Implementation policy** formulas. The correctness contract does not
 require 152 lists.
 
-## 3. Descriptor lifetime is not context or transaction lifetime
+## 4. Descriptor lifetime is not context or transaction lifetime
 
 ### Pool-owned descriptor objects
 
@@ -216,7 +344,7 @@ move the descriptor's BCBs. Those BCBs remain pool residents and may later move
 because of ordinary final-unfix policy, quota adjustment, victimization, or
 invalidation.
 
-## 4. Exact private-id assignment, sharing, fallback, and release
+## 5. Exact private-id assignment, sharing, fallback, and release
 
 `pgbuf_assign_private_lru()` is **Implementation policy** and executes as
 follows:
@@ -247,7 +375,7 @@ association count, and, when it reaches zero, clears the list's activity and
 attempts quota adjustment. It does not destroy the descriptor and does not
 change its BCB links. ([release](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14604-L14625))
 
-## 5. Exact allocator victim order
+## 6. Exact allocator victim order
 
 ### Before any LRU search
 
@@ -266,12 +394,14 @@ The executable order is:
    fails, mark it searched. For non-vacuum contexts, if total size exceeds
    `quota + max(10, 1% of quota)`, restrict the next other-private attempt to the
    “big private” advertisement queue.
-2. **An advertised other-private list.** This step exists only when private quota
+2. **An advertised private-list index in the “other” phase.** This step exists only when private quota
    is enabled and page-flush is available. The helper first consumes the big-list
    queue; when unrestricted and that is empty, it consumes the regular private
    queue. The queues carry full integer LRU indices, not sessions or
    transactions. The regular queue is populated when an over-quota private list
-   has victim candidates.
+   has victim candidates. Despite the phase name, the consumer does not compare
+   the popped index with the current thread's own full index, so it does not
+   enforce that the selected descriptor is different from own.
 3. **An advertised shared list.** Consume one shared full index and scan it. With
    page-flush available this is one queue selection. Without page-flush, the
    code may keep consuming shared advertisements, guarded by shared-list-count
@@ -371,7 +501,7 @@ Without page-flush available, the allocator wakes/runs the flush path and then
 calls normal victim search again; it does not enter the server direct-victim
 wait protocol. ([no-daemon retry](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8357-L8367))
 
-## 6. Documentation recommendation
+## 7. Documentation recommendation
 
 **Recommendation: split, do not replace the canonical owner.** Keep Lesson 12
 as the concrete one-BCB replacement story, and add a paired **Lesson 12B:

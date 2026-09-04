@@ -55,6 +55,32 @@ test("private LRU is taught as an assignment and policy domain, not page ownersh
   assert.doesNotMatch(visual, /[\uac00-\ud7a3]/u);
 });
 
+test("the canonical explanation ties first placement to the final-unfix context", async () => {
+  const [markdown, aout, en, ko] = await Promise.all([
+    read("advanced/replacement-progress.md"),
+    read("advanced/aout-ghost-history.md"),
+    read("en/lessons/0012b-understand-private-lru-index.html"),
+    read("ko/lessons/0012b-understand-private-lru-index.html"),
+  ]);
+
+  for (const text of [markdown, en]) {
+    assert.match(text, /newly loaded VOID BCB/is);
+    assert.match(text, /final-unfix(?:ing)? (?:execution )?context.*enabled private-LRU assignment/is);
+    assert.match(text, /private (?:list )?S\+p.*LRU1 top/is);
+    assert.match(text, /selected shared LRU.*LRU2 middle/is);
+    assert.match(text, /not an\s+intrinsic page or BCB property/is);
+    assert.match(text, /stand-alone.*shared LRU2 middle/is);
+    assert.match(text, /already-shared BCB.*does not move.*private/is);
+  }
+  for (const term of ["새로 load된 VOID BCB", "final-unfix execution context", "enabled private-LRU assignment", "S+p", "LRU1 top", "shared LRU2 middle", "고유 속성", "stand-alone mode"]) {
+    assert.ok(ko.includes(term), term);
+  }
+  assert.match(aout, /canonical.*first-placement/is);
+  assert.doesNotMatch(aout, /private-domain page/i);
+  assert.equal((en.match(/private-domain page/gi) ?? []).length, 1);
+  assert.equal((ko.match(/private-domain page/gi) ?? []).length, 1);
+});
+
 test("adjust_age has an explicit producer, gate, sampling purpose, and cost", async () => {
   const [markdown, en, ko] = await Promise.all([
     read("advanced/replacement-progress.md"),
@@ -100,7 +126,7 @@ test("zero-crossing unfix placement and private-to-shared movement are visual an
   assert.ok(markdown.includes("](../assets/unfix-lru-placement.svg)"));
   for (const html of [en, ko]) assert.ok(html.includes('src="../../assets/unfix-lru-placement.svg"'));
   assert.match(visual, /<svg[^>]+viewBox=/);
-  for (const label of ["Final unfix", "VOID page", "Private membership", "Shared membership", "LRU2 middle"]) {
+  for (const label of ["Final unfix", "newly loaded VOID BCB", "Private membership", "Shared membership", "LRU2 middle"]) {
     assert.ok(visual.includes(label), label);
   }
   assert.doesNotMatch(visual, /[\uac00-\ud7a3]/u);

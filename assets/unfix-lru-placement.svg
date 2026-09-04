@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
   <title id="title">Final unfix placement and private-to-shared movement</title>
-  <desc id="desc">Only a final unfix that brings the global fix count to zero enters ordinary replacement placement when no reader or writer is blocked. A VOID page enters private LRU1 or shared LRU2. A private member moves through VOID to shared LRU2 when the unfixing thread has a different private domain or the page is hot and old enough.</desc>
+  <desc id="desc">Only an eligible final unfix that brings the global fix count to zero enters ordinary replacement placement. A newly loaded VOID BCB enters private list S plus p at LRU1 top when that execution context has an enabled private-LRU assignment; otherwise it enters a selected shared LRU at LRU2 middle. An existing private member can later move through VOID to shared LRU2 when the final-unfix context has a different full private index or no enabled assignment, or the BCB is hot and old enough.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#435d69"/></marker>
     <style>.panel{fill:#fff;stroke:#c5d2d8;stroke-width:2}.event{fill:#eef0ff;stroke:#5968bd;stroke-width:2}.decision{fill:#fff6e8;stroke:#b86b22;stroke-width:2}.private{fill:#e9f4f3;stroke:#16847d;stroke-width:2}.shared{fill:#fde9e5;stroke:#b74b3c;stroke-width:2}.void{fill:#f7f8f9;stroke:#6b7780;stroke-width:2}.t{font:700 26px Inter,Arial,sans-serif;fill:#173443}.h{font:700 17px Inter,Arial,sans-serif;fill:#173443}.s{font:14px Inter,Arial,sans-serif;fill:#526874}.tiny{font:12px Inter,Arial,sans-serif;fill:#526874}.line{fill:none;stroke:#435d69;stroke-width:2.5;marker-end:url(#arrow)}.label{font:700 13px Inter,Arial,sans-serif;fill:#435d69}</style>
@@ -26,18 +26,18 @@
   <text x="640" y="394" text-anchor="middle" class="h">Current replacement state?</text>
   <text x="640" y="421" text-anchor="middle" class="s">VOID or already linked to an LRU</text>
 
-  <path d="M465 403 H305 V486" class="line"/><text x="350" y="388" class="label">VOID page</text>
+  <path d="M465 403 H305 V486" class="line"/><text x="350" y="388" class="label">newly loaded VOID BCB</text>
   <rect x="80" y="493" rx="14" width="450" height="150" class="void"/>
   <text x="305" y="527" text-anchor="middle" class="h">First placement (AOUT disabled)</text>
-  <text x="305" y="561" text-anchor="middle" class="s">thread has private id → Private LRU1 top</text>
-  <text x="305" y="592" text-anchor="middle" class="s">no private id → Shared LRU2 middle</text>
+  <text x="305" y="561" text-anchor="middle" class="s">enabled private assignment → Private S+p, LRU1 top</text>
+  <text x="305" y="592" text-anchor="middle" class="s">otherwise → selected Shared LRU, LRU2 middle</text>
   <text x="305" y="622" text-anchor="middle" class="tiny">known-list edit O(1 + D); shared choice periodically scans S lists</text>
 
   <path d="M815 403 H975 V486" class="line"/><text x="862" y="388" class="label">Private membership</text>
   <path d="M640 444 V656" class="line"/><text x="654" y="475" class="label">Shared membership</text>
   <rect x="750" y="493" rx="14" width="450" height="150" class="private"/>
   <text x="975" y="527" text-anchor="middle" class="h">Should private become shared?</text>
-  <text x="975" y="558" text-anchor="middle" class="s">different current private id, or hot + old enough</text>
+  <text x="975" y="558" text-anchor="middle" class="s">different/no enabled assignment, or hot + old enough</text>
   <text x="975" y="589" text-anchor="middle" class="s">Private → VOID → Shared membership</text>
   <text x="975" y="620" text-anchor="middle" class="tiny">remove, unlock; add at Shared LRU2 middle; BCB mutex stays held</text>
 

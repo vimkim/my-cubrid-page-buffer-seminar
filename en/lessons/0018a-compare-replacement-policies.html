@@ -39,7 +39,7 @@
         <div class="eyebrow">02 · CUBRID</div>
         <h2>Choose a domain, then search its cold zone</h2>
         <ol>
-          <li><strong>Admission:</strong> at pinned default with AOUT disabled, first final unfix puts a private-domain page at private LRU1 top; otherwise it enters shared LRU2 middle.</li>
+          <li><strong>Admission:</strong> at the pinned AOUT-disabled baseline, a newly loaded VOID BCB enters private S+p at LRU1 top when its final-unfix execution context has an enabled private-LRU assignment; otherwise it enters shared LRU2 middle.</li>
           <li><strong>Reuse:</strong> LRU1 stays in place. An LRU2 page returns to LRU1 only when its list-tick age is at least half the current LRU2 count. Ordinary LRU3 reuse returns to LRU1.</li>
           <li><strong>Victim:</strong> the allocator consumes an advertised LRU index, locks that list, and examines at most 1,000 LRU3 BCBs. Every candidate still needs clean/unfixed/waiter-free identity revalidation.</li>
           <li><strong>Scale:</strong> lists and mutexes shard ordering. Private quotas use activity; their LRU1 and LRU2 thresholds are each 5% of quota. Shared defaults are 40% and 5% of the shared target.</li>

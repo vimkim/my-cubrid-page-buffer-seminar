@@ -36,8 +36,8 @@
   <path d="M770 411 H855" class="line"/>
   <rect x="865" y="342" rx="12" width="345" height="138" class="hot"/>
   <text x="1037" y="376" text-anchor="middle" class="h">join exactly one doubly linked LRU</text>
-  <text x="1037" y="408" text-anchor="middle" class="s">private domain → LRU1 top</text>
-  <text x="1037" y="438" text-anchor="middle" class="s">no private domain → shared LRU2 middle</text>
+  <text x="1037" y="408" text-anchor="middle" class="s">enabled private assignment → S+p LRU1 top</text>
+  <text x="1037" y="438" text-anchor="middle" class="s">otherwise → shared LRU2 middle</text>
   <text x="1037" y="465" text-anchor="middle" class="tiny">default AOUT-disabled path</text>
 
   <rect x="35" y="540" rx="18" width="1210" height="275" class="panel"/>

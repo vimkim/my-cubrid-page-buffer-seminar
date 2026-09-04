@@ -62,14 +62,17 @@ page's first stable LRU placement:
 
 | Context and ghost result | Retained placement branch |
 |---|---|
-| Private domain; ghost hit from the same private LRU | Current private LRU1 top |
-| Private domain; AOUT miss | Current private LRU2 middle |
-| Private domain; ghost hit from a different former LRU | Shared LRU2 middle |
-| No private domain | Shared LRU2 middle |
+| Final-unfix context has an enabled private-LRU assignment; ghost hit from the same private LRU | Current private LRU1 top |
+| Enabled private-LRU assignment; AOUT miss | Current private LRU2 middle |
+| Enabled private-LRU assignment; ghost hit from a different former LRU | Shared LRU2 middle |
+| No enabled private-LRU assignment | Shared LRU2 middle |
 
 The idea is admission ranking: a recently evicted identity from the same domain
 would get hotter placement than an unremembered identity. `former lru_idx` is
-not a transaction ID, ownership record, or permission to use the page.
+not a transaction ID, ownership record, or permission to use the page. The
+canonical [first-placement explanation](./replacement-progress.md#how-the-final-unfix-context-chooses-first-placement)
+defines the execution-context assignment and separates this decision from later
+BCB movement.
 
 Source: `src/storage/page_buffer.c:6885-6994`.
 
@@ -79,12 +82,12 @@ Source: `src/storage/page_buffer.c:6885-6994`.
 says to disable AOUT until CBRD-20741 is fixed. Initialization consequently sets
 `max_count = 0`, and add/lookup helpers return immediately.
 
-The active first-placement rule is therefore simpler:
-
-```text
-thread has a private domain  -> private LRU1 top
-thread has no private domain -> shared LRU2 middle
-```
+The active first-placement rule therefore has no ghost hit/miss subdivision.
+Both ordinary paths remain: an enabled private-LRU assignment reaches private
+LRU1 top, while no enabled assignment reaches shared LRU2 middle. The canonical
+[first-placement explanation](./replacement-progress.md#how-the-final-unfix-context-chooses-first-placement)
+owns the exact session-to-worker handoff, `S+p` conversion, and BCB state
+boundary.
 
 The retained comment that calls the design “LRU + Aout of 2Q” does not prove
 that this revision executes 2Q. It describes code structure whose AOUT half is

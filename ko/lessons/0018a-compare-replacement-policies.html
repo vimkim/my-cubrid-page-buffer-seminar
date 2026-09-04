@@ -39,7 +39,7 @@
         <div class="eyebrow">02 · CUBRID</div>
         <h2>Domain을 고른 뒤 그 cold zone을 search한다</h2>
         <ol>
-          <li><strong>Admission:</strong> AOUT이 꺼진 pinned default에서 첫 final unfix는 private-domain page를 private LRU1 top에 넣는다. 그렇지 않으면 shared LRU2 middle에 넣는다.</li>
+          <li><strong>Admission:</strong> AOUT이 꺼진 pinned baseline에서 새로 load된 VOID BCB는 final-unfix execution context에 enabled private-LRU assignment가 있으면 private S+p의 LRU1 top으로 들어가고, 없으면 shared LRU2 middle로 들어간다.</li>
           <li><strong>Reuse:</strong> LRU1은 그대로 둔다. LRU2 page는 list-tick age가 현재 LRU2 count 절반 이상일 때만 LRU1으로 돌아간다. Ordinary LRU3 reuse는 LRU1으로 돌아간다.</li>
           <li><strong>Victim:</strong> allocator가 advertise된 LRU index를 consume하고 그 list를 lock한 뒤 LRU3 BCB를 최대 1,000개 검사한다. 모든 candidate는 clean/unfixed/waiter-free identity revalidation을 통과해야 한다.</li>
           <li><strong>Scale:</strong> 여러 list와 mutex가 ordering을 shard한다. Private quota의 LRU1/LRU2 threshold는 각각 5%다. Shared default는 shared target의 40%와 5%다.</li>

@@ -14,8 +14,8 @@
   <header class="hero">
     <div class="eyebrow">Advanced deep dive · list identity and selection</div>
     <h1>Separate the 152 persistent lists from one session's borrowed index</h1>
-    <p>Four questions guide this lesson: what the number 152 counts, when those objects exist, how a session gets an index, and which list a victim search tries next.</p>
-    <div class="pills"><span class="pill">152 descriptors</span><span class="pill">Not per transaction</span><span class="pill">Local p</span><span class="pill">Full S + p</span><span class="pill">Ordered search</span></div>
+    <p>Five questions guide this lesson: what the number 152 counts, when those objects exist, how a session gets an index, how final unfix chooses first placement, and which list a victim search tries next.</p>
+    <div class="pills"><span class="pill">152 descriptors</span><span class="pill">Not per transaction</span><span class="pill">Local p</span><span class="pill">Full S + p</span><span class="pill">Final-unfix context</span></div>
   </header>
 
   <div class="lesson-grid">
@@ -80,8 +80,28 @@ p = 151 → full LRU index 183</pre>
         <p class="source-note"><strong>Implementation policy:</strong> <code>page_buffer.c:14513–14624</code>; <code>session.c:729–744</code>; <code>server_support.c:2069–2087</code>.</p>
       </section>
 
+      <section class="section" id="first-placement" data-bcb-start-zone="VOID" data-trigger="final-unfix-global-fcnt-zero" data-private-gate="enabled-private-lru-assignment" data-private-destination="private-S-plus-p-LRU1-top" data-shared-destination="selected-shared-LRU2-middle" data-aout-state="off">
+        <div class="eyebrow">05 · First placement</div>
+        <h2>The final-unfix execution context supplies the policy input</h2>
+        <img class="diagram" src="../../assets/unfix-lru-placement.svg" alt="A newly loaded VOID BCB branching at final unfix according to the execution context's enabled private-LRU assignment">
+        <p>“Private-domain page” is misleading shorthand. Private domain is not an intrinsic page or BCB property. The precise subject is <strong>a newly loaded VOID BCB whose final-unfixing execution context has an enabled private-LRU assignment</strong>.</p>
+        <p>The session receives local <code>p</code>, and the request worker carries it as <code>THREAD_ENTRY.private_lru_index</code>. When private chains exist and <code>p != -1</code>, <code>pgbuf_thread_variables_init()</code> sets <code>m_is_private_lru_enabled</code>. The first eligible final unfix that makes global <code>fcnt</code> zero tests <code>PGBUF_THREAD_HAS_PRIVATE_LRU()</code> and converts the enabled assignment to full index <code>S+p</code>.</p>
+        <pre>newly loaded BCB: VOID
+        |
+        | first eligible final unfix, global fcnt -&gt; 0
+        v
+final-unfix context has enabled private-LRU assignment?
+        | yes                              | no
+        v                                  v
+private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
+        <p>The BCB has no session or transaction owner field. Once linked, it records only the current full LRU index and zone. Multiple sessions can share one private LRU, so it is a locality/quota domain rather than an ownership domain.</p>
+        <p>AOUT-off did not remove either branch. It removed the ghost hit/miss subdivision; in particular, the retained AOUT-miss branch to private LRU2 middle is dormant. Admission ranking chooses only this already loaded BCB's first LRU position. It does not choose the previous victim, prove ownership, or authorize frame reuse.</p>
+        <p>In stand-alone mode, or when private chains are disabled, no context has an enabled private-LRU assignment and ordinary first placement uses selected shared LRU2 middle only.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>session.c:729–744</code>; <code>server_support.c:2069–2087</code>; <code>page_buffer.c:499–543,1079–1105,1545–1560,6713–6750,6885–6994,9694–9830</code>.</p>
+      </section>
+
       <section class="section" id="activity">
-        <div class="eyebrow">05 · What “least active” means</div>
+        <div class="eyebrow">06 · What “least active” means</div>
         <h2>Activity is sampled BCB reuse, not transaction count</h2>
         <p>On an ordinary final unfix, <code>pgbuf_bcb_register_hit_for_lru()</code> lets one BCB contribute at most one hit in one accepted adjustment epoch. Only an accepted <code>pgbuf_adjust_quotas()</code> increments <code>adjust_age</code>; a daemon attempt every 100 ms does not necessarily increment it because guards may return early.</p>
         <p>An accepted pass uses <code>ATOMIC_TAS_32</code> to take and reset each LRU's <code>lru_hits</code>, converts hits to a per-second rate, and smooths private activity over ten seconds. It then uses the activity shares to adjust quotas. The structural work is O(T + L + D), excluding lock wait.</p>
@@ -90,17 +110,17 @@ p = 151 → full LRU index 183</pre>
       </section>
 
       <section class="section" id="movement">
-        <div class="eyebrow">06 · BCB membership can move</div>
-        <h2>Private association does not pin pages to that domain</h2>
-        <img class="diagram" src="../../assets/unfix-lru-placement.svg" alt="Final-unfix placement and private to VOID to shared movement">
-        <p>Ordinary movement occurs only when an unfix changes global <code>fcnt</code> to zero. <code>pgbuf_should_move_private_to_shared()</code> requests migration when the final-unfixing thread's private domain differs from the BCB's private list, or when a same-domain BCB is both hot and old enough.</p>
+        <div class="eyebrow">07 · Later BCB movement</div>
+        <h2>First placement does not pin pages to that domain</h2>
+        <p>This is a later rule for a BCB that is already on an LRU, not another description of first placement. Ordinary movement occurs only when an unfix changes global <code>fcnt</code> to zero. <code>pgbuf_should_move_private_to_shared()</code> requests migration when the final-unfixing thread's full private index differs from the BCB's private list—including when the context has no enabled assignment—or when a same-domain BCB is both hot and old enough.</p>
         <p>The path is private LRU → VOID → shared LRU2 middle. The source unlinks under the private-list mutex, releases it, chooses a destination with <code>pgbuf_get_shared_lru_index_for_add()</code>, and links under the shared-list mutex. The BCB mutex stays held between list operations.</p>
+        <p>An already-shared BCB does not move to a private LRU merely because a private-assigned context accessed it.</p>
         <p>A known-node unlink/link is O(1), plus D zone demotions: O(1 + D). Shared destination choice is amortized O(1), with a periodic O(S) balance scan; migration therefore has a periodic O(S + D) case, excluding lock wait.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:6636–7038,8988–9063,10303–10417</code>.</p>
       </section>
 
       <section class="section" id="victim-search" data-search-order="own-over-quota,other-private,shared,own-fallback" data-list-scan-zone="LRU3" data-list-scan-max="1000" data-direct-victim-stage="after-search-failure">
-        <div class="eyebrow">07 · Which list is searched?</div>
+        <div class="eyebrow">08 · Which list is searched?</div>
         <h2>Choose a list first; inspect eligible BCBs second</h2>
         <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private and shared LRU domains, three zones per list, and the victim search order">
         <p><code>pgbuf_get_victim()</code> applies this order:</p>
@@ -117,7 +137,7 @@ p = 151 → full LRU index 183</pre>
       </section>
 
       <section class="section" id="practice">
-        <div class="eyebrow">08 · Check your model</div>
+        <div class="eyebrow">09 · Check your model</div>
         <h2>Trace session A without inventing ownership</h2>
         <p>Use S = 32 and P = 152. Session A receives local p = 7, so its full private-list index is 39. A request loads page X and final-unfixes it into list 39. Session A then ends, but X remains there. Session B later receives p = 7 and accesses X.</p>
         <p>Explain why no LRU was created for either session, why B can access X, why release did not move X, and which full index the victim selector uses. Then repeat with A's list under quota and name exactly when that own list is searched.</p>
@@ -126,6 +146,7 @@ p = 151 → full LRU index 183</pre>
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
         <h2>Use the Advanced page for the full policy and cost derivation</h2>
+        <p><a href="../../advanced/replacement-progress.md#how-the-final-unfix-context-chooses-first-placement">Open the canonical first-placement explanation →</a></p>
         <p><a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Open the canonical private-LRU explanation →</a></p>
         <p><a href="0012-prove-replacement-progress.html">← Return to Lesson 0012</a> · <a href="0012a-understand-aout-ghost-history.html">Continue to optional Lesson 0012A: AOUT aside →</a></p>
       </section>
@@ -137,13 +158,15 @@ p = 151 → full LRU index 183</pre>
       <a href="#index-space">2. Three index meanings</a>
       <a href="#lifecycle">3. Two lifetimes</a>
       <a href="#assignment">4. Assignment rule</a>
-      <a href="#activity">5. Activity meaning</a>
-      <a href="#movement">6. Private → shared</a>
-      <a href="#victim-search">7. Victim-search order</a>
-      <a href="#practice">8. Check the model</a>
+      <a href="#first-placement">5. First placement</a>
+      <a href="#activity">6. Activity meaning</a>
+      <a href="#movement">7. Later movement</a>
+      <a href="#victim-search">8. Victim-search order</a>
+      <a href="#practice">9. Check the model</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="0012a-understand-aout-ghost-history.html">Optional AOUT aside →</a>
+      <a href="../../advanced/replacement-progress.md#how-the-final-unfix-context-chooses-first-placement">Canonical first-placement section</a>
       <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical Advanced section</a>
       <a href="../index.html">Course home</a>
     </nav>

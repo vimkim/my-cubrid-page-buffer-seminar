@@ -558,6 +558,26 @@ function validatePrivateLruIndexContract (pagePath, language, html, failures)
       },
       code: ["session_cnt[p]", "THREAD_ENTRY.private_lru_index"]
     },
+    "first-placement": {
+      attributes: {
+        "data-bcb-start-zone": "VOID",
+        "data-trigger": "final-unfix-global-fcnt-zero",
+        "data-private-gate": "enabled-private-lru-assignment",
+        "data-private-destination": "private-S-plus-p-LRU1-top",
+        "data-shared-destination": "selected-shared-LRU2-middle",
+        "data-aout-state": "off"
+      },
+      code: [
+        "p",
+        "THREAD_ENTRY.private_lru_index",
+        "p != -1",
+        "pgbuf_thread_variables_init()",
+        "m_is_private_lru_enabled",
+        "fcnt",
+        "PGBUF_THREAD_HAS_PRIVATE_LRU()",
+        "S+p"
+      ]
+    },
     "victim-search": {
       attributes: {
         "data-search-order": "own-over-quota,other-private,shared,own-fallback",

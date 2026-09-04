@@ -50,7 +50,7 @@
         <ol>
           <li><strong>Startup:</strong> A is an INVALID-list node paired permanently with frame A.</li>
           <li><strong>First miss for page P:</strong> <code>pgbuf_get_bcb_from_invalid_list()</code> pops A. A becomes VOID, receives VPID P, loads P's bytes, and is fixed.</li>
-          <li><strong>First final unfix:</strong> when global <code>fcnt</code> reaches zero, A enters private LRU1 top when the thread has a private domain; otherwise it enters shared LRU2 middle.</li>
+          <li><strong>First final unfix:</strong> when global <code>fcnt</code> reaches zero, the execution context's enabled private-LRU assignment selects private LRU1 top; without one, A enters shared LRU2 middle. Lesson 0012B owns the exact rule.</li>
           <li><strong>Cooling:</strong> later insertions make protected zones exceed their thresholds. <code>pgbuf_lru_adjust_zones()</code> demotes old boundary nodes LRU1 → LRU2 → LRU3. Time alone does not move A.</li>
           <li><strong>Second chance:</strong> if P is fixed again, a final unfix from LRU3 normally boosts A to LRU1. A must cool again.</li>
           <li><strong>Victim:</strong> if A stays clean and idle in LRU3, a selected scan may lock and detach it to protected VOID.</li>

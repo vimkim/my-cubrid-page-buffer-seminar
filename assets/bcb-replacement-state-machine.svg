@@ -33,8 +33,8 @@
 
   <rect x="820" y="95" width="365" height="160" rx="16" class="guard"/>
   <text x="1002" y="130" text-anchor="middle" class="h">Join exactly one LRU</text>
-  <text x="1002" y="160" text-anchor="middle" class="s">private context → private LRU1 top</text>
-  <text x="1002" y="187" text-anchor="middle" class="s">no private context → shared LRU2 middle</text>
+  <text x="1002" y="160" text-anchor="middle" class="s">enabled private assignment → S+p LRU1 top</text>
+  <text x="1002" y="187" text-anchor="middle" class="s">otherwise → shared LRU2 middle</text>
   <text x="1002" y="214" text-anchor="middle" class="s">list index + zone encoded in BCB flags</text>
   <text x="1002" y="239" text-anchor="middle" class="tiny">active pinned path; AOUT is disabled</text>
 

@@ -50,7 +50,7 @@
         <ol>
           <li><strong>Startup:</strong> A는 frame A와 영구적으로 짝지어진 INVALID-list node입니다.</li>
           <li><strong>Page P의 첫 miss:</strong> <code>pgbuf_get_bcb_from_invalid_list()</code>가 A를 꺼냅니다. A는 VOID가 되고 VPID P와 P의 bytes를 받은 뒤 fix됩니다.</li>
-          <li><strong>첫 final unfix:</strong> global <code>fcnt</code>가 0이 되면 thread에 private domain이 있을 때 private LRU1 top, 없으면 shared LRU2 middle에 들어갑니다.</li>
+          <li><strong>첫 final unfix:</strong> global <code>fcnt</code>가 0이 되면 execution context의 enabled private-LRU assignment에 따라 private LRU1 top으로 가고, assignment가 없으면 shared LRU2 middle에 들어갑니다. 정확한 규칙은 Lesson 0012B가 설명합니다.</li>
           <li><strong>차가워짐:</strong> 이후 삽입으로 protected zone이 threshold를 넘으면 <code>pgbuf_lru_adjust_zones()</code>가 오래된 boundary node를 LRU1 → LRU2 → LRU3로 내립니다. 시간만 흐른다고 A가 이동하지는 않습니다.</li>
           <li><strong>Second chance:</strong> P가 다시 fix되면 LRU3에서의 final unfix는 보통 A를 LRU1으로 올립니다. A가 victim candidate가 되려면 다시 차가워져야 합니다.</li>
           <li><strong>Victim:</strong> A가 LRU3에서 clean하고 idle인 상태로 남으면 선택된 scan이 A를 lock하고 protected VOID로 detach할 수 있습니다.</li>

@@ -41,13 +41,14 @@ hash tables = max(floor(A / 1,000), 1)</pre>
         <table>
           <thead><tr><th>Reload context</th><th>Retained placement branch</th></tr></thead>
           <tbody>
-            <tr><td>Private domain; same-private ghost hit</td><td>Current private LRU1 top</td></tr>
-            <tr><td>Private domain; AOUT miss</td><td>Current private LRU2 middle</td></tr>
-            <tr><td>Private domain; different former LRU</td><td>Shared LRU2 middle</td></tr>
-            <tr><td>No private domain</td><td>Shared LRU2 middle</td></tr>
+            <tr><td>Enabled private-LRU assignment; same-private ghost hit</td><td>Current private LRU1 top</td></tr>
+            <tr><td>Enabled private-LRU assignment; AOUT miss</td><td>Current private LRU2 middle</td></tr>
+            <tr><td>Enabled private-LRU assignment; different former LRU</td><td>Shared LRU2 middle</td></tr>
+            <tr><td>No enabled private-LRU assignment</td><td>Shared LRU2 middle</td></tr>
           </tbody>
         </table>
-        <p>This is admission ranking after load. It does not select the old victim, prove ownership, or authorize reuse. The active AOUT-off path simply places a private-domain page at private LRU1 top and a page without a private domain at shared LRU2 middle.</p>
+        <p>This is admission ranking after load. It does not select the old victim, prove ownership, or authorize reuse. AOUT-off removes the ghost hit/miss subdivision, not the two current paths: an enabled assignment reaches private LRU1 top and no enabled assignment reaches shared LRU2 middle.</p>
+        <p><a href="0012b-understand-private-lru-index.html#first-placement">Use Lesson 0012B for the canonical first-placement explanation, including the session-to-worker handoff and why the assignment belongs to the final-unfix context rather than the page →</a></p>
       </section>
       <section class="section" id="boundary">
         <div class="eyebrow">04 · Evidence boundary</div>
