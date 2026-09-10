@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0012 — CUBRID replacement 이해하기</title>
+  <title>강의 12 — Replacement 상태와 진행</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0012-prove-replacement-progress.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0012</span><a href="../index.html">과정 홈</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0012</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">심화 역량 · 첫 원리부터 배우는 replacement</div>
-    <h1>하나의 BCB가 차가워지고, victim이 되고, 새 page를 받는 과정을 따라갑니다</h1>
-    <p>INVALID와 VOID에서 출발해 영구적인 BCB/frame pair 하나가 admission, cooling, protected detach, rebind를 거치는 과정을 따라갑니다. List 수, private index, search 순서는 Lesson 12B가 담당합니다.</p>
+    <div class="eyebrow">LECTURE 12 / 교체와 진행</div>
+    <h1>Replacement 상태와 진행</h1>
+    <p>하나의 BCB/frame pair가 admission, cooling, victim 확인을 거쳐 다른 identity에 연결되는 과정을 살펴봅니다.</p>
     <div class="pills"><span class="pill">INVALID first</span><span class="pill">VOID is unlinked</span><span class="pill">LRU3 only</span><span class="pill">Protected recheck</span></div>
   </header>
 
@@ -32,13 +31,13 @@
         <div class="eyebrow">02 · 다섯 가지 list-membership 상태</div>
         <h2>VOID BCB는 모든 management list 밖에 있습니다</h2>
         <img class="diagram" src="../../assets/bcb-replacement-state-machine.svg" alt="BCB 하나가 INVALID, VOID, LRU1, LRU2, LRU3와 보호된 detach 및 rebind를 거치는 그림">
-        <table><thead><tr><th>상태</th><th>쉬운 의미</th><th>Victim search 여부</th></tr></thead><tbody>
+        <div class="table-scroll"><table><thead><tr><th>상태</th><th>쉬운 의미</th><th>Victim search 여부</th></tr></thead><tbody>
           <tr><td><code>INVALID</code></td><td>Resident VPID 없이 전역 free/invalid singly linked list에 있습니다.</td><td>Allocation이 O(1)로 바로 꺼냅니다.</td></tr>
           <tr><td><code>VOID</code></td><td>INVALID에도 어떤 LRU에도 없습니다. Load 중, 첫 배치 전 fix 상태, 이동 중, protected detach 상태일 수 있습니다.</td><td>LRU scan에서 보이지 않습니다.</td></tr>
           <tr><td><code>LRU1</code></td><td>한 LRU의 뜨겁고 보호된 부분입니다.</td><td>아니요.</td></tr>
           <tr><td><code>LRU2</code></td><td>보호된 second-chance 부분입니다.</td><td>아니요.</td></tr>
           <tr><td><code>LRU3</code></td><td>차가운 부분이며 ordinary victim search가 보는 유일한 zone입니다.</td><td>예. 그러나 safety check가 모든 node를 거부할 수 있습니다.</td></tr>
-        </tbody></table>
+        </tbody></table></div>
         <p>새로 load한 resident page는 첫 fix가 끝날 때까지 계속 VOID일 수 있습니다. VPID가 resident hash에 이미 들어 있고 <code>fcnt</code>가 양수일 수도 있습니다. VOID만으로 identity, ownership, dirty state, overwrite 가능 여부는 알 수 없습니다. <code>prev_BCB</code>/<code>next_BCB</code>가 현재 INVALID나 LRU에 BCB를 연결하지 않는다는 뜻뿐입니다.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:174–216,5559–5667,6636–6994,8904–8952,15860–15986</code>.</p>
       </section>
@@ -50,7 +49,7 @@
         <ol>
           <li><strong>Startup:</strong> A는 frame A와 영구적으로 짝지어진 INVALID-list node입니다.</li>
           <li><strong>Page P의 첫 miss:</strong> <code>pgbuf_get_bcb_from_invalid_list()</code>가 A를 꺼냅니다. A는 VOID가 되고 VPID P와 P의 bytes를 받은 뒤 fix됩니다.</li>
-          <li><strong>첫 final unfix:</strong> global <code>fcnt</code>가 0이 되면 execution context의 enabled private-LRU assignment에 따라 private LRU1 top으로 가고, assignment가 없으면 shared LRU2 middle에 들어갑니다. 정확한 규칙은 Lesson 0012B가 설명합니다.</li>
+          <li><strong>첫 final unfix:</strong> global <code>fcnt</code>가 0이 되면 execution context의 enabled private-LRU assignment에 따라 private LRU1 top으로 가고, assignment가 없으면 shared LRU2 middle에 들어갑니다. 정확한 규칙은 Lecture 0012B가 설명합니다.</li>
           <li><strong>차가워짐:</strong> 이후 삽입으로 protected zone이 threshold를 넘으면 <code>pgbuf_lru_adjust_zones()</code>가 오래된 boundary node를 LRU1 → LRU2 → LRU3로 내립니다. 시간만 흐른다고 A가 이동하지는 않습니다.</li>
           <li><strong>Second chance:</strong> P가 다시 fix되면 LRU3에서의 final unfix는 보통 A를 LRU1으로 올립니다. A가 victim candidate가 되려면 다시 차가워져야 합니다.</li>
           <li><strong>Victim:</strong> A가 LRU3에서 clean하고 idle인 상태로 남으면 선택된 scan이 A를 lock하고 protected VOID로 detach할 수 있습니다.</li>
@@ -63,7 +62,7 @@
         <div class="eyebrow">04 · BCB A가 victim이 될까요?</div>
         <h2>LRU3에 있는 것 외에도 모든 현재 상태가 안전해야 합니다</h2>
         <img class="diagram" src="../../assets/one-bcb-victim-decision.svg" alt="LRU3 BCB 하나를 건너뛰거나 victim으로 detach하는 판단 과정">
-        <table><thead><tr><th>현재 BCB A</th><th>현재 결과</th><th>이유</th></tr></thead><tbody>
+        <div class="table-scroll"><table><thead><tr><th>현재 BCB A</th><th>현재 결과</th><th>이유</th></tr></thead><tbody>
           <tr><td>INVALID</td><td>Victimization 없이 바로 할당</td><td>제거할 이전 resident page가 없습니다.</td></tr>
           <tr><td>VOID, LRU1, or LRU2</td><td>검사하지 않음</td><td>Ordinary victim search는 한 LRU3 chain만 따라갑니다.</td></tr>
           <tr><td>LRU3 + <code>DIRTY</code></td><td>건너뜀</td><td>변경된 bytes를 먼저 성공적으로 flush해야 합니다.</td></tr>
@@ -73,7 +72,7 @@
           <tr><td>LRU3 + direct-victim flag</td><td>Ordinary scan에서 건너뜀</td><td>다른 allocator handoff가 A를 참조합니다.</td></tr>
           <tr><td>LRU3 + BCB try-lock failure</td><td>이번 visit에서 건너뜀</td><td>LRU mutex를 가진 채 A를 기다리지 않습니다.</td></tr>
           <tr><td>Clean하고 idle인 LRU3, flag/waiter 없음, mutex와 protected recheck 성공</td><td><strong>A를 detach</strong></td><td>BCB mutex를 유지하며 A가 LRU3 → VOID로 바뀝니다.</td></tr>
-        </tbody></table>
+        </tbody></table></div>
         <p><code>pgbuf_get_victim_from_lru_list()</code>는 이미 선택된 LRU index 하나를 받습니다. <code>victim_hint</code> 또는 bottom에서 시작해 <code>prev_BCB</code>를 따라 최대 1,000개의 BCB node를 봅니다. 1,000개 list나 모든 transaction을 순회하는 것이 아닙니다. Private threshold demotion <code>D</code>는 이 bounded walk 전에 일어날 수 있습니다.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:221–263,9256–9538,16217–16228</code>.</p>
       </section>
@@ -82,7 +81,7 @@
         <div class="eyebrow">05 · Private는 policy domain</div>
         <h2>List membership은 transaction ownership이 아닙니다</h2>
         <p>Session은 이미 존재하는 private-list ID 하나를 빌릴 뿐 private cache를 받는 것이 아닙니다. 여러 session이 list를 공유할 수 있고, 다른 domain이 그 BCB를 fix할 수 있으며, assignment를 release해도 BCB를 비우지 않습니다.</p>
-        <p><a href="0012b-understand-private-lru-index.html">기본값이 152인 이유, local/full index 범위, assignment lifetime, movement, activity와 정확한 private/shared victim-search 순서는 Lesson 12B에서 계속 확인하세요 →</a></p>
+        <p><a href="0012b-understand-private-lru-index.html">기본값이 152인 이유, local/full index 범위, assignment lifetime, movement, activity와 정확한 private/shared victim-search 순서는 Lecture 12B에서 계속 확인하세요 →</a></p>
       </section>
 
       <section class="section" id="progress">
@@ -95,33 +94,35 @@
         <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:8181–8403,9067–9253,10925–10952,15420–15652,16972–17255</code>.</p>
       </section>
 
-      <section class="section" id="practice">
+      <section class="section" id="practice" data-audience-checkpoint>
         <div class="eyebrow">07 · 이해 확인</div>
         <h2>지금 BCB A를 재사용할 수 있을까요?</h2>
         <p>A가 INVALID에 있는 상태에서 시작합니다. Page P를 A에 load하고 final-unfix한 뒤 LRU3까지 demote합니다. 그리고 A가 clean·idle인 경우, A가 DIRTY인 경우, scan 직전에 다른 thread가 A를 fix한 경우를 각각 생각해 보세요. 현재 list/zone, 처음 거부하는 field나 lock, A를 page Q에 rebind하기 전에 필요한 event를 말해 보세요.</p>
-        <div class="callout"><strong>Model spine:</strong> INVALID는 victimization을 피함 → VOID는 unlinked이지 free라는 뜻이 아님 → LRU3만 search → flags/owners/waiters/try-lock/final recheck가 결정 → VOID detach가 hash removal보다 먼저 → 고정된 pair가 Q를 받음.</div>
+        <details class="answer-disclosure"><summary>설명 펼치기</summary><div class="callout"><strong>Model spine:</strong> INVALID는 victimization을 피함 → VOID는 unlinked이지 free라는 뜻이 아님 → LRU3만 search → flags/owners/waiters/try-lock/final recheck가 결정 → VOID detach가 hash removal보다 먼저 → 고정된 pair가 Q를 받음.</div></details>
       </section>
 
+<section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>Fix가 없어도 dirty인 page</h2><p>BCB의 fix count는 0이고 LRU3에 있지만 DIRTY 상태입니다. Allocator가 즉시 재사용해도 될까요?</p><details class="answer-disclosure"><summary>설명 펼치기</summary><p>안 됩니다. Fix count 0과 LRU3 소속은 필요한 검사일 뿐 충분한 안전성 증명이 아닙니다. Dirty byte를 버릴 수 없으며, victim 선택에는 현재 flag, owner, waiter와 보호된 상태의 검사도 필요합니다. 안전한 frame이 생기려면 flush와 재시도가 필요할 수 있습니다.</p></details></section>
       <section class="section" id="primary-reading">
         <div class="eyebrow">핵심 읽을거리</div>
         <h2>먼저 네 함수만 따라가세요</h2>
-        <p><code>pgbuf_allocate_bcb()</code>, <code>pgbuf_get_victim()</code>, <code>pgbuf_get_victim_from_lru_list()</code>, <code>pgbuf_victimize_bcb()</code>를 읽습니다. 그다음 Lesson 12B에서 index와 list-selection model을 보거나 canonical Markdown에서 전체 policy와 cost map을 확인합니다.</p>
+        <p><code>pgbuf_allocate_bcb()</code>, <code>pgbuf_get_victim()</code>, <code>pgbuf_get_victim_from_lru_list()</code>, <code>pgbuf_victimize_bcb()</code>를 읽습니다. 그다음 Lecture 12B에서 index와 list-selection model을 보거나 canonical Markdown에서 전체 policy와 cost map을 확인합니다.</p>
         <p><a href="../../advanced/replacement-progress.md">Canonical replacement page 열기 →</a></p>
-        <p><a href="0011-rebuild-after-ordered-refix.html">← Lesson 0011</a> · <a href="0012b-understand-private-lru-index.html">Lesson 0012B: private LRU index로 계속 →</a></p>
+        <p><a  href="0007-replace-one-frame.html">← 이전 강의 7</a> · <a href="0012b-understand-private-lru-index.html">Lecture 0012B: private LRU index로 계속 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson 목차">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#purpose">1. 왜 replace할까?</a><a href="#states">2. INVALID와 VOID</a><a href="#trip">3. BCB 하나의 lifetime</a>
       <a href="#decision">4. Victim scenario</a><a href="#private">5. Private-domain 연결</a><a href="#progress">6. 안전한 victim 없음</a>
       <a href="#practice">7. 이해 확인</a><a href="#primary-reading">핵심 읽을거리</a>
       <hr>
-      <a href="0012b-understand-private-lru-index.html">Private-LRU lesson →</a>
+      <a href="0012b-understand-private-lru-index.html">Private-LRU lecture →</a>
       <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a><a href="../index.html">과정 홈</a>
     </nav>
   </div>
-  <footer class="footer">상태 이름이 헷갈리면 바로 질문하세요. Identity, list membership, ownership, durability를 분리하면 replacement가 쉬워집니다.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0007-replace-one-frame.html">← Lecture 7 · Victim eligibility와 frame 재사용</a><a rel="next" href="0012b-understand-private-lru-index.html">Lecture 12B · Private LRU index와 선택 →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

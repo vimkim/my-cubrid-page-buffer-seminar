@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0013 — Connect log pages, WAL, and redo</title>
+  <title>Lecture 13 — Log buffers and data-page redo</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0013-gate-redo-by-page-lsa.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0013</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0013</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced capability · recovery ownership</div>
-    <h1>Follow a log record from its own buffer to data-page redo</h1>
-    <p>By the end, you can separate the data and log page pools, trace direct-mapped log frames into a fixed active ring and archives, explain WAL, and then apply the page-LSA redo gate.</p>
+    <div class="eyebrow">LECTURE 13 / Recovery and specialized behavior</div>
+    <h1>Log buffers and data-page redo</h1>
+    <p>Log storage and data-page residency have separate owners. Page LSA connects a recovered record to the skip-or-apply decision.</p>
     <div class="pills"><span class="pill">LOG_BUFFER</span><span class="pill">Active ring</span><span class="pill">Archive</span><span class="pill">WAL</span><span class="pill">RECOVERY_PAGE</span><span class="pill">Page LSA</span></div>
   </header>
 
@@ -25,7 +24,7 @@
         <h2>Log pages have their own descriptors and frames</h2>
         <img class="diagram" src="../../assets/data-and-log-buffer-separation.svg" alt="Separate data-page and log-page buffer pools joined by the WAL rule">
         <p><code>page_buffer.c</code> and <code>log_page_buffer.c</code> are independent buffering subsystems. The include and call relationships coordinate them; they do not place log pages in the data-page pool.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Question</th><th>Data page</th><th>Log page</th></tr></thead>
           <tbody>
             <tr><td>Descriptor</td><td><code>PGBUF_BCB</code></td><td><code>LOG_BUFFER</code>: logical page ID, active physical ID, dirty bit, frame pointer</td></tr>
@@ -33,7 +32,7 @@
             <tr><td>Caller ownership</td><td>Shared pointer, latch, fix/unfix, holder debt</td><td>Reader normally gets a copy in caller storage; no BCB fix ledger</td></tr>
             <tr><td>Disk home</td><td>Data-volume page</td><td>Fixed active-log ring or archive</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>The append code sometimes calls its current page “fixed,” but <code>LOG_BUFFER</code> has no <code>fcnt</code>, holder, BCB waiter queue, hash link, or LRU link. It means that the log append protocol retains that frame under log synchronization.</p>
         <p class="big-claim">WAL joins the pools by ordering durability. It never moves one pool's frame into the other.</p>
       </section>
@@ -66,7 +65,7 @@
         <img class="diagram" src="../../assets/log-ring-archive-retention.svg" alt="Increasing logical LSAs across a fixed active ring and archive files">
         <p>At the default 512 MiB log volume and 16 KiB pages, the active file has 32,768 physical pages: one header and 32,767 data-log slots. Logical page IDs keep increasing while physical slots wrap relative to <code>fpageid</code>.</p>
         <p>Before a slot is reused, the older logical range is copied and synced into a numbered archive. Background archiving incrementally prepares a temporary archive to smooth this copy cost. It is not the data-page double-write buffer.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Frontier</th><th>Meaning</th></tr></thead>
           <tbody>
             <tr><td><code>append_lsa</code></td><td>Current/next logical append position</td></tr>
@@ -74,7 +73,7 @@
             <tr><td><code>nxarv_pageid</code></td><td>Next logical page that must enter an archive</td></tr>
             <tr><td><code>fpageid</code></td><td>Logical page currently stored at active physical slot 1</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>An LSA names the logical coordinate <code>(page ID, offset)</code>. It does not allocate or retain storage. The representation is extremely large but finite; readable history depends on the active ring, archive files, and recovery/vacuum/HA/CDC/flashback/retention constraints.</p>
       </section>
 
@@ -118,14 +117,14 @@
       <section class="section" id="example">
         <div class="eyebrow">08 · Worked sequence</div>
         <h2>Page LSA 140: skip 120, skip 140, apply 170</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Redo record</th><th>Compare with page LSA</th><th>Action</th><th>New page LSA</th></tr></thead>
           <tbody>
             <tr><td>120</td><td>120 &lt; 140</td><td>Skip and release.</td><td>140</td></tr>
             <tr><td>140</td><td>140 = 140</td><td>Skip and release.</td><td>140</td></tr>
             <tr><td>170</td><td>170 &gt; 140</td><td>Apply callback, set DIRTY, release.</td><td>170</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>Revisiting record 170 now skips because the page LSA is already 170. That is the page-change idempotence argument. It is not a blanket promise that arbitrary callback side effects outside the page are idempotent.</p>
       </section>
 
@@ -165,18 +164,17 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">13 · Retrieval practice</div>
+        <div class="eyebrow">13 · Pause and reason</div>
         <h2>Decide skip, apply, or no-debt absence</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="checkpoint asks page buffer to flush qualifying pages and return a redo floor; it does not mean every page is flushed or that page buffer owns the whole checkpoint -> recovery fixes with RECOVERY_PAGE and WRITE because recovery owns special allocation-state knowledge -> with page LSA 140, records 120 and 140 are skipped because record LSA less than or equal to page LSA is already represented -> record 170 is applied, page LSA advances to 170, the page is marked DIRTY as required, and the fix is released -> replaying 170 then skips -> a deallocated page can be skipped without creating fix debt -> this gate proves idempotence of the page change, not arbitrary callback side effects -> existing checkpoint/backup observations do not prove crash redo or DWB recovery." data-concepts='[{"label":"checkpoint is selective coordination","terms":["selective","qualifying","redo floor","not every"]},{"label":"recovery owns special fetch","terms":["RECOVERY_PAGE","allocation","recovery","write"]},{"label":"less-than-or-equal records skip","terms":["120","140","skip","less","equal"]},{"label":"newer record applies and dirties","terms":["170","apply","page lsa","dirty","release"]},{"label":"deallocated absence creates no debt","terms":["deallocated","skip","no debt","no fix"]},{"label":"idempotence and crash evidence bounded","terms":["idempotence","callback","crash","not prove","dwb"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>Checkpoint returned a redo floor. During restart, a page has LSA 140 and receives records 120, 140, and 170; another target page was deallocated.</p>
-          <p><strong>Your task:</strong> assign each operation to its owner, decide every skip/apply/debt result, and state exactly what the scenario does not prove about crash persistence.</p>
-          <textarea aria-label="Your recovery gate trace" placeholder="Separate checkpoint ownership, fetch mode, LSA comparison, mutation, dirtying, and cleanup."></textarea>
-          <button type="button" data-check>Check recovery trace</button>
-          <button type="button" class="secondary" data-reveal>Reveal model route</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>Paste your answer into the chat. I will check comparison direction, owner boundaries, debt, and crash-evidence language before recording Advanced progress.</p>
+          <p><strong>Consider:</strong> assign each operation to its owner, decide every skip/apply/debt result, and state exactly what the scenario does not prove about crash persistence.</p>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>checkpoint asks page buffer to flush qualifying pages and return a redo floor; it does not mean every page is flushed or that page buffer owns the whole checkpoint -> recovery fixes with RECOVERY_PAGE and WRITE because recovery owns special allocation-state knowledge -> with page LSA 140, records 120 and 140 are skipped because record LSA less than or equal to page LSA is already represented -> record 170 is applied, page LSA advances to 170, the page is marked DIRTY as required, and the fix is released -> replaying 170 then skips -> a deallocated page can be skipped without creating fix debt -> this gate proves idempotence of the page change, not arbitrary callback side effects -> existing checkpoint/backup observations do not prove crash redo or DWB recovery.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -184,12 +182,12 @@
         <h2>Trace the skip before the callback</h2>
         <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_recovery.c#L497-L536"><code>log_recovery.c:497–536</code></a> and <code>log_recovery_redo.hpp:587–668</code>. Mark special fix, absent-page skip, page-LSA comparison, callback, LSA advance, DIRTY publication, and scope cleanup.</p>
         <p><a href="../reference/redo-recovery-card.html">Open the printable redo-recovery card →</a></p>
-        <p><a href="0012a-understand-aout-ghost-history.html">← Return to Lesson 0012A</a> · <a href="0014-preserve-lifecycle-order.html">Continue to Lesson 0014 →</a></p>
+        <p><a  href="0011-rebuild-after-ordered-refix.html">← Previous lecture 11</a> · <a href="0014-preserve-lifecycle-order.html">Continue to Lecture 0014 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#two-pools">1. Two buffer pools</a>
       <a href="#memory-pool">2. Log memory slots</a>
       <a href="#append-flush">3. Append and flush</a>
@@ -207,12 +205,13 @@
       <hr>
       <a href="../reference/redo-recovery-card.html">Redo-recovery card</a>
       <a href="../../advanced/recovery-and-lifecycle.md">Canonical Advanced page</a>
-      <a href="0014-preserve-lifecycle-order.html">Next lesson →</a>
-      <a href="../index.html">Course home</a>
+      <a href="0014-preserve-lifecycle-order.html">Next lecture →</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever the two buffer pools, active-ring/archive storage, WAL, LSA direction, or crash evidence is unclear.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0011-rebuild-after-ordered-refix.html">← Lecture 11 · Ordered refix and revalidation</a><a rel="next" href="0014-preserve-lifecycle-order.html">Lecture 14 · Startup and shutdown dependencies →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

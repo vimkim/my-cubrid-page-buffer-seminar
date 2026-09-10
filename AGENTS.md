@@ -4,6 +4,7 @@ This directory owns the English internal documentation set for senior engineers 
 
 ## Before editing
 
+- For bilingual seminar HTML or its shared UI, read `NOTES.md` and `docs/seminar-curriculum-design.md`; ADR 0005 governs this audience-facing product separately from the Markdown guide.
 - Read `maintainer-guide-notes.md` whenever changing the guide entry, a guide page, the document structure, or a visual.
 - Read `CONTEXT.md` for canonical reader, document, and evidence vocabulary; read relevant decisions under `docs/adr/` before changing the document-set shape or language.
 - Read `source-inventory.md` before adding or strengthening implementation-specific claims.

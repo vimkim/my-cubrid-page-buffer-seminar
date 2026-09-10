@@ -1,12 +1,68 @@
-# Page-buffer Maintainer Guide
+# Page-buffer documentation
 
-This context defines the reader roles and documentation paths used when designing the internal guide for engineers who maintain CUBRID's page-buffer module.
+This glossary defines the readers and document roles of the Maintainer Guide and the Audience-facing seminar site for CUBRID's page-buffer module.
 
 ## Language
 
 **Target maintainer**:
 A senior C/C++ systems engineer who understands basic database storage, buffer pools, and WAL, but has no assumed knowledge of CUBRID source structure or page-buffer protocols.
 _Avoid_: Page-buffer newcomer, senior engineer
+
+**Seminar participant**:
+A Target maintainer who follows the page-buffer seminar live and may return to its audience-facing material afterward for independent reading.
+_Avoid_: Listener, learner, student
+
+**Audience-facing seminar site**:
+The bilingual page-buffer material used directly with Seminar participants during the live presentation and retained as a self-contained route afterward. It is distinct from the Maintainer Guide and from private presenter preparation.
+_Avoid_: Teaching course, learner site, presentation notes
+
+**Seminar curriculum**:
+The capability-gated, multi-session route through the Audience-facing seminar site. It has no predetermined total duration: the route continues through Core, Advanced, and applied maintainer work until Seminar participants demonstrate deep Module understanding.
+_Avoid_: Live seminar route, fixed-duration course, presentation deck
+
+**Seminar lecture**:
+An audience-facing unit in the Seminar curriculum combining explanation, a bounded source trace, participant reasoning, and questions around one coherent mechanism.
+_Avoid_: Lesson, slide deck, reading assignment
+
+**Curriculum completion evidence**:
+Participant-produced source traces, scenario reasoning, diagnostic work, change-impact analysis, and a final technical defense that together demonstrate deep Module understanding.
+_Avoid_: Mastery record, attendance, pages read, keyword coverage
+
+**Completion record**:
+A presenter- or team-reviewed record of Curriculum completion evidence maintained outside the Audience-facing seminar site.
+_Avoid_: Public progress state, automated mastery score, reading history
+
+**Applied seminar work**:
+Reversible source-tracing or runtime-probe work that exercises Module reasoning without requiring a production engine change.
+_Avoid_: Homework, mandatory implementation, unrestricted experiment
+
+**Presentation mode**:
+The projected view of a Seminar lecture that emphasizes the current explanation while keeping supporting detail available for later reading.
+_Avoid_: Slide mode, separate deck, presenter view
+
+**Topic library**:
+The complete audience-facing collection of Seminar lectures, deep dives, comparisons, exercises, and reference cards available both within and beyond the Seminar curriculum.
+_Avoid_: Course catalog, required lessons, quick access
+
+**Curriculum syllabus**:
+The audience-facing map of Seminar lectures, their conceptual dependencies, and their routes into the Topic library. It describes the shared curriculum without recording individual progress.
+_Avoid_: Course learning path, current checkpoint, mastery dashboard
+
+**Curriculum phase**:
+A conceptual grouping of related Seminar lectures used to make the Curriculum syllabus navigable. It does not assert that a participant has completed or mastered the grouped material.
+_Avoid_: Level, stage gate, learner status
+
+**Synthesis workshop**:
+An audience-facing exercise that connects several Seminar lectures through one page journey or maintainer scenario and provides an evidence-bounded model explanation without automated scoring.
+_Avoid_: Synthesis studio, retrieval checkpoint, automated assessment
+
+**Audience checkpoint**:
+An optional pause in the seminar material that asks participants to reason about a transition or scenario before revealing an explanation. It supports discussion and does not score mastery or control progression.
+_Avoid_: Teach-back, mastery check, retrieval gate
+
+**Presenter runbook**:
+Private preparation material containing timing, transitions, facilitation notes, and likely questions for the person delivering the seminar. It is not part of audience navigation.
+_Avoid_: Speaker notes embedded in pages, teaching-agent guidance
 
 **Core maintainer**:
 A target maintainer who can trace ordinary acquisition and release through a real caller, reason about the governing invariants, review failure cleanup, and choose evidence appropriate to a routine change.

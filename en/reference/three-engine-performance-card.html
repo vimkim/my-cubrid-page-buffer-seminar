@@ -5,27 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Three-engine page-buffer comparison card</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/three-engine-performance-card.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · printable comparison</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · printable comparison</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
     <div class="eyebrow">Responsibility and performance card</div>
     <h1>Same invariant. Different seam.</h1>
-    <p>Use this after Lesson 18 to recall the common safety rule before studying the different replacement algorithms.</p>
+    <p>Use this after Lecture 18 to recall the common safety rule before studying the different replacement algorithms.</p>
   </header>
 
   <section class="section">
     <h2>Ownership in one view</h2>
-    <table>
+    <div class="table-scroll"><table>
       <thead><tr><th>Engine</th><th>Replacement protection</th><th>Content protection</th><th>Cleanup owner</th></tr></thead>
       <tbody>
         <tr><td>CUBRID</td><td>BCB atomic <code>fcnt</code></td><td>READ/WRITE latch requested through <code>pgbuf_fix()</code></td><td>Per-thread holder; matching <code>pgbuf_unfix()</code></td></tr>
         <tr><td>PostgreSQL</td><td>Shared refcount plus backend <code>PrivateRefCount</code></td><td>Separate buffer content lock</td><td><code>ResourceOwner</code> plus explicit unlock/unpin</td></tr>
         <tr><td>InnoDB</td><td>Atomic <code>buf_fix_count</code></td><td>Block S/SX/X latch</td><td><code>mtr_t</code> memo releases latch, then fix</td></tr>
       </tbody>
-    </table>
+    </table></div>
     <p class="big-claim">A pin or fix protects identity from reuse. A latch or content lock protects bytes from incompatible access.</p>
   </section>
 
@@ -37,11 +37,12 @@
       <li><strong>InnoDB:</strong> admit disk reads into the old region and scan backward from its tail.</li>
     </ul>
     <div class="callout warn"><strong>No winner follows from these shapes.</strong> Workload, effective capacity, cleaning, and contention still require measurement.</div>
-    <p><a href="../lessons/0018a-compare-replacement-policies.html">Open the detailed replacement-policy lesson →</a></p>
-    <p><a href="../lessons/0018-compare-three-buffer-pools.html">Return to Lesson 18 →</a></p>
+    <p><a href="../lessons/0018a-compare-replacement-policies.html">Open the detailed replacement-policy lecture →</a></p>
+    <p><a href="../lessons/0018-compare-three-buffer-pools.html">Return to Lecture 18 →</a></p>
   </section>
 
   <footer class="footer">Use this card for retrieval. Use pinned source and the evidence inventory for proof.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

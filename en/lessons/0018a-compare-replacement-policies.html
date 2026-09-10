@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0018A — Compare replacement policies</title>
+  <title>Lecture 18A — Replacement policies across engines</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0018a-compare-replacement-policies.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · Lesson 0018A</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · Lecture 0018A</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Optional deep comparison · replacement only</div>
-    <h1>Admission, reuse, victim: ask the same three questions</h1>
-    <p>Compare CUBRID, PostgreSQL, and InnoDB without forcing unlike data structures into one “LRU” label.</p>
+    <div class="eyebrow">LECTURE 18A / Cross-engine perspective</div>
+    <h1>Replacement policies across engines</h1>
+    <p>Admission, reuse history, victim selection, and dirty-page progress provide common questions for a source-based comparison.</p>
     <div class="pills"><span class="pill">Admission</span><span class="pill">Reuse memory</span><span class="pill">Victim choice</span><span class="pill">Dirty page</span><span class="pill">Scan resistance</span></div>
   </header>
 
@@ -25,14 +24,14 @@
         <h2>Follow one page through three decisions</h2>
         <img class="diagram" src="../../assets/three-engine-replacement-paths.svg" alt="Admission, reuse, and victim paths for CUBRID, PostgreSQL, and InnoDB replacement policies">
         <p class="caption">The shared hard rule is simple: a fixed or pinned frame is not an ordinary victim. Admission, hotness memory, candidate order, and dirty handling are implementation policy.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Question</th><th>CUBRID</th><th>PostgreSQL</th><th>MySQL / InnoDB</th></tr></thead>
           <tbody>
             <tr><td>What is ordered?</td><td>Many doubly linked private/shared LRUs, each split into LRU1/LRU2/LRU3.</td><td>No recency list for normal shared buffers; one atomic clock hand walks the descriptor array.</td><td>One doubly linked young/old LRU per buffer-pool instance.</td></tr>
             <tr><td>What remembers reuse?</td><td>Zone, list position/ticks, and adaptive per-list activity/quota.</td><td>A small resident <code>usage_count</code>, maximum 5.</td><td>Young/old position, first-access time, and eviction-clock distance.</td></tr>
             <tr><td>Where is the candidate?</td><td>LRU3 of one policy-selected list.</td><td>First unpinned zero-count descriptor reached by the clock.</td><td>A clean relocatable page scanned backward from the old tail.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="cubrid">
@@ -77,21 +76,21 @@
       <section class="section" id="dirty">
         <div class="eyebrow">05 · Dirty pages change progress</div>
         <h2>Writeback progress remains a separate mechanism</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Engine</th><th>When the candidate is dirty</th><th>Background help</th></tr></thead>
           <tbody>
             <tr><td>CUBRID</td><td>Ordinary detach requires clean. Dirty LRU3 stays resident until generation-aware flush makes it clean.</td><td>Page-flush and post-flush/direct-victim progress cooperate with waiting allocators.</td></tr>
             <tr><td>PostgreSQL</td><td>The clock may select a dirty unpinned buffer. The allocating backend can conditionally lock, flush, and revalidate it.</td><td>The background writer cleans likely near-future victims ahead of demand.</td></tr>
             <tr><td>InnoDB</td><td>Immediate replacement needs clean. Foreground pressure may flush one dirty tail page and retry the free list.</td><td>Page cleaners pursue both LRU-tail free-page targets and redo/flush-list targets.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="big-claim">“Cold” answers where to look. “Clean and unowned” answers whether reuse can proceed now.</p>
       </section>
 
       <section class="section" id="misreadings">
         <div class="eyebrow">06 · Prevent false equivalence</div>
         <h2>Similar words hide different algorithms</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Tempting shortcut</th><th>Correction</th></tr></thead>
           <tbody>
             <tr><td>“CUBRID LRU3 equals InnoDB old.”</td><td>Both are cold regions, but admission, number of domains, promotion gates, and candidate scans differ.</td></tr>
@@ -99,33 +98,32 @@
             <tr><td>“A PostgreSQL strategy ring is a CUBRID private LRU.”</td><td>A ring is a backend-local array of shared-buffer IDs; a CUBRID private LRU is a pool-global linked residency/quota domain.</td></tr>
             <tr><td>“InnoDB old/new is 2Q.”</td><td>Both regions hold resident pages; there is no general evicted-identity ghost queue in this path.</td></tr>
           </tbody>
-        </table>
-        <div class="callout warn"><strong>No winner follows from source shape.</strong> Hit ratio and latency also depend on effective pool bytes, page/row layout, workload, dirtying, cleaning, checkpoint behavior, and contention. This lesson supplies measurement hypotheses, not benchmark results.</div>
+        </table></div>
+        <div class="callout warn"><strong>No winner follows from source shape.</strong> Hit ratio and latency also depend on effective pool bytes, page/row layout, workload, dirtying, cleaning, checkpoint behavior, and contention. This lecture supplies measurement hypotheses, not benchmark results.</div>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">07 · Pause and reason</div>
         <h2>Trace the second access and the first dirty victim</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="CUBRID: private LRU1 or shared LRU2 admission -> zone/age-based boost -> advertised one-list LRU3 scan capped at 1000 -> dirty must be flushed before ordinary detach -> PostgreSQL: usage_count 1 admission -> first backend pin raises it up to 5 while nested local pin does not -> clock skips pins, decrements positive count, selects zero -> dirty selection may be flushed by allocator -> InnoDB: disk read enters old head, default old target 37% -> promotion normally waits 1000ms -> scan from old tail, first common attempt capped at 100 -> dirty pressure invokes cleaner or foreground flush -> all three exclude owned frames, but no policy name proves performance superiority." data-concepts='[{"label":"CUBRID path","terms":["lru1","lru2","lru3","1000"]},{"label":"PostgreSQL path","terms":["usage_count","5","clock","zero"]},{"label":"InnoDB path","terms":["old","37","1000ms","tail"]},{"label":"dirty progress differs","terms":["dirty","flush","clean"]},{"label":"ownership gate shared","terms":["fixed","pinned","owned"]},{"label":"no winner","terms":["performance","benchmark","winner"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>A sequential scan touches a page once, later touches it again, and then allocation pressure reaches it while dirty. Explain the possible policy path in each engine.</p>
-          <textarea aria-label="Your replacement-policy comparison" placeholder="CUBRID admission/reuse/victim/dirty → PostgreSQL → InnoDB → shared hard rule → evidence boundary."></textarea>
-          <button type="button" data-check>Check policy trace</button>
-          <button type="button" class="secondary" data-reveal>Reveal model route</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>CUBRID: private LRU1 or shared LRU2 admission -> zone/age-based boost -> advertised one-list LRU3 scan capped at 1000 -> dirty must be flushed before ordinary detach -> PostgreSQL: usage_count 1 admission -> first backend pin raises it up to 5 while nested local pin does not -> clock skips pins, decrements positive count, selects zero -> dirty selection may be flushed by allocator -> InnoDB: disk read enters old head, default old target 37% -> promotion normally waits 1000ms -> scan from old tail, first common attempt capped at 100 -> dirty pressure invokes cleaner or foreground flush -> all three exclude owned frames, but no policy name proves performance superiority.</p></details></div>
       </section>
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
         <h2>Use the detailed evidence note for maintenance claims</h2>
-        <p>The <a href="../../reference/cross-database-replacement-policy-comparison.md">pinned primary-source comparison</a> includes exact source routes, concurrency shapes, scan strategy details, and evidence boundaries omitted from this teaching page.</p>
+        <p>The <a href="../../reference/cross-database-replacement-policy-comparison.md">pinned primary-source comparison</a> includes exact source routes, concurrency shapes, scan strategy details, and evidence boundaries omitted from this lecture.</p>
         <p><a href="0018-compare-three-buffer-pools.html">← Return to the simple three-buffer-pool comparison</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#map">1. Three decisions</a>
       <a href="#cubrid">2. CUBRID</a>
       <a href="#postgresql">3. PostgreSQL</a>
@@ -137,10 +135,11 @@
       <hr>
       <a href="0018-compare-three-buffer-pools.html">Simple comparison</a>
       <a href="../../reference/cross-database-replacement-policy-comparison.md">Evidence note</a>
-      <a href="../index.html">Course home</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
   <footer class="footer">Compare admission, reuse memory, victim choice, and dirty progress separately; never infer a winner from names.</footer>
-</main>
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0018-compare-three-buffer-pools.html">← Lecture 18 · Responsibilities across three buffer pools</a><a href="../reference/presentation-rehearsal-card.html">Technical-defense rubric →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

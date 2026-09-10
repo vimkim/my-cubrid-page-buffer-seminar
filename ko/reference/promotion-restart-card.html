@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID promotion/restart 요약 · 한국어</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/promotion-restart-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
   <header class="hero">
     <div class="eyebrow">promotion 리뷰용 요약</div>
@@ -24,7 +24,7 @@
     </article>
     <article class="reference-card full">
       <h2>Outcome ledger</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Outcome</th><th>Ownership</th><th>관찰 규칙</th></tr></thead>
         <tbody>
           <tr><td>In-place success</td><td>holder/count는 같고 mode만 WRITE가 된다.</td><td>보호가 끊기지 않았다.</td></tr>
@@ -32,7 +32,7 @@
           <tr><td>Blocking success</td><td>기존 holder를 제거한 뒤 저장한 count가 queue head에서 새 WRITE holder로 돌아온다.</td><td>보존된다. Writer나 victim이 promoter를 지나가지 못한다.</td></tr>
           <tr><td>Hard blocking failure</td><td>null pointer이며 이전 debt는 복구되지 않았다.</td><td>그 pointer로 observation을 사용하거나 unfix하면 안 된다.</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card">
       <h2>Debt 보존</h2>
@@ -57,18 +57,19 @@
     </article>
     <article class="reference-card full">
       <h2>Source 탐색 경로</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>책임</th><th>Pinned range</th></tr></thead>
         <tbody>
           <tr><td>promotion mechanism</td><td><code>page_buffer.c:2842–3050</code></td></tr>
           <tr><td>B-tree conditional restart</td><td><code>btree.c:28365–28393</code></td></tr>
           <tr><td>B-tree WRITE traversal retry</td><td><code>btree.c:28638–28696</code></td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
   <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. Successful head handoff는 page state를 보존하며 선택한 failure path에서만 restart한다.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

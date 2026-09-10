@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0012B — Private LRU index 이해하기</title>
+  <title>강의 12B — Private LRU index와 선택</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0012b-understand-private-lru-index.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0012B</span><a href="../index.html">과정 홈</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0012B</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">심화 학습 · List identity와 선택</div>
-    <h1>계속 존재하는 152개 list와 session이 빌리는 index 하나를 구분합니다</h1>
-    <p>이 lesson은 다섯 질문을 따라갑니다. 152라는 수는 무엇을 세는지, 그 object는 언제 생기는지, session은 어떻게 index를 받는지, final unfix는 첫 배치 위치를 어떻게 고르는지, victim search는 다음에 어느 list를 보는지 알아봅니다.</p>
+    <div class="eyebrow">LECTURE 12B / 교체와 진행</div>
+    <h1>Private LRU index와 선택</h1>
+    <p>계속 존재하는 list descriptor, session이 빌리는 index, BCB의 소속, victim search에는 각각 다른 수명과 규칙이 있습니다.</p>
     <div class="pills"><span class="pill">152 descriptors</span><span class="pill">Transaction마다 생성 아님</span><span class="pill">Local p</span><span class="pill">Full S + p</span><span class="pill">Final-unfix context</span></div>
   </header>
 
@@ -31,14 +30,14 @@
         <div class="eyebrow">02 · 어떤 index인가?</div>
         <h2>“Index”라는 한 단어가 서로 다른 세 가지를 가리킵니다</h2>
         <img class="diagram" src="../../assets/default-replacement-topology.svg" alt="기본 buffer pool 수치와 shared 및 private LRU descriptor 범위">
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>값</th><th>계산 예의 범위</th><th>용도</th></tr></thead>
           <tbody>
             <tr><td>Transaction-table <code>tran_index</code></td><td>LRU 범위가 아님</td><td>Database 작업을 식별합니다. LRU array subscript로 쓰지 않습니다.</td></tr>
             <tr><td>Private-local <code>p</code></td><td>0부터 151</td><td>Session/thread의 <code>private_lru_index</code>로 저장합니다.</td></tr>
             <tr><td>Full LRU-array index</td><td>shared 0–31, private 32–183</td><td>Resident BCB의 list-membership flag에 저장합니다. Private 변환은 <code>S + p</code>입니다.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <pre>S = 32, P = 152, L = S + P = 184
 p = 0   → full LRU index 32
 p = 151 → full LRU index 183</pre>
@@ -143,17 +142,18 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
         <p>두 session을 위해 LRU를 새로 만들지 않은 이유, B가 X에 접근할 수 있는 이유, release가 X를 옮기지 않은 이유, victim selector가 어느 full index를 쓰는지 설명해 보세요. 그다음 A의 list가 quota 아래라고 가정하고 own list를 정확히 언제 search하는지도 답해 보세요.</p>
       </section>
 
+<section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>Session보다 오래 유지되는 list</h2><p>Session A가 local private-list ID 7을 반환해도 page X는 resident로 남아 있습니다. 나중에 ID 7을 받은 session이 X를 소유하거나 새 LRU를 만드는 것일까요?</p><details class="answer-disclosure"><summary>설명 펼치기</summary><p>아닙니다. Descriptor는 pool 소유이고 session은 list ID와의 연결을 빌립니다. 그 연결을 반환한다고 resident page가 이동하거나 다음 session에 소유권이 생기지는 않습니다. Page 접근은 기존 fix/latch protocol을 따르며, victim 선택에는 shared-index offset을 더한 full list index를 사용합니다.</p></details></section>
       <section class="section" id="primary-reading">
         <div class="eyebrow">핵심 읽을거리</div>
         <h2>전체 policy와 cost derivation은 Advanced page에서 확인하세요</h2>
         <p><a href="../../advanced/replacement-progress.md#how-the-final-unfix-context-chooses-first-placement">Canonical first-placement 설명 열기 →</a></p>
         <p><a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical private-LRU 설명 열기 →</a></p>
-        <p><a href="0012-prove-replacement-progress.html">← Lesson 0012로 돌아가기</a> · <a href="0012a-understand-aout-ghost-history.html">Optional Lesson 0012A: AOUT aside로 계속 →</a></p>
+        <p><a href="0012-prove-replacement-progress.html">← Lecture 0012로 돌아가기</a> · <a href="0012a-understand-aout-ghost-history.html">다음: 강의 12A · 비활성 AOUT 이력 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson 목차">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#answer">1. 짧은 답</a>
       <a href="#index-space">2. 세 가지 index 의미</a>
       <a href="#lifecycle">3. 두 lifetime</a>
@@ -165,7 +165,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       <a href="#practice">9. 이해 확인</a>
       <a href="#primary-reading">핵심 읽을거리</a>
       <hr>
-      <a href="0012a-understand-aout-ghost-history.html">Optional AOUT aside →</a>
+      <a href="0012a-understand-aout-ghost-history.html">다음: 비활성 AOUT 이력 →</a>
       <a href="../../advanced/replacement-progress.md#how-the-final-unfix-context-chooses-first-placement">Canonical first-placement section</a>
       <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical Advanced section</a>
       <a href="../index.html">과정 홈</a>
@@ -173,6 +173,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
   </div>
 
   <footer class="footer">Source에서 “LRU index”를 만나면 먼저 private-local p인지 full S + p array index인지 물어보세요.</footer>
-</main>
+<nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0012-prove-replacement-progress.html">← Lecture 12 · Replacement 상태와 진행</a><a rel="next" href="0012a-understand-aout-ghost-history.html">Lecture 12A · 비활성 AOUT admission history →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

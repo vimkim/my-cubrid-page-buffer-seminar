@@ -5,27 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>세 engine의 page buffer 비교 카드</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/three-engine-performance-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · 인쇄용 비교 자료</span><a href="../index.html">Course 홈</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · 인쇄용 비교 자료</span><a href="../index.html">커리큘럼</a></div>
   <header class="hero">
     <div class="eyebrow">Responsibility와 performance 카드</div>
     <h1>Invariant는 같아도 seam은 다릅니다.</h1>
-    <p>Lesson 18을 마친 뒤 공통 safety rule을 떠올리고 서로 다른 replacement algorithm을 학습할 때 사용하세요.</p>
+    <p>Lecture 18을 마친 뒤 공통 safety rule을 떠올리고 서로 다른 replacement algorithm을 학습할 때 사용하세요.</p>
   </header>
 
   <section class="section">
     <h2>한눈에 보는 ownership</h2>
-    <table>
+    <div class="table-scroll"><table>
       <thead><tr><th>Engine</th><th>Replacement protection</th><th>Content protection</th><th>Cleanup owner</th></tr></thead>
       <tbody>
         <tr><td>CUBRID</td><td>BCB atomic <code>fcnt</code></td><td><code>pgbuf_fix()</code>에서 요청하는 READ/WRITE latch</td><td>Per-thread holder와 대응하는 <code>pgbuf_unfix()</code></td></tr>
         <tr><td>PostgreSQL</td><td>Shared refcount와 backend <code>PrivateRefCount</code></td><td>별도의 buffer content lock</td><td><code>ResourceOwner</code>와 명시적인 unlock/unpin</td></tr>
         <tr><td>InnoDB</td><td>Atomic <code>buf_fix_count</code></td><td>Block S/SX/X latch</td><td><code>mtr_t</code> memo가 latch를 먼저, fix를 다음에 해제</td></tr>
       </tbody>
-    </table>
+    </table></div>
     <p class="big-claim">Pin 또는 fix는 identity가 재사용되지 않도록 보호합니다. Latch 또는 content lock은 호환되지 않는 access로부터 byte를 보호합니다.</p>
   </section>
 
@@ -37,11 +37,12 @@
       <li><strong>InnoDB:</strong> disk read를 old region에 넣고 그 tail에서 역방향으로 검사합니다.</li>
     </ul>
     <div class="callout warn"><strong>이 구조만으로 winner를 정할 수 없습니다.</strong> Workload, effective capacity, cleaning, contention은 여전히 측정해야 합니다.</div>
-    <p><a href="../lessons/0018a-compare-replacement-policies.html">상세 replacement-policy Lesson 열기 →</a></p>
-    <p><a href="../lessons/0018-compare-three-buffer-pools.html">Lesson 18로 돌아가기 →</a></p>
+    <p><a href="../lessons/0018a-compare-replacement-policies.html">상세 replacement-policy Lecture 열기 →</a></p>
+    <p><a href="../lessons/0018-compare-three-buffer-pools.html">Lecture 18로 돌아가기 →</a></p>
   </section>
 
   <footer class="footer">내용을 떠올릴 때는 이 카드를 사용하고, 증명할 때는 pinned source와 evidence inventory를 사용하세요.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

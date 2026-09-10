@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0007 — Replace one frame</title>
+  <title>Lecture 7 — Victim eligibility and frame reuse</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0007-replace-one-frame.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0007</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0007</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Core capability · replacement</div>
-    <h1>Find space for one missing page without stealing live work</h1>
-    <p>By the end, you can tell the simple replacement story, reject an unsafe victim, and explain why the final check must happen under protection.</p>
+    <div class="eyebrow">LECTURE 7 / Replacement</div>
+    <h1>Victim eligibility and frame reuse</h1>
+    <p>A missing page needs storage. Reuse requires a protected safety decision as well as a replacement preference.</p>
     <div class="pills"><span class="pill">Invalid list first</span><span class="pill">Victim</span><span class="pill">fcnt</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Recheck</span></div>
   </header>
 
@@ -41,8 +40,8 @@
         <p class="caption">The array owns storage. The invalid and LRU links organize subsets of those stable BCB slots at runtime.</p>
         <p>At startup, <code>BCB_table</code> is allocated as a contiguous array. Initialization sets each slot's <code>next_BCB</code> to the next slot, so building the initial invalid list is <code>O(N)</code> once. The runtime allocation path does not repeat that array loop.</p>
         <p>The invalid list has one <code>invalid_top</code> pointer, a count, and a mutex. Its nodes are BCBs connected through <code>next_BCB</code>. Allocation performs an unlocked empty hint, locks and rechecks, moves the head to its next node, unlocks, then locks the returned BCB and changes it to the void zone. That is one-node <code>O(1)</code> list work—not an array scan. The <code>invalid_mutex</code> may still wait under contention, so constant work does not promise constant wall-clock latency.</p>
-        <div class="callout"><strong>Lifetime and initial population:</strong> page-buffer initialization creates this one pool-wide invalid list with <code>invalid_top = BCB[0]</code> and <code>invalid_cnt = num_buffers</code>; therefore every BCB starts on it. Runtime allocation pops entries, while failed loads and explicit invalidation can push entries back. The control object and its BCB nodes remain pool-owned until page-buffer finalization. See <a href="0003-trace-fix-convergence.html#startup-slot">Lesson 0003 for the startup BCB/frame lifetime</a> and <a href="0012b-understand-private-lru-index.html#index-space">Lesson 0012B for the default calculation</a>: under that baseline's stated assumptions, <code>num_buffers = invalid_cnt = 32,768</code> at initialization.</div>
-        <table>
+        <div class="callout"><strong>Lifetime and initial population:</strong> page-buffer initialization creates this one pool-wide invalid list with <code>invalid_top = BCB[0]</code> and <code>invalid_cnt = num_buffers</code>; therefore every BCB starts on it. Runtime allocation pops entries, while failed loads and explicit invalidation can push entries back. The control object and its BCB nodes remain pool-owned until page-buffer finalization. See <a href="0003-trace-fix-convergence.html#startup-slot">Lecture 0003 for the startup BCB/frame lifetime</a> and <a href="0012b-understand-private-lru-index.html#index-space">Lecture 0012B for the default calculation</a>: under that baseline's stated assumptions, <code>num_buffers = invalid_cnt = 32,768</code> at initialization.</div>
+        <div class="table-scroll"><table>
           <thead><tr><th>Operation</th><th>Structure touched</th><th>Local work</th><th>What can dominate elapsed time</th></tr></thead>
           <tbody>
             <tr><td>Build initial free population</td><td>Contiguous BCB array linked once.</td><td><code>O(N)</code> at page-buffer initialization.</td><td>One-time allocation/initialization; not miss-path cost.</td></tr>
@@ -54,19 +53,19 @@
             <tr><td>Load requested old page</td><td>DWB lookup or data-volume read into the frame.</td><td>Not usefully described as <code>O(1)</code> CPU work.</td><td>Storage/cache path and decryption; commonly much larger than pointer updates.</td></tr>
             <tr><td>Publish loaded BCB</td><td>Hash-chain head and one LRU insertion.</td><td>Each link insertion is <code>O(1)</code>.</td><td>Hash/LRU mutex contention.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <h3>“1,000 links” means node visits inside one already-selected LRU</h3>
         <img class="diagram" src="../../assets/lru-scan-depth-vs-list-count.svg" alt="A candidate-index queue selecting one private LRU, followed by a bounded walk of at most one thousand BCB nodes inside that list's LRU3, with private-list count shown as a separate quantity">
         <p class="caption">Do not merge three quantities: private-list count <code>P</code>, selected-list LRU3 population <code>Z3</code>, and this call's visit count <code>K</code>.</p>
         <p><code>pgbuf_get_victim_from_lru_list(thread_p, lru_idx)</code> receives one LRU index. It locks that list, starts at its <code>victim_hint</code> or <code>bottom</code>, and follows <code>bufptr-&gt;prev_BCB</code> through LRU3. Entering the loop body once means visiting one BCB position: inspect it, perhaps try-lock and recheck it, then return or advance one link. The body runs at most 1,000 times in this call. It does not inspect 1,000 LRU descriptors and does not produce 1,000 victims.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Quantity</th><th>What it counts</th><th>Is 1,000 its maximum?</th></tr></thead>
           <tbody>
             <tr><td><code>P</code></td><td>Private LRU descriptors in the pool-wide LRU array.</td><td><strong>No.</strong> Automatic server mode uses <code>MAX_NTRANS + 50</code>. An explicit positive value is 4–4,050 at this baseline.</td></tr>
             <tr><td><code>Z3</code></td><td>BCB nodes in the selected list's LRU3.</td><td><strong>No.</strong> It can exceed 1,000, up to the pool population.</td></tr>
             <tr><td><code>K</code></td><td>BCB positions visited by this selected-list invocation.</td><td><strong>Yes.</strong> <code>K ≤ min(reachable Z3, 1000)</code>, often less because success or another exit stops early.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>The higher-level policy can make several selected-list calls: the caller's private LRU, an advertised other-private list, an advertised shared list, and a final own-list fallback. Each call gets a fresh 1,000-node budget. If a selected private list is over quota, the helper may also demote <code>M</code> boundary nodes before the scan; that work is outside <code>MAX_DEPTH</code>. The helper is therefore <code>O(M + K)</code>, while the linked-list scan itself is bounded <code>O(K)</code>.</p>
         <div class="callout"><strong>Why other 1,000s are misleading:</strong> pinned source separately caps explicitly configured <em>shared</em> <code>num_LRU_chains</code> at 1,000 and targets roughly 1,000 buffers per automatically sized shared list. Neither constant caps private LRU count.</div>
         <div class="callout"><strong>About “how long”:</strong> the pinned source gives operation bounds, not a calibrated nanosecond value. It records <code>PSTAT_PB_ALLOC_BCB</code>, <code>PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM</code>, list-search timers, and condition-wait time. Use those counters or a focused benchmark for a target workload; do not convert Big-O into a latency claim.</div>
@@ -75,23 +74,23 @@
 
       <section class="section" id="aout">
         <div class="eyebrow">01B · Separate historical topic</div>
-        <h2>Continue to the dedicated AOUT lesson only when you need dormant ghost history</h2>
-        <p>The pinned startup path forces AOUT off, so it is not part of the active safety path taught here. Lesson 0012A owns the ghost-entry structure, dormant admission branches, historical disablement, and revival boundary.</p>
-        <p><a href="0012a-understand-aout-ghost-history.html">Open Lesson 0012A: dormant AOUT ghost history →</a></p>
+        <h2>Dormant AOUT history is a required curriculum topic in Lecture 12A</h2>
+        <p>The pinned startup path forces AOUT off, so it is not part of the active safety path taught here. Lecture 0012A owns the ghost-entry structure, dormant admission branches, historical disablement, and revival boundary.</p>
+        <p><a href="0012a-understand-aout-ghost-history.html">Open Lecture 0012A: dormant AOUT ghost history →</a></p>
       </section>
 
       <section class="section" id="slot">
         <div class="eyebrow">02 · Understand what is reused</div>
         <h2>The slot stays; the page identity changes</h2>
         <p>A BCB is a reusable descriptor paired with one reusable frame. Their pool addresses are stable. The current resident page is named by <code>bcb-&gt;vpid</code>, and that identity changes only through the controlled detach/load sequence.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Time</th><th>Same pool slot</th><th>What it represents</th></tr></thead>
           <tbody>
             <tr><td>Before replacement</td><td><code>BCB[42] + frame[42]</code></td><td>Resident page A.</td></tr>
             <tr><td>After safe detach</td><td><code>BCB[42] + frame[42]</code></td><td>No resident page; available for controlled reuse.</td></tr>
             <tr><td>After the miss loads</td><td><code>BCB[42] + frame[42]</code></td><td>Resident page B.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <div class="callout"><strong>Keep this distinction:</strong> victimizing A removes A's in-memory mapping. It does not deallocate logical page A from the database.</div>
       </section>
 
@@ -100,7 +99,7 @@
         <h2>Ask four plain questions before reuse</h2>
         <img class="diagram" src="../../assets/victim-eligibility.svg" alt="A safety gate checking ownership, dirty and flushing state, waiters and transient flags, then protected revalidation before victim selection">
         <p class="caption">LRU position suggests a candidate. It never overrides the safety gate.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Question</th><th>Unsafe example</th><th>Why reuse must wait</th></tr></thead>
           <tbody>
             <tr><td>Is anybody using it?</td><td><code>fcnt &gt; 0</code></td><td>A successful fixer still owns the frame and may use its borrowed pointer.</td></tr>
@@ -108,7 +107,7 @@
             <tr><td>Is another operation waiting or claiming it?</td><td><code>next_wait_thrd != NULL</code> or an avoid-victim flag</td><td>A waiter, invalidation, or direct-victim handoff still refers to this BCB.</td></tr>
             <tr><td>Are these facts still true now?</td><td>The earlier scan was made without BCB protection.</td><td>A fixer or flusher may have changed the candidate after it was first observed.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <div class="callout warn"><strong>Shortcut to reject:</strong> <code>fcnt == 0</code> means “no current fixer was counted.” It does not also mean clean, not flushing, no waiters, and safely detached.</div>
       </section>
 
@@ -130,42 +129,41 @@
         <h2>The allocator waits until a reusable BCB becomes available</h2>
         <p>If every candidate is fixed, dirty, flushing, waiting, or in another handoff, victim search returns nothing. A flush can make a dirty candidate clean. An unfix can end ownership. In server mode, an allocating thread may wait for a directly assigned victim and retry if that candidate is fixed again before consumption.</p>
         <p>The LRU policy decides which safe candidate to prefer and how to make progress. It may change across revisions. The safety rule does not: a successful fixer or incomplete flush generation must not survive the slot's rebind.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Mechanism</th><th>Its job</th></tr></thead>
           <tbody>
             <tr><td>Safety gate</td><td>Answers “may this slot be reused now?”</td></tr>
             <tr><td>LRU zones, private/shared lists, quota, hints</td><td>Order or locate candidates that may be preferable.</td></tr>
             <tr><td>Flush and direct-victim progress</td><td>Help produce an eligible slot when the first search finds none.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="source-note"><strong>Implementation policy:</strong> wait/retry is pinned at <code>page_buffer.c:8236–8403</code>. Detailed LRU lifetime, quota, and direct-victim behavior belong to the linked Core and Advanced pages, not this first mental model.</p>
       </section>
 
       <section class="section" id="verbs">
         <div class="eyebrow">06 · Keep replacement verbs distinct</div>
         <h2>Unfix, flush, and victimize solve different debts</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Operation</th><th>What ends</th><th>What can remain</th></tr></thead>
           <tbody>
             <tr><td>Unfix</td><td>One caller's fix debt.</td><td>The page can remain resident and dirty.</td></tr>
             <tr><td>Flush</td><td>One copied generation's propagation debt.</td><td>The page can remain resident, and a newer generation can be dirty.</td></tr>
             <tr><td>Victimize</td><td>The old resident mapping, after every safety condition passes.</td><td>The logical page still exists on storage.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">07 · Pause and reason</div>
         <h2>Choose the only possible candidate</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now repeat the decision without the table." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="page B misses -> invalid list is empty, so inspect LRU candidates -> A is fixed and cannot be stolen -> C is dirty and must be flushed before reuse -> D is clean and unfixed but is only a candidate, not yet a victim -> acquire BCB protection and recheck ownership, waiters, and avoid-victim state -> if still clear, detach D and rebind the slot for B; otherwise continue searching -> LRU preference never overrides the safety gate." data-concepts='[{"label":"invalid list before victim search","terms":["invalid","first","empty","lru"]},{"label":"fixed candidate rejected","terms":["a","fixed","owner","reject"]},{"label":"dirty candidate needs flush","terms":["c","dirty","flush"]},{"label":"candidate differs from victim","terms":["d","candidate","not yet","victim"]},{"label":"protected final recheck","terms":["lock","protect","recheck","waiter"]},{"label":"detach then rebind","terms":["detach","rebind","b"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>Page B misses and the invalid list is empty. The LRU scan sees A with <code>fcnt = 1</code>, C with <code>DIRTY</code>, and D with <code>fcnt = 0</code>, no dirty/flushing flag, and no observed waiter.</p>
           <p>Which pages are immediately rejected? Is D already a victim, or only a candidate? Describe the final protected step before D's slot can represent B.</p>
-          <textarea aria-label="Your replacement decision" placeholder="Start at the invalid list, reject A and C, then explain D's protected recheck and rebind."></textarea>
-          <button type="button" data-check>Check replacement story</button>
-          <button type="button" class="secondary" data-reveal>Reveal model spine</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>page B misses -> invalid list is empty, so inspect LRU candidates -> A is fixed and cannot be stolen -> C is dirty and must be flushed before reuse -> D is clean and unfixed but is only a candidate, not yet a victim -> acquire BCB protection and recheck ownership, waiters, and avoid-victim state -> if still clear, detach D and rebind the slot for B; otherwise continue searching -> LRU preference never overrides the safety gate.</p></details></div>
       </section>
 
       <section class="section" id="primary-reading">
@@ -173,12 +171,12 @@
         <h2>Trace one candidate from scan to detach</h2>
         <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>page_buffer.c:9399–9478</code></a>. Mark four points: cheap prefilter, BCB try-lock, protected victimizable check, and LRU removal.</p>
         <p><a href="../../learning/05-replace-one-frame.md">Open the canonical replacement chapter →</a> · <a href="../../advanced/replacement-progress.md">Open advanced progress details →</a></p>
-        <p><a href="0006-flush-one-generation.html">← Return to Lesson 0006</a> · <a href="0008-defend-a-safe-change.html">Continue to Lesson 0008 →</a></p>
+        <p><a  href="0006c-follow-maintenance-and-pacing.html">← Previous lecture 6C</a> · <a  href="0012-prove-replacement-progress.html">Continue to Lecture 12 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#story">1. Why a slot is needed</a>
       <a href="#structures-cost">1A. Structures and cost</a>
       <a href="#aout">1B. AOUT route</a>
@@ -192,12 +190,13 @@
       <hr>
       <a href="../reference/replacement-safety-card.html">Replacement-safety card</a>
       <a href="../../learning/05-replace-one-frame.md">Canonical Core page</a>
-      <a href="0008-defend-a-safe-change.html">Next lesson →</a>
-      <a href="../index.html">Course home</a>
+      <a href="0012-prove-replacement-progress.html">Next lecture →</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
   <footer class="footer">If replacement still feels abstract, retell only this chain: invalid slot → safe candidate → protected recheck → detach → rebind.</footer>
-</main>
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0006c-follow-maintenance-and-pacing.html">← Lecture 6C · Replacement maintenance and I/O pacing</a><a rel="next" href="0012-prove-replacement-progress.html">Lecture 12 · Replacement state and progress →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

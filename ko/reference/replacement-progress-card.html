@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID replacement progress 요약 · 한국어</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/replacement-progress-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
   <header class="hero">
     <div class="eyebrow">pressure path 리뷰용 요약</div>
@@ -116,7 +116,7 @@
     </article>
     <article class="reference-card full">
       <h2>Source 탐색 경로</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>책임</th><th>Pinned range</th></tr></thead>
         <tbody>
           <tr><td>allocation loop</td><td><code>page_buffer.c:8181–8403</code></td></tr>
@@ -129,11 +129,12 @@
           <tr><td>flush/post-flush handoff</td><td><code>page_buffer.c:10925–10952,15489–15556</code></td></tr>
           <tr><td>daemon loop</td><td><code>page_buffer.c:16972–17298</code></td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
   <footer class="footer">Canonical explanation: <a href="../../advanced/replacement-progress.md">Replacement Policy and Background Progress</a>. Primary-source derivation: <a href="../../reference/replacement-policy-quantities-and-costs.md">quantity와 cost note</a>.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

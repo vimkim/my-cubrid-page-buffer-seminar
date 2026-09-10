@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0012A — Understand dormant AOUT history</title>
+  <title>Lecture 12A — Dormant AOUT admission history</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0012a-understand-aout-ghost-history.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0012A</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0012A</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced aside · dormant admission history</div>
-    <h1>AOUT remembers the identities of evicted pages</h1>
-    <p>This separate lesson keeps dormant AOUT code from obscuring the active replacement policy.</p>
+    <div class="eyebrow">LECTURE 12A / Replacement</div>
+    <h1>Dormant AOUT admission history</h1>
+    <p>AOUT retains ghost admission metadata in the source, while pinned parameter tuning disables its operation.</p>
     <div class="pills"><span class="pill">Ghost metadata</span><span class="pill">No frame</span><span class="pill">Admission only</span><span class="pill">Forced off</span></div>
   </header>
   <div class="lesson-grid">
@@ -22,7 +21,7 @@
       <section class="section" id="answer">
         <div class="eyebrow">01 · Short answer</div>
         <h2>AOUT is disabled in the pinned server path</h2>
-        <p>The data structures remain in source, but startup forces <code>data_aout_ratio = 0.0</code>. Initialization allocates no ghost nodes, and add/lookup helpers return immediately. Active replacement is the INVALID/VOID/private/shared three-zone LRU path from Lesson 12.</p>
+        <p>The data structures remain in source, but startup forces <code>data_aout_ratio = 0.0</code>. Initialization allocates no ghost nodes, and add/lookup helpers return immediately. Active replacement is the INVALID/VOID/private/shared three-zone LRU path from Lecture 12.</p>
         <p class="big-claim">AOUT is retained, disabled admission-history code. It neither stores page bytes nor chooses a victim in the pinned build.</p>
       </section>
       <section class="section" id="entry">
@@ -38,7 +37,7 @@ hash tables = max(floor(A / 1,000), 1)</pre>
       <section class="section" id="effect">
         <div class="eyebrow">03 · Retained design</div>
         <h2>A ghost hit would change first placement after reload</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Reload context</th><th>Retained placement branch</th></tr></thead>
           <tbody>
             <tr><td>Enabled private-LRU assignment; same-private ghost hit</td><td>Current private LRU1 top</td></tr>
@@ -46,9 +45,9 @@ hash tables = max(floor(A / 1,000), 1)</pre>
             <tr><td>Enabled private-LRU assignment; different former LRU</td><td>Shared LRU2 middle</td></tr>
             <tr><td>No enabled private-LRU assignment</td><td>Shared LRU2 middle</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>This is admission ranking after load. It does not select the old victim, prove ownership, or authorize reuse. AOUT-off removes the ghost hit/miss subdivision, not the two current paths: an enabled assignment reaches private LRU1 top and no enabled assignment reaches shared LRU2 middle.</p>
-        <p><a href="0012b-understand-private-lru-index.html#first-placement">Use Lesson 0012B for the canonical first-placement explanation, including the session-to-worker handoff and why the assignment belongs to the final-unfix context rather than the page →</a></p>
+        <p><a href="0012b-understand-private-lru-index.html#first-placement">Use Lecture 0012B for the canonical first-placement explanation, including the session-to-worker handoff and why the assignment belongs to the final-unfix context rather than the page →</a></p>
       </section>
       <section class="section" id="boundary">
         <div class="eyebrow">04 · Evidence boundary</div>
@@ -57,27 +56,29 @@ hash tables = max(floor(A / 1,000), 1)</pre>
         <p>The retained comment “LRU + Aout of 2Q” describes design structure, not active startup behavior. Any revival needs concurrency, memory, policy, and measured-performance validation. Expected benefits are not measured performance claims.</p>
         <p class="source-note"><strong>Verified dormant source:</strong> <code>system_parameter.c:3463–3474,9931–9987</code>; <code>page_buffer.c:635–666,5802–5903,6885–6994,10468–10636</code>.</p>
       </section>
+<section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>Code exists, but is the policy active?</h2><p>Can the presence of AOUT structures explain a measured hit-rate change in the pinned server path?</p><details class="answer-disclosure"><summary>Explore the explanation</summary><p>Not by itself. AOUT is disabled in the pinned server path. Its dormant structures explain a possible ghost-history mechanism, not active workload behavior. Attributing a measurement to AOUT requires evidence that the measured build actually enables and executes that path.</p></details></section>
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
         <h2>Keep active policy and dormant history on separate pages</h2>
         <p><a href="../../advanced/aout-ghost-history.md">Open the canonical AOUT page →</a></p>
-        <p><a href="0012b-understand-private-lru-index.html">← Return to Lesson 0012B</a> · <a href="0013-gate-redo-by-page-lsa.html">Continue to Lesson 0013 →</a></p>
+        <p><a href="0012b-understand-private-lru-index.html">← Return to Lecture 0012B</a> · <a  href="0009-classify-latch-wait.html">Continue to Lecture 9 →</a></p>
       </section>
     </article>
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#answer">1. Active status</a>
       <a href="#entry">2. Ghost entry</a>
       <a href="#effect">3. Admission effect</a>
       <a href="#boundary">4. Revival boundary</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
-      <a href="0013-gate-redo-by-page-lsa.html">Next lesson →</a>
+      <a href="0009-classify-latch-wait.html">Next lecture →</a>
       <a href="../../advanced/aout-ghost-history.md">Canonical Advanced page</a>
-      <a href="../index.html">Course home</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
   <footer class="footer">Ask whether a replacement claim describes active code or a dormant branch before using it in a design argument.</footer>
-</main>
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0012b-understand-private-lru-index.html">← Lecture 12B · Private LRU indexes and selection</a><a rel="next" href="0009-classify-latch-wait.html">Lecture 9 · Latch queues and grant outcomes →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

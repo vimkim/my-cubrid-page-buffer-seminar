@@ -501,7 +501,7 @@ async function validateLiveDom(root, pages, pageMarkdown, baseUrl, failures) {
 
   let playwright;
   try {
-    playwright = await import("playwright");
+    playwright = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
   } catch {
     return { available: false, reason: "Playwright is not installed", pages: 0 };
   }

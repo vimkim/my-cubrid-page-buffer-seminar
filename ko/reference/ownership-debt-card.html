@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID page buffer ownership debt 요약 · 한국어</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/ownership-debt-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
   <header class="hero">
     <div class="eyebrow">ownership 리뷰용 요약</div>
@@ -42,7 +42,7 @@
     </article>
     <article class="reference-card full">
       <h2>A×2, B×1 sequence</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Event</th><th>Global</th><th>A holder</th><th>B holder</th><th>유효한 access</th></tr></thead>
         <tbody>
           <tr><td>A fix 1</td><td>1</td><td>1</td><td>—</td><td>A</td></tr>
@@ -52,7 +52,7 @@
           <tr><td>B unfix</td><td>1</td><td>1</td><td>제거</td><td>A만</td></tr>
           <tr><td>A final unfix</td><td>0</td><td>제거</td><td>제거</td><td>둘 다 불가</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card">
       <h2>Unfix와 구분할 것</h2>
@@ -76,7 +76,9 @@
     </article>
   </section>
 
-  <footer class="footer">Canonical explanation: <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a>. total, attribution, pointer lifetime이 어괋나면 teaching agent에게 질문한다.</footer>
+
+<footer class="footer">관련 소스: <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a></footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

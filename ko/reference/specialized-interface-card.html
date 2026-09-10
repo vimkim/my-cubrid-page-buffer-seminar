@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID specialized interface 참조 카드</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/specialized-interface-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · 빠른 참조</span><a href="../index.html">Course 홈</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · 빠른 참조</span><a href="../index.html">커리큘럼</a></div>
   <header class="hero">
     <div class="eyebrow">interface review용 인쇄 자료</div>
     <h1>Specialized interface 카드</h1>
@@ -36,7 +36,7 @@
     </article>
     <article class="reference-card">
       <h2>Permission 요약</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Value</th><th>올바른 취급 방법</th></tr></thead>
         <tbody>
           <tr><td>Normal fixed <code>PAGE_PTR</code></td><td>Grant된 latch/fix lifetime 안에서 사용하고, 일반 unfix로 debt를 갚습니다.</td></tr>
@@ -44,11 +44,11 @@
           <tr><td>Scan-copy <code>PAGE_PTR</code> 형태</td><td>Private snapshot입니다. Handle을 free하며 dirty, flush, unfix를 호출하지 않습니다.</td></tr>
           <tr><td>Approximate metric</td><td>가설을 세우는 데만 사용하고, 실제로 행동하기 전에는 protected path에 다시 들어가 확인합니다.</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card full">
       <h2>Pinned uncertainty 안내표</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>ID</th><th>Pinned status</th><th>Maintainer 대응</th></tr></thead>
         <tbody>
           <tr><td><code>VS-01</code></td><td>Declaration과 macro mapping은 있으나 definition이나 caller를 찾지 못했습니다.</td><td>사용할 수 없는 상태이며, optimization 선택지가 아닙니다.</td></tr>
@@ -57,7 +57,7 @@
           <tr><td><code>VS-04</code></td><td><code>pgbuf_peek_stats</code>의 prototype name에 drift가 있습니다.</td><td>이름만 보지 말고 executable semantics를 기준으로 output을 연결합니다.</td></tr>
           <tr><td><code>VS-05</code></td><td>일부 diagnostic 값은 approximate snapshot입니다.</td><td>Mutation/deallocation을 허가하는 근거로 사용하지 않습니다.</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card">
       <h2>Owner family별 경로</h2>
@@ -83,5 +83,6 @@
 
   <footer class="footer">Canonical 설명: <a href="../../advanced/specialized-interfaces.md">Specialized Interfaces and Approximate Observability</a>. 다른 revision에서는 모든 <code>VS-*</code> status를 다시 확인하세요.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

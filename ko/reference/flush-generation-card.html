@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID flush generation 참고 카드</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/flush-generation-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · 빠른 참고</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
     <div class="eyebrow">flush review용 인쇄 카드</div>
@@ -20,18 +20,18 @@
   <section class="reference-grid">
     <article class="reference-card full">
       <h2>symbol부터 정확히 읽기</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Symbol</th><th>뜻</th><th>CUBRID에 저장되는가?</th></tr></thead>
         <tbody>
           <tr><td>G</td><td>현재 flush를 위해 capture한 page-image copy입니다.</td><td>아니요. reasoning label입니다.</td></tr>
           <tr><td>G+1</td><td>G를 capture한 뒤 변경된 resident byte입니다.</td><td>아니요. reasoning label입니다.</td></tr>
           <tr><td>Page LSA</td><td>특정 page byte에 포함된 가장 최근 logged change입니다.</td><td>예. 실제 recovery coordinate입니다.</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card full">
       <h2>flag truth table</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>DIRTY</th><th>FLUSHING</th><th>해석</th></tr></thead>
         <tbody>
           <tr><td>0</td><td>0</td><td>resident propagation debt가 없고 진행 중인 copy도 없습니다.</td></tr>
@@ -39,7 +39,7 @@
           <tr><td>0</td><td>1</td><td>G가 진행 중이며 copy 이후 변경은 아직 없습니다.</td></tr>
           <tr><td>1</td><td>1</td><td>G가 진행 중이고, 더 새로운 resident G+1도 flush해야 합니다.</td></tr>
         </tbody>
-      </table>
+      </table></div>
       <p><strong>DIRTY = 기다리는 작업.</strong> <strong>FLUSHING = 진행 중인 copied work.</strong></p>
     </article>
     <article class="reference-card full">
@@ -91,7 +91,7 @@
     </article>
     <article class="reference-card full">
       <h2>source route와 claim boundary</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Responsibility</th><th>Pinned source</th><th>Evidence 용도</th></tr></thead>
         <tbody>
           <tr><td>Flush actor와 daemon 역할</td><td><code>page_buffer.c:16972–17302</code></td><td>Verified mechanism이며 revision-bound topology</td></tr>
@@ -101,11 +101,12 @@
           <tr><td>WAL force gate</td><td><code>transaction/log_page_buffer.c:4150–4189</code></td><td>Verified mechanism</td></tr>
           <tr><td>이른 TDE/DWB preparation concern</td><td><code>page_buffer.c:10809–10828</code></td><td>Open finding VS-12이며 fault injection 필요</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
   <footer class="footer">Canonical explanation: <a href="../../learning/04-flush-one-generation.md">Flush One Generation</a>. Selection owner, 실행 thread, generation, persistence boundary를 구분하세요.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>학습 0016 — failure proof 완성하기</title>
+  <title>강의 16 — 실패 시 cleanup과 근거</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0016-close-a-failure-proof.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · 학습 0016</span><a href="../index.html">학습 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced 역량 · failure proof</div>
-    <h1>Cleanup이 끝난 뒤 남은 debt를 확인한다</h1>
-    <p>이 학습을 마치면 exceptional return을 risk에 맞는 proof plan으로 바꾸고 evidence가 어디까지인지 정확히 말할 수 있다.</p>
+    <div class="eyebrow">LECTURE 16 / 복구와 특수 경로</div>
+    <h1>실패 시 cleanup과 근거</h1>
+    <p>소스에서 확인한 return은 조사의 출발점입니다. 남은 상태, retry 동작, 영향 범위를 통해 결론을 뒷받침합니다.</p>
     <div class="pills"><span class="pill">Branch 도달</span><span class="pill">Unwind 대기</span><span class="pill">두 ledger 검증</span><span class="pill">Retry</span><span class="pill">Impact 입증</span></div>
   </header>
 
@@ -48,7 +47,7 @@
       <section class="section" id="ownership-ledger">
         <div class="eyebrow">03 · Acquisition/load ledger</div>
         <h2>Failure path에서도 ownership accounting을 보존합니다</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>State</th><th>Unwind 후 검증할 postcondition</th></tr></thead>
           <tbody>
             <tr><td>Global <code>fcnt</code></td><td>Success 또는 retry ownership으로 설명되지 않는 grant가 남지 않는다.</td></tr>
@@ -58,7 +57,7 @@
             <tr><td>Resident identity</td><td>Hash mapping, VPID, provisional BCB, load owner가 일치한다.</td></tr>
             <tr><td>Retry</td><td>뒤이은 fix가 duplicate identity나 debt 없이 locate/load/acquire할 수 있다.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p><code>VS-10</code>은 <code>dwb_read_page()</code> error 뒤의 cold-load ledger가 필요하다. <code>VS-11</code>은 grant와 unwind seam이 서로 다르므로 normal hit, lock-free hit, 깨어난 waiter를 따로 확인해야 한다.</p>
         <p class="source-note"><strong>Level 1 source route:</strong> <code>VS-10</code>은 <code>page_buffer.c:8510–8515</code>, 실패할 수 있는 holder allocation은 <code>6000–6055</code>이며 각 grant site를 별도로 추적한다.</p>
       </section>
@@ -66,7 +65,7 @@
       <section class="section" id="flush-ledger">
         <div class="eyebrow">04 · Flush-generation ledger</div>
         <h2>Failure 뒤에도 propagation debt가 retry 가능해야 한다</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>State</th><th>Unwind 후 검증할 postcondition</th></tr></thead>
           <tbody>
             <tr><td>DIRTY / FLUSHING</td><td>Capture된 G는 retry 가능하고 concurrent G+1은 독립적으로 dirty 상태를 유지한다.</td></tr>
@@ -76,7 +75,7 @@
             <tr><td>TDE / DWB / I/O resource</td><td>실패할 수 있는 각 resource에는 cleanup owner가 하나 있다.</td></tr>
             <tr><td>Retry</td><td>뒤이은 flush, checkpoint, victim 작업이 byte나 WAL floor를 잃지 않고 progress한다.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p><code>VS-12</code>에는 TDE-copy와 DWB-slot injection이 각각 필요하다. Concurrent post-copy re-dirty도 별도 schedule로 검증해야 한다. Single-thread failure로는 G+1을 다룰 수 없다.</p>
         <p class="source-note"><strong>Level 1 source route:</strong> generation setup과 early return은 <code>page_buffer.c:10795–10828</code>, 일반적인 이후 rollback은 <code>10908–10923</code>.</p>
       </section>
@@ -84,7 +83,7 @@
       <section class="section" id="seam">
         <div class="eyebrow">05 · 가장 높은 relevant seam</div>
         <h2>주장하는 harm을 실제로 만들 수 있는 boundary를 통과한다</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Claim</th><th>최소한 필요한 seam</th><th>약한 대체물</th></tr></thead>
           <tbody>
             <tr><td>Allocator/read/crypto/write unwind</td><td>실제 owner path 안의 정확한 dependency를 inject하고 post-state를 검증한다.</td><td>Leaf function만 mocking하기.</td></tr>
@@ -92,7 +91,7 @@
             <tr><td>Victim progress</td><td>실제 candidate, rejection, 최종 victim을 관찰하는 pressure.</td><td>Pressure 없는 pool에서 allocation 성공만 보기.</td></tr>
             <tr><td>Durable recovery consequence</td><td>명시한 WAL, DWB, home-page boundary에서 crash 후 recover.</td><td>Crash 없이 성공한 flush return.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="receipt">
@@ -112,16 +111,15 @@
       <section class="section" id="retrieval">
         <div class="eyebrow">07 · Retrieval 연습</div>
         <h2>약한 “stress 통과” 결론을 강화한다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="Source reading은 Level 1만 충족한다. 통과한 unscheduled stress run은 target branch 실행이나 safety를 입증하지 않는다 -> registry candidate 하나를 골라 실제 owner path의 정확한 fallible dependency를 inject한다 -> branch marker로 reachability를 입증한다 -> callee 및 outer cleanup, wakeup, retry가 끝난 뒤 surviving state를 확인한다 -> VS-10 또는 VS-11에서는 fcnt, latch tuple, holder, wait request, identity/load record, 이후 acquisition/release를 검증한다 -> VS-12에서는 DIRTY, FLUSHING, oldest-unflush LSA, copied generation과 DWB ownership, waiter wakeup, 이후 flush/victim/checkpoint/restart를 검증하며 G+1 re-dirty는 따로 test한다 -> production defect라 부르기 전에 consumer-visible impact를 입증한다 -> 변경 branch에서 다시 trace하고 실행하며 mutable status는 uncertainty registry에만 둔다." data-concepts='[{"label":"stress는 reachability나 safety를 입증하지 못함","terms":["stress","branch","reach","not prove"]},{"label":"정확한 risk-boundary injection","terms":["inject","exact","callee","owner"]},{"label":"전체 unwind 후 검사","terms":["cleanup","wakeup","retry","after"]},{"label":"올바른 state ledger 선택","terms":["fcnt","holder","identity","dirty","flushing","oldest"]},{"label":"concurrent generation schedule 분리","terms":["g+1","re-dirty","separate","schedule"]},{"label":"impact와 current revision은 별개","terms":["impact","current","revision","registry"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>문제</h3>
           <p>Maintainer가 “Stress test를 10,000번 돌렸는데 failure가 없었으니 exceptional path는 안전하다”고 말한다. <code>VS-10</code>, <code>VS-11</code>, <code>VS-12</code> 중 하나를 고르세요.</p>
-          <p><strong>할 일:</strong> stress run이 입증하지 못한 것을 설명하고, 필요한 정확한 injection seam, post-unwind ledger, retry/liveness check, impact test, current-branch revalidation을 제시하라.</p>
-          <textarea aria-label="Failure-proof plan 답안" placeholder="Candidate → current proof level → exact seam → after-unwind ledger → retry/impact → unsupported claim → current-branch check 순서로 적으세요."></textarea>
-          <button type="button" data-check>Proof 범위 확인</button>
-          <button type="button" class="secondary" data-reveal>Model route 보기</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>답안을 chat에 붙여 넣으세요. Probe가 실제 state owner까지 도달하는지, conclusion이 얻은 evidence 범위에서 멈추는지 확인하겠습니다.</p>
+          <p><strong>생각할 점:</strong> stress run이 입증하지 못한 것을 설명하고, 필요한 정확한 injection seam, post-unwind ledger, retry/liveness check, impact test, current-branch revalidation을 제시하라.</p>
+
+
+
+          <details class="answer-disclosure"><summary>설명 펼치기</summary><p>Source reading은 Level 1만 충족한다. 통과한 unscheduled stress run은 target branch 실행이나 safety를 입증하지 않는다 -> registry candidate 하나를 골라 실제 owner path의 정확한 fallible dependency를 inject한다 -> branch marker로 reachability를 입증한다 -> callee 및 outer cleanup, wakeup, retry가 끝난 뒤 surviving state를 확인한다 -> VS-10 또는 VS-11에서는 fcnt, latch tuple, holder, wait request, identity/load record, 이후 acquisition/release를 검증한다 -> VS-12에서는 DIRTY, FLUSHING, oldest-unflush LSA, copied generation과 DWB ownership, waiter wakeup, 이후 flush/victim/checkpoint/restart를 검증하며 G+1 re-dirty는 따로 test한다 -> production defect라 부르기 전에 consumer-visible impact를 입증한다 -> 변경 branch에서 다시 trace하고 실행하며 mutable status는 uncertainty registry에만 둔다.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -129,7 +127,7 @@
         <h2>Status는 registry에서, proof는 owner path에서 찾는다</h2>
         <p><a href="../../advanced/failure-and-proof-obligations.md">Failure Unwind and Open Proof Obligations</a>와 <a href="../../unresolved-or-version-sensitive-findings.md">uncertainty registry</a>를 함께 읽으세요. ID 하나를 고르고 Canonical mechanism을 따라간 뒤 injection을 설계하기 전에 before/after ledger를 작성합니다.</p>
         <p><a href="../reference/failure-proof-ledger-card.html">인쇄용 failure-proof ledger 열기 →</a></p>
-        <p><a href="0017-defend-the-module-live.html">학습 0017로 계속하기 →</a></p>
+        <p><a  href="0008-defend-a-safe-change.html">다음: 강의 8 →</a></p>
         <p><a href="0015-route-a-specialized-interface.html">← 학습 0015로 돌아가기</a></p>
       </section>
     </article>
@@ -151,7 +149,8 @@
     </nav>
   </div>
 
-  <footer class="footer">Fault seam, cleanup owner, surviving-state claim, evidence boundary가 불분명하면 언제든 teaching agent에게 질문하세요.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0015-route-a-specialized-interface.html">← Lecture 15 · 특수 접근 경로의 contract</a><a rel="next" href="0008-defend-a-safe-change.html">Lecture 8 · 변경 영향과 검증 →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

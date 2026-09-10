@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>학습 0018 — 세 buffer pool 비교하기</title>
+  <title>강의 18 — 세 buffer pool의 책임 분담</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0018-compare-three-buffer-pools.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · 학습 0018</span><a href="../index.html">학습 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">선택 비교 · 단순한 mental model 하나</div>
-    <h1>같은 safety 작업을 서로 다른 위치에서 수행한다</h1>
-    <p>먼저 공통 responsibility 두 개를 익힌다. 그런 다음 engine마다 ownership 문장 하나와 replacement 문장 하나만 기억한다.</p>
+    <div class="eyebrow">LECTURE 18 / 다른 엔진과의 비교</div>
+    <h1>세 buffer pool의 책임 분담</h1>
+    <p>CUBRID, PostgreSQL, InnoDB는 공통된 안전 문제를 서로 다른 ownership 및 cleanup 메커니즘으로 해결합니다.</p>
     <div class="pills"><span class="pill">Keep frame</span><span class="pill">Protect bytes</span><span class="pill">Who cleans up?</span><span class="pill">How choose a victim?</span></div>
   </header>
 
@@ -31,29 +30,29 @@
       <section class="section" id="scenario">
         <div class="eyebrow">02 · 기억할 세 문장</div>
         <h2>Worker 하나가 page를 빌리는 방식</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Engine</th><th>Frame protection</th><th>Byte protection</th><th>Cleanup memory</th></tr></thead>
           <tbody>
             <tr><td>CUBRID</td><td>BCB <code>fcnt</code></td><td>Normal <code>pgbuf_fix()</code>가 요청하는 READ/WRITE page latch</td><td>Per-thread holder가 기록하고 <code>pgbuf_unfix()</code>가 debt 하나를 갚는다</td></tr>
             <tr><td>PostgreSQL</td><td>Buffer pin/refcount</td><td>별도로 획득하는 content lock</td><td>Backend private refcount와 <code>ResourceOwner</code>, unlock과 unpin은 서로 별도다</td></tr>
             <tr><td>MySQL / InnoDB</td><td>Atomic <code>buf_fix_count</code></td><td>Block S/SX/X latch</td><td><code>mtr_t</code> memo가 resource를 기억하고 latch, fix 순서로 release한다</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="big-claim">CUBRID는 normal fix와 latch request를 결합한다. PostgreSQL은 pin과 content lock을 따로 노출한다. InnoDB는 state를 분리하지만 한 MTR memo가 lifetime을 소유한다.</p>
       </section>
 
       <section class="section" id="performance">
         <div class="eyebrow">03 · Replacement 한 줄 요약</div>
         <h2>모두 owned frame을 거부하지만 “hot”을 기억하는 방식이 다르다</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Engine</th><th>Replacement 그림 한 줄</th></tr></thead>
           <tbody>
             <tr><td>CUBRID</td><td>Private/shared list 안에서 page가 LRU1 → LRU2 → LRU3로 age하며 victim search는 LRU3를 본다.</td></tr>
             <tr><td>PostgreSQL</td><td>Clock hand가 pinned buffer를 건너뛰고 양수 <code>usage_count</code>를 줄인 뒤 unpinned zero를 고른다.</td></tr>
             <tr><td>InnoDB</td><td>새 read는 young/old LRU의 old 부분에 들어가고, 조건을 만족한 reuse는 young으로 올리며 candidate는 old tail에서 나온다.</td></tr>
           </tbody>
-        </table>
-        <div class="callout"><strong>Mechanism과 정확한 default가 궁금한가?</strong> <a href="0018a-compare-replacement-policies.html">Lesson 18A: replacement policy 비교</a>로 이어진다. 상세 내용을 별도 page로 분리해 기본 ownership 비교를 읽기 쉽게 유지했다.</div>
+        </table></div>
+        <div class="callout"><strong>Mechanism과 정확한 default가 궁금한가?</strong> <a href="0018a-compare-replacement-policies.html">Lecture 18A: replacement policy 비교</a>로 이어진다. 상세 내용을 별도 page로 분리해 기본 ownership 비교를 읽기 쉽게 유지했다.</div>
       </section>
 
       <section class="section" id="experiment">
@@ -70,16 +69,15 @@
       <section class="section" id="retrieval">
         <div class="eyebrow">05 · Retrieval 연습</div>
         <h2>여섯 핵심 문장을 직접 설명합니다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="공통 작업: owned frame reuse를 막고 incompatible byte access를 막는다 -> CUBRID는 normal fix, fcnt, 요청 latch, thread holder를 결합한다 -> PostgreSQL은 pin과 content lock을 분리하고 backend-local ownership을 추적한다 -> InnoDB는 buf_fix_count와 S/SX/X state를 분리하지만 MTR memo가 cleanup을 소유한다 -> replacement memory: CUBRID 세 LRU zone, PostgreSQL clock usage_count, InnoDB young/old midpoint LRU -> evidence boundary: source-backed responsibility difference이지 performance ranking은 아니다." data-concepts='[{"label":"두 공통 safety 작업","terms":["frame","reuse","bytes","protect"]},{"label":"CUBRID seam","terms":["fcnt","holder","latch"]},{"label":"PostgreSQL seam","terms":["pin","content lock","private"]},{"label":"InnoDB seam","terms":["buf_fix_count","mtr","memo"]},{"label":"세 replacement memory","terms":["lru3","usage_count","young","old"]},{"label":"benchmark winner 없음","terms":["performance","benchmark","winner"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>문제</h3>
           <p>Teammate가 “세 buffer pool의 차이를 가장 짧고 정확하게 설명해 달라”고 묻는다.</p>
-          <p><strong>할 일:</strong> 공통 safety 작업 두 개, engine별 ownership 문장 하나와 replacement 문장 하나를 말한 뒤 speed ranking이 아닌 이유를 설명하라.</p>
-          <textarea aria-label="세 engine 비교 답안" placeholder="두 safety 작업 → CUBRID → PostgreSQL → InnoDB → 세 replacement memory → performance winner 없음."></textarea>
-          <button type="button" data-check>비교 범위 확인</button>
-          <button type="button" class="secondary" data-reveal>Model route 보기</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>답안을 chat에 붙여 넣으세요. 각 API analogy가 실제로 담당하는 responsibility를 말했는지 확인하겠습니다.</p>
+          <p><strong>생각할 점:</strong> 공통 safety 작업 두 개, engine별 ownership 문장 하나와 replacement 문장 하나를 말한 뒤 speed ranking이 아닌 이유를 설명하라.</p>
+
+
+
+          <details class="answer-disclosure"><summary>설명 펼치기</summary><p>공통 작업: owned frame reuse를 막고 incompatible byte access를 막는다 -> CUBRID는 normal fix, fcnt, 요청 latch, thread holder를 결합한다 -> PostgreSQL은 pin과 content lock을 분리하고 backend-local ownership을 추적한다 -> InnoDB는 buf_fix_count와 S/SX/X state를 분리하지만 MTR memo가 cleanup을 소유한다 -> replacement memory: CUBRID 세 LRU zone, PostgreSQL clock usage_count, InnoDB young/old midpoint LRU -> evidence boundary: source-backed responsibility difference이지 performance ranking은 아니다.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -112,7 +110,8 @@
     </nav>
   </div>
 
-  <footer class="footer">API analogy가 어떤 safety responsibility를 가리는지 불분명하면 teaching agent에게 질문하세요.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0017-defend-the-module-live.html">← Lecture 17 · Maintainer 통합과 technical defense</a><a rel="next" href="0018a-compare-replacement-policies.html">Lecture 18A · 엔진별 replacement policy →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

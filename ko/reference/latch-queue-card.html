@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID latch queue 요약 · 한국어</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/latch-queue-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
   <header class="hero">
     <div class="eyebrow">latch 리뷰용 요약</div>
@@ -24,7 +24,7 @@
     </article>
     <article class="reference-card">
       <h2>Outcome ledger</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Outcome</th><th>Debt?</th></tr></thead>
         <tbody>
           <tr><td>Immediate grant</td><td>있음</td></tr>
@@ -33,7 +33,7 @@
           <tr><td>Wakeup + holder 기록</td><td>있음</td></tr>
           <tr><td>Timeout/interrupt</td><td>없음</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card">
       <h2>Zero-crossing 규칙</h2>
@@ -67,7 +67,7 @@
     </article>
     <article class="reference-card full">
       <h2>Source 탐색 경로</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>책임</th><th>Pinned range</th></tr></thead>
         <tbody>
           <tr><td>grant/wait 판단</td><td><code>page_buffer.c:6278–6634</code></td></tr>
@@ -75,11 +75,12 @@
           <tr><td>zero-crossing wakeup</td><td><code>page_buffer.c:7452–7590</code></td></tr>
           <tr><td>pinned revision의 timeout parameter</td><td><code>system_parameter.c:5308–5319</code></td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
   <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. queue에 들어가 있다고 ownership을 얻은 것은 아니다.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

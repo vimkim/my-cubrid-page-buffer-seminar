@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0010 — Preserve state through promotion</title>
+  <title>Lecture 10 — Promotion and page-state continuity</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0010-revalidate-after-promotion.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0010</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0010</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced capability · latch promotion</div>
-    <h1>Preserve debt and page state through promotion</h1>
-    <p>By the end, you can explain why queue-head promotion preserves successful B-tree observations, and exactly which failure outcomes require restart.</p>
+    <div class="eyebrow">LECTURE 10 / Concurrency</div>
+    <h1>Promotion and page-state continuity</h1>
+    <p>Dedicated promotion transforms existing ownership; its successful handoff and failure outcomes determine what the caller may retain.</p>
     <div class="pills"><span class="pill">READ</span><span class="pill">WRITE</span><span class="pill">Only fixer</span><span class="pill">Promoter head</span><span class="pill">Same debt</span><span class="pill">Same page state</span></div>
   </header>
 
@@ -44,14 +43,14 @@
         <h2>ONLY_READER fails in place; SHARED_READER may transfer and wait</h2>
         <img class="diagram" src="../../assets/promotion-condition-choice.svg" alt="Decision tree comparing only-reader and shared-reader promotion conditions">
         <p>When this thread owns every current fix, both conditions do exactly the same thing: change READ to WRITE in place and preserve its holder count. The difference appears only when another reader exists.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Starting state</th><th><code>PGBUF_PROMOTE_ONLY_READER</code></th><th><code>PGBUF_PROMOTE_SHARED_READER</code></th></tr></thead>
           <tbody>
             <tr><td>This thread owns all fixes</td><td>Promote in place; same pointer and debt.</td><td>The same in-place result.</td></tr>
             <tr><td>Another reader; no promoter waiting</td><td>Return <code>ER_PAGE_LATCH_PROMOTE_FAIL</code>. Keep READ ownership, pointer, and debt.</td><td>Subtract this thread's <code>k</code> fixes, remove its holder, queue WRITE(<code>k</code>) at the head, and sleep. Successful grant restores a WRITE holder with count <code>k</code>.</td></tr>
             <tr><td>A promoter is already first</td><td>Reject the second promotion and keep READ ownership.</td><td>The same rejection; only one continuity-preserving promoter may wait.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>Choose ONLY_READER when blocking while related pages are held could create a multi-page latch cycle and the caller can restart or skip. Choose SHARED_READER when waiting is acceptable and successful queue-head handoff must preserve the inspected page state. The condition selects contended behavior, not the fast path.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> condition definition is at <code>page_buffer.h:205–209</code>; only-owner test, conditional failure, ownership subtraction, and blocking transfer are at <code>page_buffer.c:2905–3030</code>.</p>
       </section>
@@ -61,7 +60,7 @@
         <h2>Start optimistic under READ; pay for WRITE only when structure must change</h2>
         <p>The B-tree insertion source states the strategy directly. Non-leaf traversal normally assumes that no structural change is required and uses READ latches. Only after inspecting a node can it know that maximum-key metadata must change or a split is required. At that point it needs WRITE on the <em>same already-fixed page</em>.</p>
         <p>Promotion matches that transition: keep the same logical fix debt when uncontended, or make contention an explicit outcome that the access method can handle. A nested WRITE fix would mean a second acquisition, would add another unfix obligation, and—if it waited—would use the ordinary queue path while the B-tree may still hold related pages. It does not express “upgrade this existing traversal ownership.”</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>B-tree situation</th><th>Chosen policy</th><th>Reason visible in source</th></tr></thead>
           <tbody>
             <tr><td>Non-leaf node probably unchanged</td><td>Traverse with READ first.</td><td>Avoid exclusive latches on the common no-change path.</td></tr>
@@ -70,7 +69,7 @@
             <tr><td>Promotion cannot preserve the optimistic path</td><td>Restart traversal with WRITE latches.</td><td>The exceptional retry guarantees progress without repeating optimistic failure indefinitely.</td></tr>
             <tr><td>Leaf likely to change</td><td>Fix WRITE directly.</td><td>The source says promotion can perform poorly when change is expected almost every time.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="big-claim">So “promotion is cheaper when there is no contention” is partly right, but incomplete. Its decisive value is semantic: preserve existing debt and observations, provide promotion-specific refusal/blocking policy, and let B-tree restart safely when the optimistic READ path cannot be promoted.</p>
         <p class="source-note"><strong>Caller-owned rationale:</strong> the insertion design comment and split path are pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/btree.c#L28307-L28393"><code>btree.c:28307–28393</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/btree.c#L28638-L28696"><code>28638–28696</code></a>. The delete/merge path applies the same optimistic READ, conditional promotion, skip-or-restart policy at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/btree.c#L31672-L31866"><code>31672–31866</code></a>.</p>
         <p><a href="../../reference/read-to-write-promotion-rationale.md">Open the complete pinned-source and history research note →</a></p>
@@ -81,7 +80,7 @@
         <h2>Blocking success has an internal gap but a protected handoff</h2>
         <img class="diagram" src="../../assets/promotion-outcomes.svg" alt="In-place, conditional, blocking, and error outcomes of READ-to-WRITE latch promotion">
         <p class="caption">The caller's holder disappears while waiting, but head priority prevents a writer or victim from interleaving before successful grant.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Outcome</th><th>Ownership transition</th><th>Old observations?</th></tr></thead>
           <tbody>
             <tr><td>In-place success</td><td>Caller is the only fixer; latch becomes WRITE without release.</td><td>Remain continuously protected, subject to caller invariants.</td></tr>
@@ -89,7 +88,7 @@
             <tr><td>Blocking success</td><td>Caller’s fixes leave global <code>fcnt</code>; the same count waits at the head and returns in a new WRITE holder.</td><td>Preserved: active owners were readers and queued writers could not pass the promoter.</td></tr>
             <tr><td>Blocking failure or interrupt</td><td>After surrendering ownership, returns with null page pointer and no restored debt.</td><td>Cannot be used or unfixed; restart from a valid acquisition.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <div class="callout warn"><strong>Separate unresolved seam:</strong> candidate <code>VS-11</code> concerns holder-allocation failure <em>after</em> a latch/fix grant. It does not fit the clean hard-blocking-failure row above; fault injection is still required to determine what state survives. Do not infer rollback merely from a null return.</div>
       </section>
 
@@ -142,18 +141,17 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">08 · Retrieval practice</div>
+        <div class="eyebrow">08 · Pause and reason</div>
         <h2>Prove the continuity bridge</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="the caller has a READ holder with nested fix count two and another reader exists -> SHARED_READER promotion subtracts the caller's two fixes, removes its holder, and inserts one promoter at the queue head with saved count two -> remaining active owners are readers and ordinary writers cannot pass the promoter -> the last reader's zero-crossing grants WRITE to the promoter with no writer or victim gap -> a new holder receives the same count two and pre-promotion page-byte observations remain protected, so B-tree continues without re-search -> conditional promotion failure instead retains READ ownership, while hard blocking failure nulls the pointer and requires restart -> a second promoter is rejected to protect the first promoter's page-state continuity." data-concepts='[{"label":"blocking transfer and head queue","terms":["subtract","remove","queue","head","saved"]},{"label":"writers cannot interleave","terms":["reader","writer","cannot pass","head"]},{"label":"zero-crossing preserves page state","terms":["zero","grant","same","state"]},{"label":"same debt count after grant","terms":["same","count","two","not four"]},{"label":"B-tree continues observations","terms":["need_split","node_header","continue","no re-search"]},{"label":"failure outcomes differ","terms":["conditional","retains","hard","null","restart"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>Thread T holds two nested READ fixes, locates slot 7, and computes an insertion decision. Another reader holds the page. T requests blocking promotion to WRITE.</p>
-          <p><strong>Your task:</strong> trace both debt ledgers; prove why queued writers cannot change slot 7 before successful grant; explain why B-tree may continue using the decision; then contrast conditional failure and hard blocking failure.</p>
-          <textarea aria-label="Your promotion audit" placeholder="Trace ownership, queue position, page-state continuity, then each failure outcome."></textarea>
-          <button type="button" data-check>Check promotion audit</button>
-          <button type="button" class="secondary" data-reveal>Reveal model route</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>Paste your answer into the chat. I will check debt conservation, queue-head continuity, outcome classification, and caller responsibility before recording Advanced progress.</p>
+          <p><strong>Consider:</strong> trace both debt ledgers; prove why queued writers cannot change slot 7 before successful grant; explain why B-tree may continue using the decision; then contrast conditional failure and hard blocking failure.</p>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>the caller has a READ holder with nested fix count two and another reader exists -> SHARED_READER promotion subtracts the caller's two fixes, removes its holder, and inserts one promoter at the queue head with saved count two -> remaining active owners are readers and ordinary writers cannot pass the promoter -> the last reader's zero-crossing grants WRITE to the promoter with no writer or victim gap -> a new holder receives the same count two and pre-promotion page-byte observations remain protected, so B-tree continues without re-search -> conditional promotion failure instead retains READ ownership, while hard blocking failure nulls the pointer and requires restart -> a second promoter is rejected to protect the first promoter's page-state continuity.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -161,12 +159,12 @@
         <h2>Mark the exact point where continuity is preserved or lost</h2>
         <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2842-L3050"><code>page_buffer.c:2842–3050</code></a>. Annotate only-fixer detection, conditional exits that retain READ, fix-count subtraction, promoter head insertion, protected wakeup, same-count holder recording, and the hard-failure pointer nulling.</p>
         <p><a href="../reference/promotion-restart-card.html">Open the printable promotion-restart card →</a></p>
-        <p><a href="0009-classify-latch-wait.html">← Return to Lesson 0009</a> · <a href="0011-rebuild-after-ordered-refix.html">Continue to Lesson 0011 →</a></p>
+        <p><a href="0009-classify-latch-wait.html">← Return to Lecture 0009</a> · <a href="0011-rebuild-after-ordered-refix.html">Continue to Lecture 0011 →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#meaning">1. Promotion meaning</a>
       <a href="#why-api">2. Why a dedicated API</a>
       <a href="#condition-choice">2A. ONLY versus SHARED</a>
@@ -181,12 +179,13 @@
       <hr>
       <a href="../reference/promotion-restart-card.html">Promotion-restart card</a>
       <a href="../../advanced/acquisition-concurrency.md">Canonical Advanced page</a>
-      <a href="0011-rebuild-after-ordered-refix.html">Next lesson →</a>
-      <a href="../index.html">Course home</a>
+      <a href="0011-rebuild-after-ordered-refix.html">Next lecture →</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever promotion outcome, debt transfer, queue-head continuity, or restart ownership is unclear.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0009-classify-latch-wait.html">← Lecture 9 · Latch queues and grant outcomes</a><a rel="next" href="0011-rebuild-after-ordered-refix.html">Lecture 11 · Ordered refix and revalidation →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

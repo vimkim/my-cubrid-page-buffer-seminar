@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID replacement-safety reference card</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/replacement-safety-card.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
     <div class="eyebrow">Print for replacement review</div>
     <h1>Victim eligibility card</h1>
@@ -21,7 +21,7 @@
     <article class="reference-card full">
       <h2>BCB identity in one sentence</h2>
       <p><strong>Stable slot, one current VPID:</strong> a BCB/frame address is reused serially—A, detached, then B—never as two resident page identities at once.</p>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Question</th><th>Answer</th></tr></thead>
         <tbody>
           <tr><td>Can many threads hold it?</td><td>Yes, for the same current page when latch rules permit.</td></tr>
@@ -29,7 +29,7 @@
           <tr><td>Can it be in private and shared LRUs simultaneously?</td><td>No. One link pair plus one encoded list index represent one membership. A move removes to VOID before adding to the other list.</td></tr>
           <tr><td>Why protect the handoff?</td><td>The scan only nominates a pointer. BCB try-lock and recheck establish current all-clear state, then detach returns the BCB still locked so an old A-based decision cannot act after ownership/state change or rebind to B.</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card full">
       <h2>Eligibility gates policy</h2>
@@ -77,7 +77,7 @@
     </article>
     <article class="reference-card full">
       <h2>Review worksheet</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Observation</th><th>Hard predicate or policy?</th><th>Protection needed?</th><th>Stale risk</th><th>Decision</th></tr></thead>
         <tbody>
           <tr><td><code>fcnt == 0</code></td><td>Hard, incomplete sample</td><td>Final check: yes</td><td>New owner/transient right</td><td>Continue gates</td></tr>
@@ -86,11 +86,11 @@
           <tr><td>Under-quota private LRU</td><td>Policy</td><td>Policy-specific</td><td>Quota/list change</td><td>Rank only if eligible</td></tr>
           <tr><td>Protected all-clear</td><td>Hard handoff</td><td>Held now</td><td>Bounded by protocol</td><td>May detach</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card full">
       <h2>Source and evidence route</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Question</th><th>Pinned source or route</th><th>Claim strength</th></tr></thead>
         <tbody>
           <tr><td>Ordinary victim selection and handoff</td><td><code>page_buffer.c:9293–9538</code></td><td>Verified mechanism</td></tr>
@@ -98,11 +98,13 @@
           <tr><td>LRU, quota, daemons, direct victims</td><td><code>advanced/replacement-progress.md</code></td><td>Implementation policy</td></tr>
           <tr><td>Existing workload</td><td><code>source-inventory.md</code></td><td>Runtime observation: no eviction forced</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
-  <footer class="footer">Canonical explanation: <a href="../../learning/05-replace-one-frame.md">Replace One Frame</a>. Ask the teaching agent before weakening any gate.</footer>
+
+<footer class="footer">Related sources: <a href="../../learning/05-replace-one-frame.md">Replace One Frame</a></footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

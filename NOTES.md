@@ -1,21 +1,21 @@
-# Teaching notes
+# Seminar authoring notes
 
-- The outcome is whole-module maintainer understanding plus a defensible team presentation, not passive familiarity with the source.
-- Author teaching material in English and use the canonical vocabulary from `CONTEXT.md`.
-- Teach problem -> contract -> state owner and guard -> bounded source path. Never teach `page_buffer.c` in file order.
-- Build storage strength through retrieval, spacing, and later interleaving of caller, flush, and replacement scenarios.
-- Keep model answers available, but ask the learner to explain consequences and counterexamples rather than copy wording.
-- Do not create a learning record for exposure. Record only demonstrated understanding, prior knowledge, corrected misconceptions, or a confirmed mission change.
-- Another AI agent is improving this workspace concurrently. Re-check `git status` before every patch; do not edit canonical guide Markdown, validation code, or pre-existing/concurrently created SVGs during this teaching flow.
-- The first lesson is both an orientation win and a diagnostic: the learner's 90-second teach-back will establish the next lesson's difficulty.
-- The workspace is a browserless remote Linux server reached over SSH. Never use `xdg-open`; serve lessons on loopback and give the learner an SSH port-forward command plus an exact browser URL.
-- Introduce conceptual notation in plain language before symbolic timelines. In particular, define G/G+1 as reasoning labels—not stored counters—and teach the DIRTY/FLUSHING truth table before introducing LSAs.
-- Define documentation-only labels before using them: `VS-*` is an uncertainty-registry ID and a case packet is a bounded review exercise. Distinguish a stable reusable BCB slot from its one current VPID, many compatible holders from many identities, and movement between LRUs from simultaneous membership.
-- Keep the next required action explicit. Later lessons may be previewed, but direct the learner through Core in dependency order and advance only after retrieval feedback; reference cards support later lookup rather than replacing the lesson loop.
-- On 2026-09-02 the learner reported reading Lessons 1–9. Treat this as exposure, not mastery. The next checkpoint is one integrated Core synthesis; record demonstrated concepts and assign a narrow repair or Lesson 10 from that evidence.
-- The complete teaching route is prepared through Lesson 16 plus Lesson 17 rehearsal. Do not bypass the current Core synthesis checkpoint; later readiness still requires closed-book delivery, live document navigation, adversarial questions, and teammate feedback.
-- The current checkpoint has a dedicated `reference/core-synthesis-studio.html`. Its automatic detector is coverage-only; learning evidence still comes from the learner's pasted explanation and teacher feedback.
-- `reference/course-coverage-matrix.html` audits every Core, Advanced, playbook, evidence, and rehearsal capability against its teaching route and required learner artifact. It must continue to distinguish prepared material from demonstrated capability.
-- For every teaching question, show the model answer with the prompt so the learner can compare immediately.
-- Ask multiple questions in each batch rather than advancing one question per chat turn. Still request answers in the learner's own words so recognition is not treated as demonstrated retrieval.
-- The learner requested an explicit PostgreSQL/InnoDB comparison and probable performance-improvement analysis. Keep this as an optional late lens after the CUBRID mechanism: compare responsibilities rather than API names, and label holder lookup or nested-atomic ideas as hypotheses until a release-build benchmark isolates them.
+## Audience and ownership
+
+Write directly to participants. Explain the problem, contract, state owner and guard, then the bounded source path. Questions invite reasoning about consequences and counterexamples; native disclosures provide model explanations. Presenter pacing and facilitation belong in [presenter-runbook.md](presenter-runbook.md), outside participant navigation. That separation is editorial, not access control.
+
+The [accepted design](docs/seminar-curriculum-design.md) and [ADR 0005](docs/adr/0005-make-html-an-audience-facing-seminar-curriculum.md) govern the HTML. The English Markdown guide remains governed by [maintainer-guide-notes.md](maintainer-guide-notes.md). Its canonical explanations, source inventory, and uncertainty registry retain ownership of technical claims.
+
+## Editing a page
+
+1. Update English and Korean together. Korean sentences should read naturally while retaining established database terminology, evidence labels, and exact source identifiers. Preserve qualifications beside their claims.
+2. Keep mechanism depth and source routes. Define documentation-only notation before use: G/G+1 are reasoning labels, not stored counters; VS-* identifies an uncertainty-registry entry. Distinguish stable BCB storage from current VPID, compatible holders from identities, and sequential LRU movement from simultaneous membership.
+3. Retain established URLs and anchors. The curriculum's dependency order, rather than filename order, owns previous/next lecture navigation. Landing and syllabus pages expose the same eight phases; topic references remain reachable independently.
+4. Use shared layout A styles and presentation controls. Reading and no-JavaScript modes expose the complete explanation; presentation mode focuses one section without auto-advance. Native details work without application scripts. Preserve safety qualifications in the visible explanation.
+5. Review both pages against all six axes in the design. Run both aggregate validators and their tests when changing validation. Browser checks cover reading, projection, mobile width, answer disclosure, and no-JavaScript access. A missing browser gate is unavailable, not passed.
+
+The teaching-pages.json manifest remains the pairing and human language-review registry. Editing wording invalidates old fingerprint receipts. Automation may print fingerprints and report checks, but only an actual Korean-capable review can supply a review receipt. Reading history, keyword matches, and prototype preference are not language review or participant mastery evidence.
+
+## Curriculum maintenance
+
+All Core and Advanced content is required. Lectures can expand over multiple meetings with no total time limit. Cross-engine comparisons are late, responsibility-based lenses; performance ideas remain hypotheses until supported by controlled evidence. The [coverage audit](docs/curriculum-coverage.md) belongs to authors, not the participant topic library.

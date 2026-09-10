@@ -3,35 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0006 — Flush one generation</title>
+  <title>Lecture 6 — Flush generations and WAL ordering</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0006-flush-one-generation.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0006</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0006</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Core capability · propagation</div>
-    <h1>Flushing: move one page image safely toward disk</h1>
-    <p>Learn the purpose and actors first. Then separate checkpoint selection from the WAL safety rule.</p>
+    <div class="eyebrow">LECTURE 6 / Mutation and durability</div>
+    <h1>Flush generations and WAL ordering</h1>
+    <p>A completed flush belongs to one copied image. Newer resident changes, checkpoint selection, and persistence require separate reasoning.</p>
     <div class="pills"><span class="pill">Flush actors</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Checkpoint</span><span class="pill">WAL</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="flush-purpose">
-        <div class="eyebrow">Start here · The entire lesson in one picture</div>
+        <div class="eyebrow">Start here · The entire lecture in one picture</div>
         <h2>DIRTY records the gap between memory and disk</h2>
         <p class="big-claim"><strong>Flush</strong> means: make a stable copy of a changed resident page and send that copy toward persistent page storage.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Place</th><th>State</th><th>Why it matters</th></tr></thead>
           <tbody>
             <tr><td>Buffer frame in memory</td><td>New page bytes</td><td>Fast, but lost if the process or machine loses volatile memory.</td></tr>
             <tr><td>Page's home location</td><td>Older page bytes</td><td>The durable page copy has not caught up yet.</td></tr>
             <tr><td>BCB <code>DIRTY</code></td><td>Set</td><td>Records the unfinished job: the resident change still needs propagation.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>A flush pays that propagation debt. It helps a checkpoint limit recovery work, helps shutdown move dirty pages out, and makes a clean unfixed frame eligible for replacement. Flush is <em>not</em> commit, unfix, eviction, or page deletion. A successfully flushed page may remain in memory.</p>
         <div class="callout"><strong>Shortest mental model:</strong> <code>DIRTY</code> means “there is page work to do.” <code>FLUSHING</code> means “a copied version is doing that work now.”</div>
       </section>
@@ -42,7 +41,7 @@
         <img class="diagram" src="../../assets/dirty-page-flush-actors.svg" alt="Four independent page-buffer daemon roles and the checkpoint, caller, write-owner, and standalone paths that converge on one generation flush">
         <p class="caption"><code>DIRTY</code> publishes unpaid propagation work. It does not assign the page to a master thread or immediately start I/O.</p>
         <p class="big-claim">Pinned server mode attempts to create four <em>independent, single-thread daemon objects</em>—not one master plus four flush slaves. Only <code>pgbuf-page-flush</code> selects and submits dirty victim candidates in the background.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Page-buffer daemon</th><th>Job</th><th>Starts dirty-page I/O?</th></tr></thead>
           <tbody>
             <tr><td><code>pgbuf-maintain</code></td><td>Adjust quotas, then call an intended direct-victim backup whose pinned loops are blocked as written (<code>VS-20</code>).</td><td>No.</td></tr>
@@ -50,7 +49,7 @@
             <tr><td><code>pgbuf-page-post-flush</code></td><td>Finish BCB state and victim handoff for an already-submitted flush.</td><td>No new page write.</td></tr>
             <tr><td><code>pgbuf-flush-control</code></td><td>Refresh the post-write soft-pacing token budget; it may be absent if initialization fails.</td><td>No.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <h3>The daemon is only one selection path</h3>
         <ul>
           <li>The separate log-checkpoint daemon/caller runs <code>pgbuf_flush_checkpoint()</code> in its own thread and selects pages by <code>oldest_unflush_lsa</code>.</li>
@@ -60,7 +59,7 @@
         </ul>
         <p>These paths converge on the same generation mechanism: claim <code>FLUSHING</code>, copy stable G, force WAL, submit via DWB or direct I/O, then complete or restore retryable state. DWB has two separate downstream helper daemons; they are not part of the four page-buffer roles. With DWB disabled, the selected page-buffer actor calls <code>fileio_write()</code> itself.</p>
         <p class="source-note"><strong>Verified mechanism; revision-bound topology:</strong> daemon tasks and creation are pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16972-L17255"><code>page_buffer.c:16972–17255</code></a>; checkpoint selection is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4173-L4610"><code>4173–4610</code></a>; deferred-owner flush is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6815-L6890"><code>6815–6890</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8810-L8901"><code>8810–8901</code></a>; stand-alone fallback is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11678-L11702"><code>11678–11702</code></a>.</p>
-        <p><a href="0006a-understand-page-buffer-daemons.html">Continue to Lesson 6A for every daemon's trigger, shared state, handoff, and cost →</a></p>
+        <p><a href="0006a-understand-page-buffer-daemons.html">Continue to Lecture 6A for every daemon's trigger, shared state, handoff, and cost →</a></p>
         <p><a href="../../reference/dirty-page-flush-actors.md">Open the complete actor and lifecycle research note →</a></p>
       </section>
 
@@ -69,8 +68,8 @@
         <h2>The writer must be allowed to continue</h2>
         <p>The flush copies the current resident bytes into private memory. We call that frozen copy <strong>G</strong>. After the copy is made, another writer may change the resident page again. We call the newer resident bytes <strong>G+1</strong>.</p>
         <img class="diagram" src="../../assets/two-lsa-timeline.svg" alt="A copied generation G and a newer resident generation G plus one">
-        <p class="caption"><code>G</code> and <code>G+1</code> are teaching labels, not counters stored in the BCB.</p>
-        <table>
+        <p class="caption"><code>G</code> and <code>G+1</code> are reasoning labels, not counters stored in the BCB.</p>
+        <div class="table-scroll"><table>
           <thead><tr><th>State</th><th>Plain meaning</th></tr></thead>
           <tbody>
             <tr><td><code>DIRTY=1, FLUSHING=0</code></td><td>The resident page needs a flush.</td></tr>
@@ -78,7 +77,7 @@
             <tr><td><code>DIRTY=1, FLUSHING=1</code></td><td>G is in flight and a newer resident G+1 also needs a later flush.</td></tr>
             <tr><td><code>DIRTY=0, FLUSHING=0</code></td><td>No resident propagation debt and no copy in flight.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="why-flushing">
@@ -106,13 +105,13 @@
       <section class="section" id="lsas">
         <div class="eyebrow">05 · The two LSA labels</div>
         <h2>One says “how new”; the other says “how far back”</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Value</th><th>Question</th><th>Used for</th></tr></thead>
           <tbody>
             <tr><td>Copied page LSA</td><td>What is the latest logged change included in these copied bytes?</td><td>Force WAL through this value before writing the copy.</td></tr>
             <tr><td><code>oldest_unflush_lsa</code></td><td>Where did this still-unpropagated dirty run begin?</td><td>Decide whether this page belongs to checkpoint work and bound the next redo start.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>Example: disk has P through 80. P changes at log 100, then 140, then 170 without any completed flush. Its page LSA moves <code>100 → 140 → 170</code>. Its <code>oldest_unflush_lsa</code> stays <code>100</code>, because the change at 100 is still not represented by a completed page propagation.</p>
         <div class="callout"><strong>Memory aid:</strong> page LSA is the <em>right edge</em> of the copied image's log history. Oldest-unflush is the <em>left edge</em> of the unpaid dirty history.</div>
       </section>
@@ -135,13 +134,13 @@
         <p class="caption">Checkpoint selection and WAL ordering use different values. “Newer than the checkpoint boundary” does not mean “unsafe to flush.”</p>
 
         <h3>What is actually unsafe?</h3>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Mistake</th><th>Crash consequence</th></tr></thead>
           <tbody>
             <tr><td>P still has unpaid oldest 100, but checkpoint records a redo start later than 100.</td><td>Recovery may begin too late and never replay the missing change at 100. Merely leaving P dirty is not itself corrupt if the returned minimum keeps redo at or before 100; the false progress claim is the dangerous part.</td></tr>
             <tr><td>A copied page with page LSA 220 reaches page storage while durable WAL ends at 150.</td><td>The surviving page contains a change whose explaining log may be absent. This is the actual write-ahead-order violation.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="source-note"><strong>Verified mechanism:</strong> the field meaning and initialization are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L541"><code>page_buffer.c:541</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5041-L5071"><code>5041–5071</code></a>. Checkpoint selection is at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4172-L4186"><code>4172–4186</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4247-L4257"><code>4247–4257</code></a>; revalidation and the smallest remaining lower bound are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4533-L4600"><code>4533–4600</code></a>. The log manager uses the result at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L6974-L7030"><code>log_page_buffer.c:6974–7030</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L7217-L7225"><code>7217–7225</code></a>.</p>
       </section>
 
@@ -161,13 +160,13 @@
         <div class="eyebrow">08 · Copy generation and DWB routing</div>
         <h2>DWB changes the physical write route</h2>
         <p>The private copy isolates G from later writers. DWB is an optional protected destination for that copy. When DWB is unavailable or the page is temporary, the page-buffer path uses direct <code>fileio_write()</code> instead. Flush still happens, and logged non-temporary pages still obey WAL.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>DWB path</th><th>Direct path</th></tr></thead>
           <tbody>
             <tr><td>Add copied G to DWB; later DWB processing propagates it to the home volume.</td><td>Write copied G to its home data-volume location.</td></tr>
             <tr><td>Provides DWB torn/incomplete-page protection.</td><td>Does not provide that DWB repair source.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="source-note"><strong>Verified mechanism:</strong> stable copy and route choice are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>; WAL gating and DWB/direct submission are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>.</p>
       </section>
 
@@ -180,35 +179,34 @@
         <p class="source-note"><strong>Verified mechanism:</strong> ordinary failure reconstruction is at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>. Earlier TDE/DWB preparation returns remain routed to <code>VS-12</code> in the uncertainty registry rather than being declared a proven defect here.</p>
       </section>
 
-      <section class="section" id="failure">
+      <section class="section" id="failure" data-audience-checkpoint>
         <div class="eyebrow">10 · Quick checkpoint</div>
         <h2>Answer these before reading source</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Question</th><th>Answer</th></tr></thead>
           <tbody>
-            <tr><td>Boundary 150, oldest 100, page LSA 170?</td><td>Select for checkpoint; force WAL through 170; write the current copy.</td></tr>
-            <tr><td>Boundary 150, oldest 200, page LSA 220?</td><td>Checkpoint may skip. Flushing anyway is safe extra work if WAL is forced through 220.</td></tr>
-            <tr><td>What must never happen?</td><td>Claim redo may start after unpaid history, or let a page image reach storage before its copied page LSA is durable in WAL.</td></tr>
+            <tr><td>Boundary 150, oldest 100, page LSA 170?</td><td><details class="answer-disclosure"><summary>Open the explanation</summary><p>Select for checkpoint; force WAL through 170; write the current copy.</p></details></td></tr>
+            <tr><td>Boundary 150, oldest 200, page LSA 220?</td><td><details class="answer-disclosure"><summary>Open the explanation</summary><p>Checkpoint may skip. Flushing anyway is safe extra work if WAL is forced through 220.</p></details></td></tr>
+            <tr><td>What must never happen?</td><td><details class="answer-disclosure"><summary>Open the explanation</summary><p>Claim redo may start after unpaid history, or let a page image reach storage before its copied page LSA is durable in WAL.</p></details></td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">11 · Retrieval practice</div>
+        <div class="eyebrow">11 · Pause and reason</div>
         <h2>Explain the two boundaries without mixing them</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it once without looking." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="DIRTY does not assign one flusher -> the page-flush daemon, checkpoint actor, explicit caller, WRITE owner, or standalone caller can select or execute work -> every actor converges on one generation protocol -> flush copies one resident generation -> oldest-unflush selects whether dirty history crosses the checkpoint boundary -> copied page LSA sets how far WAL must be forced -> oldest newer than the checkpoint boundary may be skipped but is safe to flush early -> unsafe means false redo progress or page-before-WAL ordering -> concurrent G+1 remains DIRTY after G completes." data-concepts='[{"label":"flush actor","terms":["daemon","checkpoint","caller","owner"]},{"label":"flush purpose","terms":["copy","resident","propagation"]},{"label":"checkpoint selection","terms":["oldest","boundary","select"]},{"label":"WAL target","terms":["page lsa","force","wal"]},{"label":"optional extra flush","terms":["newer","skip","extra","safe"]},{"label":"actual violations","terms":["redo","late","before","violation"]},{"label":"concurrent generation","terms":["g+1","dirty","remain"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>First explain why DIRTY does not identify one flusher and name two actors that could execute this work. Then use checkpoint boundary 150: P has oldest-unflush 200 and page LSA 220. May checkpoint skip P? May another flusher write P? If so, how far must WAL be forced? Contrast this with oldest-unflush 100.</p>
-          <textarea aria-label="Your checkpoint and WAL explanation" placeholder="Explain selection first, then WAL ordering, then the failure cases."></textarea>
-          <button type="button" data-check>Check coverage</button>
-          <button type="button" class="secondary" data-reveal>Reveal model spine</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>DIRTY does not assign one flusher -> the page-flush daemon, checkpoint actor, explicit caller, WRITE owner, or standalone caller can select or execute work -> every actor converges on one generation protocol -> flush copies one resident generation -> oldest-unflush selects whether dirty history crosses the checkpoint boundary -> copied page LSA sets how far WAL must be forced -> oldest newer than the checkpoint boundary may be skipped but is safe to flush early -> unsafe means false redo progress or page-before-WAL ordering -> concurrent G+1 remains DIRTY after G completes.</p></details></div>
       </section>
 
       <section class="section" id="evidence">
         <div class="eyebrow">Evidence boundary</div>
-        <h2>What this lesson establishes</h2>
+        <h2>What this lecture establishes</h2>
         <p>The pinned source establishes the ordinary control flow, selection predicate, WAL gate, flag transitions, and ordinary rollback described here. It does not by itself prove physical device persistence timing or every early-error runtime effect. Name the observed boundary instead of saying only “written.”</p>
       </section>
 
@@ -217,12 +215,12 @@
         <h2>Read the simple model first, then trace the implementation</h2>
         <p>Trace pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>. Mark claim, copy, WAL gate, submission, and completion. Use the <a href="../../learning/04-flush-one-generation.md">canonical Core page</a> for the full evidence boundary.</p>
         <p><a href="../reference/flush-generation-card.html">Open the printable flush-generation card →</a></p>
-        <p><a href="0005-audit-a-logged-mutation.html">← Return to Lesson 0005</a> · <a href="0007-replace-one-frame.html">Continue to Lesson 0007 →</a></p>
+        <p><a href="0005-audit-a-logged-mutation.html">← Return to Lecture 0005</a> · <a  href="0006a-understand-page-buffer-daemons.html">Continue to Lecture 6A →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#flush-purpose">Start. What flush does</a>
       <a href="#flush-actors">1. Who flushes it</a>
       <a href="#generation-meaning">2. Why copy</a>
@@ -241,12 +239,13 @@
       <a href="../reference/flush-generation-card.html">Flush-generation card</a>
       <a href="0006a-understand-page-buffer-daemons.html">Daemon control loops</a>
       <a href="../../learning/04-flush-one-generation.md">Canonical Core page</a>
-      <a href="0007-replace-one-frame.html">Next lesson →</a>
-      <a href="../index.html">Course home</a>
+      <a href="0006a-understand-page-buffer-daemons.html">Next lecture →</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
   <footer class="footer">Keep two questions separate: which page belongs to this checkpoint, and how far must WAL be forced for the copied image?</footer>
-</main>
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0005-audit-a-logged-mutation.html">← Lecture 5 · Caller correctness and logged mutation</a><a rel="next" href="0006a-understand-page-buffer-daemons.html">Lecture 6A · Page-buffer daemon lifecycle →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

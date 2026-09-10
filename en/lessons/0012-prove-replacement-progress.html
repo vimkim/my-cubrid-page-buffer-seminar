@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0012 — Understand CUBRID replacement</title>
+  <title>Lecture 12 — Replacement state and progress</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0012-prove-replacement-progress.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0012</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0012</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced capability · replacement from first principles</div>
-    <h1>Watch one BCB become cold, become a victim, and receive another page</h1>
-    <p>Begin with INVALID and VOID, then follow one permanent BCB/frame pair through admission, cooling, protected detach, and rebinding. Lesson 12B owns the list counts, private indexes, and search order.</p>
+    <div class="eyebrow">LECTURE 12 / Replacement</div>
+    <h1>Replacement state and progress</h1>
+    <p>One permanent BCB/frame pair moves through admission, cooling, victim checks, and rebinding to another identity.</p>
     <div class="pills"><span class="pill">INVALID first</span><span class="pill">VOID is unlinked</span><span class="pill">LRU3 only</span><span class="pill">Protected recheck</span></div>
   </header>
 
@@ -32,13 +31,13 @@
         <div class="eyebrow">02 · Five list-membership states</div>
         <h2>VOID means the BCB is outside every management list</h2>
         <img class="diagram" src="../../assets/bcb-replacement-state-machine.svg" alt="One BCB moving through INVALID, VOID, LRU1, LRU2, LRU3, protected detach, and rebind">
-        <table><thead><tr><th>State</th><th>Plain meaning</th><th>Victim search?</th></tr></thead><tbody>
+        <div class="table-scroll"><table><thead><tr><th>State</th><th>Plain meaning</th><th>Victim search?</th></tr></thead><tbody>
           <tr><td><code>INVALID</code></td><td>On the global free/invalid singly linked list; no resident VPID.</td><td>Allocation pops it directly in O(1).</td></tr>
           <tr><td><code>VOID</code></td><td>On neither INVALID nor any LRU. It may be loading, fixed before first placement, moving, or detached under protection.</td><td>No LRU scan can see it.</td></tr>
           <tr><td><code>LRU1</code></td><td>Hot protected part of one LRU.</td><td>No.</td></tr>
           <tr><td><code>LRU2</code></td><td>Protected second-chance part.</td><td>No.</td></tr>
           <tr><td><code>LRU3</code></td><td>Cold part and the only ordinary victim-search zone.</td><td>Yes, but safety checks may reject every node.</td></tr>
-        </tbody></table>
+        </tbody></table></div>
         <p>A newly loaded resident page can remain VOID during its entire first fix. Its VPID may already be in the resident hash and its <code>fcnt</code> may be positive. VOID says nothing about identity, ownership, dirty state, or whether overwriting is legal. It says only that <code>prev_BCB</code>/<code>next_BCB</code> do not currently link the BCB into INVALID or an LRU.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:174–216,5559–5667,6636–6994,8904–8952,15860–15986</code>.</p>
       </section>
@@ -50,7 +49,7 @@
         <ol>
           <li><strong>Startup:</strong> A is an INVALID-list node paired permanently with frame A.</li>
           <li><strong>First miss for page P:</strong> <code>pgbuf_get_bcb_from_invalid_list()</code> pops A. A becomes VOID, receives VPID P, loads P's bytes, and is fixed.</li>
-          <li><strong>First final unfix:</strong> when global <code>fcnt</code> reaches zero, the execution context's enabled private-LRU assignment selects private LRU1 top; without one, A enters shared LRU2 middle. Lesson 0012B owns the exact rule.</li>
+          <li><strong>First final unfix:</strong> when global <code>fcnt</code> reaches zero, the execution context's enabled private-LRU assignment selects private LRU1 top; without one, A enters shared LRU2 middle. Lecture 0012B owns the exact rule.</li>
           <li><strong>Cooling:</strong> later insertions make protected zones exceed their thresholds. <code>pgbuf_lru_adjust_zones()</code> demotes old boundary nodes LRU1 → LRU2 → LRU3. Time alone does not move A.</li>
           <li><strong>Second chance:</strong> if P is fixed again, a final unfix from LRU3 normally boosts A to LRU1. A must cool again.</li>
           <li><strong>Victim:</strong> if A stays clean and idle in LRU3, a selected scan may lock and detach it to protected VOID.</li>
@@ -63,7 +62,7 @@
         <div class="eyebrow">04 · Will BCB A be a victim?</div>
         <h2>LRU3 is only the first eligibility checkpoint</h2>
         <img class="diagram" src="../../assets/one-bcb-victim-decision.svg" alt="Decision path that either skips one LRU3 BCB or detaches it as a victim">
-        <table><thead><tr><th>BCB A now</th><th>Result now</th><th>Why</th></tr></thead><tbody>
+        <div class="table-scroll"><table><thead><tr><th>BCB A now</th><th>Result now</th><th>Why</th></tr></thead><tbody>
           <tr><td>INVALID</td><td>Allocate directly, not a victim</td><td>No old resident page exists.</td></tr>
           <tr><td>VOID, LRU1, or LRU2</td><td>Not inspected</td><td>Ordinary victim search follows only one LRU3 chain.</td></tr>
           <tr><td>LRU3 + <code>DIRTY</code></td><td>Skip</td><td>Changed bytes must be flushed successfully first.</td></tr>
@@ -73,7 +72,7 @@
           <tr><td>LRU3 + direct-victim flag</td><td>Skip ordinary scan</td><td>Another allocator handoff refers to A.</td></tr>
           <tr><td>LRU3 + BCB try-lock failure</td><td>Skip this visit</td><td>The scan never blocks on A while holding the LRU mutex.</td></tr>
           <tr><td>Clean idle LRU3, no flags/waiters, mutex and protected recheck succeed</td><td><strong>Detach A</strong></td><td>A changes LRU3 → VOID with the BCB mutex retained.</td></tr>
-        </tbody></table>
+        </tbody></table></div>
         <p><code>pgbuf_get_victim_from_lru_list()</code> receives one already selected LRU index. It starts at <code>victim_hint</code> or bottom and follows <code>prev_BCB</code> through at most 1,000 BCB nodes. It does not scan 1,000 lists or all transactions. Private threshold demotions <code>D</code> can happen before this bounded walk.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:221–263,9256–9538,16217–16228</code>.</p>
       </section>
@@ -82,7 +81,7 @@
         <div class="eyebrow">05 · Private is a policy domain</div>
         <h2>List membership is not transaction ownership</h2>
         <p>A session borrows one already-existing private-list ID; it does not receive a private cache. Multiple sessions may share the list, another domain may fix its BCBs, and releasing an assignment does not drain them.</p>
-        <p><a href="0012b-understand-private-lru-index.html">Continue in Lesson 12B for why the default is 152, the local and full index ranges, assignment lifetime, movement, activity, and exact private/shared victim-search order →</a></p>
+        <p><a href="0012b-understand-private-lru-index.html">Continue in Lecture 12B for why the default is 152, the local and full index ranges, assignment lifetime, movement, activity, and exact private/shared victim-search order →</a></p>
       </section>
 
       <section class="section" id="progress">
@@ -95,33 +94,35 @@
         <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:8181–8403,9067–9253,10925–10952,15420–15652,16972–17255</code>.</p>
       </section>
 
-      <section class="section" id="practice">
+      <section class="section" id="practice" data-audience-checkpoint>
         <div class="eyebrow">07 · Check your model</div>
         <h2>Can BCB A be reused now?</h2>
         <p>Start with A on INVALID. Load page P into A, final-unfix it, demote it to LRU3, then consider three variants: A is clean and idle; A is DIRTY; another thread fixes A just before the scan. For each variant, name the current list/zone, the first rejecting field or lock, and the event required before A can be rebound to page Q.</p>
-        <div class="callout"><strong>Model spine:</strong> INVALID avoids victimization → VOID is unlinked, not free → only LRU3 is searched → flags/owners/waiters/try-lock/final recheck decide → detach to VOID precedes hash removal → the fixed pair receives Q.</div>
+        <details class="answer-disclosure"><summary>Open the explanation</summary><div class="callout"><strong>Model spine:</strong> INVALID avoids victimization → VOID is unlinked, not free → only LRU3 is searched → flags/owners/waiters/try-lock/final recheck decide → detach to VOID precedes hash removal → the fixed pair receives Q.</div></details>
       </section>
 
+<section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>An unfixed page is still dirty</h2><p>A BCB has zero fixes and belongs to LRU3, but it is DIRTY. Can the allocator reuse it immediately?</p><details class="answer-disclosure"><summary>Explore the explanation</summary><p>No. Zero fixes and LRU3 membership are necessary checks, not a complete safety proof. Dirty bytes must not be discarded. Victim selection also checks current flags, owners, waiters, and protected state; progress may require flushing and retrying before a safe frame exists.</p></details></section>
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
         <h2>Trace only four functions first</h2>
-        <p>Read <code>pgbuf_allocate_bcb()</code>, <code>pgbuf_get_victim()</code>, <code>pgbuf_get_victim_from_lru_list()</code>, and <code>pgbuf_victimize_bcb()</code>. Then use Lesson 12B for the index and list-selection model, or the canonical Markdown for the full policy and cost map.</p>
+        <p>Read <code>pgbuf_allocate_bcb()</code>, <code>pgbuf_get_victim()</code>, <code>pgbuf_get_victim_from_lru_list()</code>, and <code>pgbuf_victimize_bcb()</code>. Then use Lecture 12B for the index and list-selection model, or the canonical Markdown for the full policy and cost map.</p>
         <p><a href="../../advanced/replacement-progress.md">Open the canonical replacement page →</a></p>
-        <p><a href="0011-rebuild-after-ordered-refix.html">← Lesson 0011</a> · <a href="0012b-understand-private-lru-index.html">Continue to Lesson 0012B: private LRU indexes →</a></p>
+        <p><a  href="0007-replace-one-frame.html">← Previous lecture 7</a> · <a href="0012b-understand-private-lru-index.html">Continue to Lecture 0012B: private LRU indexes →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#purpose">1. Why replace?</a><a href="#states">2. INVALID and VOID</a><a href="#trip">3. One BCB lifetime</a>
       <a href="#decision">4. Victim scenarios</a><a href="#private">5. Private-domain bridge</a><a href="#progress">6. No safe victim</a>
       <a href="#practice">7. Check the model</a><a href="#primary-reading">Primary reading</a>
       <hr>
-      <a href="0012b-understand-private-lru-index.html">Private-LRU lesson →</a>
-      <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a><a href="../index.html">Course home</a>
+      <a href="0012b-understand-private-lru-index.html">Private-LRU lecture →</a>
+      <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a><a href="../index.html">Curriculum</a>
     </nav>
   </div>
-  <footer class="footer">Ask whenever a state word is unclear; replacement is easiest when identity, list membership, ownership, and durability are kept separate.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0007-replace-one-frame.html">← Lecture 7 · Victim eligibility and frame reuse</a><a rel="next" href="0012b-understand-private-lru-index.html">Lecture 12B · Private LRU indexes and selection →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID redo/recovery 요약 · 한국어</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/redo-recovery-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">코스 홈</a></div>
   <header class="hero">
     <div class="eyebrow">recovery 리뷰용 요약</div>
@@ -43,7 +43,7 @@
     </article>
     <article class="reference-card">
       <h2>Page LSA가 140일 때</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Record</th><th>Action</th></tr></thead>
         <tbody>
           <tr><td>120</td><td>skip</td></tr>
@@ -51,7 +51,7 @@
           <tr><td>170</td><td>apply; page LSA → 170; DIRTY</td></tr>
           <tr><td>170 redo 반복</td><td>skip</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card">
       <h2>일반화하지 말 것</h2>
@@ -65,7 +65,7 @@
     </article>
     <article class="reference-card full">
       <h2>Source 탐색 경로</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>책임</th><th>Pinned range</th></tr></thead>
         <tbody>
           <tr><td>checkpoint coordination</td><td><code>log_page_buffer.c:6901–7406</code></td></tr>
@@ -74,11 +74,12 @@
           <tr><td>apply, LSA, dirty, cleanup</td><td><code>log_recovery_redo.hpp:587–668</code></td></tr>
           <tr><td>representative allocation ordering</td><td><code>file_manager.c:5420–5590</code></td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
   <footer class="footer">Canonical explanation: <a href="../../advanced/recovery-and-lifecycle.md">Recovery, Allocation State, and Module Lifecycle</a>. LSA가 같으면 skip하고, exceptional fetch의 의미는 recovery가 소유한다.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

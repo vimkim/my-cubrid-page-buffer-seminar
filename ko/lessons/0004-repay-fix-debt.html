@@ -3,19 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0004 — fix debt 갚기</title>
+  <title>강의 4 — Fix debt와 release</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
   <script defer src="../../assets/teach-ledger.js"></script>
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0004-repay-fix-debt.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0004</span><a href="../index.html">강의 홈</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0004</span><a href="../index.html">강의 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">Core capability · ownership accounting</div>
-    <h1>성공한 fix마다 debt 하나씩 갚기</h1>
-    <p>이 lesson을 마치면 nested fix, matching unfix, 같은 pointer value가 얽힌 상황에서도 global ownership과 per-thread ownership을 정확히 맞춰 볼 수 있습니다.</p>
+    <div class="eyebrow">LECTURE 4 / 획득과 소유권</div>
+    <h1>Fix debt와 release</h1>
+    <p>Fix가 성공할 때마다 release 책임이 하나 생깁니다. Global ledger와 thread별 ledger로 nested ownership을 추적합니다.</p>
     <div class="pills"><span class="pill">fcnt</span><span class="pill">Holder</span><span class="pill">Nested fix</span><span class="pill">PAGE_PTR</span><span class="pill">Unfix</span><span class="pill">Reuse</span></div>
   </header>
 
@@ -34,13 +33,13 @@
         <h2>Global exclusion과 thread attribution은 다릅니다</h2>
         <img class="diagram" src="../../assets/ownership-ledgers.svg" alt="Global fix count와 per-thread holder debt">
         <p class="caption">이 닫힌 예에서는 3 = 2 + 1입니다. source는 각 답을 서로 다른 owner에 저장합니다.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Ledger</th><th>답하는 질문</th><th>혼자서는 답할 수 없는 질문</th></tr></thead>
           <tbody>
             <tr><td>BCB global <code>fcnt</code></td><td>모든 thread에 걸쳐 이 BCB를 보호하는 granted fix는 몇 개인가?</td><td>각 release를 어느 thread가 빚지고 있는가.</td></tr>
             <tr><td>Thread holder <code>fix_count</code></td><td>이 thread가 이 BCB에 빚진 nested debt는 몇 개인가?</td><td>다른 thread 몇 개가 이 BCB를 hold하는가.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>BCB가 holder thread의 전체 목록을 소유하는 것은 아닙니다. attribution 방향은 각 thread의 holder anchor에서 그 thread가 debt를 가진 BCB 쪽으로 향합니다.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> holder와 atomic-latch <code>fcnt</code> structure는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L488"><code>page_buffer.c:460–488</code></a>에 있고, grant update는 <code>6277–6634</code>를 통해 이루어집니다.</p>
       </section>
@@ -77,10 +76,10 @@
             <button type="button" class="secondary" data-ledger-action="reset">초기화</button>
           </div>
           <p class="feedback" data-ledger-feedback aria-live="polite"></p>
-          <table>
+          <div class="table-scroll"><table>
             <thead><tr><th>#</th><th>Event</th><th>Global</th><th>A holder</th><th>B holder</th></tr></thead>
             <tbody data-ledger-log></tbody>
-          </table>
+          </table></div>
         </div>
         <div class="callout"><strong>예상 sequence:</strong> global count는 1, 2, 3, 2, 1, 0입니다. A holder는 1, 2, 2, 1, 1, 없음이고, B holder는 없음, 없음, 1, 1, 없음, 없음입니다.</div>
       </section>
@@ -103,19 +102,18 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">07 · 함께 생각하기</div>
         <h2>ledger를 직접 설명합니다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="성공한 fix마다 global fcnt와 caller holder에 하나를 더함 -> A가 두 번, B가 한 번 fix하면 global 3, A 2, B 1 -> 각 caller unfix는 자신의 holder와 global fcnt에서 하나를 뺌 -> 같은 PAGE_PTR value라도 debt는 합쳐지지 않음 -> 마지막 global zero는 이 borrow를 끝내지만 resident page를 flush하거나 evict하지는 않음." data-concepts='[{"label":"successful grant마다 debt 하나","terms":["successful","grant","debt","one"]},{"label":"thread 전체의 global fcnt","terms":["fcnt","global","three","3"]},{"label":"per-thread nested holder count 설명","terms":["holder","thread","nested","a","b"]},{"label":"두 ledger를 줄이는 matching unfix","terms":["unfix","decrement","repay","removed"]},{"label":"pointer equality가 call을 합치지 않음","terms":["pointer","page_ptr","equal","address"]},{"label":"global zero가 eviction이나 flush를 뜻하지 않음","terms":["zero","evict","flush","resident","not sufficient"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>문제</h3>
           <p>A×2, B×1 sequence를 기억만으로 설명하세요. 모든 call이 같은 <code>PAGE_PTR</code>를 반환하는데도 debt가 세 개인 이유는 무엇이며, 마지막 global <code>fcnt == 0</code>은 무엇을 보장하고 무엇은 보장하지 않나요?</p>
-          <p><strong>권장 답변 구조:</strong> successful-call count → global total → per-thread attribution → debt마다 unfix 하나 → pointer lifetime → replacement boundary.</p>
-          <p><strong>할 일:</strong> 잘못된 unfix 동의어 하나를 배제하고 source-evidence label 하나를 포함하세요.</p>
-          <textarea aria-label="ownership debt 설명 답안" placeholder="simulator를 숨기고 모든 count와 lifetime을 기억만으로 다시 구성하세요."></textarea>
-          <button type="button" data-check>ledger 포함 여부 확인</button>
-          <button type="button" class="secondary" data-reveal>model spine 보기</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>답을 chat에 붙여 넣으세요. mastery를 기록하기 전에 count, pointer lifetime, replacement boundary를 확인합니다.</p>
+
+          <p><strong>생각할 점:</strong> 잘못된 unfix 동의어 하나를 배제하고 source-evidence label 하나를 포함하세요.</p>
+
+
+
+          <details class="answer-disclosure"><summary>설명 펼치기</summary><p>successful-call count → global total → per-thread attribution → debt마다 unfix 하나 → pointer lifetime → replacement boundary.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -123,8 +121,8 @@
         <h2>increment 하나와 decrement 하나를 추적합니다</h2>
         <p>정상 grant는 <code>page_buffer.c:6277–6537</code>, 정상 release 하나는 <code>6128–6184,6636–6703</code>에서 읽으세요. 각 count를 어느 owner가 저장하는지, holder가 정확히 어디서 사라지는지 표시합니다.</p>
         <p><a href="../reference/ownership-debt-card.html">인쇄용 ownership-debt card 열기 →</a></p>
-        <p><a href="0004a-understand-holder-anchor.html">teach-back 후 Lesson 4A로 계속 →</a></p>
-        <p><a href="0003-trace-fix-convergence.html">← Lesson 0003로 돌아가기</a></p>
+        <p><a href="0004a-understand-holder-anchor.html">Lecture 4A로 계속 →</a></p>
+        <p><a href="0003-trace-fix-convergence.html">← Lecture 0003로 돌아가기</a></p>
       </section>
     </article>
 
@@ -136,17 +134,18 @@
       <a href="#simulate">4. simulator</a>
       <a href="#pointers">5. Pointer equality</a>
       <a href="#release">6. Release effect</a>
-      <a href="#retrieval">7. teach-back</a>
+      <a href="#retrieval">7. 함께 생각하기</a>
       <a href="#primary-reading">필수 읽기</a>
       <hr>
       <a href="../reference/ownership-debt-card.html">Ownership-debt 카드</a>
       <a href="../../learning/02-fix-hold-release.md">Canonical Core 문서</a>
-      <a href="0004a-understand-holder-anchor.html">다음 lesson · 4A</a>
+      <a href="0004a-understand-holder-anchor.html">다음 lecture · 4A</a>
       <a href="../index.html">강의 홈</a>
     </nav>
   </div>
 
-  <footer class="footer">grant, holder, nested debt, pointer lifetime, release transition이 불분명하면 언제든 teaching agent에게 물어보세요.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0003-trace-fix-convergence.html">← Lecture 3 · Hit와 miss의 합류</a><a rel="next" href="0004a-understand-holder-anchor.html">Lecture 4A · Holder의 구조와 수명 →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

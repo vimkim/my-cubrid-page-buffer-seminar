@@ -1,103 +1,29 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID page-buffer course learning path</title>
-  <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
-<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/course-learning-path.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · course route</span><a href="../index.html">Course home</a></div>
-  <header class="hero">
-    <div class="eyebrow">Stateful learning path</div>
-    <h1>Learn in dependency order. Advance by retrieval.</h1>
-    <p>Core builds the page journey and change-review capability; Advanced closes the full-module mechanisms; live defense practice turns understanding into review-ready maintainer reasoning.</p>
-    <div class="pills"><span class="pill">Orient</span><span class="pill">Core</span><span class="pill">Advanced</span><span class="pill">Practice</span><span class="pill">Defend</span></div>
-  </header>
-
-  <section class="section">
-    <div class="eyebrow">Your current action</div>
-    <h2>Synthesize Lessons 1–9 before reading Lesson 10</h2>
-    <p>You reported reading Lessons 1–9. Submit the integrated Core teach-back in chat without reopening them. I will record only demonstrated concepts, repair the narrow gaps, and then route you to Lesson 10.</p>
-    <p><strong>Required spine:</strong> Module boundary and six-move journey → object/state axes and fix debt → caller mutation → G/G+1 with DIRTY/FLUSHING → victim eligibility and reusable BCB identity → evidence-bounded VS candidate → queued versus granted latch ownership.</p>
-    <p><a href="core-synthesis-studio.html">Open the closed-book Core synthesis studio →</a></p>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">Required Core route</div>
-    <h2>One dependency chain through safe change review</h2>
-    <div class="course-list">
-      <article class="course-item"><span class="step">1</span><div><h3>Explain the page journey</h3><p>Module boundary, six-move narrative, document routes, evidence grammar.</p></div><a href="../lessons/0001-present-the-page-journey.html">Open →</a></article>
-      <article class="course-item"><span class="step">2</span><div><h3>Separate objects from state</h3><p>VPID, BCB, frame, PAGE_PTR, holder/watcher, lifetimes, four state axes.</p></div><a href="../lessons/0002-separate-objects-from-state.html">Open →</a></article>
-      <article class="course-item"><span class="step">3</span><div><h3>Trace fix convergence</h3><p>Hit, cold miss, load ownership, waiter retry, common success postcondition.</p></div><a href="../lessons/0003-trace-fix-convergence.html">Open →</a></article>
-      <article class="course-item"><span class="step">4</span><div><h3>Repay fix debt</h3><p>Global <code>fcnt</code>, per-thread holders, nested ownership, matching release.</p></div><a href="../lessons/0004-repay-fix-debt.html">Open →</a></article>
-      <article class="course-item"><span class="step">4A</span><div><h3>Understand the holder anchor</h3><p>Per-thread anchor versus entry, linear BCB lookup, nested reuse, and recycling.</p></div><a href="../lessons/0004a-understand-holder-anchor.html">Open →</a></article>
-      <article class="course-item"><span class="step">5</span><div><h3>Audit a logged mutation</h3><p>Logical lock, WRITE latch, validation, log/page LSA, DIRTY, all-exit cleanup.</p></div><a href="../lessons/0005-audit-a-logged-mutation.html">Open →</a></article>
-      <article class="course-item"><span class="step">6</span><div><h3>Flush one generation</h3><p>Flush actors, G/G+1, DIRTY/FLUSHING, two LSAs, WAL gate, re-dirty, retryable failure.</p></div><a href="../lessons/0006-flush-one-generation.html">Open →</a></article>
-      <article class="course-item"><span class="step">7</span><div><h3>Replace one frame</h3><p>Stable BCB slot/current VPID, hard eligibility, protected handoff, policy boundary.</p></div><a href="../lessons/0007-replace-one-frame.html">Open →</a></article>
-      <article class="course-item"><span class="step">8</span><div><h3>Defend a safe change</h3><p>VS registry, case packets, proof ladder, fault seam, evidence-bounded conclusion.</p></div><a href="../lessons/0008-defend-a-safe-change.html">Open →</a></article>
-    </div>
-    <div class="callout"><strong>Core completion:</strong> demonstrated retrieval for the page journey plus a reviewable change-impact defense. Reading all eight pages is not completion evidence.</div>
-    <p><a href="core-synthesis-studio.html">Attempt the integrated Core checkpoint →</a></p>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">Advanced route</div>
-    <h2>Complete these before claiming whole-module mastery</h2>
-    <div class="course-list">
-      <article class="course-item"><span class="step">9</span><div><span class="status">Ready</span><h3>Classify a latch wait</h3><p>Queue membership, zero-crossing handoff, timeout cleanup, fairness boundary.</p></div><a href="../lessons/0009-classify-latch-wait.html">Open →</a></article>
-      <article class="course-item"><span class="step">10</span><div><span class="status">Ready</span><h3>Preserve state through promotion</h3><p>Four outcomes, queue-head continuity, debt conservation, access-method restart.</p></div><a href="../lessons/0010-revalidate-after-promotion.html">Open →</a></article>
-      <article class="course-item"><span class="step">11</span><div><span class="status">Ready</span><h3>Ordered multi-page refix</h3><p>Caller-supplied order, watcher transfer, partial unwind, stale observation repair.</p></div><a href="../lessons/0011-rebuild-after-ordered-refix.html">Open →</a></article>
-      <article class="course-item"><span class="step">12</span><div><span class="status">Ready</span><h3>One-BCB replacement</h3><p>INVALID, VOID, cooling, hard victim checks, detach, and rebind.</p></div><a href="../lessons/0012-prove-replacement-progress.html">Open →</a></article>
-      <article class="course-item"><span class="step">12B</span><div><span class="status">Ready</span><h3>Private LRU indexes</h3><p>Default counts, index namespaces, association lifetimes, assignment, movement, and victim-search order.</p></div><a href="../lessons/0012b-understand-private-lru-index.html">Open →</a></article>
-      <article class="course-item"><span class="step">13</span><div><span class="status">Ready</span><h3>Recovery redo and checkpoint</h3><p>Selective checkpoint ownership, special fetch modes, page-LSA idempotence, and crash evidence.</p></div><a href="../lessons/0013-gate-redo-by-page-lsa.html">Open →</a></article>
-      <article class="course-item"><span class="step">14</span><div><span class="status">Ready</span><h3>Lifecycle dependency order</h3><p>Initialization, daemon gating, recovery, shutdown, log finalization, and pool finalization.</p></div><a href="../lessons/0014-preserve-lifecycle-order.html">Open →</a></article>
-      <article class="course-item"><span class="step">15</span><div><span class="status">Ready</span><h3>Specialized interfaces</h3><p>Pointer location, owner protocols, paired cleanup, approximate diagnostics, and API caveats.</p></div><a href="../lessons/0015-route-a-specialized-interface.html">Open →</a></article>
-      <article class="course-item"><span class="step">16</span><div><span class="status">Ready</span><h3>Failure and proof obligations</h3><p>Exceptional exits, risk-matched injection, settled ownership/generation ledgers, impact, and current status.</p></div><a href="../lessons/0016-close-a-failure-proof.html">Open →</a></article>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">The lesson loop</div>
-    <h2>Use the same five moves every time</h2>
-    <div class="journey">
-      <article><span class="step">1</span><h3>Acquire</h3><p>Read the short lesson and inspect its one primary diagram.</p></article>
-      <article><span class="step">2</span><h3>Close</h3><p>Hide the page before attempting the retrieval prompt.</p></article>
-      <article><span class="step">3</span><h3>Retrieve</h3><p>Predict state and consequences from memory; do not reveal first.</p></article>
-      <article><span class="step">4</span><h3>Submit</h3><p>Paste the answer into chat for source- and invariant-level feedback.</p></article>
-      <article><span class="step">5</span><h3>Record</h3><p>Create a learning record only after demonstrated understanding, then interleave it later.</p></article>
-    </div>
-    <p>Use printable reference cards after learning, not as a substitute for retrieval. Use canonical Markdown when tracing source or preparing team questions.</p>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">Optional comparative lens</div>
-    <h2>Translate the model after the CUBRID mechanism is stable</h2>
-    <p>Lesson 18 compares the same responsibilities across PostgreSQL and InnoDB, then applies the course's evidence discipline to a probable CUBRID CPU opportunity. It does not replace the current Core synthesis checkpoint or any required Advanced lesson.</p>
-    <div class="course-list">
-      <article class="course-item"><span class="step">X</span><div><span class="status">Ready</span><h3>Compare three buffer pools</h3><p>Ownership seams, miss publication, replacement, durability, linear holder lookup, and a falsifiable benchmark.</p></div><a href="../lessons/0018-compare-three-buffer-pools.html">Open →</a></article>
-    </div>
-    <p><a href="three-engine-performance-card.html">Open the printable comparison card →</a></p>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">Maintainer readiness gate</div>
-    <h2>Understanding is necessary; live defense proves review readiness</h2>
-    <ol>
-      <li>Reconstruct the six-move page journey without reopening the guide.</li>
-      <li>Navigate from a claim to its canonical page and pinned source range.</li>
-      <li>Answer counterexamples across identity, ownership, dirty generation, and replacement axes.</li>
-      <li>Distinguish contract, verified mechanism, policy, inference, runtime observation, and historical evidence.</li>
-      <li>Defend one change-impact case against counterexamples and record maintainer feedback.</li>
-    </ol>
-    <p><a href="../lessons/0017-defend-the-module-live.html">Open Lesson 17: live module defense →</a></p>
-    <p><a href="presentation-spine.html">Open the explanation spine →</a> · <a href="presentation-rehearsal-card.html">Open the readiness scorecard →</a></p>
-  </section>
-
-  <footer class="footer">Do not advance because a page feels familiar. Advance when you can reconstruct the owner, transition, invariant, consequence, and evidence boundary without looking.</footer>
-  <p class="footer"><a href="course-coverage-matrix.html">Audit canonical coverage and current learner evidence →</a></p>
-</main>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Curriculum syllabus</title><link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head><body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><a href="../../ko/reference/course-learning-path.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">CUBRID PAGE BUFFER · f799e05</div><h1>Curriculum syllabus</h1></header><section class="section"><h2>One mechanism at a time; the whole Module in view</h2><p>Follow the conceptual order below. Lecture identifiers remain stable even when the order changes. Each lecture combines explanation, source tracing, participant reasoning, and questions.</p></section><div class="curriculum-phases"><section class="curriculum-phase" id="phase-1"><p class="eyebrow">01</p><h2>Foundations</h2><ol><li><a href="../lessons/0001-present-the-page-journey.html">Lecture 1 — Module boundary and page journey</a><small>Follow a logical page from acquisition through mutation, propagation, and frame reuse. Each transition has an owner and an evidence boundary.</small></li>
+<li><a href="../lessons/0002-separate-objects-from-state.html">Lecture 2 — Objects and independent state axes</a><small>Identity, resident storage, borrowed access, and ownership accounting describe different parts of the same page journey.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-2"><p class="eyebrow">02</p><h2>Acquisition and ownership</h2><ol><li><a href="../lessons/0003-trace-fix-convergence.html">Lecture 3 — Hit and miss convergence</a><small>Hit and miss prepare access differently, then converge on identity checks and the caller's ownership contract.</small></li>
+<li><a href="../lessons/0004-repay-fix-debt.html">Lecture 4 — Fix debt and release</a><small>Each successful fix adds a release obligation. Global and per-thread ledgers make nested ownership visible.</small></li>
+<li><a href="../lessons/0004a-understand-holder-anchor.html">Lecture 4A — Holder structure and lifetime</a><small>The thread's anchor and its reusable holder entries connect repeated BCB access to ownership accounting and lookup cost.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-3"><p class="eyebrow">03</p><h2>Mutation and durability</h2><ol><li><a href="../lessons/0005-audit-a-logged-mutation.html">Lecture 5 — Caller correctness and logged mutation</a><small>A successful fix grants access. The caller still owns logical locking, validation, logging, dirty publication, and cleanup.</small></li>
+<li><a href="../lessons/0006-flush-one-generation.html">Lecture 6 — Flush generations and WAL ordering</a><small>A completed flush belongs to one copied image. Newer resident changes, checkpoint selection, and persistence require separate reasoning.</small></li>
+<li><a href="../lessons/0006a-understand-page-buffer-daemons.html">Lecture 6A — Page-buffer daemon lifecycle</a><small>Four background roles share a thread lifecycle but perform different work after recovery opens their gate.</small></li>
+<li><a href="../lessons/0006b-follow-page-flush-handoff.html">Lecture 6B — Page-flush and post-flush handoff</a><small>Allocator pressure connects candidate selection, generation submission, protected rechecks, and allocator wakeup.</small></li>
+<li><a href="../lessons/0006c-follow-maintenance-and-pacing.html">Lecture 6C — Replacement maintenance and I/O pacing</a><small>Quota maintenance and post-write token control shape future progress through separate state and timing policies.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-4"><p class="eyebrow">04</p><h2>Replacement</h2><ol><li><a href="../lessons/0007-replace-one-frame.html">Lecture 7 — Victim eligibility and frame reuse</a><small>A missing page needs storage. Reuse requires a protected safety decision as well as a replacement preference.</small></li>
+<li><a href="../lessons/0012-prove-replacement-progress.html">Lecture 12 — Replacement state and progress</a><small>One permanent BCB/frame pair moves through admission, cooling, victim checks, and rebinding to another identity.</small></li>
+<li><a href="../lessons/0012b-understand-private-lru-index.html">Lecture 12B — Private LRU indexes and selection</a><small>Persistent list descriptors, borrowed session indexes, BCB membership, and victim search have distinct lifetimes and rules.</small></li>
+<li><a href="../lessons/0012a-understand-aout-ghost-history.html">Lecture 12A — Dormant AOUT admission history</a><small>AOUT retains ghost admission metadata in the source, while pinned parameter tuning disables its operation.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-5"><p class="eyebrow">05</p><h2>Concurrency</h2><ol><li><a href="../lessons/0009-classify-latch-wait.html">Lecture 9 — Latch queues and grant outcomes</a><small>A pending request, a latch grant, and completed holder accounting are distinct events in the wait path.</small></li>
+<li><a href="../lessons/0010-revalidate-after-promotion.html">Lecture 10 — Promotion and page-state continuity</a><small>Dedicated promotion transforms existing ownership; its successful handoff and failure outcomes determine what the caller may retain.</small></li>
+<li><a href="../lessons/0011-rebuild-after-ordered-refix.html">Lecture 11 — Ordered refix and revalidation</a><small>Ordering breaks multi-page wait cycles. Releasing and reacquiring pages can also invalidate observations made before the gap.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-6"><p class="eyebrow">06</p><h2>Recovery and specialized behavior</h2><ol><li><a href="../lessons/0013-gate-redo-by-page-lsa.html">Lecture 13 — Log buffers and data-page redo</a><small>Log storage and data-page residency have separate owners. Page LSA connects a recovered record to the skip-or-apply decision.</small></li>
+<li><a href="../lessons/0014-preserve-lifecycle-order.html">Lecture 14 — Startup and shutdown dependencies</a><small>Initialization, recovery gates, and finalization must respect the last user of each resource.</small></li>
+<li><a href="../lessons/0015-route-a-specialized-interface.html">Lecture 15 — Specialized access contracts</a><small>Similar pointer types may carry different ownership, protection, permissions, and cleanup obligations.</small></li>
+<li><a href="../lessons/0016-close-a-failure-proof.html">Lecture 16 — Failure cleanup and evidence</a><small>A source-visible return begins an investigation. Surviving state, retry behavior, and impact determine the supported conclusion.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-7"><p class="eyebrow">07</p><h2>Maintainer integration</h2><ol><li><a href="../lessons/0008-defend-a-safe-change.html">Lecture 8 — Change impact and verification</a><small>A change review connects interface behavior, state ownership, invariants, failure cleanup, caller impact, and verification.</small></li>
+<li><a href="../lessons/0017-defend-the-module-live.html">Lecture 17 — Maintainer synthesis and technical defense</a><small>A coherent page journey connects source traces, counterexamples, diagnosis, and a defensible change plan.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-8"><p class="eyebrow">08</p><h2>Cross-engine perspective</h2><ol><li><a href="../lessons/0018-compare-three-buffer-pools.html">Lecture 18 — Responsibilities across three buffer pools</a><small>CUBRID, PostgreSQL, and InnoDB solve shared safety problems through different ownership and cleanup mechanisms.</small></li>
+<li><a href="../lessons/0018a-compare-replacement-policies.html">Lecture 18A — Replacement policies across engines</a><small>Admission, reuse history, victim selection, and dirty-page progress provide common questions for a source-based comparison.</small></li></ol></section></div><section class="section" id="practice"><h2>Practice between lectures</h2><p>Trace one source transition, record its owner and invariant, and predict a counterexample. Revisit connections in the synthesis workshop. Use a reversible probe when the question requires runtime evidence.</p><p><a href="core-synthesis-studio.html">Synthesis workshop</a> · <a href="../../questions/applied-exercises.md">Applied exercises and experiment boundaries</a> · <a href="presentation-rehearsal-card.html">Final technical-defense rubric</a></p></section><section class="section" id="completion"><h2>Evidence of understanding</h2><p>Completion connects source traces, concurrency and failure scenarios, symptom diagnosis, and a reviewed change-impact and verification plan. The presenter or team keeps individual records outside this site.</p></section></main><nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
+</body></html>

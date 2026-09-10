@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0009 — Classify a latch wait</title>
+  <title>Lecture 9 — Latch queues and grant outcomes</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0009-classify-latch-wait.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0009</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0009</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced capability · latch queue</div>
-    <h1>Classify the outcome before claiming fairness</h1>
-    <p>By the end, you can trace an incompatible request through queueing and zero-crossing handoff without inventing ownership or a fairness theorem.</p>
+    <div class="eyebrow">LECTURE 9 / Concurrency</div>
+    <h1>Latch queues and grant outcomes</h1>
+    <p>A pending request, a latch grant, and completed holder accounting are distinct events in the wait path.</p>
     <div class="pills"><span class="pill">Immediate</span><span class="pill">Conditional</span><span class="pill">Queued</span><span class="pill">Zero-crossing</span><span class="pill">Timeout</span><span class="pill">Grant debt</span></div>
   </header>
 
@@ -23,9 +22,9 @@
       <section class="section" id="outcomes">
         <div class="eyebrow">01 · What happens after the resident BCB is found?</div>
         <h2>A fix request ends in one of five caller-visible outcomes</h2>
-        <p>Earlier lessons stopped after saying “request a READ or WRITE latch.” This lesson opens that step. Once CUBRID finds the resident BCB, it compares the requested latch with the current owners and wait queue. A compatible request can finish immediately. A conflicting request either fails immediately or waits, depending on the caller's condition.</p>
+        <p>Earlier lectures stopped after saying “request a READ or WRITE latch.” This lecture opens that step. Once CUBRID finds the resident BCB, it compares the requested latch with the current owners and wait queue. A compatible request can finish immediately. A conflicting request either fails immediately or waits, depending on the caller's condition.</p>
         <p>The table follows one request from the caller's point of view. The practical question is simple: <em>did this call return a page that I now own and must later unfix?</em></p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Outcome</th><th>Caller result</th><th>Fix debt?</th></tr></thead>
           <tbody>
             <tr><td>Immediate grant</td><td>Latch tuple and holder are recorded; page pointer returned.</td><td>Yes—one successful acquisition.</td></tr>
@@ -34,7 +33,7 @@
             <tr><td>Timeout or interrupt</td><td>Queue request is cancelled/removed and error returned.</td><td>No.</td></tr>
             <tr><td>Wakeup and grant</td><td>Waker updates latch tuple; resumed thread records its holder.</td><td>Yes—the same postcondition as immediate success.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="big-claim">Only “immediate grant” and “wakeup and grant” return successful ownership. Queueing by itself records a request and creates no new unfix debt.</p>
       </section>
 
@@ -44,13 +43,13 @@
         <p class="big-claim">While waiting, the request is linked from the BCB to a <code>THREAD_ENTRY</code>. After grant, ownership is linked from that thread to a <code>PGBUF_HOLDER</code>.</p>
         <img class="diagram" src="../../assets/latch-request-structures.svg" alt="Transaction wait policy feeding one thread request, its temporary membership in a BCB wait queue, and its holder entry after grant">
         <p class="caption">The waiting thread is the queue node. It gains no new holder until the latch grant succeeds.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Moment</th><th>Linked-list anchor and link</th><th>What the node means</th></tr></thead>
           <tbody>
             <tr><td>Incompatible unconditional wait</td><td><code>BCB.next_wait_thrd</code> → <code>THREAD_ENTRY.next_wait_thrd</code></td><td>The <code>THREAD_ENTRY</code> carries <code>request_latch_mode</code> and <code>request_fix_count</code>. It is a pending request, not new ownership.</td></tr>
             <tr><td>Successful grant</td><td><code>holder_anchor.thrd_hold_list</code> → <code>PGBUF_HOLDER.thrd_link</code></td><td>The holder points to the BCB and counts this thread's nested fix debt.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>The waker changes the BCB latch tuple, unlinks the waiting <code>THREAD_ENTRY</code>, and wakes it. The resumed thread then pops a reusable holder from its free list and prepends it to its active list. The BCB has a wait-queue head, but no reverse list of holders or transactions.</p>
         <h3>Thread ownership versus transaction policy</h3>
         <p>The executing thread owns both pieces of page-buffer bookkeeping. Its <code>tran_index</code> lets page buffer read the transaction's <code>wait_msecs</code> and report transaction-aware timeout or interrupt errors. The transaction influences waiting policy; it is not the node in a page-buffer holder list.</p>
@@ -60,14 +59,14 @@
       <section class="section" id="no-latch">
         <div class="eyebrow">03 · One enum value in three fields</div>
         <h2>NO_LATCH is a real idle BCB mode and a separate queue tombstone</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Owning field</th><th>Meaning</th></tr></thead>
           <tbody>
             <tr><td><code>PGBUF_BCB.atomic_latch.latch_mode</code></td><td>No READ or WRITE page-content latch is currently granted. After final unfix, a resident BCB can stay in this state for a long time.</td></tr>
             <tr><td><code>THREAD_ENTRY.request_latch_mode</code></td><td>Default before a request; while queue-linked, timeout/interrupt writes NO_LATCH as a cancellation tombstone.</td></tr>
             <tr><td><code>PGBUF_WATCHER.latch_mode</code></td><td>Initialization metadata before an ordered fix records READ or WRITE. Use the watcher pointer and links to determine active state.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <pre>resident idle BCB:
 latch_mode = NO_LATCH, fcnt = 0
 
@@ -82,7 +81,7 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
         <div class="eyebrow">04 · READ, WRITE, and unconditional</div>
         <h2>Unconditional requests wait only when they conflict</h2>
         <p>Before latch work, a transaction with zero-wait policy converts even an unconditional fix to conditional behavior. Otherwise, a compatible request succeeds immediately and an incompatible request queues.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Current BCB state</th><th>READ request</th><th>WRITE request</th></tr></thead>
           <tbody>
             <tr><td><code>NO_LATCH</code></td><td>Set READ, global <code>fcnt=1</code>, and create a holder.</td><td>Set WRITE, global <code>fcnt=1</code>, and create a holder.</td></tr>
@@ -90,7 +89,7 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
             <tr><td>READ, waiter exists</td><td>An existing holder may re-enter. A new reader waits instead of barging.</td><td>The same nested-WRITE-fix rule applies. This is not the dedicated promotion API's contract.</td></tr>
             <tr><td>WRITE</td><td>The current WRITE holder may nest a READ; another thread waits.</td><td>The current WRITE holder may re-enter; another thread waits.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <img class="diagram" src="../../assets/unconditional-latch-scenarios.svg" alt="State transitions for idle, N-reader, queued-writer, existing-holder, and new-thread unconditional READ and WRITE requests">
         <p class="caption">“One more reader” is incomplete: an existing reader and a new non-holder reader follow different paths when writers are waiting.</p>
         <p>With <code>N</code> readers and no waiter, another READ is granted immediately. With <code>N</code> readers and queued writers, a new non-holder reader goes behind those writers, but an existing reader may re-enter READ. A new writer also joins the tail. “A current reader asks for WRITE” is incomplete: a nested WRITE fix acquires another debt, while dedicated promotion transforms the fixes the caller already owns.</p>
@@ -99,7 +98,7 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
         <h3>Why does a separate READ-to-WRITE promotion API exist?</h3>
         <img class="diagram" src="../../assets/fix-write-vs-promote.svg" alt="Comparison showing that a nested WRITE fix adds one debt while dedicated promotion preserves existing debt">
         <p class="caption">Both paths may end with WRITE protection, but they do not promise the same ownership accounting.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Difference</th><th>Nested <code>pgbuf_fix(..., WRITE, ...)</code></th><th><code>pgbuf_promote_read_latch()</code></th></tr></thead>
           <tbody>
             <tr><td>Intent</td><td>Acquire one more fix with WRITE protection.</td><td>Strengthen the fixes already owned.</td></tr>
@@ -108,13 +107,13 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
             <tr><td>Promotion-specific choice</td><td>None; this is the general fix condition.</td><td><code>PGBUF_PROMOTE_ONLY_READER</code> can fail while retaining READ; <code>PGBUF_PROMOTE_SHARED_READER</code> may release and wait.</td></tr>
             <tr><td>Lifetime signal</td><td>Returns the result of another VPID-based fix.</td><td>Takes <code>PAGE_PTR *</code>; a blocking failure can null it, exposing that the old borrowed lifetime ended.</td></tr>
           </tbody>
-        </table>
-        <p>The immediate upgrade branch inside the general helper is therefore not a replacement for the API. It satisfies a new-acquisition contract. The dedicated function provides a same-debt transformation, promotion-specific policy, queue-head continuity, and an explicit hard-failure pointer boundary. Lesson 10 follows that protocol through representative B-tree callers.</p>
+        </table></div>
+        <p>The immediate upgrade branch inside the general helper is therefore not a replacement for the API. It satisfies a new-acquisition contract. The dedicated function provides a same-debt transformation, promotion-specific policy, queue-head continuity, and an explicit hard-failure pointer boundary. Lecture 10 follows that protocol through representative B-tree callers.</p>
         <div class="callout warn"><strong>Pinned-source anomaly:</strong> the ordinary immediate branch sets global <code>fcnt=1</code> and then increments the existing holder. Starting from holder count 2 therefore appears to leave global count 1 and holder count 3. This is candidate <code>VS-18</code>, not a proven safe promotion substitute; a focused runtime test is still required.</div>
 
         <h3>Does queueing 100 waiters cost O(N²)?</h3>
         <p><strong>Yes, cumulatively for insertion into a queue that does not drain.</strong> The BCB has only <code>next_wait_thrd</code>, a head pointer. It has no tail pointer. An ordinary append walks from the head to the final <code>THREAD_ENTRY</code>.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Operation</th><th>Structural cost</th><th>Reason</th></tr></thead>
           <tbody>
             <tr><td>Append one waiter with <code>W</code> already queued</td><td><code>O(W)</code></td><td>Walk the singly linked list to find the tail.</td></tr>
@@ -124,7 +123,7 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
             <tr><td>Wake a READ group</td><td>up to <code>O(W)</code></td><td>Scan the queue, leave incompatible writers/FLUSH nodes linked, remove cancelled nodes, and grant later compatible READ requests.</td></tr>
             <tr><td>Remove an arbitrary timed-out waiter</td><td><code>O(W)</code> worst case</td><td>Search for its predecessor; many such removals can also accumulate to <code>O(N²)</code>.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <div class="callout warn"><strong>Performance boundary:</strong> these scans hold the BCB mutex, so the shape can amplify contention. Source proves the complexity, not that it dominates a real workload. A profile with queue depth and scan samples is required for a bottleneck claim.</div>
         <p class="source-note"><strong>Verified mechanism:</strong> grant classification is pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>page_buffer.c:6277–6634</code></a>; ordinary tail append and promoter head insertion are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7041-L7099"><code>7041–7099</code></a>; arbitrary timeout removal is at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7198-L7279"><code>7198–7279</code></a>.</p>
       </section>
@@ -155,13 +154,13 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
         <h3>Does granting each queued READ restart a full queue scan?</h3>
         <p><strong>No. One zero-crossing wakeup makes one forward scan and grants multiple readers during that scan.</strong> If the first grantable node is READ, the waker changes the tuple to READ and keeps its current position: it leaves each incompatible WRITE linked, advances to the next node, and grants every later compatible READ it encounters. It does not return to the head for R2, R3, and so on.</p>
         <p>Enqueue cost is separate. While the original WRITE owner remains fixed, every ordinary conflicting arrival—READ and WRITE alike—walks the singly linked queue to find its tail. That is one <code>O(W)</code> append walk per arrival; it is not the reader-group algorithm.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Alternating workload queued before release</th><th>All append inspections</th><th>READ-arrival share</th><th>Group wakeup</th></tr></thead>
           <tbody>
             <tr><td><code>100</code> total = <code>50</code> READ + <code>50</code> WRITE</td><td><code>4,950</code></td><td><code>2,450</code> if READ first; <code>2,500</code> if WRITE first</td><td>One <code>O(100)</code> scan grants all <code>50</code> readers.</td></tr>
             <tr><td><code>200</code> total = <code>100</code> READ + <code>100</code> WRITE</td><td><code>19,900</code></td><td><code>9,900</code> if READ first; <code>10,000</code> if WRITE first</td><td>One <code>O(200)</code> scan grants all <code>100</code> readers.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>If the queue starts with WRITE, the first zero-crossing grants that one writer and stops. When it releases, the new head is READ and the next single forward scan grants every READ across the remaining writers. Thus the cost is cumulative <code>O(N²)</code> tail-append work plus one <code>O(N)</code> reader scan—not 50 or 100 full scans. The exact sums assume no dequeue while arrivals are building the queue.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> pinned ordinary append is <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7041-L7099"><code>page_buffer.c:7041–7099</code></a>; mixed-queue scanning, tuple updates, node removal, and wakeup are <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7452-L7590"><code>7452–7590</code></a>.</p>
         <p><a href="../../reference/alternating-reader-writer-wakeup-cost.md">Open the complete alternating-queue cost derivation →</a></p>
@@ -170,7 +169,7 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
       <section class="section" id="head">
         <div class="eyebrow">06 · First granted mode controls the scan</div>
         <h2>Writer stops the scan; READ keeps searching for readers</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Scanned request</th><th>Zero-crossing action</th><th>What remains</th></tr></thead>
           <tbody>
             <tr><td>WRITE</td><td>Grant that writer only, then stop.</td><td>Other readers/writers stay queued.</td></tr>
@@ -178,7 +177,7 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
             <tr><td>Cancelled waiter: <code>THREAD_ENTRY.request_latch_mode=NO_LATCH</code> tombstone</td><td>Remove without granting.</td><td>Continue scanning.</td></tr>
             <tr><td>FLUSH waiter</td><td>Leave it for the flush-completion protocol.</td><td>It is not granted by unfix.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>While blocked readers or writers remain, <code>waiter_exists</code> stays set. A new non-holder READ cannot simply use compatibility to barge past the queue. A thread already holding the BCB may still re-enter under the nested-fix protocol.</p>
       </section>
 
@@ -198,22 +197,21 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
         <div class="eyebrow">08 · Failed waits leave no debt</div>
         <h2>Timeout and interrupt remove an ungranted request</h2>
         <p>A timeout resets/cancels the request and reports a page-latch timeout that is mapped according to transaction wait policy. An interrupted waiter removes itself. Neither returns a page pointer or creates a holder that the caller must unfix.</p>
-        <p>Review both sides of every wakeup: the waker’s tuple transition and the resumed thread’s holder allocation. Lesson 8’s <code>VS-11</code> candidate exists exactly at that post-grant holder-recording seam; queue success is not complete until both ledgers agree.</p>
+        <p>Review both sides of every wakeup: the waker’s tuple transition and the resumed thread’s holder allocation. Lecture 8’s <code>VS-11</code> candidate exists exactly at that post-grant holder-recording seam; queue success is not complete until both ledgers agree.</p>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">09 · Retrieval practice</div>
+        <div class="eyebrow">09 · Pause and reason</div>
         <h2>Trace one queue without saying “the waiter owns the page”</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="while the current WRITE holder keeps global fcnt above zero, incompatible unconditional requests append as THREAD_ENTRY nodes and own no fix debt -> waiter_exists prevents a newly arriving non-holder reader from bypassing queue insertion -> when unfix makes fcnt zero, the releasing thread scans under BCB protection -> if the first grant is WRITE it grants one writer and stops; if the first grant is READ it leaves writers linked and grants later READ requests across them -> the waker updates the latch tuple and each resumed reader records its holder, creating ordinary success debt -> timeout or interrupt cancels/removes the request and returns without a page pointer or debt -> holder re-entry, promoter head insertion, and cross-writer reader grouping prevent a strict FIFO or starvation-freedom claim." data-concepts='[{"label":"queued request has no debt","terms":["queued","pending","no debt","not own"]},{"label":"zero-crossing handoff","terms":["fcnt","zero","unfix","protected"]},{"label":"writer stop versus READ scan","terms":["writer","one","reader","scan"]},{"label":"grant completes both ledgers","terms":["tuple","holder","debt","woken"]},{"label":"timeout and interrupt cleanly fail","terms":["timeout","interrupt","remove","no pointer"]},{"label":"no fairness theorem","terms":["fifo","fairness","starvation","re-entry","promoter"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>A WRITE holder has <code>fcnt=1</code>. The queue is <code>R1 → R2 → W1 → R3</code>; another non-holder reader arrives. Then the holder unfixes to zero.</p>
-          <p><strong>Your task:</strong> predict where the newcomer queues, which READ requests the scan grants across W1, when debt begins, what W1 still owns, and why the result does not prove fairness. Add the timeout result for W1.</p>
-          <textarea aria-label="Your latch queue trace" placeholder="Classify each request as pending, granted, or failed, then name its debt."></textarea>
-          <button type="button" data-check>Check queue trace</button>
-          <button type="button" class="secondary" data-reveal>Reveal model route</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>Paste your answer into the chat. I will check queue ownership, zero-crossing order, grant completion, cleanup, and evidence boundaries before recording Advanced progress.</p>
+          <p><strong>Consider:</strong> predict where the newcomer queues, which READ requests the scan grants across W1, when debt begins, what W1 still owns, and why the result does not prove fairness. Add the timeout result for W1.</p>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>while the current WRITE holder keeps global fcnt above zero, incompatible unconditional requests append as THREAD_ENTRY nodes and own no fix debt -> waiter_exists prevents a newly arriving non-holder reader from bypassing queue insertion -> when unfix makes fcnt zero, the releasing thread scans under BCB protection -> if the first grant is WRITE it grants one writer and stops; if the first grant is READ it leaves writers linked and grants later READ requests across them -> the waker updates the latch tuple and each resumed reader records its holder, creating ordinary success debt -> timeout or interrupt cancels/removes the request and returns without a page pointer or debt -> holder re-entry, promoter head insertion, and cross-writer reader grouping prevent a strict FIFO or starvation-freedom claim.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -221,12 +219,12 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
         <h2>Follow one request across both threads</h2>
         <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7041-L7590"><code>page_buffer.c:7041–7590</code></a>. Mark queue append, timed sleep, cancellation, zero-crossing, tuple grant, and resumed holder recording. Separate source-visible ordering from scheduler fairness.</p>
         <p><a href="../reference/latch-queue-card.html">Open the printable latch-queue card →</a></p>
-        <p><a href="0008-defend-a-safe-change.html">← Return to Lesson 0008</a> · <a href="../reference/core-synthesis-studio.html">Attempt the Lessons 1–9 synthesis →</a></p>
+        <p><a  href="0012a-understand-aout-ghost-history.html">← Previous lecture 12A</a> · <a href="../reference/core-synthesis-studio.html">Attempt the Lectures 1–9 synthesis →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#outcomes">1. Five outcomes</a>
       <a href="#structures">2. Two linked lists</a>
       <a href="#no-latch">3. NO_LATCH by field</a>
@@ -242,11 +240,12 @@ latch_mode = INVALID, VPID = NULL, zone = INVALID</pre>
       <a href="../reference/latch-queue-card.html">Latch-queue card</a>
       <a href="../../advanced/acquisition-concurrency.md">Canonical Advanced page</a>
       <a href="../reference/core-synthesis-studio.html">Next: Core synthesis →</a>
-      <a href="../index.html">Course home</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever queue membership, granted ownership, timeout cleanup, or fairness language is unclear.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0012a-understand-aout-ghost-history.html">← Lecture 12A · Dormant AOUT admission history</a><a rel="next" href="0010-revalidate-after-promotion.html">Lecture 10 · Promotion and page-state continuity →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

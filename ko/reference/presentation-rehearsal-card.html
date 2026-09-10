@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID page-buffer maintainer readiness 카드</title>
+  <title>Technical defense 평가 기준</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/presentation-rehearsal-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · 빠른 참고</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
     <div class="eyebrow">live defense review용 인쇄 카드</div>
-    <h1>Maintainer readiness scorecard</h1>
+    <h1>Technical defense 평가 기준</h1>
     <p>인과관계의 중심축을 지키고, 강한 claim에는 label을 붙이며, review 중에 guide를 바로 찾아가고, 모르는 것은 범위가 명확한 evidence work로 바꿉니다.</p>
     <div class="pills"><span class="pill">Narrative</span><span class="pill">Counterexample</span><span class="pill">Evidence</span><span class="pill">Navigation</span><span class="pill">Feedback</span></div>
   </header>
@@ -20,17 +20,17 @@
   <section class="reference-grid">
     <article class="reference-card full">
       <h2>six-move 설명 점검</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Move</th><th>반드시 설명할 내용</th><th>빠졌다면 복습</th></tr></thead>
         <tbody>
-          <tr><td>1 · Object/boundary</td><td><code>VPID → BCB ↔ frame → PAGE_PTR</code>, borrowed lifetime, Module과 caller의 경계.</td><td>Lessons 1–2</td></tr>
-          <tr><td>2 · Acquire/release</td><td>hit/miss convergence, latch grant, <code>fcnt</code>와 holder debt, 짝이 맞는 unfix.</td><td>Lessons 3–4, 9</td></tr>
-          <tr><td>3 · Caller correctness</td><td>logical lock, validation, logging, page LSA, dirty, 모든 exit의 cleanup.</td><td>Lesson 5</td></tr>
-          <tr><td>4 · Flush generation</td><td>G/G+1, DIRTY/FLUSHING, WAL, DWB/direct path, retryable failure.</td><td>Lessons 6, 16</td></tr>
-          <tr><td>5 · Replacement</td><td>policy보다 먼저 eligibility, stable slot/current identity, 보호된 serial reuse.</td><td>Lessons 7, 12</td></tr>
-          <tr><td>6 · Defensible change</td><td>owner, state, guard, invariant, unwind, caller impact, proof level.</td><td>Lessons 8, 16</td></tr>
+          <tr><td>1 · Object/boundary</td><td><code>VPID → BCB ↔ frame → PAGE_PTR</code>, borrowed lifetime, Module과 caller의 경계.</td><td>Lectures 1–2</td></tr>
+          <tr><td>2 · Acquire/release</td><td>hit/miss convergence, latch grant, <code>fcnt</code>와 holder debt, 짝이 맞는 unfix.</td><td>Lectures 3–4, 9</td></tr>
+          <tr><td>3 · Caller correctness</td><td>logical lock, validation, logging, page LSA, dirty, 모든 exit의 cleanup.</td><td>Lecture 5</td></tr>
+          <tr><td>4 · Flush generation</td><td>G/G+1, DIRTY/FLUSHING, WAL, DWB/direct path, retryable failure.</td><td>Lectures 6, 16</td></tr>
+          <tr><td>5 · Replacement</td><td>policy보다 먼저 eligibility, stable slot/current identity, 보호된 serial reuse.</td><td>Lectures 7, 12</td></tr>
+          <tr><td>6 · Defensible change</td><td>owner, state, guard, invariant, unwind, caller impact, proof level.</td><td>Lectures 8, 16</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card">
       <h2>까다로운 질문에 답하는 순서</h2>
@@ -55,7 +55,7 @@
     </article>
     <article class="reference-card full">
       <h2>readiness rubric</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Capability</th><th>준비됐다는 evidence</th><th>보완이 필요한 신호</th></tr></thead>
         <tbody>
           <tr><td>Coherent narrative</td><td>각 move가 다음 move의 원인이 되며 file 순서대로 나열하지 않습니다.</td><td>topic이 서로 끊긴 정의처럼 나옵니다.</td></tr>
@@ -65,7 +65,7 @@
           <tr><td>Resistance</td><td>순서를 섞은 네 가지 challenge에도 같은 page journey로 돌아옵니다.</td><td>답변이 중심축을 버리거나 fairness/current status를 지어냅니다.</td></tr>
           <tr><td>Review follow-up</td><td>maintainer의 질문 하나와 수정한 답을 기록합니다.</td><td>다른 maintainer가 확인한 review evidence가 없습니다.</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card">
       <h2>challenge deck</h2>
@@ -98,5 +98,6 @@
 
   <footer class="footer"><a href="presentation-spine.html">page-journey explanation spine</a>, <a href="expected-team-questions.html">curated maintainer questions</a>, <a href="../../page-buffer-teaching-material.md">Maintainer Guide entry</a>와 함께 사용하세요. 문서를 다 읽었다고 준비가 끝나는 것은 아닙니다. 실제 reasoning과 maintainer feedback으로 readiness를 보여 줘야 합니다.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

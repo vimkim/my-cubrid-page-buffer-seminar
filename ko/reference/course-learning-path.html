@@ -1,103 +1,29 @@
 <!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUBRID page-buffer 과정 learning path</title>
-  <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
-<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/course-learning-path.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · 과정 route</span><a href="../index.html">과정 홈</a></div>
-  <header class="hero">
-    <div class="eyebrow">Stateful learning path</div>
-    <h1>dependency 순서로 배우고 retrieval로 진도를 판단하세요</h1>
-    <p>Core에서는 page journey와 change-review 역량을 만들고, Advanced에서는 module 전체의 mechanism을 완성합니다. live defense 연습에서는 이해한 내용을 review에 바로 쓸 수 있는 maintainer reasoning으로 바꿉니다.</p>
-    <div class="pills"><span class="pill">Orient</span><span class="pill">Core</span><span class="pill">Advanced</span><span class="pill">Practice</span><span class="pill">Defend</span></div>
-  </header>
-
-  <section class="section">
-    <div class="eyebrow">지금 할 일</div>
-    <h2>Lesson 10을 읽기 전에 Lessons 1–9를 하나로 종합하세요</h2>
-    <p>Lessons 1–9를 읽었다면 페이지를 다시 열지 말고 통합된 Core teach-back을 chat에 제출하세요. 실제로 설명해 낸 concept만 기록하고, 부족한 부분만 좁게 보완한 뒤 Lesson 10으로 안내합니다.</p>
-    <p><strong>필수 spine:</strong> Module boundary와 six-move journey → object/state axis와 fix debt → caller mutation → DIRTY/FLUSHING이 있는 G/G+1 → victim eligibility와 재사용 가능한 BCB identity → evidence-bounded VS candidate → queued latch ownership과 granted latch ownership.</p>
-    <p><a href="core-synthesis-studio.html">closed-book Core synthesis 실습실 열기 →</a></p>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">필수 Core route</div>
-    <h2>safe change review로 이어지는 하나의 dependency chain</h2>
-    <div class="course-list">
-      <article class="course-item"><span class="step">1</span><div><h3>Page journey 설명하기</h3><p>Module boundary, six-move narrative, document route, evidence grammar.</p></div><a href="../lessons/0001-present-the-page-journey.html">열기 →</a></article>
-      <article class="course-item"><span class="step">2</span><div><h3>Object와 state 분리하기</h3><p>VPID, BCB, frame, PAGE_PTR, holder/watcher, lifetime, 네 가지 state axis.</p></div><a href="../lessons/0002-separate-objects-from-state.html">열기 →</a></article>
-      <article class="course-item"><span class="step">3</span><div><h3>Fix convergence 추적하기</h3><p>hit, cold miss, load ownership, waiter retry, 공통 success postcondition.</p></div><a href="../lessons/0003-trace-fix-convergence.html">열기 →</a></article>
-      <article class="course-item"><span class="step">4</span><div><h3>Fix debt 갚기</h3><p>global <code>fcnt</code>, per-thread holder, nested ownership, 짝이 맞는 release.</p></div><a href="../lessons/0004-repay-fix-debt.html">열기 →</a></article>
-      <article class="course-item"><span class="step">4A</span><div><h3>Holder anchor 이해하기</h3><p>Per-thread anchor와 entry, linear BCB lookup, nested reuse, recycling.</p></div><a href="../lessons/0004a-understand-holder-anchor.html">열기 →</a></article>
-      <article class="course-item"><span class="step">5</span><div><h3>Logged mutation audit하기</h3><p>logical lock, WRITE latch, validation, log/page LSA, DIRTY, 모든 exit의 cleanup.</p></div><a href="../lessons/0005-audit-a-logged-mutation.html">열기 →</a></article>
-      <article class="course-item"><span class="step">6</span><div><h3>Generation 하나 flush하기</h3><p>Flush actor, G/G+1, DIRTY/FLUSHING, 두 LSA, WAL gate, re-dirty, retryable failure.</p></div><a href="../lessons/0006-flush-one-generation.html">열기 →</a></article>
-      <article class="course-item"><span class="step">7</span><div><h3>Frame 하나 replace하기</h3><p>stable BCB slot/current VPID, hard eligibility, protected handoff, policy boundary.</p></div><a href="../lessons/0007-replace-one-frame.html">열기 →</a></article>
-      <article class="course-item"><span class="step">8</span><div><h3>Safe change 방어하기</h3><p>VS registry, case packet, proof ladder, fault seam, evidence-bounded conclusion.</p></div><a href="../lessons/0008-defend-a-safe-change.html">열기 →</a></article>
-    </div>
-    <div class="callout"><strong>Core 완료 조건:</strong> page journey를 기억에서 재구성하고, review할 수 있는 change-impact defense를 실제로 보여 줘야 합니다. 여덟 페이지를 모두 읽었다는 사실만으로는 완료 evidence가 되지 않습니다.</div>
-    <p><a href="core-synthesis-studio.html">통합 Core checkpoint 도전하기 →</a></p>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">Advanced route</div>
-    <h2>module 전체를 익혔다고 말하기 전에 마쳐야 할 내용</h2>
-    <div class="course-list">
-      <article class="course-item"><span class="step">9</span><div><span class="status">Ready</span><h3>Latch wait 분류하기</h3><p>queue membership, zero-crossing handoff, timeout cleanup, fairness boundary.</p></div><a href="../lessons/0009-classify-latch-wait.html">열기 →</a></article>
-      <article class="course-item"><span class="step">10</span><div><span class="status">Ready</span><h3>Promotion으로 state 보존하기</h3><p>네 가지 outcome, queue-head continuity, debt conservation, access-method restart.</p></div><a href="../lessons/0010-revalidate-after-promotion.html">열기 →</a></article>
-      <article class="course-item"><span class="step">11</span><div><span class="status">Ready</span><h3>Ordered multi-page refix</h3><p>caller-supplied order, watcher transfer, partial unwind, stale observation repair.</p></div><a href="../lessons/0011-rebuild-after-ordered-refix.html">열기 →</a></article>
-      <article class="course-item"><span class="step">12</span><div><span class="status">Ready</span><h3>BCB 하나의 replacement</h3><p>INVALID, VOID, cooling, hard victim check, detach, rebind를 따라갑니다.</p></div><a href="../lessons/0012-prove-replacement-progress.html">열기 →</a></article>
-      <article class="course-item"><span class="step">12B</span><div><span class="status">Ready</span><h3>Private LRU index</h3><p>기본 수치, index namespace, association lifetime, assignment, movement, victim-search 순서.</p></div><a href="../lessons/0012b-understand-private-lru-index.html">열기 →</a></article>
-      <article class="course-item"><span class="step">13</span><div><span class="status">Ready</span><h3>Recovery redo와 checkpoint</h3><p>selective checkpoint ownership, special fetch mode, page-LSA idempotence, crash evidence.</p></div><a href="../lessons/0013-gate-redo-by-page-lsa.html">열기 →</a></article>
-      <article class="course-item"><span class="step">14</span><div><span class="status">Ready</span><h3>Lifecycle dependency 순서</h3><p>initialization, daemon gating, recovery, shutdown, log finalization, pool finalization.</p></div><a href="../lessons/0014-preserve-lifecycle-order.html">열기 →</a></article>
-      <article class="course-item"><span class="step">15</span><div><span class="status">Ready</span><h3>Specialized interface</h3><p>pointer location, owner protocol, paired cleanup, approximate diagnostic, API caveat.</p></div><a href="../lessons/0015-route-a-specialized-interface.html">열기 →</a></article>
-      <article class="course-item"><span class="step">16</span><div><span class="status">Ready</span><h3>Failure와 proof obligation</h3><p>exceptional exit, risk-matched injection, 정리된 ownership/generation ledger, impact, current status.</p></div><a href="../lessons/0016-close-a-failure-proof.html">열기 →</a></article>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">Lesson loop</div>
-    <h2>매번 같은 다섯 move를 사용하세요</h2>
-    <div class="journey">
-      <article><span class="step">1</span><h3>Acquire</h3><p>짧은 lesson을 읽고 primary diagram 하나를 살펴봅니다.</p></article>
-      <article><span class="step">2</span><h3>Close</h3><p>retrieval prompt에 답하기 전에 페이지를 닫습니다.</p></article>
-      <article><span class="step">3</span><h3>Retrieve</h3><p>기억만으로 state와 consequence를 예측합니다. 먼저 답을 열어 보지 마세요.</p></article>
-      <article><span class="step">4</span><h3>Submit</h3><p>source와 invariant 수준의 feedback을 받도록 답을 chat에 붙여 넣습니다.</p></article>
-      <article><span class="step">5</span><h3>Record</h3><p>이해를 실제로 보여 준 뒤에만 learning record를 만들고, 나중에 다른 내용과 interleave합니다.</p></article>
-    </div>
-    <p>인쇄용 reference card는 학습한 뒤에 사용하세요. retrieval을 대신하는 용도가 아닙니다. source를 trace하거나 팀 질문을 준비할 때는 canonical Markdown을 사용합니다.</p>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">선택 과정: 비교 관점</div>
-    <h2>CUBRID mechanism을 충분히 익힌 뒤 다른 engine과 연결하세요</h2>
-    <p>Lesson 18은 같은 responsibility를 PostgreSQL과 InnoDB에서 어떻게 다루는지 비교한 뒤, 개선 가능성이 높은 CUBRID CPU opportunity에 이 과정의 evidence discipline을 적용합니다. 현재의 Core synthesis checkpoint나 필수 Advanced lesson을 대신하지는 않습니다.</p>
-    <div class="course-list">
-      <article class="course-item"><span class="step">X</span><div><span class="status">Ready</span><h3>세 buffer pool 비교하기</h3><p>ownership seam, miss publication, replacement, durability, linear holder lookup, falsifiable benchmark.</p></div><a href="../lessons/0018-compare-three-buffer-pools.html">열기 →</a></article>
-    </div>
-    <p><a href="three-engine-performance-card.html">인쇄용 comparison card 열기 →</a></p>
-  </section>
-
-  <section class="section">
-    <div class="eyebrow">Maintainer readiness gate</div>
-    <h2>이해는 필요조건이고, live defense는 review readiness를 증명합니다</h2>
-    <ol>
-      <li>guide를 다시 열지 않고 six-move page journey를 재구성합니다.</li>
-      <li>claim에서 canonical page와 pinned source range까지 바로 찾아갑니다.</li>
-      <li>identity, ownership, dirty generation, replacement axis를 넘나드는 counterexample에 답합니다.</li>
-      <li>contract, verified mechanism, policy, inference, runtime observation, historical evidence를 구분합니다.</li>
-      <li>counterexample에 맞서 change-impact case 하나를 방어하고 maintainer feedback을 기록합니다.</li>
-    </ol>
-    <p><a href="../lessons/0017-defend-the-module-live.html">Lesson 17: live module defense 열기 →</a></p>
-    <p><a href="presentation-spine.html">explanation spine 열기 →</a> · <a href="presentation-rehearsal-card.html">readiness scorecard 열기 →</a></p>
-  </section>
-
-  <footer class="footer">페이지가 익숙하다는 이유로 진도를 나가지 마세요. 보지 않고 owner, transition, invariant, consequence, evidence boundary를 재구성할 수 있을 때 다음으로 넘어갑니다.</footer>
-  <p class="footer"><a href="course-coverage-matrix.html">canonical coverage와 현재 learner evidence 점검하기 →</a></p>
-</main>
-</body>
-</html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>커리큘럼 안내</title><link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head><body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><span aria-current="page">KO</span><a href="../../en/reference/course-learning-path.html" hreflang="en" lang="en">EN</a></nav>
+<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">CUBRID PAGE BUFFER · f799e05</div><h1>커리큘럼 안내</h1></header><section class="section"><h2>하나의 메커니즘에서 모듈 전체로</h2><p>아래의 개념 순서로 진행합니다. 진행 순서가 바뀌어도 강의 식별자는 유지합니다. 각 강의는 설명, source tracing, 함께 생각하기, 질문으로 구성됩니다.</p></section><div class="curriculum-phases"><section class="curriculum-phase" id="phase-1"><p class="eyebrow">01</p><h2>기초 모델</h2><ol><li><a href="../lessons/0001-present-the-page-journey.html">Lecture 1 — Module 경계와 page journey</a><small>페이지 획득부터 변경, 전파, frame 재사용까지 이어지는 흐름을 살펴봅니다. 각 전이의 책임과 근거를 연결합니다.</small></li>
+<li><a href="../lessons/0002-separate-objects-from-state.html">Lecture 2 — 객체와 독립적인 상태 축</a><small>Identity, resident storage, 빌려 쓰는 접근 권한, ownership accounting은 같은 페이지의 서로 다른 측면을 설명합니다.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-2"><p class="eyebrow">02</p><h2>획득과 소유권</h2><ol><li><a href="../lessons/0003-trace-fix-convergence.html">Lecture 3 — Hit와 miss의 합류</a><small>Hit와 miss는 접근을 준비하는 과정이 다릅니다. 두 경로가 identity 확인과 caller의 ownership contract로 합류하는 과정을 살펴봅니다.</small></li>
+<li><a href="../lessons/0004-repay-fix-debt.html">Lecture 4 — Fix debt와 release</a><small>Fix가 성공할 때마다 release 책임이 하나 생깁니다. Global ledger와 thread별 ledger로 nested ownership을 추적합니다.</small></li>
+<li><a href="../lessons/0004a-understand-holder-anchor.html">Lecture 4A — Holder의 구조와 수명</a><small>Thread의 anchor와 재사용되는 holder entry가 반복 BCB 접근을 ownership accounting 및 탐색 비용과 연결합니다.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-3"><p class="eyebrow">03</p><h2>변경과 durability</h2><ol><li><a href="../lessons/0005-audit-a-logged-mutation.html">Lecture 5 — Caller의 correctness와 logged mutation</a><small>Fix 성공으로 접근 권한을 얻어도 logical locking, validation, logging, dirty publication과 cleanup은 caller의 책임으로 남습니다.</small></li>
+<li><a href="../lessons/0006-flush-one-generation.html">Lecture 6 — Flush generation과 WAL 순서</a><small>완료된 flush는 특정 복사본에 해당합니다. 새 resident 변경, checkpoint 선택, persistence를 각각 구분해 살펴봅니다.</small></li>
+<li><a href="../lessons/0006a-understand-page-buffer-daemons.html">Lecture 6A — Page-buffer daemon의 lifecycle</a><small>네 background 역할은 thread lifecycle을 공유하지만, recovery gate가 열린 뒤 수행하는 작업은 서로 다릅니다.</small></li>
+<li><a href="../lessons/0006b-follow-page-flush-handoff.html">Lecture 6B — Page-flush와 post-flush handoff</a><small>Allocator pressure가 candidate 선택, generation 제출, 보호 아래 재확인, allocator wakeup으로 이어집니다.</small></li>
+<li><a href="../lessons/0006c-follow-maintenance-and-pacing.html">Lecture 6C — Replacement maintenance와 I/O pacing</a><small>Quota maintenance와 write 이후 token control은 서로 다른 상태와 timing policy를 통해 이후 진행을 조절합니다.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-4"><p class="eyebrow">04</p><h2>교체와 진행</h2><ol><li><a href="../lessons/0007-replace-one-frame.html">Lecture 7 — Victim eligibility와 frame 재사용</a><small>Missing page에는 저장 공간이 필요합니다. Frame 재사용에는 replacement 선호도뿐 아니라 보호 아래에서 확인한 안전 조건이 필요합니다.</small></li>
+<li><a href="../lessons/0012-prove-replacement-progress.html">Lecture 12 — Replacement 상태와 진행</a><small>하나의 BCB/frame pair가 admission, cooling, victim 확인을 거쳐 다른 identity에 연결되는 과정을 살펴봅니다.</small></li>
+<li><a href="../lessons/0012b-understand-private-lru-index.html">Lecture 12B — Private LRU index와 선택</a><small>계속 존재하는 list descriptor, session이 빌리는 index, BCB의 소속, victim search에는 각각 다른 수명과 규칙이 있습니다.</small></li>
+<li><a href="../lessons/0012a-understand-aout-ghost-history.html">Lecture 12A — 비활성 AOUT admission history</a><small>소스에는 AOUT ghost admission metadata가 남아 있지만, 기준 revision의 parameter tuning은 그 동작을 비활성화합니다.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-5"><p class="eyebrow">05</p><h2>동시성</h2><ol><li><a href="../lessons/0009-classify-latch-wait.html">Lecture 9 — Latch queue와 grant 결과</a><small>Pending request, latch grant, holder accounting 완료는 대기 경로에서 서로 다른 사건입니다.</small></li>
+<li><a href="../lessons/0010-revalidate-after-promotion.html">Lecture 10 — Promotion과 page-state 연속성</a><small>전용 promotion은 기존 ownership을 변환합니다. 성공적인 handoff와 실패 결과에 따라 caller가 유지할 수 있는 정보가 달라집니다.</small></li>
+<li><a href="../lessons/0011-rebuild-after-ordered-refix.html">Lecture 11 — Ordered refix와 재검증</a><small>순서를 지키면 multi-page 대기의 순환을 끊을 수 있습니다. Page를 놓았다 다시 얻는 동안 이전 관측이 무효가 될 수도 있습니다.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-6"><p class="eyebrow">06</p><h2>복구와 특수 경로</h2><ol><li><a href="../lessons/0013-gate-redo-by-page-lsa.html">Lecture 13 — Log buffer와 data-page redo</a><small>Log storage와 data-page residency는 담당 owner가 다릅니다. Page LSA는 복구할 record를 skip 또는 apply하는 판단과 연결합니다.</small></li>
+<li><a href="../lessons/0014-preserve-lifecycle-order.html">Lecture 14 — Startup과 shutdown의 의존 관계</a><small>Initialization, recovery gate, finalization의 순서는 각 resource를 마지막으로 사용하는 주체를 고려해야 합니다.</small></li>
+<li><a href="../lessons/0015-route-a-specialized-interface.html">Lecture 15 — 특수 접근 경로의 contract</a><small>Pointer type이 비슷해도 ownership, protection, 허용 작업, cleanup 책임은 다를 수 있습니다.</small></li>
+<li><a href="../lessons/0016-close-a-failure-proof.html">Lecture 16 — 실패 시 cleanup과 근거</a><small>소스에서 확인한 return은 조사의 출발점입니다. 남은 상태, retry 동작, 영향 범위를 통해 결론을 뒷받침합니다.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-7"><p class="eyebrow">07</p><h2>Maintainer 통합</h2><ol><li><a href="../lessons/0008-defend-a-safe-change.html">Lecture 8 — 변경 영향과 검증</a><small>변경 검토에서는 interface 동작, 상태의 owner, invariant, 실패 시 cleanup, caller 영향, 검증을 연결합니다.</small></li>
+<li><a href="../lessons/0017-defend-the-module-live.html">Lecture 17 — Maintainer 통합과 technical defense</a><small>일관된 page journey를 바탕으로 source trace, 반례, 진단, 근거 있는 변경 계획을 연결합니다.</small></li></ol></section>
+<section class="curriculum-phase" id="phase-8"><p class="eyebrow">08</p><h2>다른 엔진과의 비교</h2><ol><li><a href="../lessons/0018-compare-three-buffer-pools.html">Lecture 18 — 세 buffer pool의 책임 분담</a><small>CUBRID, PostgreSQL, InnoDB는 공통된 안전 문제를 서로 다른 ownership 및 cleanup 메커니즘으로 해결합니다.</small></li>
+<li><a href="../lessons/0018a-compare-replacement-policies.html">Lecture 18A — 엔진별 replacement policy</a><small>Admission, 재사용 이력, victim 선택, dirty-page 진행을 공통 질문으로 삼아 소스에 근거해 비교합니다.</small></li></ol></section></div><section class="section" id="practice"><h2>강의 사이의 실습</h2><p>소스 전이 하나를 추적해 owner와 invariant를 기록하고 반례를 예상합니다. 통합 워크숍에서 연결을 다시 확인합니다. Runtime evidence가 필요한 질문에는 되돌릴 수 있는 probe를 사용합니다.</p><p><a href="core-synthesis-studio.html">통합 워크숍</a> · <a href="../../questions/applied-exercises.md">실습과 실험의 경계</a> · <a href="presentation-rehearsal-card.html">최종 technical defense 평가 기준</a></p></section><section class="section" id="completion"><h2>이해를 확인하는 근거</h2><p>과정 완료 시 source trace, 동시 실행과 실패 시나리오, 증상 진단, 검토된 변경 영향 및 검증 계획을 연결합니다. 개인별 기록은 발표자나 팀이 이 사이트 밖에서 관리합니다.</p></section></main><nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
+</body></html>

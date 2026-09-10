@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0018 — Compare three buffer pools</title>
+  <title>Lecture 18 — Responsibilities across three buffer pools</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0018-compare-three-buffer-pools.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · Lesson 0018</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · Lecture 0018</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Optional comparison · one simple mental model</div>
-    <h1>Same safety jobs, different places to do them</h1>
-    <p>Learn two shared responsibilities first. Then remember one ownership sentence and one replacement sentence for each engine.</p>
+    <div class="eyebrow">LECTURE 18 / Cross-engine perspective</div>
+    <h1>Responsibilities across three buffer pools</h1>
+    <p>CUBRID, PostgreSQL, and InnoDB solve shared safety problems through different ownership and cleanup mechanisms.</p>
     <div class="pills"><span class="pill">Keep frame</span><span class="pill">Protect bytes</span><span class="pill">Who cleans up?</span><span class="pill">How choose a victim?</span></div>
   </header>
 
@@ -31,29 +30,29 @@
       <section class="section" id="scenario">
         <div class="eyebrow">02 · Three sentences to remember</div>
         <h2>How one worker borrows a page</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Engine</th><th>Frame protection</th><th>Byte protection</th><th>Cleanup memory</th></tr></thead>
           <tbody>
             <tr><td>CUBRID</td><td>BCB <code>fcnt</code></td><td>READ/WRITE page latch requested by normal <code>pgbuf_fix()</code></td><td>Per-thread holder; <code>pgbuf_unfix()</code> repays one debt</td></tr>
             <tr><td>PostgreSQL</td><td>Buffer pin/refcount</td><td>Separately acquired content lock</td><td>Backend private refcount and <code>ResourceOwner</code>; unlock and unpin are separate</td></tr>
             <tr><td>MySQL / InnoDB</td><td>Atomic <code>buf_fix_count</code></td><td>Block S/SX/X latch</td><td><code>mtr_t</code> memo remembers resources and releases the latch, then the fix</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="big-claim">CUBRID couples the normal fix and latch request. PostgreSQL exposes pin and content lock separately. InnoDB keeps the states separate but lets one MTR memo own their lifetime.</p>
       </section>
 
       <section class="section" id="performance">
         <div class="eyebrow">03 · Replacement in one line</div>
         <h2>All reject owned frames; they remember “hot” differently</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Engine</th><th>One-line replacement picture</th></tr></thead>
           <tbody>
             <tr><td>CUBRID</td><td>Pages age through LRU1 → LRU2 → LRU3 across private/shared lists; victim search looks in LRU3.</td></tr>
             <tr><td>PostgreSQL</td><td>A clock hand skips pinned buffers, reduces positive <code>usage_count</code>, and chooses an unpinned zero.</td></tr>
             <tr><td>InnoDB</td><td>New reads enter the old part of a young/old LRU; qualified reuse promotes them, and candidates come from the old tail.</td></tr>
           </tbody>
-        </table>
-        <div class="callout"><strong>Want the mechanisms and exact defaults?</strong> Continue to <a href="0018a-compare-replacement-policies.html">Lesson 18A: Compare replacement policies</a>. Keeping this detail on its own page makes the basic ownership comparison readable.</div>
+        </table></div>
+        <div class="callout"><strong>Want the mechanisms and exact defaults?</strong> Continue to <a href="0018a-compare-replacement-policies.html">Lecture 18A: Compare replacement policies</a>. Keeping this detail on its own page makes the basic ownership comparison readable.</div>
       </section>
 
       <section class="section" id="experiment">
@@ -68,18 +67,17 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">05 · Retrieval practice</div>
+        <div class="eyebrow">05 · Pause and reason</div>
         <h2>Explain the six sentences without looking</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="shared jobs: prevent frame reuse while owned and prevent incompatible byte access -> CUBRID couples normal fix, fcnt, requested latch, and thread holder -> PostgreSQL separates pin from content lock and tracks backend-local ownership -> InnoDB separates buf_fix_count from S/SX/X state while the MTR memo owns cleanup -> replacement memory: CUBRID three LRU zones, PostgreSQL clock usage_count, InnoDB young/old midpoint LRU -> evidence boundary: these are source-backed responsibility differences, not a performance ranking." data-concepts='[{"label":"two shared safety jobs","terms":["frame","reuse","bytes","protect"]},{"label":"CUBRID seam","terms":["fcnt","holder","latch"]},{"label":"PostgreSQL seam","terms":["pin","content lock","private"]},{"label":"InnoDB seam","terms":["buf_fix_count","mtr","memo"]},{"label":"three replacement memories","terms":["lru3","usage_count","young","old"]},{"label":"no benchmark winner","terms":["performance","benchmark","winner"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>A teammate asks, “What is the shortest accurate difference among these three buffer pools?”</p>
-          <p><strong>Your task:</strong> name the two shared safety jobs, give one ownership sentence and one replacement sentence per engine, then explain why this is not a speed ranking.</p>
-          <textarea aria-label="Your three-engine comparison" placeholder="Two safety jobs → CUBRID → PostgreSQL → InnoDB → three replacement memories → no performance winner."></textarea>
-          <button type="button" data-check>Check comparison coverage</button>
-          <button type="button" class="secondary" data-reveal>Reveal model route</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>Paste your answer into the chat. I will check whether every API analogy names the responsibility it actually covers.</p>
+          <p><strong>Consider:</strong> name the two shared safety jobs, give one ownership sentence and one replacement sentence per engine, then explain why this is not a speed ranking.</p>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>shared jobs: prevent frame reuse while owned and prevent incompatible byte access -> CUBRID couples normal fix, fcnt, requested latch, and thread holder -> PostgreSQL separates pin from content lock and tracks backend-local ownership -> InnoDB separates buf_fix_count from S/SX/X state while the MTR memo owns cleanup -> replacement memory: CUBRID three LRU zones, PostgreSQL clock usage_count, InnoDB young/old midpoint LRU -> evidence boundary: these are source-backed responsibility differences, not a performance ranking.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -92,12 +90,12 @@
         </ul>
         <p><a href="0018a-compare-replacement-policies.html">Continue to the detailed replacement-policy comparison →</a></p>
         <p><a href="../reference/three-engine-performance-card.html">Open the printable comparison card →</a></p>
-        <p><a href="0017-defend-the-module-live.html">← Return to Lesson 0017</a></p>
+        <p><a href="0017-defend-the-module-live.html">← Return to Lecture 0017</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#lens">1. Two protections</a>
       <a href="#scenario">2. Shared scenario</a>
       <a href="#performance">3. Replacement memory</a>
@@ -108,11 +106,12 @@
       <a href="../reference/three-engine-performance-card.html">Comparison card</a>
       <a href="0018a-compare-replacement-policies.html">Replacement detail</a>
       <a href="../../source-inventory.md">Evidence inventory</a>
-      <a href="../index.html">Course home</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever an API analogy hides which safety responsibility it actually covers.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0017-defend-the-module-live.html">← Lecture 17 · Maintainer synthesis and technical defense</a><a rel="next" href="0018a-compare-replacement-policies.html">Lecture 18A · Replacement policies across engines →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

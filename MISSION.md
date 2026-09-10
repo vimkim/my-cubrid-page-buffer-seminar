@@ -1,23 +1,11 @@
-# Mission: Defend CUBRID's page-buffer module
+# Mission: Understand and maintain the page-buffer module
 
-## Why
-Build a source-level mental model of `src/storage/page_buffer.c/.h` so I can present this maintainer-guide document set to my team, explain the design without hand-waving, and answer difficult follow-up questions with the right evidence boundary.
+The bilingual HTML is direct seminar material for teammates: senior C/C++ systems engineers familiar with buffer pools and WAL, without assumed CUBRID-internal knowledge. Participants should be able to trace a page's lifetime, reason about concurrent state and ownership, investigate failures, and defend a safe change with evidence.
 
-## Success looks like
-- Draw and explain `VPID -> BCB -> frame -> PAGE_PTR`, including global fix accounting and the per-thread holder.
-- Trace normal acquisition and release, a representative caller mutation, one flush generation, and safe frame reuse in the pinned source.
-- Separate Module guarantees from caller and dependency obligations during design and code-review discussions.
-- Navigate the Core, Advanced, playbook, reference, and Question-bank routes according to the team's question.
-- Deliver a coherent presentation and defend every strong claim as an Interface contract, Verified mechanism, Implementation policy, Inference, Runtime observation, or Historical evidence.
+The curriculum has no fixed total duration. Its 25 provisional lectures cover every Core and Advanced topic, with cross-engine comparison after the CUBRID mechanisms. A lecture may span multiple meetings; completion depends on deep understanding, not elapsed time or page visits.
 
-## Constraints
-- Use CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912` as the source baseline.
-- Keep English lessons canonical and provide a complete natural-Korean counterpart for every teaching HTML page. Preserve established database/CUBRID jargon and source identifiers in English in the Korean pages. Keep both language trees short, interactive, and grounded in the existing canonical guide pages and pinned source.
-- Serve HTML from the remote Linux host over a loopback-only HTTP server reached through SSH port forwarding; no graphical browser is available on the host.
-- Preserve concurrent work in this directory; teaching files must not rewrite canonical guide pages or other agents' assets.
-- Presentation date, duration, and the learner's current page-buffer depth have not yet been established.
+Korean is the primary live edition. English owns canonical seminar wording; the Markdown maintainer guide owns technical explanations and evidence. Both HTML editions preserve source identifiers, evidence boundaries, and the pinned CUBRID revision f799e05d77d5300c6ea5753b4a6cc7caee6d8912.
 
-## Out of scope
-- Modifying the CUBRID engine while the goal is understanding and presentation mastery.
-- Re-teaching general database internals unless they are necessary for a page-buffer mechanism.
-- Treating PostgreSQL or InnoDB as normative designs or direct API equivalents for CUBRID.
+The deliverable is one readable, audience-facing site with optional presentation mode, worked scenarios, model explanations, and durable reference routes. It does not store participant answers or award mastery scores. Engine changes and new performance claims are outside this documentation migration.
+
+See the [accepted curriculum design](docs/seminar-curriculum-design.md) for scope and acceptance criteria, and [authoring notes](NOTES.md) before editing.

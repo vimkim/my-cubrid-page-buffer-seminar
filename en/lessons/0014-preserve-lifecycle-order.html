@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0014 — Preserve lifecycle order</title>
+  <title>Lecture 14 — Startup and shutdown dependencies</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0014-preserve-lifecycle-order.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0014</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0014</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced capability · module lifecycle</div>
-    <h1>Keep the pool alive until every user is finished</h1>
-    <p>By the end, you can review startup, recovery gating, shutdown, and failure cleanup as a dependency order—not a list of independent finalizers.</p>
+    <div class="eyebrow">LECTURE 14 / Recovery and specialized behavior</div>
+    <h1>Startup and shutdown dependencies</h1>
+    <p>Initialization, recovery gates, and finalization must respect the last user of each resource.</p>
     <div class="pills"><span class="pill">Initialize</span><span class="pill">Gate daemons</span><span class="pill">Recover</span><span class="pill">Stop work</span><span class="pill">log_final</span><span class="pill">Finalize pool</span></div>
   </header>
 
@@ -23,14 +22,14 @@
       <section class="section" id="owner-boundary">
         <div class="eyebrow">01 · Identity ownership</div>
         <h2>Logical lifecycle decision first; cache coherence second</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Decision</th><th>Owner</th><th>Page-buffer consequence</th></tr></thead>
           <tbody>
             <tr><td>Allocate/deallocate logical page identity</td><td>File/disk/recovery protocol</td><td>Materialize, reject, or invalidate resident mapping as requested.</td></tr>
             <tr><td>Select <a href="0005-audit-a-logged-mutation.html#new-page"><code>NEW_PAGE</code></a> or recovery fetch mode</td><td>Caller with allocation/recovery knowledge</td><td>Apply the matching resident-byte metadata/validation contract; the caller still owns logical payload initialization.</td></tr>
             <tr><td>Raw/bypass overwrite</td><td>File/disk owner</td><td>Flush/invalidate cached mapping as required before external bytes replace it.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="big-claim">Invalidation is a cache-coherence consequence. It does not itself decide whether storage is logically allocated.</p>
         <p class="source-note"><strong>Representative sources:</strong> allocation ordering <code>file_manager.c:5420–5590</code>; bypass reset/coherence <code>disk_manager.c:721–811</code>.</p>
       </section>
@@ -76,7 +75,7 @@
       <section class="section" id="wrong-order">
         <div class="eyebrow">05 · Counterexamples</div>
         <h2>Two tempting reorderings violate dependencies</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Wrong change</th><th>Broken dependency</th><th>Failure shape</th></tr></thead>
           <tbody>
             <tr><td><code>pgbuf_finalize()</code> before daemon destruction</td><td>Background consumer outlives its pool.</td><td>Daemon can dereference finalized lists, frames, queues, or locks.</td></tr>
@@ -84,7 +83,7 @@
             <tr><td>Enable flush daemons before recovery completion</td><td>Background policy races recovery ownership.</td><td>Unfinished recovery state becomes visible to normal flush/replacement work.</td></tr>
             <tr><td>Raw overwrite without invalidation</td><td>Cached identity survives external byte reset.</td><td>Readers can observe stale resident bytes inconsistent with storage.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="failure">
@@ -96,18 +95,17 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">07 · Pause and reason</div>
         <h2>Repair a dangerous shutdown proposal</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="file disk or recovery code owns logical allocation and raw overwrite decisions, while page-buffer invalidation is the resident coherence consequence -> startup initializes locks, then the page-buffer pool, then file management; restart metadata and DWB recovery precede gated daemon creation, and flush work is enabled only after log recovery -> shutdown stops background ownership and destroys page-buffer daemons before later finalization -> log_final must run while the pool is alive because it may still propagate pages -> DWB and then pool dependencies are torn down only after their last users finish, and file management is finalized after the pool -> finalizing the pool before daemons risks use-after-finalization; finalizing it before log_final removes required page service -> restart-error cleanup preserves the same consumer-before-resource destruction rule." data-concepts='[{"label":"logical owner versus invalidation consequence","terms":["file","disk","recovery","invalidation","coherence"]},{"label":"startup dependency order","terms":["lock","pgbuf_initialize","file","gated","recovery"]},{"label":"stop daemons before pool","terms":["stop","destroy daemon","before","pool"]},{"label":"log_final needs live pool","terms":["log_final","alive","propagate","page"]},{"label":"dwb pool file teardown order","terms":["dwb","pgbuf_finalize","file manager","after"]},{"label":"failure cleanup preserves dependencies","terms":["error","cleanup","consumer","resource","order"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>A proposed cleanup calls <code>pgbuf_finalize()</code>, then destroys daemons, then calls <code>log_final()</code>. A raw volume-reset path also leaves cached mappings intact.</p>
-          <p><strong>Your task:</strong> identify every broken owner/dependency, give the safe order, and explain which rules are structural versus version-sensitive timing policy.</p>
-          <textarea aria-label="Your lifecycle dependency repair" placeholder="Name each consumer, the resource it needs, and the last legal use before destruction."></textarea>
-          <button type="button" data-check>Check lifecycle repair</button>
-          <button type="button" class="secondary" data-reveal>Reveal model route</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>Paste your answer into the chat. I will check owner boundaries, startup/shutdown order, last-use reasoning, and policy language before recording Advanced progress.</p>
+          <p><strong>Consider:</strong> identify every broken owner/dependency, give the safe order, and explain which rules are structural versus version-sensitive timing policy.</p>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>file disk or recovery code owns logical allocation and raw overwrite decisions, while page-buffer invalidation is the resident coherence consequence -> startup initializes locks, then the page-buffer pool, then file management; restart metadata and DWB recovery precede gated daemon creation, and flush work is enabled only after log recovery -> shutdown stops background ownership and destroys page-buffer daemons before later finalization -> log_final must run while the pool is alive because it may still propagate pages -> DWB and then pool dependencies are torn down only after their last users finish, and file management is finalized after the pool -> finalizing the pool before daemons risks use-after-finalization; finalizing it before log_final removes required page service -> restart-error cleanup preserves the same consumer-before-resource destruction rule.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -115,13 +113,13 @@
         <h2>Trace each dependency through its last use</h2>
         <p>Read pinned <code>boot_sr.c:2740–2801,3055–3113</code> beside <code>log_tran_table.c:468–512,580–594</code>. For every create/enable/disable/destroy/finalize call, annotate the consumer it permits and the last operation that may still need it.</p>
         <p><a href="../reference/lifecycle-order-card.html">Open the printable lifecycle-order card →</a></p>
-        <p><a href="0015-route-a-specialized-interface.html">Continue to Lesson 0015 →</a></p>
-        <p><a href="0013-gate-redo-by-page-lsa.html">← Return to Lesson 0013</a></p>
+        <p><a href="0015-route-a-specialized-interface.html">Continue to Lecture 0015 →</a></p>
+        <p><a href="0013-gate-redo-by-page-lsa.html">← Return to Lecture 0013</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#owner-boundary">1. Identity owner</a>
       <a href="#shape">2. Dependency graph</a>
       <a href="#startup">3. Startup/recovery</a>
@@ -133,11 +131,12 @@
       <hr>
       <a href="../reference/lifecycle-order-card.html">Lifecycle-order card</a>
       <a href="../../advanced/recovery-and-lifecycle.md">Canonical Advanced page</a>
-      <a href="../index.html">Course home</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever logical allocation ownership, daemon gating, last use, or finalization order is unclear.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0013-gate-redo-by-page-lsa.html">← Lecture 13 · Log buffers and data-page redo</a><a rel="next" href="0015-route-a-specialized-interface.html">Lecture 15 · Specialized access contracts →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

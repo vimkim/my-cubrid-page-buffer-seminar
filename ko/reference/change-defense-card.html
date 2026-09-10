@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID change defense 참고 카드</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/change-defense-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · 빠른 참고</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
     <div class="eyebrow">change review용 인쇄 카드</div>
@@ -20,18 +20,18 @@
   <section class="reference-grid">
     <article class="reference-card full">
       <h2>label부터 정확히 읽기</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Label</th><th>뜻</th><th>혼동하면 안 되는 것</th></tr></thead>
         <tbody>
           <tr><td><code>VS-*</code></td><td>guide의 unresolved/version-sensitive findings registry에서 쓰는 stable ID입니다.</td><td>source symbol이나 error code가 아닙니다.</td></tr>
           <tr><td>Case packet</td><td>source range, registry entry, worksheet, model answer를 한데 묶은 범위가 명확한 review exercise입니다.</td><td>network packet이나 page-buffer object가 아닙니다.</td></tr>
           <tr><td>Candidate</td><td>source에서 우려되는 지점은 확인했지만 reachability와 impact는 아직 증명하지 못한 상태입니다.</td><td>검증된 production defect가 아닙니다.</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card full">
       <h2>다섯 단계 proof level</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Level</th><th>증명 대상</th><th>필요한 evidence</th></tr></thead>
         <tbody>
           <tr><td>1</td><td>source에서 보이는 control flow</td><td>pinned symbol, range, transition, callee, exit</td></tr>
@@ -40,11 +40,11 @@
           <tr><td>4</td><td>Production impact</td><td>consumer가 관찰할 수 있는 consequence 재현</td></tr>
           <tr><td>5</td><td>Current-branch status</td><td>정확한 branch commit에서 다시 trace하고 rerun</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card full">
       <h2>아홉 항목 change-impact plan</h2>
-      <table>
+      <div class="table-scroll"><table>
         <tbody>
           <tr><th>Behavior</th><td>달라질 수 있는 observable behavior</td><th>Owners</th><td>Thread, Module, caller, consumer</td></tr>
           <tr><th>State</th><td>field, flag, counter, pointer, queue, LSA</td><th>Guards</th><td>Latch, mutex, atomic order, logical lock, precondition</td></tr>
@@ -52,7 +52,7 @@
           <tr><th>Caller impact</th><td>return, ownership, timing, retry, contract</td><th>Evidence seam</th><td>source가 말해 주는 한계와 risk-matched probe</td></tr>
           <tr><th>Remaining uncertainty</th><td colspan="3">inference, version sensitivity, unreachable condition 또는 아직 관찰하지 못한 것</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card full">
       <h2>공통 exceptional-return 구조</h2>
@@ -77,7 +77,7 @@
     </article>
     <article class="reference-card full">
       <h2>review에서 쓸 표현</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>권장 표현</th><th>증명 전에는 피할 표현</th></tr></thead>
         <tbody>
           <tr><td>“pinned commit X에서 source는 …을 보여 줍니다.”</td><td>“현재 CUBRID는 언제나 …합니다.”</td></tr>
@@ -85,11 +85,12 @@
           <tr><td>“이 callee에서 inject하고 다음 postcondition을 확인합니다.”</td><td>“cleanup이 빠져 보이니 여기에 추가하면 됩니다.”</td></tr>
           <tr><td>“Candidate status의 owner는 uncertainty registry입니다.”</td><td>변할 수 있는 defect status를 여러 페이지에 복사</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
   <footer class="footer">Canonical exercise: <a href="../../learning/06-maintainer-capstone.md">Maintainer Capstone</a>. 문서 위의 논증은 risk-matched probe와 maintainer review를 거쳐야 readiness evidence가 됩니다.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

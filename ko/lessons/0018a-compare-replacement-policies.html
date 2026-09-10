@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0018A — replacement policy 비교하기</title>
+  <title>강의 18A — 엔진별 replacement policy</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0018a-compare-replacement-policies.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · Lesson 0018A</span><a href="../index.html">과정 홈</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · Lecture 0018A</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">선택 심화 비교 · replacement만 다루기</div>
-    <h1>Admission, reuse, victim이라는 같은 세 질문을 던진다</h1>
-    <p>서로 다른 data structure를 모두 “LRU”라고 뭉개지 않고 CUBRID, PostgreSQL, InnoDB를 비교한다.</p>
+    <div class="eyebrow">LECTURE 18A / 다른 엔진과의 비교</div>
+    <h1>엔진별 replacement policy</h1>
+    <p>Admission, 재사용 이력, victim 선택, dirty-page 진행을 공통 질문으로 삼아 소스에 근거해 비교합니다.</p>
     <div class="pills"><span class="pill">Admission</span><span class="pill">Reuse memory</span><span class="pill">Victim choice</span><span class="pill">Dirty page</span><span class="pill">Scan resistance</span></div>
   </header>
 
@@ -25,14 +24,14 @@
         <h2>Page 하나를 세 decision에 걸쳐 따라간다</h2>
         <img class="diagram" src="../../assets/three-engine-replacement-paths.svg" alt="CUBRID, PostgreSQL, InnoDB replacement policy의 admission, reuse, victim path">
         <p class="caption">공통 hard rule은 단순하다. Fix 또는 pin 중인 frame은 ordinary victim이 아니다. Admission, hotness memory, candidate order, dirty handling은 implementation policy다.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>질문</th><th>CUBRID</th><th>PostgreSQL</th><th>MySQL / InnoDB</th></tr></thead>
           <tbody>
             <tr><td>무엇을 순서화하는가?</td><td>Private/shared doubly linked LRU가 여러 개이고 각각 LRU1/LRU2/LRU3로 나뉜다.</td><td>Normal shared buffer에 recency list가 없다. Atomic clock hand 하나가 descriptor array를 걷는다.</td><td>Buffer-pool instance마다 doubly linked young/old LRU 하나가 있다.</td></tr>
             <tr><td>Reuse를 무엇으로 기억하는가?</td><td>Zone, list position/tick, adaptive per-list activity/quota.</td><td>최대 5인 작은 resident <code>usage_count</code>.</td><td>Young/old position, first-access time, eviction-clock distance.</td></tr>
             <tr><td>Candidate는 어디 있는가?</td><td>Policy가 고른 list 하나의 LRU3.</td><td>Clock이 만난 첫 unpinned zero-count descriptor.</td><td>Old tail에서 역방향으로 scan해 찾은 clean relocatable page.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="cubrid">
@@ -77,21 +76,21 @@
       <section class="section" id="dirty">
         <div class="eyebrow">05 · Dirty page가 progress를 바꾼다</div>
         <h2>Writeback progress는 별도의 mechanism이 담당합니다</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Engine</th><th>Candidate가 dirty일 때</th><th>Background help</th></tr></thead>
           <tbody>
             <tr><td>CUBRID</td><td>Ordinary detach는 clean을 요구한다. Dirty LRU3는 generation-aware flush가 clean으로 만들 때까지 resident다.</td><td>Page-flush와 post-flush/direct-victim progress가 waiting allocator와 협력한다.</td></tr>
             <tr><td>PostgreSQL</td><td>Clock은 dirty unpinned buffer를 고를 수 있다. Allocating backend가 conditional lock, flush, revalidation을 수행할 수 있다.</td><td>Background writer가 곧 필요할 가능성이 있는 victim을 미리 clean한다.</td></tr>
             <tr><td>InnoDB</td><td>즉시 replacement하려면 clean이어야 한다. Foreground pressure가 dirty tail page 하나를 flush하고 free list를 retry할 수 있다.</td><td>Page cleaner는 LRU-tail free-page target과 redo/flush-list target을 모두 좇는다.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="big-claim">“Cold”는 어디를 볼지 답한다. “Clean and unowned”는 지금 reuse 가능한지 답한다.</p>
       </section>
 
       <section class="section" id="misreadings">
         <div class="eyebrow">06 · False equivalence 막기</div>
         <h2>비슷한 단어가 다른 algorithm을 가린다</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>유혹적인 shortcut</th><th>수정된 설명</th></tr></thead>
           <tbody>
             <tr><td>“CUBRID LRU3는 InnoDB old와 같다.”</td><td>둘 다 cold region이지만 admission, domain 수, promotion gate, candidate scan이 다르다.</td></tr>
@@ -99,33 +98,32 @@
             <tr><td>“PostgreSQL strategy ring은 CUBRID private LRU다.”</td><td>Ring은 shared-buffer ID의 backend-local array이고 CUBRID private LRU는 pool-global linked residency/quota domain이다.</td></tr>
             <tr><td>“InnoDB old/new는 2Q다.”</td><td>두 region 모두 resident page를 담으며 이 path에는 general evicted-identity ghost queue가 없다.</td></tr>
           </tbody>
-        </table>
-        <div class="callout warn"><strong>Source shape만으로 winner를 고를 수 없다.</strong> Hit ratio와 latency는 effective pool byte, page/row layout, workload, dirtying, cleaning, checkpoint behavior, contention에도 달려 있다. 이 lesson은 measurement hypothesis를 제공하지 benchmark result를 제공하지 않는다.</div>
+        </table></div>
+        <div class="callout warn"><strong>Source shape만으로 winner를 고를 수 없다.</strong> Hit ratio와 latency는 effective pool byte, page/row layout, workload, dirtying, cleaning, checkpoint behavior, contention에도 달려 있다. 이 lecture은 measurement hypothesis를 제공하지 benchmark result를 제공하지 않는다.</div>
       </section>
 
       <section class="section" id="retrieval">
         <div class="eyebrow">07 · Retrieval 연습</div>
         <h2>두 번째 access와 첫 dirty victim을 trace한다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="CUBRID: private LRU1 또는 shared LRU2 admission -> zone/age-based boost -> advertise된 list 하나의 LRU3 scan 최대 1000 -> ordinary detach 전에 dirty를 flush해야 함 -> PostgreSQL: usage_count 1 admission -> backend 첫 pin은 최대 5까지 올리지만 nested local pin은 올리지 않음 -> clock은 pin을 건너뛰고 positive count를 줄여 zero 선택 -> dirty selection은 allocator가 flush할 수 있음 -> InnoDB: disk read는 old head에 들어가고 기본 old target 37% -> promotion은 보통 1000ms 기다림 -> old tail부터 scan하며 첫 common attempt는 최대 100 -> dirty pressure는 cleaner 또는 foreground flush를 부름 -> 셋 모두 owned frame을 제외하지만 policy 이름이 performance 우월성을 증명하지 않음." data-concepts='[{"label":"CUBRID path","terms":["lru1","lru2","lru3","1000"]},{"label":"PostgreSQL path","terms":["usage_count","5","clock","zero"]},{"label":"InnoDB path","terms":["old","37","1000ms","tail"]},{"label":"dirty progress 차이","terms":["dirty","flush","clean"]},{"label":"공통 ownership gate","terms":["fixed","pinned","owned"]},{"label":"winner 없음","terms":["performance","benchmark","winner"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>문제</h3>
           <p>Sequential scan이 page를 한 번 touch하고 나중에 다시 touch한다. 그 뒤 allocation pressure가 dirty 상태의 그 page에 도달한다. Engine별 가능한 policy path를 설명하라.</p>
-          <textarea aria-label="replacement-policy 비교 답안" placeholder="CUBRID admission/reuse/victim/dirty → PostgreSQL → InnoDB → 공통 hard rule → evidence boundary."></textarea>
-          <button type="button" data-check>policy trace 확인</button>
-          <button type="button" class="secondary" data-reveal>model route 보기</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
+
+
+
+          <details class="answer-disclosure"><summary>설명 펼치기</summary><p>CUBRID: private LRU1 또는 shared LRU2 admission -> zone/age-based boost -> advertise된 list 하나의 LRU3 scan 최대 1000 -> ordinary detach 전에 dirty를 flush해야 함 -> PostgreSQL: usage_count 1 admission -> backend 첫 pin은 최대 5까지 올리지만 nested local pin은 올리지 않음 -> clock은 pin을 건너뛰고 positive count를 줄여 zero 선택 -> dirty selection은 allocator가 flush할 수 있음 -> InnoDB: disk read는 old head에 들어가고 기본 old target 37% -> promotion은 보통 1000ms 기다림 -> old tail부터 scan하며 첫 common attempt는 최대 100 -> dirty pressure는 cleaner 또는 foreground flush를 부름 -> 셋 모두 owned frame을 제외하지만 policy 이름이 performance 우월성을 증명하지 않음.</p></details></div>
       </section>
 
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
         <h2>Maintenance claim에는 상세 evidence note를 사용한다</h2>
-        <p><a href="../../reference/cross-database-replacement-policy-comparison.md">Pinned primary-source comparison</a>에는 이 teaching page에서 생략한 정확한 source route, concurrency shape, scan strategy detail, evidence boundary가 있다.</p>
+        <p><a href="../../reference/cross-database-replacement-policy-comparison.md">Pinned primary-source comparison</a>에는 이 강의에서 생략한 정확한 source route, concurrency shape, scan strategy detail, evidence boundary가 있다.</p>
         <p><a href="0018-compare-three-buffer-pools.html">← 단순한 세 buffer-pool 비교로 돌아가기</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson 목차">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#map">1. 세 decision</a>
       <a href="#cubrid">2. CUBRID</a>
       <a href="#postgresql">3. PostgreSQL</a>
@@ -141,6 +139,7 @@
     </nav>
   </div>
   <footer class="footer">Admission, reuse memory, victim choice, dirty progress를 따로 비교하고 이름만으로 winner를 추론하지 않는다.</footer>
-</main>
+<nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0018-compare-three-buffer-pools.html">← Lecture 18 · 세 buffer pool의 책임 분담</a><a href="../reference/presentation-rehearsal-card.html">Technical defense 평가 기준 →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

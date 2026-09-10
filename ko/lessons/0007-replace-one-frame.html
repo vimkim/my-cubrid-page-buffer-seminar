@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0007 — frame 하나 교체하기</title>
+  <title>강의 7 — Victim eligibility와 frame 재사용</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0007-replace-one-frame.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0007</span><a href="../index.html">강의 홈</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0007</span><a href="../index.html">강의 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">Core capability · replacement</div>
-    <h1>missing page를 위한 안전한 BCB를 찾습니다</h1>
-    <p>이 lesson을 마치면 replacement의 간단한 흐름을 말하고, unsafe victim을 제외하며, 마지막 확인을 protection 아래에서 해야 하는 이유를 설명할 수 있습니다.</p>
+    <div class="eyebrow">LECTURE 7 / 교체와 진행</div>
+    <h1>Victim eligibility와 frame 재사용</h1>
+    <p>Missing page에는 저장 공간이 필요합니다. Frame 재사용에는 replacement 선호도뿐 아니라 보호 아래에서 확인한 안전 조건이 필요합니다.</p>
     <div class="pills"><span class="pill">Invalid list 먼저</span><span class="pill">Victim</span><span class="pill">fcnt</span><span class="pill">DIRTY</span><span class="pill">FLUSHING</span><span class="pill">Recheck</span></div>
   </header>
 
@@ -41,8 +40,8 @@
         <p class="caption">Array는 storage를 소유하고 invalid/LRU link는 runtime에 그 stable BCB slot의 일부를 조직합니다.</p>
         <p>Startup에서 <code>BCB_table</code>을 contiguous array로 할당합니다. Initialization이 각 slot의 <code>next_BCB</code>를 다음 slot에 연결하므로 최초 invalid list 구성은 한 번의 <code>O(N)</code>입니다. Runtime allocation path가 이 array loop를 반복하지는 않습니다.</p>
         <p>Invalid list에는 <code>invalid_top</code> pointer 하나, count, mutex가 있습니다. Node는 <code>next_BCB</code>로 연결된 BCB입니다. Allocation은 lock 없는 empty hint를 본 뒤 lock하고 다시 확인하며, head를 그 next node로 옮기고 unlock한 다음 반환된 BCB를 lock해 void zone으로 바꿉니다. 이는 array scan이 아니라 node 하나만 다루는 <code>O(1)</code> list work입니다. 다만 contention이 있으면 <code>invalid_mutex</code>를 기다릴 수 있으므로 constant work가 constant wall-clock latency를 보장하지는 않습니다.</p>
-        <div class="callout"><strong>Lifetime과 초기 population:</strong> page-buffer initialization은 pool 전체에 invalid list 하나를 만들고 <code>invalid_top = BCB[0]</code>, <code>invalid_cnt = num_buffers</code>로 설정합니다. 따라서 모든 BCB가 여기서 시작합니다. Runtime allocation은 entry를 pop하고, load 실패나 명시적 invalidation은 entry를 다시 push할 수 있습니다. Control object와 BCB node는 page-buffer finalization까지 pool이 소유합니다. <a href="0003-trace-fix-convergence.html#startup-slot">Startup BCB/frame lifetime은 Lesson 0003</a>, <a href="0012b-understand-private-lru-index.html#index-space">default 계산은 Lesson 0012B</a>를 보세요. 그 baseline의 명시된 가정에서는 initialization 시 <code>num_buffers = invalid_cnt = 32,768</code>입니다.</div>
-        <table>
+        <div class="callout"><strong>Lifetime과 초기 population:</strong> page-buffer initialization은 pool 전체에 invalid list 하나를 만들고 <code>invalid_top = BCB[0]</code>, <code>invalid_cnt = num_buffers</code>로 설정합니다. 따라서 모든 BCB가 여기서 시작합니다. Runtime allocation은 entry를 pop하고, load 실패나 명시적 invalidation은 entry를 다시 push할 수 있습니다. Control object와 BCB node는 page-buffer finalization까지 pool이 소유합니다. <a href="0003-trace-fix-convergence.html#startup-slot">Startup BCB/frame lifetime은 Lecture 0003</a>, <a href="0012b-understand-private-lru-index.html#index-space">default 계산은 Lecture 0012B</a>를 보세요. 그 baseline의 명시된 가정에서는 initialization 시 <code>num_buffers = invalid_cnt = 32,768</code>입니다.</div>
+        <div class="table-scroll"><table>
           <thead><tr><th>Operation</th><th>접근하는 구조</th><th>Local work</th><th>Elapsed time을 지배할 수 있는 것</th></tr></thead>
           <tbody>
             <tr><td>최초 free population 구성</td><td>한 번 연결하는 contiguous BCB array.</td><td>Page-buffer initialization에서 <code>O(N)</code>.</td><td>한 번의 allocation/initialization이며 miss-path cost가 아닙니다.</td></tr>
@@ -54,19 +53,19 @@
             <tr><td>요청한 old page load</td><td>DWB lookup 또는 data-volume read로 frame을 채웁니다.</td><td><code>O(1)</code> CPU work라고 표현하는 것이 유용하지 않습니다.</td><td>Storage/cache path와 decryption. 보통 pointer update보다 훨씬 클 수 있습니다.</td></tr>
             <tr><td>Loaded BCB publish</td><td>Hash-chain head와 LRU insertion 하나.</td><td>각 link insertion은 <code>O(1)</code>.</td><td>Hash/LRU mutex contention.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <h3>“1,000 links”는 이미 선택된 LRU 하나 안의 node 방문 수입니다</h3>
         <img class="diagram" src="../../assets/lru-scan-depth-vs-list-count.svg" alt="candidate index queue가 private LRU 하나를 선택한 뒤 그 list의 LRU3 안에서 BCB node를 최대 1,000개 걷고, private list 개수는 별도 수량임을 보여 주는 그림">
         <p class="caption">Private-list count <code>P</code>, 선택된 list의 LRU3 population <code>Z3</code>, 이 호출의 visit count <code>K</code>를 섞으면 안 됩니다.</p>
         <p><code>pgbuf_get_victim_from_lru_list(thread_p, lru_idx)</code>는 LRU index 하나를 받습니다. 그 list를 lock하고 <code>victim_hint</code>, 없으면 <code>bottom</code>에서 시작해 LRU3 안에서 <code>bufptr-&gt;prev_BCB</code>를 따라갑니다. Loop body에 한 번 들어가면 BCB 위치 하나를 방문한 것입니다. 해당 BCB를 검사하고, 필요하면 try-lock 후 recheck한 다음 반환하거나 link 하나를 이동합니다. 이 body가 한 호출에서 최대 1,000번 실행됩니다. LRU descriptor 1,000개를 검사한다는 뜻도, victim 1,000개를 만든다는 뜻도 아닙니다.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>수량</th><th>무엇을 세는가</th><th>1,000이 상한인가?</th></tr></thead>
           <tbody>
             <tr><td><code>P</code></td><td>Pool-wide LRU array 안의 private LRU descriptor 수.</td><td><strong>아니요.</strong> 자동 server mode는 <code>MAX_NTRANS + 50</code>을 사용합니다. 명시 양수값은 이 baseline에서 4–4,050입니다.</td></tr>
             <tr><td><code>Z3</code></td><td>선택된 list의 LRU3에 들어 있는 BCB node 수.</td><td><strong>아니요.</strong> Pool population 범위에서 1,000을 넘을 수 있습니다.</td></tr>
             <tr><td><code>K</code></td><td>이 selected-list 호출이 방문한 BCB 위치 수.</td><td><strong>예.</strong> <code>K ≤ min(reachable Z3, 1000)</code>이고, 성공이나 다른 종료 조건이 있으면 더 작습니다.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>Higher-level policy는 caller의 private LRU, advertise된 다른 private list, advertise된 shared list, 마지막 own-list fallback에 대해 selected-list 호출을 여러 번 할 수 있습니다. 호출마다 새로운 1,000-node budget을 가집니다. 선택한 private list가 over quota이면 scan 전에 boundary node <code>M</code>개를 demote할 수도 있는데, 이 작업은 <code>MAX_DEPTH</code> 밖입니다. 따라서 helper 전체는 <code>O(M + K)</code>, linked-list scan 자체는 bounded <code>O(K)</code>입니다.</p>
         <div class="callout"><strong>다른 1,000과 혼동하지 마세요.</strong> Pinned source는 명시적인 <em>shared</em> <code>num_LRU_chains</code>를 1,000으로 제한하고 자동 shared list 하나당 buffer 약 1,000개를 목표로 합니다. 어느 쪽도 private LRU 개수의 상한이 아닙니다.</div>
         <div class="callout"><strong>“얼마나 오래”에 관하여:</strong> pinned source에는 operation bound가 있지만 보정된 nanosecond 값은 없습니다. <code>PSTAT_PB_ALLOC_BCB</code>, <code>PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM</code>, list-search timer, condition-wait time을 기록합니다. Target workload에서는 이 counter나 focused benchmark를 사용해야 하며 Big-O를 latency claim으로 바꾸면 안 됩니다.</div>
@@ -75,23 +74,23 @@
 
       <section class="section" id="aout">
         <div class="eyebrow">01B · 별도 historical topic</div>
-        <h2>비활성 ghost history가 필요할 때만 AOUT 전용 lesson으로 이동하세요</h2>
-        <p>Pinned startup path는 AOUT을 강제로 끄므로 여기서 배우는 active safety path에 포함되지 않습니다. Lesson 0012A가 ghost-entry structure, dormant admission branch, historical disablement, revival boundary를 담당합니다.</p>
-        <p><a href="0012a-understand-aout-ghost-history.html">Lesson 0012A: 비활성 AOUT ghost history 열기 →</a></p>
+        <h2>비활성 AOUT 이력은 강의 12A에서 다루는 필수 학습 주제입니다</h2>
+        <p>Pinned startup path는 AOUT을 강제로 끄므로 여기서 배우는 active safety path에 포함되지 않습니다. Lecture 0012A가 ghost-entry structure, dormant admission branch, historical disablement, revival boundary를 담당합니다.</p>
+        <p><a href="0012a-understand-aout-ghost-history.html">Lecture 0012A: 비활성 AOUT ghost history 열기 →</a></p>
       </section>
 
       <section class="section" id="slot">
         <div class="eyebrow">02 · 재사용되는 것 이해하기</div>
         <h2>Slot은 그대로 있고 page identity가 바뀝니다</h2>
         <p>BCB는 frame 하나와 짝을 이루는 reusable descriptor입니다. Pool 안에서 두 address는 안정적입니다. 현재 resident page는 <code>bcb-&gt;vpid</code>가 이름 붙이며, 이 identity는 통제된 detach/load sequence를 거쳐 바뀝니다.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>시점</th><th>동일한 pool slot</th><th>나타내는 것</th></tr></thead>
           <tbody>
             <tr><td>Replacement 전</td><td><code>BCB[42] + frame[42]</code></td><td>Resident page A.</td></tr>
             <tr><td>안전한 detach 뒤</td><td><code>BCB[42] + frame[42]</code></td><td>Resident page 없음. 통제된 재사용 가능.</td></tr>
             <tr><td>Miss load 뒤</td><td><code>BCB[42] + frame[42]</code></td><td>Resident page B.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <div class="callout"><strong>꼭 구분하세요.</strong> A를 victimize하면 A의 in-memory mapping이 사라집니다. Database에서 logical page A를 deallocate하는 것은 아닙니다.</div>
       </section>
 
@@ -100,7 +99,7 @@
         <h2>재사용 전에 쉬운 질문 네 개를 합니다</h2>
         <img class="diagram" src="../../assets/victim-eligibility.svg" alt="ownership, dirty와 flushing state, waiter와 transient flag를 확인하고 victim 선택 전에 protected revalidation을 거치는 safety gate">
         <p class="caption">LRU position은 candidate를 제안할 뿐이며 safety gate를 무시하게 해 주지 않습니다.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>질문</th><th>Unsafe example</th><th>재사용이 기다려야 하는 이유</th></tr></thead>
           <tbody>
             <tr><td>누군가 사용 중인가?</td><td><code>fcnt &gt; 0</code></td><td>Successful fixer가 여전히 frame을 소유하며 borrowed pointer를 사용할 수 있습니다.</td></tr>
@@ -108,7 +107,7 @@
             <tr><td>다른 operation이 기다리거나 claim 중인가?</td><td><code>next_wait_thrd != NULL</code> 또는 avoid-victim flag</td><td>Waiter, invalidation, direct-victim handoff가 아직 이 BCB를 참조합니다.</td></tr>
             <tr><td>이 사실들이 지금도 참인가?</td><td>이전 scan은 BCB protection 없이 이루어졌습니다.</td><td>처음 관찰한 뒤 fixer나 flusher가 candidate를 바꿨을 수 있습니다.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <div class="callout warn"><strong>버려야 할 shortcut:</strong> <code>fcnt == 0</code>은 “현재 count된 fixer가 없다”만 뜻합니다. Clean, not flushing, no waiters, safely detached까지 한꺼번에 뜻하지 않습니다.</div>
       </section>
 
@@ -130,42 +129,41 @@
         <h2>Allocator는 재사용 가능한 BCB가 생길 때까지 기다립니다</h2>
         <p>모든 candidate가 fixed, dirty, flushing, waiting 또는 다른 handoff 상태라면 victim search는 아무것도 반환하지 않습니다. Flush는 dirty candidate를 clean하게 만들 수 있고 unfix는 ownership을 끝낼 수 있습니다. Server mode에서 allocating thread는 direct-assigned victim을 기다릴 수 있고, 소비 전에 그 candidate가 다시 fixed되면 재시도합니다.</p>
         <p>LRU policy는 안전한 candidate 중 무엇을 선호하고 어떻게 progress를 만들지 결정합니다. Revision마다 바뀔 수 있습니다. Safety rule은 바뀌지 않습니다. Successful fixer나 incomplete flush generation이 slot rebind 뒤까지 살아남아서는 안 됩니다.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Mechanism</th><th>담당하는 일</th></tr></thead>
           <tbody>
             <tr><td>Safety gate</td><td>“이 slot을 지금 재사용해도 되는가?”에 답합니다.</td></tr>
             <tr><td>LRU zone, private/shared list, quota, hint</td><td>더 선호할 만한 candidate의 순서를 정하거나 위치를 찾습니다.</td></tr>
             <tr><td>Flush와 direct-victim progress</td><td>첫 search에서 아무것도 못 찾았을 때 eligible slot이 생기도록 돕습니다.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="source-note"><strong>Implementation policy:</strong> wait/retry는 pinned <code>page_buffer.c:8236–8403</code>에 있습니다. 자세한 LRU lifetime, quota, direct-victim behavior는 이 첫 mental model이 아니라 아래 Core와 Advanced 문서가 담당합니다.</p>
       </section>
 
       <section class="section" id="verbs">
         <div class="eyebrow">06 · replacement 동사 구분하기</div>
         <h2>Unfix, flush, victimize는 서로 다른 debt를 끝냅니다</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Operation</th><th>끝나는 것</th><th>남을 수 있는 것</th></tr></thead>
           <tbody>
             <tr><td>Unfix</td><td>Caller 한 명의 fix debt.</td><td>Page는 resident이면서 dirty일 수 있습니다.</td></tr>
             <tr><td>Flush</td><td>Copied generation 하나의 propagation debt.</td><td>Page는 resident일 수 있고 newer generation이 dirty일 수 있습니다.</td></tr>
             <tr><td>Victimize</td><td>모든 safety condition을 통과한 뒤의 old resident mapping.</td><td>Logical page는 storage에 계속 존재합니다.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">07 · 함께 생각하기</div>
         <h2>가능한 candidate 하나를 고릅니다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 table 없이 decision을 다시 설명하세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="page B가 miss함 -> invalid list가 비었으므로 LRU candidate를 검사함 -> A는 fixed여서 빼앗을 수 없음 -> C는 dirty여서 재사용 전 flush가 필요함 -> D는 clean/unfixed이지만 아직 victim이 아니라 candidate일 뿐임 -> BCB protection을 얻고 ownership, waiter, avoid-victim state를 다시 확인함 -> 여전히 clear이면 D를 detach하고 그 slot을 B로 rebind하며, 아니면 계속 찾음 -> LRU preference는 safety gate를 무시하지 못함." data-concepts='[{"label":"victim search 전 invalid list","terms":["invalid","first","empty","lru"]},{"label":"fixed candidate 제외","terms":["a","fixed","owner","reject"]},{"label":"dirty candidate는 flush 필요","terms":["c","dirty","flush"]},{"label":"candidate와 victim 구분","terms":["d","candidate","not yet","victim"]},{"label":"protected final recheck","terms":["lock","protect","recheck","waiter"]},{"label":"detach 뒤 rebind","terms":["detach","rebind","b"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>문제</h3>
           <p>Page B가 miss했고 invalid list는 비었습니다. LRU scan에서 A는 <code>fcnt = 1</code>, C는 <code>DIRTY</code>, D는 <code>fcnt = 0</code>이며 dirty/flushing flag와 관찰된 waiter가 없습니다.</p>
           <p>어떤 page를 즉시 제외해야 할까요? D는 이미 victim일까요, 아니면 아직 candidate일 뿐일까요? D의 slot이 B를 나타내기 전에 필요한 마지막 protected step을 설명하세요.</p>
-          <textarea aria-label="replacement 판단" placeholder="invalid list부터 시작해 A와 C를 제외하고 D의 protected recheck와 rebind를 설명하세요."></textarea>
-          <button type="button" data-check>replacement 흐름 확인</button>
-          <button type="button" class="secondary" data-reveal>model 흐름 보기</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
+
+
+
+          <details class="answer-disclosure"><summary>설명 펼치기</summary><p>page B가 miss함 -> invalid list가 비었으므로 LRU candidate를 검사함 -> A는 fixed여서 빼앗을 수 없음 -> C는 dirty여서 재사용 전 flush가 필요함 -> D는 clean/unfixed이지만 아직 victim이 아니라 candidate일 뿐임 -> BCB protection을 얻고 ownership, waiter, avoid-victim state를 다시 확인함 -> 여전히 clear이면 D를 detach하고 그 slot을 B로 rebind하며, 아니면 계속 찾음 -> LRU preference는 safety gate를 무시하지 못함.</p></details></div>
       </section>
 
       <section class="section" id="primary-reading">
@@ -173,7 +171,7 @@
         <h2>Candidate 하나를 scan부터 detach까지 추적합니다</h2>
         <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>page_buffer.c:9399–9478</code></a>을 읽고 cheap prefilter, BCB try-lock, protected victimizable check, LRU removal 네 지점을 표시하세요.</p>
         <p><a href="../../learning/05-replace-one-frame.md">Canonical replacement chapter 열기 →</a> · <a href="../../advanced/replacement-progress.md">Advanced progress detail 열기 →</a></p>
-        <p><a href="0006-flush-one-generation.html">← Lesson 0006으로 돌아가기</a> · <a href="0008-defend-a-safe-change.html">Lesson 0008로 계속 →</a></p>
+        <p><a  href="0006c-follow-maintenance-and-pacing.html">← 이전 강의 6C</a> · <a  href="0012-prove-replacement-progress.html">다음: 강의 12 →</a></p>
       </section>
     </article>
 
@@ -192,12 +190,13 @@
       <hr>
       <a href="../reference/replacement-safety-card.html">Replacement-safety card</a>
       <a href="../../learning/05-replace-one-frame.md">Canonical Core 문서</a>
-      <a href="0008-defend-a-safe-change.html">다음 lesson →</a>
+      <a href="0012-prove-replacement-progress.html">다음 강의 →</a>
       <a href="../index.html">강의 홈</a>
     </nav>
   </div>
 
   <footer class="footer">Replacement가 여전히 추상적이면 이 chain만 다시 말해 보세요: invalid slot → safe candidate → protected recheck → detach → rebind.</footer>
-</main>
+<nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0006c-follow-maintenance-and-pacing.html">← Lecture 6C · Replacement maintenance와 I/O pacing</a><a rel="next" href="0012-prove-replacement-progress.html">Lecture 12 · Replacement 상태와 진행 →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { Script } from "node:vm";
 import path from "node:path";
 import process from "node:process";
+import { validateAudience, checkPresentationDom, checkPresentationKeyboard } from "./seminar-contract.mjs";
 
 function parseArguments (argv)
 {
@@ -952,6 +953,9 @@ function buildInteractionHarness (html)
     retrievals,
     ledgers,
     document: {
+      // This harness exercises the holder ledger. Presentation requires a real
+      // layout/history implementation and is covered by the live-DOM gate.
+      querySelector () { return null; },
       addEventListener (type, callback)
       {
         if (type === "DOMContentLoaded")
@@ -1186,7 +1190,7 @@ async function validateLiveDom (root, baseUrl)
   let playwright;
   try
     {
-      playwright = await import ("playwright");
+      playwright = await import (process.env.PLAYWRIGHT_MODULE || "playwright");
     }
   catch (error)
     {
@@ -1225,11 +1229,15 @@ async function validateLiveDom (root, baseUrl)
           try
             {
               const response = await page.goto (new URL (pagePath.split ("/").map (encodeURIComponent).join ("/"), base).href,
-                { waitUntil: "domcontentloaded" });
+                { waitUntil: "load" });
               if (!response?.ok ())
                 {
                   failures.push (`${pagePath}: live navigation returned HTTP ${response?.status () ?? "unknown"}`);
                   continue;
+                }
+              if (pagePath.endsWith ("/course-coverage-matrix.html"))
+                {
+                  await page.waitForURL ("**/course-learning-path.html", { waitUntil: "load" });
                 }
               const smoke = await page.evaluate (() =>
               {
@@ -1260,7 +1268,38 @@ async function validateLiveDom (root, baseUrl)
                   }
                 return errors;
               });
-              for (const error of [...runtimeErrors, ...smoke])
+              await page.setViewportSize ({ width: 390, height: 844 });
+              await page.evaluate (async () => {
+                await document.fonts.ready;
+                await new Promise (resolve => requestAnimationFrame (() => requestAnimationFrame (resolve)));
+              });
+              if (await page.evaluate (() => document.documentElement.scrollWidth > innerWidth + 1))
+                failures.push (`${pagePath}: horizontal document overflow at 390px`);
+              await page.setViewportSize ({ width: 1440, height: 1000 });
+              const presentation = await page.evaluate (checkPresentationDom);
+              presentation.push (...await checkPresentationKeyboard (page));
+              const noScript = await browser.newPage ({ javaScriptEnabled: false });
+              try
+                {
+                  await noScript.goto (page.url ().split ("?")[0].split ("#")[0], { waitUntil: "load" });
+                  const fallbackErrors = await noScript.evaluate (() => {
+                    const errors = [];
+                    for (const section of document.querySelectorAll ("section"))
+                      if (getComputedStyle (section).display === "none") errors.push ("section hidden without JavaScript");
+                    const controls = document.querySelector ("[data-presentation-controls]");
+                    if (controls && getComputedStyle (controls).display !== "none") errors.push ("nonfunctional controls visible without JavaScript");
+                    for (const details of document.querySelectorAll ("[data-audience-checkpoint] details, .question-card details, details.answer-disclosure"))
+                      {
+                        if (details.open) errors.push ("checkpoint explanation starts open without JavaScript");
+                        details.querySelector ("summary").click ();
+                        if (!details.open) errors.push ("native explanation unavailable without JavaScript");
+                      }
+                    return errors;
+                  });
+                  presentation.push (...fallbackErrors);
+                }
+              finally { await noScript.close (); }
+              for (const error of [...runtimeErrors, ...smoke, ...presentation])
                 {
                   failures.push (`${pagePath}: ${error}`);
                 }
@@ -1458,7 +1497,7 @@ async function validateInventory (root)
 async function main ()
 {
   const options = parseArguments (process.argv.slice (2));
-  if (!new Set (["all", "inventory", "navigation", "links", "technical", "language", "review", "static", "served"]).has (options.gate))
+  if (!new Set (["all", "inventory", "navigation", "links", "technical", "language", "review", "static", "served", "audience"]).has (options.gate))
     {
       throw new Error (`unknown gate: ${options.gate}`);
     }
@@ -1469,6 +1508,10 @@ async function main ()
       return;
     }
   const results = [];
+  if (options.gate === "all" || options.gate === "audience")
+    {
+      results.push (["Audience curriculum contract", await validateAudience (root)]);
+    }
   if (options.gate === "all" || options.gate === "inventory")
     {
       results.push (["Inventory and manifest", await validateInventory (root)]);
@@ -1520,7 +1563,7 @@ async function main ()
         }
       else
         {
-          console.log (`${label}: PASS (${result.count} ${label === "Served HTTP behavior" ? "resources" : "pairs"})`);
+          console.log (`${label}: PASS (${result.count} ${label === "Served HTTP behavior" ? "resources" : label === "Live DOM behavior" ? "pages" : "pairs"})`);
         }
     }
 }

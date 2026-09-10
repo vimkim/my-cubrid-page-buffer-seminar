@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0012B — Understand private LRU indexes</title>
+  <title>Lecture 12B — Private LRU indexes and selection</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0012b-understand-private-lru-index.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0012B</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0012B</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced deep dive · list identity and selection</div>
-    <h1>Separate the 152 persistent lists from one session's borrowed index</h1>
-    <p>Five questions guide this lesson: what the number 152 counts, when those objects exist, how a session gets an index, how final unfix chooses first placement, and which list a victim search tries next.</p>
+    <div class="eyebrow">LECTURE 12B / Replacement</div>
+    <h1>Private LRU indexes and selection</h1>
+    <p>Persistent list descriptors, borrowed session indexes, BCB membership, and victim search have distinct lifetimes and rules.</p>
     <div class="pills"><span class="pill">152 descriptors</span><span class="pill">Not per transaction</span><span class="pill">Local p</span><span class="pill">Full S + p</span><span class="pill">Final-unfix context</span></div>
   </header>
 
@@ -31,14 +30,14 @@
         <div class="eyebrow">02 · Which index?</div>
         <h2>One word “index” names three different things</h2>
         <img class="diagram" src="../../assets/default-replacement-topology.svg" alt="Default buffer-pool counts and the shared and private LRU descriptor ranges">
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Value</th><th>Range in the worked default</th><th>Purpose</th></tr></thead>
           <tbody>
             <tr><td>Transaction-table <code>tran_index</code></td><td>Not an LRU range</td><td>Identifies database work. It is not used as an LRU-array subscript.</td></tr>
             <tr><td>Private-local <code>p</code></td><td>0 through 151</td><td>Stored as the session/thread's <code>private_lru_index</code>.</td></tr>
             <tr><td>Full LRU-array index</td><td>shared 0–31; private 32–183</td><td>Stored in a resident BCB's list-membership flags. Private conversion is <code>S + p</code>.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <pre>S = 32, P = 152, L = S + P = 184
 p = 0   → full LRU index 32
 p = 151 → full LRU index 183</pre>
@@ -143,17 +142,18 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
         <p>Explain why no LRU was created for either session, why B can access X, why release did not move X, and which full index the victim selector uses. Then repeat with A's list under quota and name exactly when that own list is searched.</p>
       </section>
 
+<section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>List identity outlives a session</h2><p>Session A releases local private-list ID 7 while its page X remains resident. Does a later session receiving ID 7 own X or create a new LRU?</p><details class="answer-disclosure"><summary>Explore the explanation</summary><p>No. Descriptors belong to the pool; a session borrows an association with a list ID. Releasing that association does not move its resident pages or grant ownership to the next session. Page access still follows the normal fix/latch protocol, and victim selection uses the full list index after the shared-index offset.</p></details></section>
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>
         <h2>Use the Advanced page for the full policy and cost derivation</h2>
         <p><a href="../../advanced/replacement-progress.md#how-the-final-unfix-context-chooses-first-placement">Open the canonical first-placement explanation →</a></p>
         <p><a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Open the canonical private-LRU explanation →</a></p>
-        <p><a href="0012-prove-replacement-progress.html">← Return to Lesson 0012</a> · <a href="0012a-understand-aout-ghost-history.html">Continue to optional Lesson 0012A: AOUT aside →</a></p>
+        <p><a href="0012-prove-replacement-progress.html">← Return to Lecture 0012</a> · <a href="0012a-understand-aout-ghost-history.html">Continue to Lecture 12A: Dormant AOUT history →</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#answer">1. Short answer</a>
       <a href="#index-space">2. Three index meanings</a>
       <a href="#lifecycle">3. Two lifetimes</a>
@@ -165,14 +165,15 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       <a href="#practice">9. Check the model</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
-      <a href="0012a-understand-aout-ghost-history.html">Optional AOUT aside →</a>
+      <a href="0012a-understand-aout-ghost-history.html">Next: Dormant AOUT history →</a>
       <a href="../../advanced/replacement-progress.md#how-the-final-unfix-context-chooses-first-placement">Canonical first-placement section</a>
       <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical Advanced section</a>
-      <a href="../index.html">Course home</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
   <footer class="footer">When “LRU index” appears in source, first ask whether it is private-local p or the full S + p array index.</footer>
-</main>
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0012-prove-replacement-progress.html">← Lecture 12 · Replacement state and progress</a><a rel="next" href="0012a-understand-aout-ghost-history.html">Lecture 12A · Dormant AOUT admission history →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

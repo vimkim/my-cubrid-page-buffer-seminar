@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0016 — Close a failure proof</title>
+  <title>Lecture 16 — Failure cleanup and evidence</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0016-close-a-failure-proof.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · Lesson 0016</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · Lecture 0016</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced capability · failure proof</div>
-    <h1>Inspect the debt after cleanup finishes</h1>
-    <p>By the end, you can turn an exceptional return into a risk-matched proof plan and state exactly where the evidence stops.</p>
+    <div class="eyebrow">LECTURE 16 / Recovery and specialized behavior</div>
+    <h1>Failure cleanup and evidence</h1>
+    <p>A source-visible return begins an investigation. Surviving state, retry behavior, and impact determine the supported conclusion.</p>
     <div class="pills"><span class="pill">Reach the branch</span><span class="pill">Wait for unwind</span><span class="pill">Assert both ledgers</span><span class="pill">Retry</span><span class="pill">Demonstrate impact</span></div>
   </header>
 
@@ -48,7 +47,7 @@
       <section class="section" id="ownership-ledger">
         <div class="eyebrow">03 · Acquisition/load ledger</div>
         <h2>Failure paths preserve visible ownership accounting</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>State</th><th>Postcondition to assert after unwind</th></tr></thead>
           <tbody>
             <tr><td>Global <code>fcnt</code></td><td>No grant remains unless success or retry ownership represents it.</td></tr>
@@ -58,7 +57,7 @@
             <tr><td>Resident identity</td><td>Hash mapping, VPID, provisional BCB, and load owner agree.</td></tr>
             <tr><td>Retry</td><td>A later fix can locate/load/acquire without duplicate identity or debt.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p><code>VS-10</code> needs the cold-load ledger after a <code>dwb_read_page()</code> error. <code>VS-11</code> needs it separately for normal hit, lock-free hit, and awakened waiter because their grant and unwind seams differ.</p>
         <p class="source-note"><strong>Level 1 source routes:</strong> <code>VS-10</code> at <code>page_buffer.c:8510–8515</code>; fallible holder allocation at <code>6000–6055</code>, with each grant site traced separately.</p>
       </section>
@@ -66,7 +65,7 @@
       <section class="section" id="flush-ledger">
         <div class="eyebrow">04 · Flush-generation ledger</div>
         <h2>Failure must preserve retryable propagation debt</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>State</th><th>Postcondition to assert after unwind</th></tr></thead>
           <tbody>
             <tr><td>DIRTY / FLUSHING</td><td>Captured G remains retryable; concurrent G+1 remains independently dirty.</td></tr>
@@ -76,7 +75,7 @@
             <tr><td>TDE / DWB / I/O resource</td><td>Each fallible resource has one cleanup owner.</td></tr>
             <tr><td>Retry</td><td>Later flush, checkpoint, or victim work can progress without losing bytes or the WAL floor.</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p><code>VS-12</code> needs separate TDE-copy and DWB-slot injections. Test a concurrent post-copy re-dirty as a different schedule; a single-thread failure does not cover G+1.</p>
         <p class="source-note"><strong>Level 1 source route:</strong> generation setup and early returns <code>page_buffer.c:10795–10828</code>; ordinary later rollback <code>10908–10923</code>.</p>
       </section>
@@ -84,7 +83,7 @@
       <section class="section" id="seam">
         <div class="eyebrow">05 · Highest relevant seam</div>
         <h2>Cross the boundary that could create the claimed harm</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Claim</th><th>Minimum useful seam</th><th>Weak substitute</th></tr></thead>
           <tbody>
             <tr><td>Allocator/read/crypto/write unwind</td><td>Inject the exact dependency inside the real owner path; assert post-state.</td><td>Mocking only the leaf function.</td></tr>
@@ -92,7 +91,7 @@
             <tr><td>Victim progress</td><td>Pressure that observes a real candidate, rejection, and eventual victim.</td><td>Watching allocation succeed in an unpressured pool.</td></tr>
             <tr><td>Durable recovery consequence</td><td>Crash and recover at a named WAL, DWB, or home-page boundary.</td><td>Successful flush return without crash.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="receipt">
@@ -110,18 +109,17 @@
       </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Retrieval practice</div>
+        <div class="eyebrow">07 · Pause and reason</div>
         <h2>Upgrade a weak “stress passed” conclusion</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="source reading closes only Level 1; a passing unscheduled stress run does not prove the target branch ran or that safety holds -> choose one registry candidate and inject the exact fallible dependency in its real owner path -> prove reachability with a branch marker -> wait through callee and outer cleanup, wakeups, and retry before inspecting surviving state -> for VS-10 or VS-11 assert fcnt, latch tuple, holder, wait request, identity/load record, and later acquisition/release -> for VS-12 assert DIRTY, FLUSHING, oldest-unflush LSA, copied generation and DWB ownership, waiter wakeup, later flush/victim/checkpoint/restart; test G+1 re-dirty separately -> demonstrate consumer-visible impact before calling it a production defect -> re-trace and rerun on the branch being changed; keep mutable status in the uncertainty registry." data-concepts='[{"label":"stress does not prove reachability or safety","terms":["stress","branch","reach","not prove"]},{"label":"exact risk-boundary injection","terms":["inject","exact","callee","owner"]},{"label":"inspect after complete unwind","terms":["cleanup","wakeup","retry","after"]},{"label":"select the correct state ledger","terms":["fcnt","holder","identity","dirty","flushing","oldest"]},{"label":"separate concurrent generation schedule","terms":["g+1","re-dirty","separate","schedule"]},{"label":"impact and current revision remain separate","terms":["impact","current","revision","registry"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>A maintainer says, “I ran a stress test 10,000 times and saw no failure, so the exceptional path is safe.” Choose <code>VS-10</code>, <code>VS-11</code>, or <code>VS-12</code>.</p>
-          <p><strong>Your task:</strong> explain what the stress run did not prove; name the exact injection seam, post-unwind ledger, retry/liveness check, impact test, and current-branch revalidation needed.</p>
-          <textarea aria-label="Your failure-proof plan" placeholder="Candidate → current proof level → exact seam → after-unwind ledger → retry/impact → unsupported claims → current-branch check."></textarea>
-          <button type="button" data-check>Check proof coverage</button>
-          <button type="button" class="secondary" data-reveal>Reveal model route</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>Paste your answer into the chat. I will check whether your probe reaches the real state owner and whether your conclusion stops at the evidence obtained.</p>
+          <p><strong>Consider:</strong> explain what the stress run did not prove; name the exact injection seam, post-unwind ledger, retry/liveness check, impact test, and current-branch revalidation needed.</p>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>source reading closes only Level 1; a passing unscheduled stress run does not prove the target branch ran or that safety holds -> choose one registry candidate and inject the exact fallible dependency in its real owner path -> prove reachability with a branch marker -> wait through callee and outer cleanup, wakeups, and retry before inspecting surviving state -> for VS-10 or VS-11 assert fcnt, latch tuple, holder, wait request, identity/load record, and later acquisition/release -> for VS-12 assert DIRTY, FLUSHING, oldest-unflush LSA, copied generation and DWB ownership, waiter wakeup, later flush/victim/checkpoint/restart; test G+1 re-dirty separately -> demonstrate consumer-visible impact before calling it a production defect -> re-trace and rerun on the branch being changed; keep mutable status in the uncertainty registry.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -129,13 +127,13 @@
         <h2>Use the registry for status and the owner path for proof</h2>
         <p>Read <a href="../../advanced/failure-and-proof-obligations.md">Failure Unwind and Open Proof Obligations</a> beside the <a href="../../unresolved-or-version-sensitive-findings.md">uncertainty registry</a>. Select one ID, follow its Canonical mechanism, and write the before/after ledger before designing the injection.</p>
         <p><a href="../reference/failure-proof-ledger-card.html">Open the printable failure-proof ledger →</a></p>
-        <p><a href="0017-defend-the-module-live.html">Continue to Lesson 0017 →</a></p>
-        <p><a href="0015-route-a-specialized-interface.html">← Return to Lesson 0015</a></p>
+        <p><a  href="0008-defend-a-safe-change.html">Continue to Lecture 8 →</a></p>
+        <p><a href="0015-route-a-specialized-interface.html">← Return to Lecture 0015</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#levels">1. Five claim levels</a>
       <a href="#timing">2. Inspection timing</a>
       <a href="#ownership-ledger">3. Ownership ledger</a>
@@ -147,11 +145,12 @@
       <hr>
       <a href="../reference/failure-proof-ledger-card.html">Failure-proof ledger</a>
       <a href="../../advanced/failure-and-proof-obligations.md">Canonical Advanced page</a>
-      <a href="../index.html">Course home</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever a fault seam, cleanup owner, surviving-state claim, or evidence boundary is unclear.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0015-route-a-specialized-interface.html">← Lecture 15 · Specialized access contracts</a><a rel="next" href="0008-defend-a-safe-change.html">Lecture 8 · Change impact and verification →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

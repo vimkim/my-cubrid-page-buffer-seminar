@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID replacement-progress reference card</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/replacement-progress-card.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
     <div class="eyebrow">Print for pressure-path review</div>
     <h1>Replacement progress card</h1>
@@ -116,7 +116,7 @@
     </article>
     <article class="reference-card full">
       <h2>Source route</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Responsibility</th><th>Pinned range</th></tr></thead>
         <tbody>
           <tr><td>Allocation loop</td><td><code>page_buffer.c:8181–8403</code></td></tr>
@@ -129,11 +129,12 @@
           <tr><td>Flush/post-flush handoff</td><td><code>page_buffer.c:10925–10952,15489–15556</code></td></tr>
           <tr><td>Daemon loops</td><td><code>page_buffer.c:16972–17298</code></td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
   <footer class="footer">Canonical explanation: <a href="../../advanced/replacement-progress.md">Replacement Policy and Background Progress</a>. Primary-source derivation: <a href="../../reference/replacement-policy-quantities-and-costs.md">quantities and cost note</a>.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0017 — Defend the module live</title>
+  <title>Lecture 17 — Maintainer synthesis and technical defense</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0017-defend-the-module-live.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · Lesson 0017</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · Lecture 0017</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
-    <div class="eyebrow">Mission capability · technical defense</div>
-    <h1>Return every hard question to the page journey</h1>
-    <p>By the end, you can explain the Module coherently, navigate the guide during review, and answer challenges without inventing certainty.</p>
+    <div class="eyebrow">LECTURE 17 / Maintainer integration</div>
+    <h1>Maintainer synthesis and technical defense</h1>
+    <p>A coherent page journey connects source traces, counterexamples, diagnosis, and a defensible change plan.</p>
     <div class="pills"><span class="pill">One spine</span><span class="pill">Owner and guard</span><span class="pill">Counterexample</span><span class="pill">Evidence label</span><span class="pill">Live route</span></div>
   </header>
 
@@ -22,7 +21,7 @@
     <article class="lesson-main">
       <section class="section" id="job">
         <div class="eyebrow">01 · Your job as maintainer</div>
-        <h2>Teach a model; route the catalog</h2>
+        <h2>The mental model and its evidence routes</h2>
         <p class="lede">Your team does not need a recitation of every function. They need a model that predicts behavior, a source route that verifies strong claims, and an honest boundary when evidence stops.</p>
         <p class="big-claim">Use one page journey as the working model. Use the document set to expand, diagnose, change, verify, or qualify it.</p>
         <p>Keep the pinned revision visible. If someone asks about another branch, say what must be re-traced instead of silently carrying the claim forward.</p>
@@ -31,7 +30,7 @@
       <section class="section" id="spine">
         <div class="eyebrow">02 · Six moves</div>
         <h2>Tell the same causal story every time</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Move</th><th>Claim to establish</th><th>Question it answers</th></tr></thead>
           <tbody>
             <tr><td>1 · Objects and boundary</td><td><code>VPID → BCB ↔ frame → PAGE_PTR</code>; the pointer is a temporary borrowed view.</td><td>“What exactly did fix return?”</td></tr>
@@ -41,14 +40,14 @@
             <tr><td>5 · Replace safely</td><td>Eligibility is a hard protected predicate; policy chooses only among eligible BCBs; identity may change only after safe detachment.</td><td>“Why is <code>fcnt==0</code> insufficient?”</td></tr>
             <tr><td>6 · Change with evidence</td><td>Name owner, state, guard, invariant, negative path, caller impact, and risk-matched proof level.</td><td>“Is this source concern a verified defect?”</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p><a href="../reference/presentation-spine.html">Use the printable page-journey map for review preparation →</a></p>
       </section>
 
       <section class="section" id="route">
         <div class="eyebrow">03 · Document navigation under review</div>
         <h2>Route each question by maintainer intent</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Team intent</th><th>Open first</th><th>Then prove with</th></tr></thead>
           <tbody>
             <tr><td>Learn or repair the mental model</td><td>Guide entry → ordered Learning path</td><td>Canonical explanation and its understanding check</td></tr>
@@ -57,7 +56,7 @@
             <tr><td>Check whether a claim is current</td><td>Source inventory and uncertainty registry</td><td>Pinned source or exact target-branch revalidation</td></tr>
             <tr><td>Test or challenge the model</td><td>Question-bank route selector</td><td>Companion answer only after retrieval</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <div class="callout"><strong>Navigation check:</strong> do not merely name a page. Explain why that page owns the concept and where mutable evidence status lives.</div>
       </section>
 
@@ -71,7 +70,7 @@
           <li><strong>Evidence level:</strong> contract, verified mechanism, policy, inference, runtime observation, or historical evidence.</li>
           <li><strong>Route:</strong> point to the Canonical explanation, source range, registry row, or verification seam.</li>
         </ol>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Challenge</th><th>First sentence</th><th>Expansion route</th></tr></thead>
           <tbody>
             <tr><td>“If it is resident, why can fix block?”</td><td>Residency and latch grant are independent axes.</td><td>Acquisition concurrency and latch queue.</td></tr>
@@ -79,7 +78,7 @@
             <tr><td>“Statistics show zero; can we deallocate?”</td><td>An approximate diagnostic snapshot cannot authorize a state transition.</td><td>Specialized interfaces, then protected owner path.</td></tr>
             <tr><td>“Is VS-12 a real bug?”</td><td>The pinned source proves an ordering concern; reachability, surviving state, impact, and current status remain separate.</td><td>Registry, failure-proof ledger, target injection.</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="section" id="unknown">
@@ -106,16 +105,15 @@
       <section class="section" id="retrieval">
         <div class="eyebrow">07 · Technical-defense gate</div>
         <h2>Defend the model against one challenge</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total} key ideas detected." data-complete-message="Good coverage. Now explain it from memory without consulting the guide." data-revisit-label="Revisit:" data-model-label="Model spine:" data-model="boundary: the page buffer turns a logical VPID and access intent into temporarily borrowed resident bytes with a granted page latch and recorded fix debt; the caller still owns logical correctness -> objects: VPID maps to one current BCB identity, which owns a frame and yields PAGE_PTR while fixed -> acquisition: hit and miss converge on the same global fcnt and per-thread holder debt, repaid by unfix -> caller: lock, validate, mutate, log, advance page LSA, dirty, and clean up -> flush: copy G, preserve G+1, force WAL, propagate through DWB or direct I/O, keep failures retryable -> replacement: verify identity and hard eligibility under protection before policy and serial BCB reuse -> evidence: label the claim and route it to its Canonical page, source, registry, or risk-matched test -> challenge answer: direct sentence, owner/state/guard, invariant/consequence, evidence level, route." data-concepts='[{"label":"Module boundary","terms":["vpid","borrow","latch","debt","caller"]},{"label":"object and acquisition chain","terms":["bcb","frame","page_ptr","fcnt","holder"]},{"label":"caller completes correctness","terms":["lock","validate","log","lsa","dirty"]},{"label":"G and G+1 propagation","terms":["g+1","wal","dwb","retry"]},{"label":"eligibility before serial reuse","terms":["eligible","identity","protect","reuse","policy"]},{"label":"evidence and document route","terms":["evidence","canonical","source","registry","test"]},{"label":"five-move challenge response","terms":["short answer","owner","guard","invariant","route"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
           <p>Reconstruct all six moves without the guide. Then answer one challenge: a resident hit blocks; DIRTY and FLUSHING are both set; a BCB's VPID differs later; a statistic is zero; or a <code>VS-*</code> row looks true.</p>
-          <p><strong>Your task:</strong> keep one causal narrative, then answer the challenge using short answer → owner/state/guard → invariant/consequence → evidence level → route.</p>
-          <textarea aria-label="Your page-buffer technical defense" placeholder="Six-move explanation, followed by one adversarial answer and its document/source route."></textarea>
-          <button type="button" data-check>Check defense coverage</button>
-          <button type="button" class="secondary" data-reveal>Reveal model spine</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>Paste the response into the chat. I will assess only demonstrated reasoning, repair the narrowest gap, and preserve your strongest formulation for the next review.</p>
+          <p><strong>Consider:</strong> keep one causal narrative, then answer the challenge using short answer → owner/state/guard → invariant/consequence → evidence level → route.</p>
+
+
+
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>boundary: the page buffer turns a logical VPID and access intent into temporarily borrowed resident bytes with a granted page latch and recorded fix debt; the caller still owns logical correctness -> objects: VPID maps to one current BCB identity, which owns a frame and yields PAGE_PTR while fixed -> acquisition: hit and miss converge on the same global fcnt and per-thread holder debt, repaid by unfix -> caller: lock, validate, mutate, log, advance page LSA, dirty, and clean up -> flush: copy G, preserve G+1, force WAL, propagate through DWB or direct I/O, keep failures retryable -> replacement: verify identity and hard eligibility under protection before policy and serial BCB reuse -> evidence: label the claim and route it to its Canonical page, source, registry, or risk-matched test -> challenge answer: direct sentence, owner/state/guard, invariant/consequence, evidence level, route.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -123,12 +121,12 @@
         <h2>Use the Guide entry as your routing surface</h2>
         <p>Review the model with the <a href="../reference/presentation-spine.html">page-journey map</a>, then navigate from <a href="../../page-buffer-teaching-material.md">the Maintainer Guide entry</a> to one Canonical page, source range, and evidence owner without relying on search.</p>
         <p><a href="../reference/presentation-rehearsal-card.html">Open the printable technical-defense scorecard →</a></p>
-        <p><a href="0016-close-a-failure-proof.html">← Return to Lesson 0016</a></p>
+        <p><a  href="0008-defend-a-safe-change.html">← Previous lecture 8</a></p>
       </section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#job">1. Maintainer job</a>
       <a href="#spine">2. Six moves</a>
       <a href="#route">3. Document navigation</a>
@@ -141,11 +139,12 @@
       <a href="../reference/presentation-spine.html">Page-journey map</a>
       <a href="../reference/presentation-rehearsal-card.html">Technical-defense scorecard</a>
       <a href="../../page-buffer-teaching-material.md">Maintainer Guide entry</a>
-      <a href="../index.html">Course home</a>
+      <a href="../index.html">Curriculum</a>
     </nav>
   </div>
 
-  <footer class="footer">Ask the teaching agent whenever a transition, counterexample, evidence label, or live document route is unclear.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0008-defend-a-safe-change.html">← Lecture 8 · Change impact and verification</a><a rel="next" href="0018-compare-three-buffer-pools.html">Lecture 18 · Responsibilities across three buffer pools →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID failure-proof ledger 참조 카드</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/failure-proof-ledger-card.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · 빠른 참조</span><a href="../index.html">Course 홈</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · 빠른 참조</span><a href="../index.html">커리큘럼</a></div>
   <header class="hero">
     <div class="eyebrow">Exceptional path review용 인쇄 자료</div>
     <h1>Failure-proof ledger</h1>
@@ -48,7 +48,7 @@
     </article>
     <article class="reference-card full">
       <h2>Risk에 맞는 가장 높은 verification seam</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Risk</th><th>Verification seam</th></tr></thead>
         <tbody>
           <tr><td>Allocator/read/crypto/write unwind</td><td>실제 owner path 안에서 정확한 dependency를 injection하고 state를 assertion으로 확인합니다.</td></tr>
@@ -56,7 +56,7 @@
           <tr><td>Victim progress</td><td>실제 pressure를 만들고 candidate 선택, rejection, 최종 victim 결정을 관찰합니다.</td></tr>
           <tr><td>Durability/recovery</td><td>이름을 명시한 WAL, DWB 또는 home page boundary에서 crash/recovery를 수행합니다.</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card">
       <h2>Receipt에 남길 항목</h2>
@@ -82,7 +82,7 @@
     </article>
     <article class="reference-card full">
       <h2>Review에 사용할 표현</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>확보한 evidence</th><th>방어할 수 있는 가장 강한 표현</th></tr></thead>
         <tbody>
           <tr><td>Source 순서만 확인</td><td>“Pinned source에서 이 proof obligation이 드러납니다.”</td></tr>
@@ -91,11 +91,12 @@
           <tr><td>Consumer에게 보이는 결과 확인</td><td>“이 setup에서 재현된 impact는 남아 있는 state로 인해 발생합니다.”</td></tr>
           <tr><td>Target branch에서 다시 확인</td><td>“이 receipt를 근거로 registry의 status update를 검토할 수 있습니다.”</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
   <footer class="footer">Canonical 설명: <a href="../../advanced/failure-and-proof-obligations.md">Failure Unwind and Open Proof Obligations</a>. 변경 가능한 status는 uncertainty registry에서만 관리합니다.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

@@ -251,8 +251,15 @@ test("the aggregate command requests every page and displayed SVG from Copyparty
   const requests = [];
   const server = createServer((request, response) => {
     requests.push(request.url);
-    response.writeHead(200, { "content-type": "text/plain" });
-    response.end("ok");
+    if (request.url === "/assets/page-journey.svg") {
+      response.writeHead(200, { "content-type": "image/svg+xml" });
+      response.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100"/></svg>');
+    } else {
+      response.writeHead(200, { "content-type": "text/html" });
+      response.end(request.url === "/page-buffer-teaching-material.md?v"
+        ? '<!doctype html><html><body><img src="/assets/page-journey.svg" alt="Page journey"></body></html>'
+        : '<!doctype html><html><body>Fixture page</body></html>');
+    }
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
@@ -264,7 +271,7 @@ test("the aggregate command requests every page and displayed SVG from Copyparty
     ]);
 
     assert.match(result.stdout, /Copyparty HTTP: PASS \(16 resources\)/);
-    assert.deepEqual(requests.sort(), [
+    assert.deepEqual([...new Set(requests.filter(url => url !== "/favicon.ico"))].sort(), [
       "/advanced/concurrency.md?v",
       "/assets/page-journey.svg",
       "/learning/contract.md?v",

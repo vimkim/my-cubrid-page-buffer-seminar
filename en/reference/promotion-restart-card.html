@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CUBRID promotion-restart reference card</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/promotion-restart-card.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · quick reference</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
     <div class="eyebrow">Print for promotion review</div>
     <h1>READ→WRITE promotion card</h1>
@@ -24,7 +24,7 @@
     </article>
     <article class="reference-card full">
       <h2>Outcome ledger</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Outcome</th><th>Ownership</th><th>Observation rule</th></tr></thead>
         <tbody>
           <tr><td>In-place success</td><td>Same holder/count; mode becomes WRITE.</td><td>Continuously protected.</td></tr>
@@ -32,7 +32,7 @@
           <tr><td>Blocking success</td><td>Old holder removed; saved count returns from queue head in a new WRITE holder.</td><td>Preserved: no writer or victim passes the promoter.</td></tr>
           <tr><td>Hard blocking failure</td><td>Null pointer; old debt was not restored.</td><td>No observation or unfix may use that pointer.</td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
     <article class="reference-card">
       <h2>Debt conservation</h2>
@@ -57,18 +57,19 @@
     </article>
     <article class="reference-card full">
       <h2>Source route</h2>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr><th>Responsibility</th><th>Pinned range</th></tr></thead>
         <tbody>
           <tr><td>Promotion mechanism</td><td><code>page_buffer.c:2842–3050</code></td></tr>
           <tr><td>B-tree conditional restart</td><td><code>btree.c:28365–28393</code></td></tr>
           <tr><td>B-tree WRITE traversal retry</td><td><code>btree.c:28638–28696</code></td></tr>
         </tbody>
-      </table>
+      </table></div>
     </article>
   </section>
 
   <footer class="footer">Canonical explanation: <a href="../../advanced/acquisition-concurrency.md">Acquisition Concurrency and Multi-page Ownership</a>. Successful head handoff preserves page state; only the selected failure path restarts.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>

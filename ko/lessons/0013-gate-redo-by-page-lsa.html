@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>학습 0013 — log page, WAL, redo 연결하기</title>
+  <title>강의 13 — Log buffer와 data-page redo</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0013-gate-redo-by-page-lsa.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
+<main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · 학습 0013</span><a href="../index.html">학습 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">Advanced 역량 · recovery ownership</div>
-    <h1>log record가 자체 buffer를 거쳐 data-page redo로 이어지는 과정</h1>
-    <p>이 학습을 마치면 data/log page pool을 구분하고, direct-mapped log frame이 fixed active ring과 archive로 이어지는 과정, WAL, page-LSA redo gate를 연결해 설명할 수 있다.</p>
+    <div class="eyebrow">LECTURE 13 / 복구와 특수 경로</div>
+    <h1>Log buffer와 data-page redo</h1>
+    <p>Log storage와 data-page residency는 담당 owner가 다릅니다. Page LSA는 복구할 record를 skip 또는 apply하는 판단과 연결합니다.</p>
     <div class="pills"><span class="pill">LOG_BUFFER</span><span class="pill">Active ring</span><span class="pill">Archive</span><span class="pill">WAL</span><span class="pill">RECOVERY_PAGE</span><span class="pill">Page LSA</span></div>
   </header>
 
@@ -25,7 +24,7 @@
         <h2>log page는 자체 descriptor와 frame을 사용합니다</h2>
         <img class="diagram" src="../../assets/data-and-log-buffer-separation.svg" alt="WAL 규칙으로 연결된 독립적인 data-page와 log-page buffer pool">
         <p><code>page_buffer.c</code>와 <code>log_page_buffer.c</code>는 서로 다른 buffering subsystem이다. include와 function call은 둘을 조율하지만, log page를 data-page pool에 넣지는 않는다.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>질문</th><th>Data page</th><th>Log page</th></tr></thead>
           <tbody>
             <tr><td>Descriptor</td><td><code>PGBUF_BCB</code></td><td><code>LOG_BUFFER</code>: logical page ID, active physical ID, dirty bit, frame pointer</td></tr>
@@ -33,7 +32,7 @@
             <tr><td>Caller ownership</td><td>shared pointer, latch, fix/unfix, holder debt</td><td>reader는 보통 caller storage로 copy를 받음; BCB fix ledger 없음</td></tr>
             <tr><td>Disk home</td><td>data-volume page</td><td>fixed active-log ring 또는 archive</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>append code가 현재 log page를 “fixed”라고 부를 때가 있지만, <code>LOG_BUFFER</code>에는 <code>fcnt</code>, holder, BCB waiter queue, hash/LRU link가 없다. log append protocol이 log synchronization 아래에서 그 frame을 유지한다는 뜻이다.</p>
         <p class="big-claim">WAL은 두 pool의 durability 순서를 연결한다. 한 pool의 frame을 다른 pool으로 옮기지 않는다.</p>
       </section>
@@ -66,7 +65,7 @@
         <img class="diagram" src="../../assets/log-ring-archive-retention.svg" alt="fixed active ring과 archive file 위로 증가하는 logical LSA">
         <p>기본 512 MiB log volume과 16 KiB page라면 active file은 32,768개의 physical page, 즉 header 하나와 data-log slot 32,767개를 갖는다. logical page ID는 계속 증가하고 physical slot은 <code>fpageid</code>를 기준으로 wrap한다.</p>
         <p>slot을 재사용하기 전에 이전 logical range를 numbered archive로 copy하고 sync한다. Background archiving은 이 비용을 나누기 위해 temporary archive를 점진적으로 준비한다. data-page double-write buffer가 아니다.</p>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Frontier</th><th>의미</th></tr></thead>
           <tbody>
             <tr><td><code>append_lsa</code></td><td>현재/다음 logical append 위치</td></tr>
@@ -74,7 +73,7 @@
             <tr><td><code>nxarv_pageid</code></td><td>다음으로 archive에 들어가야 할 logical page</td></tr>
             <tr><td><code>fpageid</code></td><td>active physical slot 1에 현재 저장된 logical page</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>LSA는 <code>(page ID, offset)</code> 형식의 logical 좌표다. storage를 할당하거나 보존하지 않는다. 표현 범위는 매우 크지만 유한하며, 실제로 읽을 수 있는 history는 active ring, archive file, recovery/vacuum/HA/CDC/flashback/retention 조건에 달려 있다.</p>
       </section>
 
@@ -118,14 +117,14 @@
       <section class="section" id="example">
         <div class="eyebrow">08 · 순서대로 따라보기</div>
         <h2>Page LSA가 140이면 120과 140은 skip, 170은 apply</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Redo record</th><th>Page LSA와 비교</th><th>동작</th><th>새 page LSA</th></tr></thead>
           <tbody>
             <tr><td>120</td><td>120 &lt; 140</td><td>Skip하고 release한다.</td><td>140</td></tr>
             <tr><td>140</td><td>140 = 140</td><td>Skip하고 release한다.</td><td>140</td></tr>
             <tr><td>170</td><td>170 &gt; 140</td><td>Callback을 적용하고 DIRTY로 표시한 뒤 release한다.</td><td>170</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>이제 record 170을 다시 만나면 page LSA가 이미 170이므로 skip한다. 이것이 page 변경에 대한 idempotence 논리다. Page 밖에서 callback이 일으키는 임의의 side effect까지 idempotent하다고 보장하는 것은 아니다.</p>
       </section>
 
@@ -167,16 +166,15 @@
       <section class="section" id="retrieval">
         <div class="eyebrow">13 · Retrieval 연습</div>
         <h2>Skip, apply, debt 없는 부재를 구분한다</h2>
-        <div class="quiz" data-retrieval data-coverage-template="{found}/{total}개의 핵심 설명을 확인했습니다." data-complete-message="핵심을 빠짐없이 다뤘습니다. 이제 guide를 보지 않고 기억만으로 다시 설명해 보세요." data-revisit-label="다시 확인할 항목:" data-model-label="Model 흐름:" data-model="Checkpoint는 page buffer에 조건을 만족하는 page를 flush하고 redo floor를 돌려달라고 요청한다. 모든 page를 flush하거나 page buffer가 checkpoint 전체를 소유한다는 뜻은 아니다 -> recovery는 special allocation-state 지식을 소유하므로 RECOVERY_PAGE와 WRITE로 fix한다 -> page LSA가 140이면 record LSA가 page LSA 이하인 120과 140은 이미 반영되어 있으므로 skip한다 -> record 170은 적용하고 page LSA를 170으로 전진시키며, 필요한 대로 page를 DIRTY로 표시한 뒤 fix를 release한다 -> 이후 170을 replay하면 skip한다 -> deallocate된 page는 fix debt 없이 skip할 수 있다 -> 이 gate는 page 변경의 idempotence만 입증하며 임의의 callback side effect까지 입증하지 않는다 -> 기존 checkpoint/backup 관찰은 crash redo나 DWB recovery를 입증하지 않는다." data-concepts='[{"label":"checkpoint는 선택적 coordination","terms":["selective","qualifying","redo floor","not every"]},{"label":"recovery가 special fetch를 소유","terms":["RECOVERY_PAGE","allocation","recovery","write"]},{"label":"이하인 record는 skip","terms":["120","140","skip","less","equal"]},{"label":"새 record는 apply하고 dirty","terms":["170","apply","page lsa","dirty","release"]},{"label":"deallocate된 부재는 debt 없음","terms":["deallocated","skip","no debt","no fix"]},{"label":"idempotence와 crash evidence의 한계","terms":["idempotence","callback","crash","not prove","dwb"]}]'>
+        <div class="quiz" data-audience-checkpoint>
           <h3>문제</h3>
           <p>Checkpoint가 redo floor를 반환했다. Restart 중 page LSA가 140인 page에 record 120, 140, 170이 차례로 들어오며, 다른 target page는 이미 deallocate되었다.</p>
-          <p><strong>할 일:</strong> 각 operation의 owner를 정하고 모든 skip/apply/debt 결과를 판단한 뒤, 이 scenario가 crash persistence에 관해 무엇을 입증하지 못하는지 정확히 설명하라.</p>
-          <textarea aria-label="Recovery gate 추적 답안" placeholder="Checkpoint ownership, fetch mode, LSA 비교, mutation, dirtying, cleanup을 나누어 적으세요."></textarea>
-          <button type="button" data-check>Recovery trace 확인</button>
-          <button type="button" class="secondary" data-reveal>Model route 보기</button>
-          <div class="feedback" aria-live="polite"></div>
-        </div>
-        <p>답안을 chat에 붙여 넣으세요. Advanced 진도를 기록하기 전에 비교 방향, owner boundary, debt, crash-evidence 표현을 확인하겠습니다.</p>
+          <p><strong>생각할 점:</strong> 각 operation의 owner를 정하고 모든 skip/apply/debt 결과를 판단한 뒤, 이 scenario가 crash persistence에 관해 무엇을 입증하지 못하는지 정확히 설명하라.</p>
+
+
+
+          <details class="answer-disclosure"><summary>설명 펼치기</summary><p>Checkpoint는 page buffer에 조건을 만족하는 page를 flush하고 redo floor를 돌려달라고 요청한다. 모든 page를 flush하거나 page buffer가 checkpoint 전체를 소유한다는 뜻은 아니다 -> recovery는 special allocation-state 지식을 소유하므로 RECOVERY_PAGE와 WRITE로 fix한다 -> page LSA가 140이면 record LSA가 page LSA 이하인 120과 140은 이미 반영되어 있으므로 skip한다 -> record 170은 적용하고 page LSA를 170으로 전진시키며, 필요한 대로 page를 DIRTY로 표시한 뒤 fix를 release한다 -> 이후 170을 replay하면 skip한다 -> deallocate된 page는 fix debt 없이 skip할 수 있다 -> 이 gate는 page 변경의 idempotence만 입증하며 임의의 callback side effect까지 입증하지 않는다 -> 기존 checkpoint/backup 관찰은 crash redo나 DWB recovery를 입증하지 않는다.</p></details></div>
+
       </section>
 
       <section class="section" id="primary-reading">
@@ -184,7 +182,7 @@
         <h2>Callback보다 먼저 skip 경로를 추적한다</h2>
         <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_recovery.c#L497-L536"><code>log_recovery.c:497–536</code></a>와 <code>log_recovery_redo.hpp:587–668</code>을 읽으세요. Special fix, absent-page skip, page-LSA 비교, callback, LSA 전진, DIRTY publication, scope cleanup을 표시합니다.</p>
         <p><a href="../reference/redo-recovery-card.html">인쇄용 redo-recovery card 열기 →</a></p>
-        <p><a href="0012a-understand-aout-ghost-history.html">← 학습 0012A로 돌아가기</a> · <a href="0014-preserve-lifecycle-order.html">학습 0014로 계속하기 →</a></p>
+        <p><a  href="0011-rebuild-after-ordered-refix.html">← 이전 강의 11</a> · <a href="0014-preserve-lifecycle-order.html">학습 0014로 계속하기 →</a></p>
       </section>
     </article>
 
@@ -212,7 +210,8 @@
     </nav>
   </div>
 
-  <footer class="footer">두 buffer pool, active ring/archive storage, WAL, LSA 비교 방향, crash evidence가 불분명하면 언제든 teaching agent에게 질문하세요.</footer>
-</main>
+
+<nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0011-rebuild-after-ordered-refix.html">← Lecture 11 · Ordered refix와 재검증</a><a rel="next" href="0014-preserve-lifecycle-order.html">Lecture 14 · Startup과 shutdown의 의존 관계 →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

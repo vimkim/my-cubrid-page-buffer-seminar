@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lesson 0012A — 비활성 AOUT history 이해하기</title>
+  <title>강의 12A — 비활성 AOUT admission history</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <script defer src="../../assets/teach-retrieval.js"></script>
-</head>
-<body>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0012a-understand-aout-ghost-history.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · lesson 0012A</span><a href="../index.html">과정 홈</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · lecture 0012A</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
-    <div class="eyebrow">심화 보충 · 비활성 admission history</div>
-    <h1>AOUT은 evict된 identity를 기억합니다</h1>
-    <p>비활성 AOUT code가 현재 replacement policy의 이해를 방해하지 않도록 별도 lesson으로 분리했습니다.</p>
+    <div class="eyebrow">LECTURE 12A / 교체와 진행</div>
+    <h1>비활성 AOUT admission history</h1>
+    <p>소스에는 AOUT ghost admission metadata가 남아 있지만, 기준 revision의 parameter tuning은 그 동작을 비활성화합니다.</p>
     <div class="pills"><span class="pill">Ghost metadata</span><span class="pill">No frame</span><span class="pill">Admission only</span><span class="pill">Forced off</span></div>
   </header>
   <div class="lesson-grid">
@@ -22,7 +21,7 @@
       <section class="section" id="answer">
         <div class="eyebrow">01 · 짧은 답</div>
         <h2>Pinned server path에서는 AOUT이 비활성화되어 있습니다</h2>
-        <p>자료구조는 source에 남아 있지만 startup이 <code>data_aout_ratio = 0.0</code>을 강제합니다. Initialization은 ghost node를 할당하지 않고 add/lookup helper도 즉시 반환합니다. 현재 replacement는 Lesson 12의 INVALID/VOID/private/shared 3-zone LRU path입니다.</p>
+        <p>자료구조는 source에 남아 있지만 startup이 <code>data_aout_ratio = 0.0</code>을 강제합니다. Initialization은 ghost node를 할당하지 않고 add/lookup helper도 즉시 반환합니다. 현재 replacement는 Lecture 12의 INVALID/VOID/private/shared 3-zone LRU path입니다.</p>
         <p class="big-claim">AOUT은 source에 남아 있지만 비활성인 admission-history code입니다. Pinned build에서 page bytes를 저장하거나 victim을 고르지 않습니다.</p>
       </section>
       <section class="section" id="entry">
@@ -38,7 +37,7 @@ hash tables = max(floor(A / 1,000), 1)</pre>
       <section class="section" id="effect">
         <div class="eyebrow">03 · Retained design</div>
         <h2>Ghost hit는 reload 뒤의 첫 배치 위치를 바꾸도록 설계되었습니다</h2>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr><th>Reload context</th><th>Retained placement branch</th></tr></thead>
           <tbody>
             <tr><td>Enabled private-LRU assignment; same-private ghost hit</td><td>현재 private LRU1 top</td></tr>
@@ -46,9 +45,9 @@ hash tables = max(floor(A / 1,000), 1)</pre>
             <tr><td>Enabled private-LRU assignment; 다른 former LRU</td><td>Shared LRU2 middle</td></tr>
             <tr><td>Enabled private-LRU assignment 없음</td><td>Shared LRU2 middle</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p>이것은 load 뒤의 admission ranking입니다. 이전 victim을 고르거나 ownership을 증명하거나 reuse를 허가하지 않습니다. AOUT-off가 없앤 것은 ghost hit/miss 세분화이지 현재의 두 path가 아닙니다. Enabled assignment가 있으면 private LRU1 top, 없으면 shared LRU2 middle로 갑니다.</p>
-        <p><a href="0012b-understand-private-lru-index.html#first-placement">Session에서 worker로 assignment가 전달되는 과정과 assignment가 page가 아니라 final-unfix context에 속하는 이유는 Lesson 0012B의 canonical first-placement 설명에서 확인하세요 →</a></p>
+        <p><a href="0012b-understand-private-lru-index.html#first-placement">Session에서 worker로 assignment가 전달되는 과정과 assignment가 page가 아니라 final-unfix context에 속하는 이유는 Lecture 0012B의 canonical first-placement 설명에서 확인하세요 →</a></p>
       </section>
       <section class="section" id="boundary">
         <div class="eyebrow">04 · Evidence 경계</div>
@@ -57,27 +56,29 @@ hash tables = max(floor(A / 1,000), 1)</pre>
         <p>Retained comment의 “LRU + Aout of 2Q”는 design structure를 설명하며 active startup behavior를 증명하지 않습니다. Revival에는 concurrency, memory, policy와 측정된 performance validation이 필요합니다. 기대 효과를 측정된 performance claim으로 쓰면 안 됩니다.</p>
         <p class="source-note"><strong>Verified dormant source:</strong> <code>system_parameter.c:3463–3474,9931–9987</code>; <code>page_buffer.c:635–666,5802–5903,6885–6994,10468–10636</code>.</p>
       </section>
+<section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>코드가 있으면 활성 정책일까요?</h2><p>AOUT 구조가 소스에 있다는 사실만으로 pinned server path의 hit rate 변화를 설명할 수 있을까요?</p><details class="answer-disclosure"><summary>설명 펼치기</summary><p>그 사실만으로는 설명할 수 없습니다. Pinned server path에서 AOUT은 비활성화되어 있습니다. 남아 있는 구조는 가능한 ghost-history 메커니즘을 보여줄 뿐, 실제 workload 동작의 증거가 아닙니다. 측정값을 AOUT에 귀속하려면 측정한 build가 해당 경로를 활성화하고 실행한다는 증거가 필요합니다.</p></details></section>
       <section class="section" id="primary-reading">
         <div class="eyebrow">핵심 읽을거리</div>
         <h2>Active policy와 dormant history를 별도 page로 읽으세요</h2>
         <p><a href="../../advanced/aout-ghost-history.md">Canonical AOUT page 열기 →</a></p>
-        <p><a href="0012b-understand-private-lru-index.html">← Lesson 0012B로 돌아가기</a> · <a href="0013-gate-redo-by-page-lsa.html">Lesson 0013으로 계속 →</a></p>
+        <p><a href="0012b-understand-private-lru-index.html">← Lecture 0012B로 돌아가기</a> · <a  href="0009-classify-latch-wait.html">다음: 강의 9 →</a></p>
       </section>
     </article>
     <nav class="lesson-nav" aria-label="Lesson 목차">
-      <strong>Lesson map</strong>
+      <strong>Lecture map</strong>
       <a href="#answer">1. Active 상태</a>
       <a href="#entry">2. Ghost entry</a>
       <a href="#effect">3. Admission 효과</a>
       <a href="#boundary">4. Revival 경계</a>
       <a href="#primary-reading">핵심 읽을거리</a>
       <hr>
-      <a href="0013-gate-redo-by-page-lsa.html">다음 lesson →</a>
+      <a href="0009-classify-latch-wait.html">다음 강의 →</a>
       <a href="../../advanced/aout-ghost-history.md">Canonical Advanced page</a>
       <a href="../index.html">과정 홈</a>
     </nav>
   </div>
   <footer class="footer">Replacement claim을 설계 근거로 쓰기 전에 active code인지 dormant branch인지 먼저 확인하세요.</footer>
-</main>
+<nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0012b-understand-private-lru-index.html">← Lecture 12B · Private LRU index와 선택</a><a rel="next" href="0009-classify-latch-wait.html">Lecture 9 · Latch queue와 grant 결과 →</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body>
 </html>

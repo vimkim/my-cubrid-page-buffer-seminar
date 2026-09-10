@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Expected CUBRID page-buffer questions and model answers</title>
+  <title>Questions and explanations</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-</head>
-<body>
+<link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/expected-team-questions.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell">
-  <div class="topline"><span>CUBRID page buffer · maintainer challenge guide</span><a href="../index.html">Course home</a></div>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · maintainer challenge guide</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
     <div class="eyebrow">15 team challenges + 14 implementation questions</div>
-    <h1>Answer the questions behind the design.</h1>
+    <h1>Questions and explanations</h1>
     <p>Use these questions for maintainer self-check and peer review. Form your answer before expanding the model, then defend it with an owner, state, guard, invariant, and evidence boundary.</p>
     <div class="pills"><span class="pill">Objects</span><span class="pill">Ownership</span><span class="pill">Durability</span><span class="pill">Replacement</span><span class="pill">Proof</span></div>
   </header>
@@ -34,33 +34,33 @@
     <h2>What exists, and who owns correctness?</h2>
     <div class="question-stack">
       <article class="question-card" id="q-001">
-        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-001</span><span>Lesson 1</span></div>
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-001</span><span>Lecture 1</span></div>
         <h3>1. What does the page-buffer Module own—and what remains with its callers?</h3>
-        <details open>
+        <details>
           <summary>Show model answer</summary>
           <div class="model-answer">
             <p><strong>Model answer:</strong> The Module maps a page identity to resident bytes and temporarily protects those bytes through fix, latch, dirty/flush, and replacement protocols. It does not know whether the caller chose the right page or made a logically valid change. Allocation knowledge, logical locking, page-layout validation, recovery meaning, retry, and complete cleanup remain with the caller and neighboring modules.</p>
             <p><strong>Defend with:</strong> Successful fix proves an access contract; it does not prove caller correctness.</p>
-            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-001-what-does-the-page-buffer-module-own">Canonical answer and source anchors</a> · <a href="../lessons/0001-present-the-page-journey.html">Lesson 1</a></p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-001-what-does-the-page-buffer-module-own">Canonical answer and source anchors</a> · <a href="../lessons/0001-present-the-page-journey.html">Lecture 1</a></p>
           </div>
         </details>
       </article>
 
       <article class="question-card" id="q-003">
-        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-003</span><span>Lessons 1–2</span></div>
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-003</span><span>Lectures 1–2</span></div>
         <h3>2. How do VPID, BCB, frame, PAGE_PTR, and holder differ?</h3>
         <details>
           <summary>Show model answer</summary>
           <div class="model-answer">
             <p><strong>Model answer:</strong> A <code>VPID</code> is the logical page identity. A BCB is volatile control state for one currently resident identity, paired with a frame that stores the bytes. A <code>PAGE_PTR</code> is only a borrowed view into those bytes; it is not the page’s identity or ownership record. Global <code>fcnt</code> protects the frame from reuse, while each thread’s holder records its own matching release debt.</p>
             <p><strong>Defend with:</strong> The pointer can repeat while identity changes, and identity can remain while the frame address changes.</p>
-            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-003-how-do-vpid-bcb-frame-pageptr-and-holder-differ">Canonical answer and source anchors</a> · <a href="../lessons/0002-separate-objects-from-state.html">Lesson 2</a></p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-003-how-do-vpid-bcb-frame-pageptr-and-holder-differ">Canonical answer and source anchors</a> · <a href="../lessons/0002-separate-objects-from-state.html">Lecture 2</a></p>
           </div>
         </details>
       </article>
 
       <article class="question-card" id="q-004">
-        <div class="question-meta"><span>Counterexample</span><span>PGBUF-QB-004</span><span>Lesson 2</span></div>
+        <div class="question-meta"><span>Counterexample</span><span>PGBUF-QB-004</span><span>Lecture 2</span></div>
         <h3>3. Can a page be resident, unfixed, and dirty at the same time?</h3>
         <details>
           <summary>Show model answer</summary>
@@ -79,20 +79,20 @@
     <h2>Why do successful-looking paths still recheck?</h2>
     <div class="question-stack">
       <article class="question-card" id="q-009">
-        <div class="question-meta"><span>Expected challenge</span><span>PGBUF-QB-009</span><span>Lesson 3</span></div>
+        <div class="question-meta"><span>Expected challenge</span><span>PGBUF-QB-009</span><span>Lecture 3</span></div>
         <h3>4. Why check BCB identity again after finding a victim or hash candidate?</h3>
         <details>
           <summary>Show model answer</summary>
           <div class="model-answer">
             <p><strong>Model answer:</strong> The first lookup produces only a candidate. Before the thread obtains the protection needed to fix, release, remove, or reuse it, another thread may change the resident mapping. The protected identity check proves that the BCB still represents the expected VPID at the transition that matters.</p>
             <p><strong>Defend with:</strong> It is not checking whether the same BCB address still exists; it is checking whether that stable slot still has the same current identity.</p>
-            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once">Canonical answer and source anchors</a> · <a href="../lessons/0007-replace-one-frame.html">Lesson 7</a></p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once">Canonical answer and source anchors</a> · <a href="../lessons/0007-replace-one-frame.html">Lecture 7</a></p>
           </div>
         </details>
       </article>
 
       <article class="question-card" id="q-015">
-        <div class="question-meta"><span>Expected challenge</span><span>PGBUF-QB-015</span><span>Lesson 4</span></div>
+        <div class="question-meta"><span>Expected challenge</span><span>PGBUF-QB-015</span><span>Lecture 4</span></div>
         <h3>5. Can several threads share one BCB? Does that put it in several LRUs?</h3>
         <details>
           <summary>Show model answer</summary>
@@ -105,14 +105,14 @@
       </article>
 
       <article class="question-card" id="q-013">
-        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-013</span><span>Lesson 5</span></div>
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-013</span><span>Lecture 5</span></div>
         <h3>6. Why does a caller need a transaction lock if it already has a page latch?</h3>
         <details>
           <summary>Show model answer</summary>
           <div class="model-answer">
             <p><strong>Model answer:</strong> A page latch serializes short physical access to one in-memory page image. A transaction lock protects a logical database object across transaction conflict and visibility rules. A heap mutation may need both because protecting bytes does not establish logical permission, and logical permission does not protect the bytes while they are edited.</p>
             <p><strong>Defend with:</strong> The mechanisms have different objects, owners, and lifetimes.</p>
-            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-013-how-does-a-page-latch-differ-from-a-transaction-lock">Canonical answer and source anchors</a> · <a href="../lessons/0005-audit-a-logged-mutation.html">Lesson 5</a></p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-013-how-does-a-page-latch-differ-from-a-transaction-lock">Canonical answer and source anchors</a> · <a href="../lessons/0005-audit-a-logged-mutation.html">Lecture 5</a></p>
           </div>
         </details>
       </article>
@@ -124,7 +124,7 @@
     <h2>Which generation became durable?</h2>
     <div class="question-stack">
       <article class="question-card" id="q-023">
-        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-023</span><span>Lesson 5</span></div>
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-023</span><span>Lecture 5</span></div>
         <h3>7. What is the correct mutation, logging, page-LSA, dirty, and release order?</h3>
         <details>
           <summary>Show model answer</summary>
@@ -137,7 +137,7 @@
       </article>
 
       <article class="question-card" id="q-028">
-        <div class="question-meta"><span>Expected challenge</span><span>PGBUF-QB-028</span><span>Lesson 6</span></div>
+        <div class="question-meta"><span>Expected challenge</span><span>PGBUF-QB-028</span><span>Lecture 6</span></div>
         <h3>8. What are generation G and G+1, and why can DIRTY and FLUSHING both be set?</h3>
         <details>
           <summary>Show model answer</summary>
@@ -150,14 +150,14 @@
       </article>
 
       <article class="question-card" id="q-027">
-        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-027</span><span>Lesson 6</span></div>
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-027</span><span>Lecture 6</span></div>
         <h3>9. Where does WAL-before-data happen, and does successful flush mean the home page is durable?</h3>
         <details>
           <summary>Show model answer</summary>
           <div class="model-answer">
             <p><strong>Model answer:</strong> Before submitting the copied page image, page-buffer flush asks log management to force WAL through that image’s page LSA. The image then follows the configured DWB or direct data-volume path. Success at this boundary may mean DWB acceptance or direct-write return; it does not automatically prove physical home-page persistence.</p>
             <p><strong>Defend with:</strong> WAL is the recovery-ordering gate, DWB protects page-image propagation, and physical durability is a lower boundary.</p>
-            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-027-where-is-the-wal-before-data-gate">Canonical answer and source anchors</a> · <a href="../lessons/0006-flush-one-generation.html">Lesson 6</a></p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-027-where-is-the-wal-before-data-gate">Canonical answer and source anchors</a> · <a href="../lessons/0006-flush-one-generation.html">Lecture 6</a></p>
           </div>
         </details>
       </article>
@@ -169,7 +169,7 @@
     <h2>Eligibility first; policy second</h2>
     <div class="question-stack">
       <article class="question-card" id="q-029">
-        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-029</span><span>Lesson 7</span></div>
+        <div class="question-meta"><span>Essential</span><span>PGBUF-QB-029</span><span>Lecture 7</span></div>
         <h3>10. What makes a BCB safe to victimize?</h3>
         <details>
           <summary>Show model answer</summary>
@@ -182,14 +182,14 @@
       </article>
 
       <article class="question-card" id="q-040">
-        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-040</span><span>Lesson 12</span></div>
+        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-040</span><span>Lecture 12</span></div>
         <h3>11. What happens when no free BCB is immediately available?</h3>
         <details>
           <summary>Show model answer</summary>
           <div class="model-answer">
             <p><strong>Model answer:</strong> The allocator enters a progress protocol: search invalid or eligible victim state, trigger flush or background progress, wait for or consume a direct-victim reservation, and retry. Timeout, interrupt, or an all-buffers-dirty condition can provide bounded exits. An empty free list is pressure, not proof of deadlock or starvation.</p>
             <p><strong>Defend with:</strong> Safety is established by eligibility; liveness depends on producers, wakeups, retries, and bounded exits.</p>
-            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-040-what-happens-when-no-free-bcb-is-immediately-available">Canonical answer and source anchors</a> · <a href="../lessons/0012-prove-replacement-progress.html">Lesson 12</a></p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-040-what-happens-when-no-free-bcb-is-immediately-available">Canonical answer and source anchors</a> · <a href="../lessons/0012-prove-replacement-progress.html">Lecture 12</a></p>
           </div>
         </details>
       </article>
@@ -201,7 +201,7 @@
     <h2>What changes across a temporary ownership gap?</h2>
     <div class="question-stack">
       <article class="question-card" id="q-035">
-        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-035</span><span>Lesson 11</span></div>
+        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-035</span><span>Lecture 11</span></div>
         <h3>12. Why can ordered fixing release pages first, and what becomes stale?</h3>
         <details>
           <summary>Show model answer</summary>
@@ -214,33 +214,33 @@
       </article>
 
       <article class="question-card" id="q-046">
-        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-046</span><span>Lesson 13</span></div>
+        <div class="question-meta"><span>Advanced</span><span>PGBUF-QB-046</span><span>Lecture 13</span></div>
         <h3>13. How does redo use page LSA to avoid applying a record twice?</h3>
         <details>
           <summary>Show model answer</summary>
           <div class="model-answer">
             <p><strong>Model answer:</strong> Redo fixes the recovery page under WRITE and compares the log record LSA with the page LSA. If the page already represents that record, redo skips it and releases ownership. Otherwise it applies the recovery function, advances the page LSA, marks the page dirty as required, and releases through scope cleanup.</p>
             <p><strong>Defend with:</strong> This proves page-image idempotence at the LSA gate; it does not automatically prove arbitrary callback side effects idempotent.</p>
-            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-046-how-does-redo-use-page-lsa-for-idempotence">Canonical answer and source anchors</a> · <a href="../lessons/0013-gate-redo-by-page-lsa.html">Lesson 13</a></p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-046-how-does-redo-use-page-lsa-for-idempotence">Canonical answer and source anchors</a> · <a href="../lessons/0013-gate-redo-by-page-lsa.html">Lecture 13</a></p>
           </div>
         </details>
       </article>
 
       <article class="question-card" id="q-055">
-        <div class="question-meta"><span>Evidence discipline</span><span>PGBUF-QB-055</span><span>Lessons 8 and 16</span></div>
+        <div class="question-meta"><span>Evidence discipline</span><span>PGBUF-QB-055</span><span>Lectures 8 and 16</span></div>
         <h3>14. Are VS-10, VS-11, and VS-12 packets true statements that defects exist?</h3>
         <details>
           <summary>Show model answer</summary>
           <div class="model-answer">
             <p><strong>Model answer:</strong> No. A <code>VS-*</code> packet is a version-sensitive evidence record for a concern, not a verdict. It packages the candidate’s source path, current evidence level, missing proof, and status owner. Promotion requires exact control flow, supported reachability, surviving-state evidence, caller or production impact, and a target-branch recheck. Different packets may already sit at different evidence levels.</p>
             <p><strong>Defend with:</strong> “Source-visible early return” is weaker than “reachable state leak,” which is weaker than “demonstrated production defect.”</p>
-            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-055-what-evidence-promotes-an-exceptional-path-candidate">Canonical evidence ladder</a> · <a href="../../unresolved-or-version-sensitive-findings.md">Current packet status</a> · <a href="../lessons/0008-defend-a-safe-change.html">Lesson 8</a></p>
+            <p class="answer-route"><a href="../../questions/advanced-answers.md#pgbuf-qb-055-what-evidence-promotes-an-exceptional-path-candidate">Canonical evidence ladder</a> · <a href="../../unresolved-or-version-sensitive-findings.md">Current packet status</a> · <a href="../lessons/0008-defend-a-safe-change.html">Lecture 8</a></p>
           </div>
         </details>
       </article>
 
       <article class="question-card" id="q-070">
-        <div class="question-meta"><span>Maintainer defense</span><span>PGBUF-QB-070</span><span>Lessons 8 and 16</span></div>
+        <div class="question-meta"><span>Maintainer defense</span><span>PGBUF-QB-070</span><span>Lectures 8 and 16</span></div>
         <h3>15. What test actually proves a page-buffer change is safe?</h3>
         <details>
           <summary>Show model answer</summary>
@@ -259,9 +259,9 @@
     <h2>Fifteen direct answers from the pinned source</h2>
     <div class="question-stack">
       <article class="question-card" id="reader-q-01">
-        <div class="question-meta"><span>Lookup</span><span>Reader Q1</span><span>Lesson 3</span></div>
+        <div class="question-meta"><span>Lookup</span><span>Reader Q1</span><span>Lecture 3</span></div>
         <h3>1. What hashing algorithm maps a VPID toward a BCB?</h3>
-        <details open>
+        <details>
           <summary>Show direct answer</summary>
           <div class="model-answer">
             <p><strong>Answer:</strong> The resident lookup uses <code>bucket = (pageid ^ (reverse8(volid &amp; 0xff) &lt;&lt; 12)) &amp; 0xfffff</code>. It reverses the low eight volume-id bits into the high portion of a 20-bit value, XORs the page id, and selects one of 2^20 anchors. The bucket contains a chain, so lookup still locks a candidate and compares the complete VPID. <code>pgbuf_hash_vpid()</code> is a separate generic/AOUT hash, not this resident-table formula.</p>
@@ -272,7 +272,7 @@
       </article>
 
       <article class="question-card" id="reader-q-02">
-        <div class="question-meta"><span>Pool lifetime</span><span>Reader Q2</span><span>Lesson 2</span></div>
+        <div class="question-meta"><span>Pool lifetime</span><span>Reader Q2</span><span>Lecture 2</span></div>
         <h3>2. Does a lookup miss create a new BCB?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -285,7 +285,7 @@
       </article>
 
       <article class="question-card" id="reader-q-03">
-        <div class="question-meta"><span>Pressure</span><span>Reader Q3</span><span>Lessons 7 and 12</span></div>
+        <div class="question-meta"><span>Pressure</span><span>Reader Q3</span><span>Lectures 7 and 12</span></div>
         <h3>3. What happens when the BCB pool is full?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -298,7 +298,7 @@
       </article>
 
       <article class="question-card" id="reader-q-04">
-        <div class="question-meta"><span>LRU policy</span><span>Reader Q4</span><span>Lesson 12</span></div>
+        <div class="question-meta"><span>LRU policy</span><span>Reader Q4</span><span>Lecture 12</span></div>
         <h3>4. How many private and shared LRUs exist, and what do their quotas mean?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -312,7 +312,7 @@
       </article>
 
       <article class="question-card" id="reader-q-05">
-        <div class="question-meta"><span>Ownership</span><span>Reader Q5</span><span>Lessons 3 and 4</span></div>
+        <div class="question-meta"><span>Ownership</span><span>Reader Q5</span><span>Lectures 3 and 4</span></div>
         <h3>5. What do fix and unfix mean?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -325,13 +325,13 @@
       </article>
 
       <article class="question-card" id="reader-q-06">
-        <div class="question-meta"><span>Background progress</span><span>Reader Q6</span><span>Lesson 12</span></div>
+        <div class="question-meta"><span>Background progress</span><span>Reader Q6</span><span>Lecture 12</span></div>
         <h3>6. How many page-buffer daemons exist, and what do they do?</h3>
         <details>
           <summary>Show direct answer</summary>
           <div class="model-answer">
             <p><strong>Answer:</strong> Server mode nominally registers four: maintenance every 100 ms for quota work plus a call to an intended direct-victim backup; page flush on demand or at the 1,000 ms default interval; post-flush with adaptive 1/10/100 ms waits and then wake-only; and flush control every 50 ms for post-write soft pacing. The pinned maintenance backup loops do not enter as written (<code>VS-20</code>). Recovery gating, configuration, and failed flush-control initialization qualify the count. Stand-alone mode has no page-buffer daemons and uses synchronous progress.</p>
-            <p><a href="../lessons/0006a-understand-page-buffer-daemons.html">Trace every daemon's trigger, shared state, handoff, and cost in Lesson 6A →</a></p>
+            <p><a href="../lessons/0006a-understand-page-buffer-daemons.html">Trace every daemon's trigger, shared state, handoff, and cost in Lecture 6A →</a></p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:16972-17255</code></p>
             <p class="answer-route"><a href="../../advanced/replacement-progress.md#what-happens-when-every-scan-fails">Canonical daemon table</a></p>
           </div>
@@ -339,7 +339,7 @@
       </article>
 
       <article class="question-card" id="reader-q-07">
-        <div class="question-meta"><span>Structures</span><span>Reader Q7</span><span>Lesson 2</span></div>
+        <div class="question-meta"><span>Structures</span><span>Reader Q7</span><span>Lecture 2</span></div>
         <h3>7. Which supporting data structures matter besides BCBs and frames?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -365,7 +365,7 @@
       </article>
 
       <article class="question-card" id="reader-q-09">
-        <div class="question-meta"><span>Victim order</span><span>Reader Q9</span><span>Lesson 12</span></div>
+        <div class="question-meta"><span>Victim order</span><span>Reader Q9</span><span>Lecture 12</span></div>
         <h3>9. How is victim priority determined?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -378,7 +378,7 @@
       </article>
 
       <article class="question-card" id="reader-q-10">
-        <div class="question-meta"><span>Holder lifetime</span><span>Reader Q10</span><span>Lesson 4</span></div>
+        <div class="question-meta"><span>Holder lifetime</span><span>Reader Q10</span><span>Lecture 4</span></div>
         <h3>10. How does a holder entry live, and can it make unfix slow?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -386,13 +386,13 @@
             <p><strong>Answer:</strong> Initialization reserves seven entries per thread; exhaustion grows storage in sets of ten. First fix binds one free entry to one BCB and prepends it to that thread’s hold list. Nested fixes reuse it by increasing <code>fix_count</code>. Final matching unfix removes the binding and returns the entry to that thread’s free list, but backing memory remains until page-buffer finalization.</p>
             <p><strong>Performance judgment:</strong> a bottleneck is plausible, not automatic. Find is linear in the distinct BCBs held by that thread, and final removal may walk the singly linked list again. Small or LIFO hold sets are cheap; unfavorable order can accumulate quadratic traversal. Many threads on one BCB can instead contend on its shared atomic latch, while nested fixes of one page by one thread do not lengthen the holder list. Profile these separately from zero-count LRU work, wakeups, and flush.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:86-94,438-500,5922-6275,6298-6634,7807-7835</code></p>
-            <p class="answer-route"><a href="../../advanced/holder-entry-lifecycle.md">Canonical holder lifecycle and cost analysis</a> · <a href="../lessons/0004a-understand-holder-anchor.html">Bilingual Lesson 4A</a></p>
+            <p class="answer-route"><a href="../../advanced/holder-entry-lifecycle.md">Canonical holder lifecycle and cost analysis</a> · <a href="../lessons/0004a-understand-holder-anchor.html">Bilingual Lecture 4A</a></p>
           </div>
         </details>
       </article>
 
       <article class="question-card" id="reader-q-11">
-        <div class="question-meta"><span>Replacement safety</span><span>Reader Q11</span><span>Lessons 7 and 12</span></div>
+        <div class="question-meta"><span>Replacement safety</span><span>Reader Q11</span><span>Lectures 7 and 12</span></div>
         <h3>11. Why does victim selection need a protected handoff?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -408,7 +408,7 @@
       </article>
 
       <article class="question-card" id="reader-q-12">
-        <div class="question-meta"><span>Cross-private LRU</span><span>Reader Q12</span><span>Lesson 12</span></div>
+        <div class="question-meta"><span>Cross-private LRU</span><span>Reader Q12</span><span>Lecture 12</span></div>
         <h3>12. How does one transaction find victims in another private LRU?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -423,7 +423,7 @@
       </article>
 
       <article class="question-card" id="reader-q-13">
-        <div class="question-meta"><span>Ordered ownership</span><span>Reader Q13</span><span>Lesson 11</span></div>
+        <div class="question-meta"><span>Ordered ownership</span><span>Reader Q13</span><span>Lecture 11</span></div>
         <h3>13. What are the inputs, outputs, and internal steps of ordered fix?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -438,7 +438,7 @@
       </article>
 
       <article class="question-card" id="reader-q-14">
-        <div class="question-meta"><span>Redo cleanup</span><span>Reader Q14</span><span>Lesson 13</span></div>
+        <div class="question-meta"><span>Redo cleanup</span><span>Reader Q14</span><span>Lecture 13</span></div>
         <h3>14. What does “redo releases through scope cleanup” mean?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -452,7 +452,7 @@
       </article>
 
       <article class="question-card" id="reader-q-15">
-        <div class="question-meta"><span>Creation Interface</span><span>Reader Q15</span><span>Lessons 3 and 5</span></div>
+        <div class="question-meta"><span>Creation Interface</span><span>Reader Q15</span><span>Lectures 3 and 5</span></div>
         <h3>15. Why does <code>NEW_PAGE</code> exist, and can we remove it?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -461,7 +461,7 @@
             <p><strong>Removal:</strong> the semantic operation cannot simply disappear. <code>OLD_PAGE</code> adds read/decrypt/failure paths and rejects <code>PAGE_UNKNOWN</code>; <code>RECOVERY_PAGE</code> still reads on a miss and owns a different validation boundary; cache absence cannot prove allocation intent. A safe redesign may hide the enum behind a narrow creation function, but it must preserve no-read materialization and keep the external-sort full-page overwrite separate.</p>
             <p><strong>Comparison and scope:</strong> PostgreSQL expresses the same internal responsibility with <code>RBM_ZERO_AND_LOCK</code>; InnoDB uses <code>buf_page_create()</code>. CUBRID's declaration is a server-module Interface, not an installed SQL, CCI, or application API. The engines differ in API shape, not in whether creation must be distinguished from reading an existing page.</p>
             <p><strong>Pinned evidence:</strong> ten direct CUBRID creation calls, all WRITE plus unconditional; <code>src/storage/page_buffer.h:172-187</code>; <code>src/storage/page_buffer.c:2380-2616,8392-8634</code>; <code>src/storage/file_manager.c:5360-5590</code>.</p>
-            <p class="answer-route"><a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Bilingual canonical lesson</a> · <a href="../../learning/03-caller-completes-correctness.md#newpage-means-materialize-after-allocation">Canonical Markdown explanation</a> · <a href="../../reference/new-page-fetch-mode-audit.md">Complete pinned audit</a></p>
+            <p class="answer-route"><a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Bilingual canonical lecture</a> · <a href="../../learning/03-caller-completes-correctness.md#newpage-means-materialize-after-allocation">Canonical Markdown explanation</a> · <a href="../../reference/new-page-fetch-mode-audit.md">Complete pinned audit</a></p>
           </div>
         </details>
       </article>
@@ -479,5 +479,6 @@
 
   <footer class="footer">Curated for maintainer challenge review; Canonical explanations and mutable evidence status remain in the linked Maintainer Guide documents.</footer>
 </main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body>
 </html>
