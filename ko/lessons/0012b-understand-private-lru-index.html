@@ -100,6 +100,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       </section>
 
       <section class="section" id="activity">
+        <p><a href="0012-prove-replacement-progress.html#lru-conditional-movement">먼저 Lecture 12에서 exact recency, 리스트 이벤트 age, quota epoch를 구분합니다.</a> 각 필드는 서로 다른 정책 판단에 쓰이며 전체 page의 마지막 접근 시각을 뜻하지 않습니다.</p>
         <div class="eyebrow">06 · “Least active”의 의미</div>
         <h2>Activity는 transaction 수가 아니라 sample된 BCB reuse입니다</h2>
         <p>Ordinary final unfix 때 <code>pgbuf_bcb_register_hit_for_lru()</code>는 accepted adjustment epoch 하나에서 BCB 하나가 최대 hit 하나만 기여하게 합니다. Accepted <code>pgbuf_adjust_quotas()</code>만 <code>adjust_age</code>를 increment합니다. Daemon이 100 ms마다 시도해도 guard가 early return할 수 있으므로 반드시 increment되는 것은 아닙니다.</p>
@@ -109,6 +110,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       </section>
 
       <section class="section" id="movement">
+        <p>Hit 후 유지·승격·이동이 달라지는 이유를 추적하기 전에 <a href="0012-prove-replacement-progress.html#textbook-vs-cubrid">교과서 LRU와 CUBRID의 비교</a>로 돌아가 큰 흐름을 확인하세요.</p>
         <p>연속된 구성 예제에서 <a href="../reference/lru-worked-example.html#cooling">스캔에 따른 냉각과 재사용을 예측</a>한 뒤 <a href="../reference/lru-worked-example.html#cross-context">B가 같은 P에 접근하는 과정</a>을 따라가세요.</p>
         <div class="eyebrow">07 · 이후 BCB 이동</div>
         <h2>첫 배치는 page를 그 domain에 고정하지 않습니다</h2>

@@ -34,12 +34,77 @@
         <div class="table-scroll"><table><thead><tr><th>상태</th><th>쉬운 의미</th><th>Victim search 여부</th></tr></thead><tbody>
           <tr><td><code>INVALID</code></td><td>Resident VPID 없이 전역 free/invalid singly linked list에 있습니다.</td><td>Allocation이 O(1)로 바로 꺼냅니다.</td></tr>
           <tr><td><code>VOID</code></td><td>INVALID에도 어떤 LRU에도 없습니다. Load 중, 첫 배치 전 fix 상태, 이동 중, protected detach 상태일 수 있습니다.</td><td>LRU scan에서 보이지 않습니다.</td></tr>
-          <tr><td><code>LRU1</code></td><td>한 LRU의 뜨겁고 보호된 부분입니다.</td><td>아니요.</td></tr>
+          <tr><td><code>LRU1</code></td><td>한 LRU의 보호된 상단 구간입니다. 소속 자체가 별도의 hotness 기준을 만족했다는 뜻은 아닙니다.</td><td>아니요.</td></tr>
           <tr><td><code>LRU2</code></td><td>보호된 second-chance 부분입니다.</td><td>아니요.</td></tr>
           <tr><td><code>LRU3</code></td><td>차가운 부분이며 ordinary victim search가 보는 유일한 zone입니다.</td><td>예. 그러나 safety check가 모든 node를 거부할 수 있습니다.</td></tr>
         </tbody></table></div>
         <p>새로 load한 resident page는 첫 fix가 끝날 때까지 계속 VOID일 수 있습니다. VPID가 resident hash에 이미 들어 있고 <code>fcnt</code>가 양수일 수도 있습니다. VOID만으로 identity, ownership, dirty state, overwrite 가능 여부는 알 수 없습니다. <code>prev_BCB</code>/<code>next_BCB</code>가 현재 INVALID나 LRU에 BCB를 연결하지 않는다는 뜻뿐입니다.</p>
         <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:174–216,5559–5667,6636–6994,8904–8952,15860–15986</code>.</p>
+      </section>
+
+      <section class="section" id="textbook-vs-cubrid">
+        <h2>왜 CUBRID의 LRU는 교과서의 exact LRU와 다를까?</h2>
+        <p><strong>Exact LRU는 접근 순서를 정확히 기억합니다. CUBRID는 여러 3구간 리스트 안에서 조건에 따라 배치를 바꿉니다. 전체 page를 하나의 정확한 최근 사용 순서로 관리하는 것은 아닙니다.</strong> 둘 다 과거 사용을 교체 판단에 활용하지만, 다음에 같은 page를 내보낸다고 보장하지는 않습니다.</p>
+        <p><a href="0000-replacement-foundations.html#lru">교과서 모델</a>을 떠올려 보세요. Hit나 최초 적재가 발생하면 그 page가 가장 최근에 사용한 항목(MRU)이 됩니다. Cache가 가득 찬 상태에서 miss가 나면 마지막 사용이 가장 오래된 resident page를 내보냅니다. 이 모델은 모든 resident page를 즉시 교체할 수 있다고 가정합니다. 실제 데이터베이스는 어떤 정책을 쓰든 사용 중인 page와 보존해야 할 변경을 추가로 보호해야 합니다.</p>
+        <p>Exact LRU가 접근 순서대로 세운 한 줄이라면, CUBRID에는 여러 줄이 있고 각 줄이 보호 구간 LRU1/LRU2와 후보를 찾는 구간 LRU3으로 나뉩니다. 줄을 다시 정리하는 시점도 조건부입니다. 이 구간은 정책상의 분류이지 물리적으로 분리된 세 buffer pool이 아닙니다. BCB를 옮겨 연결하는 것은 metadata 변경이며 page 내용이 저장된 frame을 옮기는 일이 아닙니다.</p>
+        <div class="table-scroll"><table><caption>CUBRID f799e05d77d5300c6ea5753b4a6cc7caee6d8912 기준 정책 비교</caption><thead><tr><th scope="col">비교 질문</th><th scope="col">교과서 exact LRU</th><th scope="col">고정 리비전의 CUBRID 정책</th></tr></thead><tbody>
+          <tr><th scope="row">어떤 순서를 유지하나?</th><td>Cache 전체의 정확한 최근 사용 순서 하나.</td><td>Private/shared 리스트와 LRU1/LRU2/LRU3. 위치가 전체 page의 마지막 접근 순위를 뜻하지는 않습니다.</td></tr>
+          <tr><th scope="row">Hit가 나면 무엇이 바뀌나?</th><td>접근한 page가 MRU가 됩니다. 이미 MRU라면 순서는 같습니다.</td><td>일반 resident fix는 사용 권한을 부여하지만 다시 연결하지 않습니다. 조건을 만족한 final unfix에서 유지·승격·이동을 결정합니다.</td></tr>
+          <tr><th scope="row">어떻게 교체 후보가 되나?</th><td>다른 접근이 이어져 마지막 사용이 가장 오래된 page가 됩니다.</td><td>리스트 압력으로 경계 노드가 LRU3까지 강등될 수 있습니다. 선택한 리스트의 LRU3을 검색하고 보호된 상태에서 자격을 검사합니다.</td></tr>
+          <tr><th scope="row">어디서 victim을 찾나?</th><td>하나의 순서에서 가장 오래된 끝.</td><td>Quota와 후보 광고 정보를 이용해 private/shared 리스트를 선택한 뒤, 선택한 리스트 안에서 제한된 범위를 검색합니다.</td></tr>
+          <tr><th scope="row">어떤 관리 비용이 드나?</th><td>정확한 접근 순서를 유지합니다. O(1) metadata 갱신에도 작업과 동기화 비용은 있습니다.</td><td>조건부 재연결에 더해 zone·domain·quota·후보 정보를 관리합니다. 어느 정책도 공짜이거나 항상 더 빠르지는 않습니다.</td></tr>
+        </tbody></table></div>
+        <p class="source-note">Verified mechanism / Implementation policy: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6675-L6845">해제와 zone 분기</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9250">리스트 선택</a>. 특정 리비전의 비교이며 runtime 측정 결과가 아닙니다.</p>
+      </section>
+
+      <section class="section" id="lru-hit-comparison" data-audience-checkpoint>
+        <h2>P에 다시 접근하면 R 앞으로 갈까?</h2>
+        <p>기존 32,768-frame 구성 예제의 일부를 살펴봅니다. Frame 네 개짜리 CUBRID 설정이 아닙니다. F43에는 R, F42에는 P가 들어 있습니다. Private 리스트 32의 LRU1에서 왼쪽이 top입니다: <strong>R → P → H1 → H2</strong>. Exact LRU와 비교할 때에만 같은 표시 순서를 MRU → 오래된 항목으로 놓습니다. 나머지 page는 그대로입니다.</p>
+        <p>A가 resident P를 성공적으로 READ-fix한 뒤 유일한 fix를 해제합니다. P는 clean·non-hot이며 A의 private domain과 일치합니다. Waiter, 특별한 hint, 동시 접근, quota 조정은 없습니다. P를 보유하는 동안과 final unfix 후의 순서를 각각 예측해 보세요. Fix count는 0 → 1 → 0으로 바뀌며 page identity와 frame은 F42/P 그대로입니다.</p>
+        <details class="answer-disclosure"><summary>세 시점의 순서 비교 펼치기</summary>
+          <div class="table-scroll"><table><caption>맨 왼쪽: exact LRU에서는 MRU, CUBRID에서는 리스트 top</caption><thead><tr><th scope="col">시점</th><th scope="col">Exact LRU</th><th scope="col">CUBRID LRU1</th></tr></thead><tbody>
+            <tr><th scope="row">P 접근 전</th><td>R → P → H1 → H2</td><td>R → P → H1 → H2</td></tr>
+            <tr><th scope="row">P 접근 / fix 성공 후</th><td>P → R → H1 → H2</td><td>R → P → H1 → H2</td></tr>
+            <tr><th scope="row">해제 후</th><td>P → R → H1 → H2</td><td>R → P → H1 → H2</td></tr>
+          </tbody></table></div>
+          <p>Exact LRU는 접근을 즉시 순서에 반영합니다. 이 비교에서 해제는 별도의 접근이 아닙니다. CUBRID의 일반 fix는 소유권을 부여하지만 연결 순서를 바꾸지 않습니다. Final unfix에서도 이동을 요구하는 예외가 없으므로 LRU1 분기가 P를 그대로 둡니다. 가장 최근에 접근한 page는 P인데 R이 위에 남습니다. 이 사례 하나만으로도 exact recency 순서라는 해석은 성립하지 않습니다.</p>
+          <p>Keep 분기는 재연결을 위한 LRU mutex 작업이 필요 없습니다. 그렇다고 잠금이 전혀 없는 것은 아닙니다. 보호된 unfix는 BCB mutex를 보유하며 activity를 등록할 수도 있습니다. “이동 없음”과 “metadata 작업 없음”은 다릅니다.</p>
+          <p class="source-note"><a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6752-L6780">명시적인 “do not move or boost” 분기 확인</a>.</p>
+        </details>
+        <p>이 결론에는 앞의 조건이 붙습니다. 모든 P 접근이 위치를 유지한다는 뜻은 아닙니다. <a href="../reference/lru-worked-example.html#hit-p">원래 fix 확인 지점</a>과 <a href="../reference/lru-worked-example.html#unfix-p">final-unfix 확인 지점</a>에서 개수, tick, 실제 분기를 이어서 확인할 수 있습니다.</p>
+      </section>
+
+      <section class="section" id="lru-conditional-movement">
+        <h2>Final unfix는 무조건 이동이 아니라 판단 시점이다</h2>
+        <p><strong>Final은 전체 fix count가 0이 된다는 뜻</strong>입니다. 한 호출자가 사용을 마쳤다는 뜻만은 아닙니다. 다른 fix가 남아 있으면 이 zero-count 배치 경로에 도달하지 않습니다. Move-to-bottom 요청과 대기 중인 reader/writer에게 넘기는 경로도 일반 zone 분기의 실행 여부에 영향을 줍니다.</p>
+        <p>일반 zone 분기 안에서도 ignore hint와 private-to-shared 이동 조건을 먼저 확인합니다. 그런 예외가 없다면 다음과 같이 동작합니다.</p>
+        <ul>
+          <li><strong>LRU1:</strong> 현재 위치를 유지합니다.</li>
+          <li><strong>LRU2:</strong> 리스트 이벤트로 계산한 age가 충분히 클 때만 LRU1으로 승격합니다. 그렇지 않으면 유지합니다.</li>
+          <li><strong>LRU3:</strong> 예외 검사를 통과한 일반 경로에서는 LRU1으로 승격합니다.</li>
+        </ul>
+        <p>냉각은 반대 방향입니다. Scan으로 새 page가 들어와 zone 임계치를 넘으면, 해당 page에 다시 접근하지 않아도 경계 노드가 LRU1 → LRU2 → LRU3으로 내려갈 수 있습니다. 벽시계 시간이 흐르는 것만으로 이동하지는 않습니다. <a href="../reference/lru-worked-example.html#cooling">기존 scan 예제</a>에서 정확히 어느 경계가 바뀌는지 계산합니다.</p>
+        <p>서로 다른 세 기준을 섞지 마세요. 리스트 이벤트 age는 LRU2 승격 판단에 쓰이고, 유효한 quota 조정의 epoch는 activity 표본 등록을 제한하며, 별도의 hot-fix 기준은 migration 판단에 관여합니다. 어느 것도 정확한 마지막 접근 시각이 아니며, LRU1에 있다는 사실만으로 별도의 hot 판정이 참인 것도 아닙니다.</p>
+        <p class="source-note">소스 확인 지점: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6713-L6725">zero-count와 waiter 조건</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6780-L6845">LRU2/LRU3 결과</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1053-L1058">리스트 이벤트 age 검사</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9985-L10106">zone 조정</a>. <a href="0012b-understand-private-lru-index.html#activity">Lecture 12B에서 activity 필드를 구분합니다</a>.</p>
+      </section>
+
+      <section class="section" id="lru-policy-layers">
+        <h2>배치, 검색, 안전한 재사용은 서로 다른 결정이다</h2>
+        <ol>
+          <li><strong>배치:</strong> 이 BCB를 어느 리스트와 zone에 둘까요? Private 리스트는 실행 문맥과 연결된 정책 영역이지 독점적인 개인 사본이 아닙니다. 여러 문맥이 같은 영역을 공유할 수 있습니다. Domain 불일치나 hot-and-old 조건이 있으면 private 항목을 현재 LRU1 top이 아니라 shared LRU2로 옮길 수 있습니다.</li>
+          <li><strong>검색:</strong> INVALID가 소진되면 어느 리스트에서 후보를 구할까요? Quota와 후보 광고 정보가 own-private, other-private, shared 검색에 영향을 줍니다. Quota는 정책 목표이지 물리 메모리의 고정 칸막이가 아닙니다. 리스트 선택 자체가 전체에서 가장 오래된 page를 찾거나 frame을 예약하는 것도 아닙니다.</li>
+          <li><strong>안전한 재사용:</strong> 후보의 이전 identity를 정말 제거해도 될까요? 선택한 리스트의 검색 경로는 LRU3, flag, fix, waiter와 잠금을 확인한 뒤 보호된 상태에서 다시 검사합니다. List detach, 이전 hash identity 제거, 새 page binding은 별개의 사건입니다.</li>
+        </ol>
+        <p><strong>안전성은 CUBRID만의 LRU 차이가 아닙니다.</strong> Exact LRU를 선택한 데이터베이스도 pinned page를 보호하고 WAL/writeback 절차로 dirty data를 보존해야 합니다. 정책이 선호하는 page라도 사용할 수 없으면 다른 적격 후보를 고를 수 있습니다. Flush 후에도 page는 resident일 수 있고, re-dirty되면 계속 부적격일 수 있습니다. 좋은 순위나 대기만으로 진행을 보장하지는 않습니다.</p>
+        <p class="source-note"><a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6996-L7038">Migration 조건</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9250">리스트 선택</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9340-L9454">보호된 후보 검색</a>. <a href="0012b-understand-private-lru-index.html#movement">Domain 이동</a>, <a href="0012b-understand-private-lru-index.html#victim-search">quota와 검색 순서</a>, <a href="0000a-database-bridge.html#durability">데이터베이스 공통 안전 조건</a>으로 이어집니다.</p>
+      </section>
+
+      <section class="section" id="lru-tradeoffs">
+        <h2>덜 정확한 순서는 절충이지 성능 우위의 증거가 아니다</h2>
+        <p>R/P 예제는 정확한 recency 순서를 유지할 때 필요한 재연결을 생략합니다. 동시 접근에서는 공유 metadata의 재연결을 조율하는 비용도 고려해야 합니다. 고정 소스의 주석은 LRU1 항목을 제자리에 두는 이유로 성능상의 의도를 명시합니다. 하지만 그 주석은 benchmark 결과가 아닙니다.</p>
+        <p>CUBRID도 BCB 동기화, 조건부 리스트 갱신, 경계 관리, activity/quota 집계, 후보 검색 비용을 지불합니다. 여러 리스트가 일부 metadata 작업을 분산할 수는 있지만 경합을 없애지는 않습니다. Exact LRU와 CUBRID가 다른 victim을 선택할 수 있으므로 순서 관리 작업을 줄이는 대신 miss 양상이 달라질 수 있습니다. 전체 효과는 workload에 따라 측정해야 합니다.</p>
+        <p><strong>CUBRID가 항상 더 빠르거나, scan의 영향을 받지 않거나, 최적이거나, starvation이 없다고 결론 내리면 안 됩니다.</strong> 이 baseline의 AOUT은 비활성이므로 “CUBRID는 2Q다”도 충분한 설명이 아닙니다. 기존 quota·검색·진행의 불확실성은 근거 레지스트리에 남아 있으며, 이 설명이 해결한 것은 아닙니다.</p>
+        <p class="source-note"><a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6717-L6719">LRU1 유지의 성능 의도를 설명한 주석</a> · <a href="../../reference/replacement-policy-quantities-and-costs.md">비용과 수량의 정본 설명</a> · <a href="../../unresolved-or-version-sensitive-findings.md">버전별 불확실성</a> · <a href="../reference/lru-worked-example.html#policy-proposal">즉시 승격 제안을 검토하는 정책 방어 연습</a>.</p>
       </section>
 
       <section class="section" id="trip">
@@ -116,7 +181,8 @@
 
     <nav class="lesson-nav" aria-label="Lesson 목차">
       <strong>Lecture map</strong>
-      <a href="#purpose">1. 왜 replace할까?</a><a href="#states">2. INVALID와 VOID</a><a href="#trip">3. BCB 하나의 lifetime</a>
+      <a href="#purpose">1. 왜 replace할까?</a><a href="#states">2. INVALID와 VOID</a>
+      <a href="#textbook-vs-cubrid">교과서 LRU와 CUBRID</a><a href="#lru-hit-comparison">P hit의 순서 비교</a><a href="#lru-conditional-movement">조건부 이동</a><a href="#lru-policy-layers">서로 다른 세 결정</a><a href="#lru-tradeoffs">비용과 한계</a><a href="#trip">3. BCB 하나의 lifetime</a>
       <a href="#decision">4. Victim scenario</a><a href="#private">5. Private-domain 연결</a><a href="#progress">6. 안전한 victim 없음</a>
       <a href="#practice">7. 이해 확인</a><a href="#primary-reading">핵심 읽을거리</a>
       <hr>

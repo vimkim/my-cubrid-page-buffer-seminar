@@ -12,6 +12,8 @@ Before presenting, open the exact served URL and check the intended viewport, di
 
 ## Integrated replacement itinerary
 
+Lecture12 now owns the explicit textbook-versus-CUBRID comparison at `#textbook-vs-cubrid`, following the membership-state explanation. Use its R/P checkpoint before the complete BCB trip: distinguish access ordering from ownership, then conditional unfix movement, list selection and protected reuse. Ask which stated condition would invalidate the keep result. Retain the exact-LRU MRU-on-left convention used there; it intentionally differs from the oldest-first metadata in F1. The visible performance discussion separates source intent/structural work from measured benefit. JavaScript presentation controls remain available; script-disabled reading is a fallback, not a ban on interactions.
+
 Use the [Korean syllabus resume routes](ko/reference/course-learning-path.html#replacement-route) or the [English counterpart](en/reference/course-learning-path.html#replacement-route). The Topic library also exposes the complete worked example. These checkpoints supplement the full Core/Advanced curriculum; they do not bypass acquisition, ownership, or durability prerequisites.
 
 | Teaching stop | Prediction pause and source task | Reset or return |

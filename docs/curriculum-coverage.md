@@ -8,6 +8,8 @@ Ticket 04 adds the bounded immediate-hit-promotion defense to the existing worke
 
 ## Scope and six-axis review
 
+The explicit textbook-versus-CUBRID extension adds five paired Lecture12 sections: policy comparison, R/P prediction, conditional zone movement, placement/search/safe-reuse separation, and costs/limits. Lecture12B and the syllabus link to the main explanation. It preserves the existing worked-example states, 51-pair inventory, pinned evidence ownership and all prior lectures. English/Korean editorial parity and automated interaction checks do not constitute human naturalness acceptance; the three changed pairs retain pending review. See `.scratch/lru-textbook-comparison/` for the accepted scope and actual verification record.
+
 The manifest now contains 51 paths per language: 27 lectures, one landing page, 22 curriculum/reference pages, and one compatibility redirect. The original 48-path migration is recorded below; later additions are recorded separately. All Core and Advanced mechanisms remain required, with detailed source-level cross-engine comparison in the final phase and no fixed total duration.
 
 ## Cooling, migration, and selection extension (2026-09-29)

@@ -13,6 +13,58 @@ let browser;
 before(async () => { if (chromium) browser = await chromium.launch({ headless: true }); });
 after(async () => { await browser?.close(); });
 
+test('main lecture compares exact LRU with CUBRID through keyboard prediction and source-trace navigation', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      await page.goto(base + language + '/lessons/0012-prove-replacement-progress.html?present=1#lru-hit-comparison');
+      assert.equal(await page.locator('#lru-hit-comparison').count(), 1);
+      assert.equal(await page.locator('[data-presentation-toggle]').getAttribute('aria-pressed'), 'true');
+      await page.locator('#lru-hit-comparison').waitFor({ state: 'visible' });
+      const answer = page.locator('#lru-hit-comparison > details');
+      assert.equal(await answer.getAttribute('open'), null);
+      await answer.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.notEqual(await answer.getAttribute('open'), null);
+      const rows = await answer.locator('tbody tr').allTextContents();
+      assert.equal(rows.length, 3);
+      assert.match(rows[1], /P → R → H1 → H2/);
+      assert.match(rows[1], /R → P → H1 → H2/);
+      await page.locator('[data-section-next]').click();
+      await page.locator('#lru-conditional-movement').waitFor({ state: 'visible' });
+      await page.locator('[data-section-previous]').click();
+      await page.locator('#lru-hit-comparison').waitFor({ state: 'visible' });
+      const trace = page.locator('#lru-hit-comparison a[href="../reference/lru-worked-example.html#hit-p"]');
+      await trace.focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/lru-worked-example.html#hit-p');
+      assert.equal(await page.locator('#hit-p').isVisible(), true);
+    } finally { await page.close(); }
+  }
+});
+
+test('syllabus reaches the main LRU comparison and its native answer without scripts on mobile', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/reference/course-learning-path.html#replacement-route');
+      const link = page.locator('#replacement-route a[href="../lessons/0012-prove-replacement-progress.html#textbook-vs-cubrid"]');
+      assert.equal(await link.count(), 1);
+      await link.focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/0012-prove-replacement-progress.html#textbook-vs-cubrid');
+      for (const id of ['textbook-vs-cubrid', 'lru-hit-comparison', 'lru-conditional-movement', 'lru-policy-layers', 'lru-tradeoffs']) {
+        assert.equal(await page.locator('#' + id).isVisible(), true);
+      }
+      await page.locator('#lru-hit-comparison > details > summary').focus();
+      await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#lru-hit-comparison > details[open]').count(), 1);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    }
+  } finally { await context.close(); }
+});
+
 test('integrated replacement route is reachable from library and syllabus without JavaScript', { skip: unavailable }, async () => {
   const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   try {

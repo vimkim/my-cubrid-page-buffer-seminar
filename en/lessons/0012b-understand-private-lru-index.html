@@ -100,6 +100,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       </section>
 
       <section class="section" id="activity">
+        <p><a href="0012-prove-replacement-progress.html#lru-conditional-movement">First distinguish exact recency, list-event age and quota epochs in Lecture 12.</a> These fields serve different policy decisions; none is a global last-access timestamp.</p>
         <div class="eyebrow">06 · What “least active” means</div>
         <h2>Activity is sampled BCB reuse, not transaction count</h2>
         <p>On an ordinary final unfix, <code>pgbuf_bcb_register_hit_for_lru()</code> lets one BCB contribute at most one hit in one accepted adjustment epoch. Only an accepted <code>pgbuf_adjust_quotas()</code> increments <code>adjust_age</code>; a daemon attempt every 100 ms does not necessarily increment it because guards may return early.</p>
@@ -109,6 +110,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       </section>
 
       <section class="section" id="movement">
+        <p><a href="0012-prove-replacement-progress.html#textbook-vs-cubrid">Return to the textbook-versus-CUBRID comparison</a> before tracing why a hit can keep, boost or migrate a member.</p>
         <p><a href="../reference/lru-worked-example.html#cooling">Predict scan-driven cooling and reuse</a>, then <a href="../reference/lru-worked-example.html#cross-context">follow B's access to the same P</a> in the continuous constructed trace.</p>
         <div class="eyebrow">07 · Later BCB movement</div>
         <h2>First placement does not pin pages to that domain</h2>
