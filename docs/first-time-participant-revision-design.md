@@ -54,7 +54,7 @@ These observations establish candidate problems. They do not settle the revised 
 3. Given the route: continuous workload, page identity and explicit example resets.
 4. Given that story: concurrency and crash/flush timelines with bounded assumptions.
 5. Given the concepts: prediction/reveal behavior, Korean prose and source-detail placement.
-6. Given the target capability: final diagnostic task and observable acceptance criteria.
+6. Observable acceptance criteria; Q4 excludes a separate final diagnostic task.
 7. Confirm shared understanding; choose direct implementation or specification/tickets.
 
 The interview advances one consequential question at a time. Decisions depending on an unanswered question remain pending.
@@ -71,7 +71,7 @@ Trade-off: the route-focused option targets the critique's principal reading exp
 Observable scope criteria:
 
 - The revised route explicitly reaches every prerequisite explanation needed by its scenarios before asking participants to use it.
-- Its linked explanations support a complete page-request/replacement/progress story and a bounded final diagnostic exercise.
+- Its linked explanations support a complete page-request/replacement/progress story. Q4 subsequently excludes a separate final diagnostic exercise.
 - Existing Core/Advanced depth and evidence remain available; completion of this revision does not assert completion of the full maintainer curriculum.
 
 ## Q2 — Prerequisite placement (deferred)
@@ -104,10 +104,21 @@ Observable Q3 criteria:
 - Show the final residency of H1/H2 in both branches and identify the events responsible for retention or loss.
 - Verify the chosen schedules against the pinned mechanism before claiming either outcome. Label constructed scenarios separately from runtime observations.
 
-## Q4 — Final diagnostic exercise format (pending)
+## Q4 — Separate final diagnostic exercise (excluded)
 
-Recommendation A: progressively disclose evidence for a slow page request. Participants first identify plausible causes, choose the next observation and explain what would distinguish their hypotheses. Reveal prepared evidence, ask them to revise the diagnosis, then expose model reasoning and remaining uncertainty. Cases should exercise retention misses, fixed-candidate pressure and dirty-page progress without assuming every symptom has a unique cause.
+The user said “I think we can skip this.” The separate final diagnostic exercise is excluded from this revision. Short prediction checkpoints within explanations remain in scope. The following alternatives were considered but neither is selected.
+
+Proposed A: progressively disclose evidence for a slow page request. Participants first identify plausible causes, choose the next observation and explain what would distinguish their hypotheses. Reveal prepared evidence, ask them to revise the diagnosis, then expose model reasoning and remaining uncertainty. Cases should exercise retention misses, fixed-candidate pressure and dirty-page progress without assuming every symptom has a unique cause.
 
 Alternative B: provide all relevant observations at once and ask participants to classify the cause and explain the mechanism. This is easier to facilitate and checks conceptual application, but gives less evidence that participants can choose what to inspect.
 
 This question is independent of Q2. Exact counters, evidence cards and any source routes are factual implementation work after the exercise objective is agreed; no new runtime experiment or interactive scoring system is implied.
+
+
+## Q5 — Timeline presentation form (pending)
+
+Recommendation A: use authored, numbered steps with stable lanes for actors and state. Show the initial conditions, ask for the next transition, and reveal the resulting state and explanation using existing presentation controls/native disclosures. Keep the complete sequence readable without JavaScript. Apply this format to both concurrency and copied-generation flush scenarios.
+
+Alternative B: add an interactive simulation in which participants choose thread actions or write/flush timing and observe derived transitions. This enables experimentation but requires a defined simulation model, controls and additional behavioral verification beyond the existing presentation workflow.
+
+Both alternatives retain concrete timelines; the decision concerns interaction scope, not teaching order. Q2 remains deferred. No new engine experiments are implied by either option.
