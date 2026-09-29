@@ -115,10 +115,28 @@ Alternative B: provide all relevant observations at once and ask participants to
 This question is independent of Q2. Exact counters, evidence cards and any source routes are factual implementation work after the exercise objective is agreed; no new runtime experiment or interactive scoring system is implied.
 
 
-## Q5 — Timeline presentation form (pending)
+## Q5 — Timeline presentation form (accepted A)
 
-Recommendation A: use authored, numbered steps with stable lanes for actors and state. Show the initial conditions, ask for the next transition, and reveal the resulting state and explanation using existing presentation controls/native disclosures. Keep the complete sequence readable without JavaScript. Apply this format to both concurrency and copied-generation flush scenarios.
+The user selected A. Decision: use authored, numbered steps with stable lanes for actors and state. Show the initial conditions, ask for the next transition, and reveal the resulting state and explanation using existing presentation controls/native disclosures. Keep the complete sequence readable without JavaScript. Apply this format to both concurrency and copied-generation flush scenarios.
 
 Alternative B: add an interactive simulation in which participants choose thread actions or write/flush timing and observe derived transitions. This enables experimentation but requires a defined simulation model, controls and additional behavioral verification beyond the existing presentation workflow.
 
 Both alternatives retain concrete timelines; the decision concerns interaction scope, not teaching order. Q2 remains deferred. No new engine experiments are implied by either option.
+
+
+Observable Q5 criteria:
+
+- Each timeline declares its initial conditions and identifies its actors and relevant page state.
+- Actor lanes and state labels stay consistent across steps; the next outcome is concealed until explicitly revealed.
+- Reveal shows both the resulting state and its causal explanation; assumptions remain visible before the prediction.
+- Complete explanations remain readable without JavaScript. Reuse existing presentation controls and native disclosures; no new simulator is in scope.
+
+## Q6 — Presenter companion scope (pending)
+
+The participant HTML and the separate presenter script currently assume different prior knowledge. The script at `my-presentation-script.html` assumes a preceding transaction-lock seminar. The current editing design already keeps participant content separate from presenter instructions.
+
+Recommendation A: revise the participant HTML and align the existing presenter runbook with the accepted route, adding concise transitions and reminders for the prediction/reveal pauses. Mark or route the older incompatible script so it is not mistaken for the revised route's companion; preserve useful historical content. Avoid writing a second complete explanation of every lecture.
+
+Alternative B: additionally rewrite a complete Korean spoken script matching the revised route, with cue points into the HTML. This helps delivery preparation but creates a larger parallel artifact that must stay synchronized with the participant material.
+
+This is a deliverable-scope decision independent of deferred Q2. Exact route transitions will be written only after Q2 is resolved. Existing EN/KO participant parity and source-evidence rules remain unchanged.
