@@ -13,6 +13,62 @@ let browser;
 before(async () => { if (chromium) browser = await chromium.launch({ headless: true }); });
 after(async () => { await browser?.close(); });
 
+test('LRU trace lets participants predict admission and revisit an unchanged resident position', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage();
+    try {
+      const response = await page.goto(base + language + '/reference/lru-worked-example.html');
+      assert.equal(response.status(), 200);
+      await page.getByRole('button', { name: /^(Presentation mode|발표 모드)$/ }).click();
+      await page.keyboard.press('PageDown');
+      assert.equal(new URL(page.url()).hash, '#load-p');
+      const answer = page.locator('#load-p details');
+      assert.equal(await answer.getAttribute('open'), null);
+      await answer.locator('summary').click();
+      assert.match(await answer.innerText(), /30,767/);
+      await page.keyboard.press('PageDown');
+      assert.equal(new URL(page.url()).hash, '#admit-p');
+      await page.keyboard.press('PageDown');
+      assert.equal(new URL(page.url()).hash, '#admit-r');
+      await page.keyboard.press('PageDown');
+      assert.equal(new URL(page.url()).hash, '#hit-p');
+      await page.locator('#hit-p > details > summary').click();
+      assert.match(await page.locator('#hit-p > details').innerText(), /F43.*F42.*H1.*H2/s);
+      await page.keyboard.press('PageDown');
+      assert.equal(new URL(page.url()).hash, '#unfix-p');
+      await page.locator('#unfix-p > details > summary').click();
+      assert.match(await page.locator('#unfix-p > details').innerText(), /F43.*F42.*H1.*H2/s);
+      await page.keyboard.press('PageUp');
+      assert.equal(new URL(page.url()).hash, '#hit-p');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('section.section[hidden]').count(), 0);
+      await page.goto(base + language + '/reference/lru-worked-example.html?present=1#admit-p');
+      assert.equal(await page.locator('#admit-p').isVisible(), true);
+      assert.equal(await page.locator('#load-p').isVisible(), false);
+    } finally { await page.close(); }
+  }
+});
+
+test('LRU trace remains readable without JavaScript and links to its language counterpart', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/reference/lru-worked-example.html');
+      assert.equal(await page.locator('[data-presentation-controls]').isVisible(), false);
+      assert.equal(await page.locator('#snapshot').isVisible(), true);
+      assert.equal(await page.locator('#carry-forward').isVisible(), true);
+      await page.locator('#unfix-p > details > summary').click();
+      assert.equal(await page.locator('#unfix-p > details > pre').first().isVisible(), true);
+      await page.locator('#unfix-p details details summary').click();
+      assert.match(await page.locator('#unfix-p details details').innerText(), /case PGBUF_LRU_1_ZONE/);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.locator('[data-language-switcher] a').click();
+      assert.match(page.url(), new RegExp('/' + (language === 'en' ? 'ko' : 'en') + '/reference/lru-worked-example.html$'));
+    }
+  } finally { await context.close(); }
+});
+
 test('all Lecture 8 continuation links lead to the next integration lecture', { skip: unavailable }, async () => {
   const page = await browser.newPage();
   try {

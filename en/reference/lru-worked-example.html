@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LRU worked example: admission and reuse</title>
+<link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a>
+<header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum"><a data-curriculum-link href="course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span> | <a href="../../ko/reference/lru-worked-example.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">LRU / F42 / P</div><h1>LRU worked example: admission and reuse</h1><p>Follow the same frame through a miss, first placement, and another access. Predict each transition before opening its explanation. This first sequence ends with a resident LRU1 page that has been read again but has not moved.</p></header>
+<div class="lesson-grid"><article class="lesson-main">
+<section class="section" id="snapshot"><h2>0 · A window into a larger pool</h2>
+<p><strong>Constructed trace, not a runtime observation.</strong> Rules are pinned to CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>. Textbook exact LRU puts each accessed item at the most-recent end. Here, inspect the actual fix and final-unfix branches before predicting movement.</p>
+<p>Server mode, <code>num_buffers = 32768; shared_lists = 32; private_lists = 4</code> (explicit private-chain count). Context A carries private-local <code>p = 0</code>, full list <code>32</code>; context B carries <code>p = 1</code>, full list <code>33</code>. B is idle during these steps. Pages P and R form A's small working set; a later sequential scan and B's access will put pressure on it. P and R are existing valid disk pages, initially absent from the resident hash. F42 and F43 are permanent frame/BCB pairs, not page IDs.</p>
+<p>Initially 2,000 pages are resident: 100 in private list 32 and 1,900 in shared list 0. All other lists are empty. INVALID has 30,768 nodes, headed by F42 then F43. Shared list 0 has all its nodes in LRU3. Private list 32 has 2/48/50 nodes in LRU1/2/3; its LRU1 order is H1 → H2. H2 is <code>bottom_1</code>; the last of the 48 LRU2 nodes is <code>bottom_2</code>. The 50 LRU3 nodes follow it.</p>
+<p>List 32 has quota 1,000 and LRU1/LRU2 thresholds 50/50. These snapshot values stay fixed through this sequence.</p><details><summary>Derive the quota and shared thresholds</summary><p>A prior accepted quota pass has <code>private_pages_ratio = 0.5</code> and all smoothed private activity assigned to list 32. Thus <code>all_private_quota = 2000 * 0.5 = 1000</code>, list 32 has <code>quota = 1000</code>, and each private protected-zone threshold is <code>1000 * 0.05 = 50</code>. Other private quotas are zero. Shared thresholds are <code>floor((32768 - 1000) / 32) = 992</code>, then <code>floor(992 * 0.4) = 396</code> and <code>floor(992 * 0.05) = 49</code>. These are snapshot inputs and derived policy values, not miniature-pool substitutions.</p></details>
+<p>All unmentioned pages remain idle. No daemon/quota pass, new context access, error, waiter, dirtying, flush, reservation, or vacuum hint intervenes. Each event completes before the next. P and R remain clean, non-hot, with no avoid-victim or move-to-bottom flag. AOUT is disabled. List 32 starts at <code>tick_list = 1000</code>; the accepted quota epoch stays <code>adjust_age = 10</code>. Fresh F42/F43 have <code>hit_age = 0</code>; list 32's current <code>lru_hits = 0</code>. List ticks and quota epochs are different clocks.</p>
+<p class="source-note">Implementation policy: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5744-L5800">list topology</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14359-L14496">quota/threshold derivation</a>. See the <a href="../../reference/replacement-policy-quantities-and-costs.md">quantity derivation</a> and <a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md">unfix/epoch evidence</a>.</p>
+</section>
+<section class="section" id="load-p" data-audience-checkpoint><h2>1 · Miss: load P into F42</h2><p>Before: P is absent; F42 heads INVALID; 30,768 frames are invalid. A requests OLD_PAGE with a READ latch. Which identity, fix count, and list state are visible when the successful fix returns?</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary><pre>F42 represents P; fcnt = 1; latch = READ; zone = VOID
+INVALID = 30,767; list 32 counts = 2 / 48 / 50; tick_list = 1000</pre><p>The allocator pops F42 under the invalid-list mutex and changes it to VOID under BCB protection. The successful miss path loads and publishes P and grants its holder/fix. No victim was needed, and VOID has not yet become LRU membership. The other 2,000 resident pages are unchanged. The state shown is after successful fix, not the intermediate pop.</p>
+<pre><code>bufptr = pgbuf_Pool.buf_invalid_list.invalid_top;
+pgbuf_Pool.buf_invalid_list.invalid_top = bufptr-&gt;next_BCB;
+pgbuf_Pool.buf_invalid_list.invalid_cnt -= 1;</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8929-L8948">INVALID pop</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8634">Follow the remaining claim/load/publication path</a>.</p></details></section>
+<section class="section" id="admit-p" data-audience-checkpoint><h2>2 · Final unfix: place F42</h2><p>Before: F42/P is VOID, READ, fcnt 1. A releases its only fix; no queued reader/writer or special hint exists. Does P enter private LRU1, private LRU2, or shared LRU2?</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary><pre>F42/P: fcnt = 0; latch = NO_LATCH; list = 32; zone = LRU1
+LRU1 top -&gt; F42 -&gt; H1 -&gt; H2
+counts = 3 / 48 / 50; tick_list = 1001; F42.tick_lru_list = 1000</pre><p>The zero-count unfix reaches the VOID branch. A has private index 32 and AOUT is off, so the quoted condition chooses private-top admission. While the BCB is protected, the helper locks list 32, saves its old tick, links F42 at the top, and increments the list tick. Counts 3 and 3 + 48 = 51 remain below 50 and 100 respectively, so no boundary node falls. INVALID stays 30,767. Epoch registration sets F42.hit_age to 10 and lru_hits to 1.</p>
+<pre><code>if (!aout_enabled || thread_private_lru_index == aout_list_id)</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6946-L6974">private admission</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6680-L6749">Zero-count/waiter gate</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10207-L10232">protected insertion and adjustment</a>.</p><details><summary>Expand the controlling source branch</summary><pre><code>      if (!aout_enabled || thread_private_lru_index == aout_list_id)
+	{
+	  /* add to top of current private list */
+	  pgbuf_lru_add_new_bcb_to_top (thread_p, bcb, thread_private_lru_index);
+	  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_VOID_TO_PRIVATE_TOP);
+	  pgbuf_quiz_trace ("ENTER_LRU", &amp;bcb-&gt;vpid, "private-top");
+	  pgbuf_bcb_register_hit_for_lru (bcb);
+	  return;
+	}</code></pre></details></details></section>
+<section class="section" id="admit-r" data-audience-checkpoint><h2>3 · Load and release R: give P a newer neighbor</h2><p>Before: F42/P is the top of private LRU1. A successfully fixes absent R into the next invalid frame F43, then final-unfixes R. Where is F42 now?</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary><pre>F43/R and F42/P: fcnt = 0; latch = NO_LATCH; list = 32; zone = LRU1
+LRU1 top -&gt; F43 -&gt; F42 -&gt; H1 -&gt; H2
+counts = 4 / 48 / 50; tick_list = 1002; F43.tick_lru_list = 1001
+INVALID = 30,766; resident pages = 2,002</pre><p>The same miss/admission branches apply to R. F43 is briefly VOID while fixed, then becomes the new top on its final unfix. F42 stays linked immediately below it. The protected total is 52, below 100, and LRU1 has 4 nodes, below 50: no demotion. F42 retains saved tick 1000. F43 registers epoch 10, raising lru_hits to 2. This neighbor makes a later no-movement result observable.</p>
+<pre><code>bcb-&gt;tick_lru_list = lru_list-&gt;tick_list;
+pgbuf_lru_add_bcb_to_top (thread_p, bcb, lru_list);</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10216-L10228">insertion</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9694-L9740">Top insertion increments tick_list</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9985-L10016">zone-adjustment gate</a>.</p></details></section>
+<section class="section" id="hit-p" data-audience-checkpoint><h2>4 · Hit P: does it become most recent?</h2><p>Before: F43 is above F42. F42/P is clean LRU1 with fcnt 0 and NO_LATCH. A successfully READ-fixes P again. Predict the order while the fix is held.</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary><pre>F42/P: fcnt = 1; latch = READ; list = 32; zone = LRU1
+LRU1 top -&gt; F43 -&gt; F42 -&gt; H1 -&gt; H2
+counts = 4 / 48 / 50; tick_list = 1002; INVALID = 30,766</pre><p>The lock-free READ helper rejects an idle NO_LATCH/zero-count tuple. The ordinary protected hit path grants READ ownership and records the holder; it does not relink F42. P is protected from replacement while fixed, but it has not become the top node. No unfix hit sample has yet been registered for this access. The excerpt is the beginning of the fast-path rejection condition; follow its link for the remaining identity terms and return.</p>
+<pre><code>if (impl.impl.latch_mode != PGBUF_LATCH_READ || impl.impl.waiter_exists || impl.impl.fcnt == 0</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7738-L7749">fast-path rejection</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634">Ordinary latch/holder grant</a> · <a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md#3-ordinary-fix-leaves-an-existing-bcb-in-place">Why the ordinary fix keeps its list position</a>.</p><details><summary>Expand the controlling source branch</summary><pre><code>      if (is_page_idle == true)
+	{
+	  old_impl.impl.waiter_exists = false;
+	  old_impl.impl.latch_mode = PGBUF_NO_LATCH;
+	  old_impl.impl.fcnt = 0;
+	  new_impl = old_impl;
+	  new_impl.impl.latch_mode = request_mode;
+	  new_impl.impl.fcnt = 1;
+	}</code></pre></details></details></section>
+<section class="section" id="unfix-p" data-audience-checkpoint><h2>5 · Final unfix again: still below R?</h2><p>Before: A holds F42/P in READ with fcnt 1. Its private index still matches 32, and P is not hot. A final-unfixes P with no waiter. Is this enough to boost it above R?</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary><pre>F42/P: fcnt = 0; latch = NO_LATCH; list = 32; zone = LRU1
+LRU1 top -&gt; F43 -&gt; F42 -&gt; H1 -&gt; H2
+counts = 4 / 48 / 50; tick_list = 1002; F42.tick_lru_list = 1000
+adjust_age = 10; F42.hit_age = 10; lru_hits = 2</pre><p>The ordinary zero-count branch sees LRU1. There is no special hint, private-domain mismatch, or hot-and-old migration condition. It keeps the position and registers reuse. Because F42 already contributed in epoch 10, lru_hits remains 2. Repeated reading has changed fix/holder state, but neither this list order nor the current epoch sample count. No LRU mutex/relink is needed for this keep branch; the protected unfix entered with the BCB mutex.</p>
+<pre><code>pgbuf_bcb_register_hit_for_lru (bufptr);
+break;</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6752-L6783">LRU1 keep branch</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7005-L7038">Migration predicates</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16594-L16610">Epoch sampling</a>.</p><details><summary>Expand the controlling source branch</summary><pre><code>	    case PGBUF_LRU_1_ZONE:
+	      /* note: this is most often accessed code and must be highly optimized! */
+	      if (PGBUF_SHOULD_IGNORE_UNFIX (thread_p, bufptr))
+		{
+		  /* do nothing */
+		  /* ... except collecting statistics */
+		  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_LRU_ONE_KEEP_VAC);
+		  break;
+		}
+	      if (pgbuf_should_move_private_to_shared (thread_p, bufptr, th_lru_idx))
+		{
+		  /* move to shared */
+		  pgbuf_lru_move_from_private_to_shared (thread_p, bufptr);
+		  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_LRU_ONE_PRV_TO_SHR_MID);
+		  break;
+		}
+	      /* do not move or boost */
+	      if (PGBUF_IS_PRIVATE_LRU_INDEX (pgbuf_bcb_get_lru_index (bufptr)))
+		{
+		  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_LRU_ONE_PRV_KEEP);
+		}
+	      else
+		{
+		  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_LRU_ONE_SHR_KEEP);
+		}
+	      pgbuf_bcb_register_hit_for_lru (bufptr);
+	      break;</code></pre></details></details></section>
+<section class="section" id="carry-forward"><h2>Carry this state into the next mechanism</h2><p>The same F42/P and F43/R are now idle in list 32. This sequence establishes admission and a repeated-access keep case. For cooling, cross-context movement, and victim selection, use the existing private-LRU lecture and canonical replacement explanation. LRU1 membership and a zero fix count alone are not permission to overwrite a page.</p><p><a href="../../advanced/replacement-progress.md">Canonical replacement explanation</a> · <a href="../../unresolved-or-version-sensitive-findings.md">Evidence limits and open findings</a></p></section>
+</article><nav class="lesson-nav" aria-label="Trace checkpoints"><a href="#snapshot">0 · A window into a larger pool</a><a href="#load-p">1 · Miss: load P into F42</a><a href="#admit-p">2 · Final unfix: place F42</a><a href="#admit-r">3 · Load and release R: give P a newer neighbor</a><a href="#hit-p">4 · Hit P: does it become most recent?</a><a href="#unfix-p">5 · Final unfix again: still below R?</a><a href="#carry-forward">Carry this state into the next mechanism</a></nav></div>
+<nav class="lecture-navigation" data-lecture-nav aria-label="Related lectures"><a rel="prev" href="../lessons/0012-prove-replacement-progress.html">Lecture 12 · Replacement state and progress</a><a rel="next" href="../lessons/0012b-understand-private-lru-index.html">Lecture 12B · Private LRU indexes and selection</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
+</body></html>

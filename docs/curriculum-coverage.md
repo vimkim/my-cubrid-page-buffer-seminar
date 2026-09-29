@@ -4,7 +4,13 @@ This author-only audit accompanies the [accepted design](seminar-curriculum-desi
 
 ## Scope and six-axis review
 
-The manifest retains 48 paths per language: 25 lectures, one landing page, 21 curriculum/reference pages, and one compatibility redirect. Every path below has an explicit disposition. All Core and Advanced mechanisms remain required, with cross-engine comparison in the final phase and no fixed total duration.
+The manifest now contains 49 paths per language: 25 lectures, one landing page, 22 curriculum/reference pages, and one compatibility redirect. The original 48-path migration is recorded below; the LRU addition is recorded separately. All Core and Advanced mechanisms remain required, with cross-engine comparison in the final phase and no fixed total duration.
+
+## LRU worked-example addition (2026-09-29)
+
+The new [English](../en/reference/lru-worked-example.html) and [Korean](../ko/reference/lru-worked-example.html) pair implements admission and repeated-access prediction from a source-derived larger-pool snapshot. Lecture 12 links to its starting checkpoint in both languages. The page reuses the existing presentation controls and native disclosures; its unprefixed URL redirects to English under the site's compatibility convention.
+
+This is ticket 01 of the approved enhancement: cooling/migration, progress branches, and policy defense remain subsequent work. Evidence and validation are recorded in the [ticket 01 handoff](../.scratch/lru-seminar-design/ticket01-handoff.md). Human Korean/semantic review remains pending for the new pair and modified Lecture 12 pair. Historical 48-pair results below do not validate this addition.
 
 | Axis | Check performed and boundary |
 | --- | --- |

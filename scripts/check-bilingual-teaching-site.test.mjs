@@ -34,13 +34,26 @@ async function withFixture (callback)
     }
 }
 
-test ("the inventory gate requires the 48-page course", async () =>
+test ("the inventory gate accepts the declared complete page set", async () =>
 {
   await withFixture (async (root) =>
   {
+    const result = await execFileAsync (process.execPath, [checker, "--root", root, "--gate", "inventory"]);
+    assert.match (result.stdout, /Inventory and manifest: PASS/);
+  });
+});
+
+test ("the inventory gate rejects a declared count that differs from the page set", async () =>
+{
+  await withFixture (async (root) =>
+  {
+    const manifestPath = path.join (root, "teaching-pages.json");
+    const manifest = JSON.parse (await readFile (manifestPath, "utf8"));
+    manifest.expectedPageCount = 2;
+    await writeFile (manifestPath, JSON.stringify (manifest));
     await assert.rejects (
       execFileAsync (process.execPath, [checker, "--root", root, "--gate", "inventory"]),
-      (error) => /expectedPageCount must be exactly 48/.test (error.stderr));
+      (error) => /expected 2 entries, found 1/.test (error.stderr));
   });
 });
 

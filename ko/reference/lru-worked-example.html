@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LRU 동작 예제: 최초 배치와 재접근</title>
+<link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a>
+<header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="교육과정"><a data-curriculum-link href="course-learning-path.html">교육과정</a><a data-library-link href="../index.html#library">주제별 자료</a></nav></header>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><span aria-current="page">KO</span> | <a href="../../en/reference/lru-worked-example.html" hreflang="en" lang="en">EN</a></nav>
+<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">LRU / F42 / P</div><h1>LRU 동작 예제: 최초 배치와 재접근</h1><p>동일한 프레임이 miss, 최초 배치, 재접근을 거치는 과정을 따라갑니다. 설명을 펼치기 전에 다음 상태를 예측해 보세요. 첫 시퀀스의 끝에서는 LRU1 페이지를 다시 읽었는데도 위치가 그대로인 이유를 설명할 수 있습니다.</p></header>
+<div class="lesson-grid"><article class="lesson-main">
+<section class="section" id="snapshot"><h2>0 · 큰 풀의 일부를 살펴보기</h2>
+<p><strong>소스에 따라 구성한 예제이며 실행에서 관찰한 기록이 아닙니다.</strong> 기준 리비전은 CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>입니다. 교과서적인 exact LRU는 접근한 항목을 매번 가장 최근 위치로 옮깁니다. 여기서는 실제 fix와 final-unfix 분기를 확인한 뒤 이동 여부를 예측합니다.</p>
+<p>서버 모드이며 <code>num_buffers = 32768; shared_lists = 32; private_lists = 4</code>입니다. private chain 수는 명시적으로 설정했습니다. 실행 문맥 A의 private-local 인덱스는 <code>p = 0</code>, 전체 리스트 인덱스는 <code>32</code>입니다. 실행 문맥 B는 <code>p = 1</code>, 전체 인덱스 <code>33</code>을 사용하며 이번 시퀀스에서는 활동하지 않습니다. 페이지 P와 R은 A의 작은 working set입니다. 이후의 순차 스캔과 B의 접근이 이 집합에 영향을 줍니다. P와 R은 디스크에 존재하는 유효한 페이지이며, 시작 시 resident hash에는 없습니다. F42와 F43은 고정된 프레임/BCB 쌍의 이름이지 페이지 ID가 아닙니다.</p>
+<p>시작 시 상주 페이지는 2,000개입니다. private 리스트 32에 100개, shared 리스트 0에 1,900개가 있고 나머지 리스트는 비어 있습니다. INVALID에는 30,768개가 있으며 F42, F43 순서로 시작합니다. shared 리스트 0의 노드는 모두 LRU3에 있습니다. 리스트 32의 LRU1/2/3 노드 수는 2/48/50이고, LRU1 순서는 H1 → H2입니다. H2가 <code>bottom_1</code>이며, LRU2의 48번째 노드가 <code>bottom_2</code>입니다. 그 뒤에 LRU3 노드 50개가 이어집니다.</p>
+<p>리스트 32의 quota는 1,000이고 LRU1/LRU2 임계치는 50/50입니다. 이번 시퀀스 동안 이 값은 바뀌지 않습니다.</p><details><summary>quota와 shared 임계치 계산 펼치기</summary><p>앞선 유효 quota 조정 결과에서 <code>private_pages_ratio = 0.5</code>이고 평활화한 private activity가 모두 리스트 32에 속한다고 정했습니다. 따라서 <code>all_private_quota = 2000 * 0.5 = 1000</code>이고 리스트 32의 <code>quota = 1000</code>, private 보호 구간별 임계치는 <code>1000 * 0.05 = 50</code>입니다. 다른 private quota는 0입니다. shared 임계치는 <code>floor((32768 - 1000) / 32) = 992</code>를 기준으로 <code>floor(992 * 0.4) = 396</code>, <code>floor(992 * 0.05) = 49</code>입니다. 작은 가상 풀의 규칙으로 바꾼 것이 아니라, 지정한 스냅샷 입력에 실제 정책 계산을 적용한 값입니다.</p></details>
+<p>언급하지 않은 페이지는 모두 그대로 둡니다. 중간에 daemon/quota 조정, 다른 문맥의 접근, 오류, waiter, dirty 전환, flush, 예약, vacuum hint는 없습니다. 각 이벤트가 끝난 뒤 다음 이벤트가 시작합니다. P와 R은 clean, non-hot 상태이며 avoid-victim과 move-to-bottom 플래그가 없습니다. AOUT은 비활성입니다. 리스트 32는 <code>tick_list = 1000</code>에서 시작하고 quota epoch는 <code>adjust_age = 10</code>으로 유지됩니다. 새 F42/F43의 <code>hit_age = 0</code>이며 리스트 32의 현재 <code>lru_hits = 0</code>입니다. 리스트 tick과 quota epoch는 서로 다른 기준입니다.</p>
+<p class="source-note">Implementation policy: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5744-L5800">리스트 구성</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14359-L14496">quota와 임계치 계산</a>. <a href="../../reference/replacement-policy-quantities-and-costs.md">수량 계산 근거</a>와 <a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md">unfix/epoch 근거</a>를 함께 참고하세요.</p>
+</section>
+<section class="section" id="load-p" data-audience-checkpoint><h2>1 · Miss: F42에 P 적재</h2><p>이전 상태: P는 비상주이고 F42는 INVALID의 첫 노드입니다. invalid 프레임은 30,768개입니다. A가 OLD_PAGE와 READ latch로 요청합니다. fix가 성공해 반환했을 때 페이지 식별자, fix count, 리스트 상태는 무엇일까요?</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary><pre>F42 represents P; fcnt = 1; latch = READ; zone = VOID
+INVALID = 30,767; list 32 counts = 2 / 48 / 50; tick_list = 1000</pre><p>할당기는 invalid-list mutex 아래에서 F42를 꺼내고 BCB를 보호한 상태에서 VOID로 전환합니다. 성공한 miss 경로가 P를 적재하고 hash에 공개하며 holder/fix를 부여합니다. victim은 필요하지 않았고, VOID는 아직 LRU 소속이 아닙니다. 기존 상주 페이지 2,000개는 변하지 않습니다. 표시한 상태는 pop 직후가 아니라 fix가 성공한 뒤의 상태입니다.</p>
+<pre><code>bufptr = pgbuf_Pool.buf_invalid_list.invalid_top;
+pgbuf_Pool.buf_invalid_list.invalid_top = bufptr-&gt;next_BCB;
+pgbuf_Pool.buf_invalid_list.invalid_cnt -= 1;</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8929-L8948">INVALID에서 꺼내기</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8634">이후의 claim/적재/hash 공개 경로 확인</a>.</p></details></section>
+<section class="section" id="admit-p" data-audience-checkpoint><h2>2 · Final unfix: F42 배치</h2><p>이전 상태: F42/P는 VOID, READ, fcnt 1입니다. A가 유일한 fix를 해제하며 대기 중인 reader/writer나 특별한 hint는 없습니다. P는 private LRU1, private LRU2, shared LRU2 중 어디로 갈까요?</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary><pre>F42/P: fcnt = 0; latch = NO_LATCH; list = 32; zone = LRU1
+LRU1 top -&gt; F42 -&gt; H1 -&gt; H2
+counts = 3 / 48 / 50; tick_list = 1001; F42.tick_lru_list = 1000</pre><p>fix count가 0이 된 unfix가 VOID 분기로 들어갑니다. A의 private 인덱스는 32이고 AOUT은 꺼져 있으므로 아래 조건이 private-top 배치를 선택합니다. BCB를 보호한 상태에서 helper가 리스트 32를 잠그고 기존 tick을 저장한 뒤 F42를 맨 위에 연결하고 리스트 tick을 증가시킵니다. 3은 50 이하이고 3 + 48 = 51은 100 이하이므로 경계 노드는 강등되지 않습니다. INVALID는 30,767개 그대로입니다. epoch 등록으로 F42.hit_age는 10, lru_hits는 1이 됩니다.</p>
+<pre><code>if (!aout_enabled || thread_private_lru_index == aout_list_id)</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6946-L6974">private 최초 배치</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6680-L6749">zero-count/waiter 조건</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10207-L10232">보호된 삽입과 구간 조정</a>.</p><details><summary>조건을 결정하는 소스 분기 펼치기</summary><pre><code>      if (!aout_enabled || thread_private_lru_index == aout_list_id)
+	{
+	  /* add to top of current private list */
+	  pgbuf_lru_add_new_bcb_to_top (thread_p, bcb, thread_private_lru_index);
+	  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_VOID_TO_PRIVATE_TOP);
+	  pgbuf_quiz_trace ("ENTER_LRU", &amp;bcb-&gt;vpid, "private-top");
+	  pgbuf_bcb_register_hit_for_lru (bcb);
+	  return;
+	}</code></pre></details></details></section>
+<section class="section" id="admit-r" data-audience-checkpoint><h2>3 · R 적재와 해제: P 위에 새 이웃 추가</h2><p>이전 상태: F42/P가 private LRU1의 맨 위에 있습니다. A가 비상주 R을 다음 invalid 프레임 F43에 성공적으로 fix한 뒤 final-unfix합니다. 이제 F42는 어디에 있을까요?</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary><pre>F43/R and F42/P: fcnt = 0; latch = NO_LATCH; list = 32; zone = LRU1
+LRU1 top -&gt; F43 -&gt; F42 -&gt; H1 -&gt; H2
+counts = 4 / 48 / 50; tick_list = 1002; F43.tick_lru_list = 1001
+INVALID = 30,766; resident pages = 2,002</pre><p>R에도 같은 miss/최초 배치 분기를 적용합니다. F43은 fix 중 잠시 VOID에 있다가 final unfix 때 새 top이 됩니다. F42는 그 바로 아래에 그대로 연결되어 있습니다. 보호 구간 합계 52는 100 이하이고 LRU1 노드 4개는 50 이하이므로 강등은 없습니다. F42의 저장 tick은 1000 그대로입니다. F43이 epoch 10을 등록하면서 lru_hits는 2가 됩니다. 새 이웃이 생겼으므로 다음 재접근에서 위치가 그대로인지 눈으로 확인할 수 있습니다.</p>
+<pre><code>bcb-&gt;tick_lru_list = lru_list-&gt;tick_list;
+pgbuf_lru_add_bcb_to_top (thread_p, bcb, lru_list);</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10216-L10228">삽입</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9694-L9740">top 삽입 시 tick_list 증가</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9985-L10016">구간 조정 조건</a>.</p></details></section>
+<section class="section" id="hit-p" data-audience-checkpoint><h2>4 · P hit: 가장 최근 위치로 이동할까?</h2><p>이전 상태: F43이 F42 위에 있습니다. F42/P는 clean LRU1이며 fcnt 0, NO_LATCH입니다. A가 P를 다시 READ-fix하는 데 성공합니다. fix를 보유하는 동안의 순서를 예측해 보세요.</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary><pre>F42/P: fcnt = 1; latch = READ; list = 32; zone = LRU1
+LRU1 top -&gt; F43 -&gt; F42 -&gt; H1 -&gt; H2
+counts = 4 / 48 / 50; tick_list = 1002; INVALID = 30,766</pre><p>lock-free READ helper는 idle 상태인 NO_LATCH/zero-count 조합을 거절합니다. 일반 보호 경로가 READ 소유권과 holder를 부여하며, F42의 리스트 연결은 바꾸지 않습니다. fix 동안 P는 교체로부터 보호되지만 top 노드가 된 것은 아닙니다. 이번 접근에 대한 unfix hit 표본도 아직 등록되지 않았습니다. 아래 발췌는 fast path 거절 조건의 앞부분입니다. 나머지 식별자 조건과 return은 링크에서 확인하세요.</p>
+<pre><code>if (impl.impl.latch_mode != PGBUF_LATCH_READ || impl.impl.waiter_exists || impl.impl.fcnt == 0</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7738-L7749">fast path 거절</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634">일반 latch/holder 부여</a> · <a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md#3-ordinary-fix-leaves-an-existing-bcb-in-place">일반 fix에서 위치를 유지하는 이유</a>.</p><details><summary>조건을 결정하는 소스 분기 펼치기</summary><pre><code>      if (is_page_idle == true)
+	{
+	  old_impl.impl.waiter_exists = false;
+	  old_impl.impl.latch_mode = PGBUF_NO_LATCH;
+	  old_impl.impl.fcnt = 0;
+	  new_impl = old_impl;
+	  new_impl.impl.latch_mode = request_mode;
+	  new_impl.impl.fcnt = 1;
+	}</code></pre></details></details></section>
+<section class="section" id="unfix-p" data-audience-checkpoint><h2>5 · 다시 final unfix: 여전히 R 아래일까?</h2><p>이전 상태: A가 F42/P를 READ, fcnt 1로 보유합니다. private 인덱스는 여전히 32와 일치하며 P는 hot이 아닙니다. waiter 없이 P를 final-unfix하면 R 위로 올라갈까요?</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary><pre>F42/P: fcnt = 0; latch = NO_LATCH; list = 32; zone = LRU1
+LRU1 top -&gt; F43 -&gt; F42 -&gt; H1 -&gt; H2
+counts = 4 / 48 / 50; tick_list = 1002; F42.tick_lru_list = 1000
+adjust_age = 10; F42.hit_age = 10; lru_hits = 2</pre><p>일반 zero-count 분기가 LRU1을 확인합니다. 특별한 hint, private-domain 불일치, hot-and-old 이동 조건이 없으므로 위치를 유지하고 재사용을 등록합니다. F42는 이미 epoch 10에 기여했으므로 lru_hits도 2 그대로입니다. 다시 읽으면서 fix/holder 상태는 바뀌었지만 리스트 순서와 현재 epoch의 표본 수는 변하지 않았습니다. 이 keep 분기에서는 LRU mutex를 잡고 다시 연결할 필요가 없으며, 보호된 unfix에는 BCB mutex를 보유한 상태로 진입합니다.</p>
+<pre><code>pgbuf_bcb_register_hit_for_lru (bufptr);
+break;</code></pre><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6752-L6783">LRU1 유지 분기</a>. <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7005-L7038">이동 조건</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16594-L16610">epoch 표본 등록</a>.</p><details><summary>조건을 결정하는 소스 분기 펼치기</summary><pre><code>	    case PGBUF_LRU_1_ZONE:
+	      /* note: this is most often accessed code and must be highly optimized! */
+	      if (PGBUF_SHOULD_IGNORE_UNFIX (thread_p, bufptr))
+		{
+		  /* do nothing */
+		  /* ... except collecting statistics */
+		  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_LRU_ONE_KEEP_VAC);
+		  break;
+		}
+	      if (pgbuf_should_move_private_to_shared (thread_p, bufptr, th_lru_idx))
+		{
+		  /* move to shared */
+		  pgbuf_lru_move_from_private_to_shared (thread_p, bufptr);
+		  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_LRU_ONE_PRV_TO_SHR_MID);
+		  break;
+		}
+	      /* do not move or boost */
+	      if (PGBUF_IS_PRIVATE_LRU_INDEX (pgbuf_bcb_get_lru_index (bufptr)))
+		{
+		  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_LRU_ONE_PRV_KEEP);
+		}
+	      else
+		{
+		  perfmon_inc_stat (thread_p, PSTAT_PB_UNFIX_LRU_ONE_SHR_KEEP);
+		}
+	      pgbuf_bcb_register_hit_for_lru (bufptr);
+	      break;</code></pre></details></details></section>
+<section class="section" id="carry-forward"><h2>이 상태에서 다음 메커니즘으로</h2><p>동일한 F42/P와 F43/R이 이제 리스트 32에서 idle 상태입니다. 여기까지는 최초 배치와 재접근 시 위치 유지 사례입니다. 냉각, 다른 문맥에 의한 이동, victim 선택은 기존 private-LRU 강의와 정본 설명에서 이어서 살펴보세요. LRU1 소속이고 fix count가 0이라는 사실만으로 페이지를 덮어쓸 수는 없습니다.</p><p><a href="../../advanced/replacement-progress.md">교체 정책 정본 설명</a> · <a href="../../unresolved-or-version-sensitive-findings.md">근거의 한계와 미해결 항목</a></p></section>
+</article><nav class="lesson-nav" aria-label="추적 확인 지점"><a href="#snapshot">0 · 큰 풀의 일부를 살펴보기</a><a href="#load-p">1 · Miss: F42에 P 적재</a><a href="#admit-p">2 · Final unfix: F42 배치</a><a href="#admit-r">3 · R 적재와 해제: P 위에 새 이웃 추가</a><a href="#hit-p">4 · P hit: 가장 최근 위치로 이동할까?</a><a href="#unfix-p">5 · 다시 final unfix: 여전히 R 아래일까?</a><a href="#carry-forward">이 상태에서 다음 메커니즘으로</a></nav></div>
+<nav class="lecture-navigation" data-lecture-nav aria-label="관련 강의"><a rel="prev" href="../lessons/0012-prove-replacement-progress.html">강의 12 · 교체 상태와 진행</a><a rel="next" href="../lessons/0012b-understand-private-lru-index.html">강의 12B · Private LRU 인덱스와 선택</a></nav></main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
+</body></html>

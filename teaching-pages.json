@@ -1,9 +1,10 @@
 {
   "version": 1,
-  "expectedPageCount": 48,
+  "expectedPageCount": 49,
   "canonicalLanguage": "en",
   "legacyRedirectMinimumDays": 90,
   "pages": [
+    { "path": "reference/lru-worked-example.html", "en": "en/reference/lru-worked-example.html", "ko": "ko/reference/lru-worked-example.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "index.html", "en": "en/index.html", "ko": "ko/index.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0001-present-the-page-journey.html", "en": "en/lessons/0001-present-the-page-journey.html", "ko": "ko/lessons/0001-present-the-page-journey.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0002-separate-objects-from-state.html", "en": "en/lessons/0002-separate-objects-from-state.html", "ko": "ko/lessons/0002-separate-objects-from-state.html", "review": { "state": "pending" }, "fingerprints": {} },
