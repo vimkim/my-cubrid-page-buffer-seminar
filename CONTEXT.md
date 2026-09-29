@@ -4,6 +4,14 @@ This glossary defines the readers and document roles of the Maintainer Guide and
 
 ## Language
 
+**Seminar collection**:
+The collection of CUBRID topic seminars, each maintained independently and brought together for discovery.
+_Avoid_: Page-buffer seminar, when referring to the whole collection
+
+**Page-buffer seminar**:
+The complete page-buffer documentation product, including the Audience-facing seminar site, Maintainer Guide, supporting evidence, and authoring records.
+_Avoid_: Presentation, when the full documentation product is intended
+
 **Target maintainer**:
 A senior C/C++ systems engineer who understands basic database storage, buffer pools, and WAL, but has no assumed knowledge of CUBRID source structure or page-buffer protocols.
 _Avoid_: Page-buffer newcomer, senior engineer
