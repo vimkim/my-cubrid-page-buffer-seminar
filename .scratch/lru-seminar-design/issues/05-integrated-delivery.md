@@ -4,7 +4,9 @@
 
 **Blocked by:** 03 — Explain safe reuse and concurrent progress branches; 04 — Defend the immediate-promotion proposal.
 
-**Status:** ready-for-agent
+**Status:** implemented and technically verified; final human acceptance pending
+
+Evidence: [ticket 05 handoff](../ticket05-handoff.md). Required human Korean-naturalness/semantic receipts remain open, alongside the explicitly disclosed inherited test and Copyparty Markdown DOM failures.
 
 ## Context
 
@@ -12,12 +14,12 @@ Read the [specification](../spec.md), [confirmed design](../design.md), and comp
 
 ## Acceptance criteria
 
-- [ ] Complete curriculum/library entry points, lecture checkpoint links, branch return routes, and final-defense integration without breaking existing URLs or removing required Core/Advanced coverage.
-- [ ] Add presenter guidance for prediction pauses, source tracing, branch selection, and policy-defense discussion while keeping presenter-only instructions out of participant content.
-- [ ] Audit the complete trace for identity continuity, explicit initial state, consistent counts/boundaries, valid branches, and source-linked causal explanations. Verify the hypothetical policy remains visibly separate from the active baseline.
-- [ ] Preserve canonical explanation ownership and link deep evidence rather than duplicating catalogs. Keep AOUT, source anomalies, constructed-trace status, and runtime limitations qualified consistently across all affected material.
+- [x] Complete curriculum/library entry points, lecture checkpoint links, branch return routes, and final-defense integration without breaking existing URLs or removing required Core/Advanced coverage.
+- [x] Add presenter guidance for prediction pauses, source tracing, branch selection, and policy-defense discussion while keeping presenter-only instructions out of participant content.
+- [x] Audit the complete trace for identity continuity, explicit initial state, consistent counts/boundaries, valid branches, and source-linked causal explanations. Verify the hypothetical policy remains visibly separate from the active baseline.
+- [x] Preserve canonical explanation ownership and link deep evidence rather than duplicating catalogs. Keep AOUT, source anomalies, constructed-trace status, and runtime limitations qualified consistently across all affected material.
 - [ ] Reconcile pairing/coverage metadata and inspect all changed English/Korean pairs for semantic parity. Record actual human Korean-naturalness and semantic-review receipts against current fingerprints; pending receipts stay open.
-- [ ] Run both aggregate validators and relevant tests, including required validator tests if their code changed. Request affected pages/assets through Copyparty and verify available live DOM checks, natural image dimensions, and relevant render errors.
-- [ ] Review desktop/projector, responsive/mobile, keyboard, prediction/reveal, branch switching, language navigation, deep links, and no-JavaScript reading across the whole route. Report unavailable HTTP/browser gates explicitly.
-- [ ] Publish an acceptance summary identifying delivered artifacts, checks and evidence, remaining gates, and the participant rubric. Do not mark final acceptance complete while required human/browser evidence is missing.
-- [ ] Confirm that no simulator dependency, engine modification, invented runtime result, stored participant response, or automated mastery claim has entered the deliverable.
+- [x] Run both aggregate validators and relevant tests, including required validator tests if their code changed. Request affected pages/assets through Copyparty and verify available live DOM checks, natural image dimensions, and relevant render errors. Execution is complete; inherited failures are disclosed in the handoff, not counted as passes.
+- [x] Review desktop/projector, responsive/mobile, keyboard, prediction/reveal, branch switching, language navigation, deep links, and no-JavaScript reading across the whole route. Report unavailable HTTP/browser gates explicitly.
+- [x] Publish an acceptance summary identifying delivered artifacts, checks and evidence, remaining gates, and the participant rubric. Do not mark final acceptance complete while required human/browser evidence is missing.
+- [x] Confirm that no simulator dependency, engine modification, invented runtime result, stored participant response, or automated mastery claim has entered the deliverable.
