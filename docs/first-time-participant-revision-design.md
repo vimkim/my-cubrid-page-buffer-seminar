@@ -123,3 +123,7 @@ Suggested ticket boundaries, to be refined by the specification rather than trea
 5. Complete route-level editorial, bilingual source and served/headless verification; preserve honest human-review status.
 
 No design questions remain. The user has confirmed the consolidated understanding; the next phase can use this document as its accepted design input without repeating the interview. The selected flow is specification, dependency-ordered tickets, then implementation. Merge and publication remain unauthorized.
+
+## Specification
+
+The local [implementation specification](first-time-participant-revision-spec.md) concretizes the accepted design into file ownership, route boundaries, user stories and observable acceptance criteria. It is ready for ticket decomposition; no presentation implementation or publication is claimed.
