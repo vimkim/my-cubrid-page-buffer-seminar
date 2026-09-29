@@ -2,7 +2,7 @@
 
 ## Status and provenance
 
-Design interview in progress; implementation is not yet authorized by a confirmed shared design. Work item: 241. Current review baseline: `fd44ccf` on `main`, inspected on 2026-09-30.
+Design questions are resolved; the consolidated design awaits the user's final shared-understanding confirmation. Presentation implementation has not begun. Work item: 241. Current review baseline: `fd44ccf` on `main`, inspected on 2026-09-30.
 
 Input: `critics.md` at commit `c421d40` on `docs/seminar-critique`, available in `/home/vimkim/gh/my-cubrid-page-buffer-seminar-critique/critics.md`. The critique describes baseline `c793ee6`; current main additionally clarifies private/shared zone placement and the always-promote alternative. The critique remains a set of proposals, not accepted requirements or observed participant feedback.
 
@@ -28,7 +28,7 @@ The [curriculum design](seminar-curriculum-design.md), [ADR 0005](adr/0005-make-
 - The Maintainer Guide owns technical evidence; seminar revisions do not automatically require changing its structure.
 - Human language acceptance remains separate from automated checks.
 
-No new glossary term has been settled. `CONTEXT.md` remains the canonical glossary; editorial planning belongs here. No ADR is warranted before a consequential new trade-off is accepted.
+No new glossary term has been settled. `CONTEXT.md` remains the canonical glossary; editorial planning belongs here. These are reversible teaching-scope and editorial decisions within the existing curriculum; no new ADR is required.
 
 ## Initial factual revalidation
 
@@ -45,98 +45,81 @@ No new glossary term has been settled. `CONTEXT.md` remains the canonical glossa
 - Critique 12 needs a narrow repair: the comparison already opens with a common H1/H2-plus-scan story and shared questions. Strengthen transfer exercises rather than replacing an absent framework.
 - Critique 13 can reuse [the lab results](../ko/reference/replacement-lab.html#results): the three-frame, four-page cyclic teaching example compares LRU with MRU/OPT and demonstrates that capacity overflow does not require every request to miss. New engine experiments are not necessary to illustrate that distinction.
 
-These observations establish candidate problems. They do not settle the revised teaching order, breadth, or exercise design.
+These observations establish the factual basis for the decisions below. The later user decision explicitly defers WAL and recovery instruction; the existence of those prerequisites does not authorize adding them to this session.
 
-## Decision tree
+## Consolidated decisions
 
-1. Revision boundary and completion target — Q1 accepted: first-principles route plus required prerequisites.
-2. Given that boundary: prerequisite order and conceptual stopping points.
-3. Given the route: continuous workload, page identity and explicit example resets.
-4. Given that story: concurrency and crash/flush timelines with bounded assumptions.
-5. Given the concepts: prediction/reveal behavior, Korean prose and source-detail placement.
-6. Observable acceptance criteria; Q4 excludes a separate final diagnostic task.
-7. Confirm shared understanding; choose direct implementation or specification/tickets.
+### Q1 — Focus on the first-principles route
 
-The interview advances one consequential question at a time. Decisions depending on an unanswered question remain pending.
+Accepted A. Make the existing first-principles presentation route self-contained for its selected topics, revising linked lectures and the prerequisite explanations needed for replacement, concurrency, background progress and comparison. Preserve the full Core/Advanced curriculum and its evidence. This revision does not claim completion of the broader maintainer curriculum.
 
-## Q1 — Accepted revision boundary
+### Q2 — Teach concurrency; defer WAL to the next session
 
-The user selected A. Decision: make the existing first-principles route self-contained for the stated novice audience, revising linked lectures and adding the minimum prerequisite explanations needed for its replacement, progress and comparison story. Preserve the full curriculum's maintainer scope and deep references.
+The user initially deferred this question, then resolved it explicitly: teach concurrent access in this session; WAL is unnecessary here and belongs to the next session. This supersedes both originally proposed combined concurrency/WAL routes.
 
-Alternative: redesign the entire Core/Advanced curriculum in this effort, extending prerequisite and exercise review through recovery, ordered access, specialized interfaces and technical defense. This is a materially wider objective.
+Establish fix/unfix ownership and latch-based access before using them in CUBRID replacement safety. Use numbered actor/state timelines to explain compatible use and the race between candidate observation and protected recheck.
 
-Trade-off: the route-focused option targets the critique's principal reading experience and supports a bounded end-to-end diagnosis exercise; it does not claim to complete the broader maintainer curriculum redesign.
+Explain dirty state only to the depth needed for replacement: changed contents must be preserved before a frame can be reused, and cleaning/completion can help supply eligible candidates. A completed write does not authorize reuse without current-state checks. Do not imply that flush is commit or that page submission alone establishes transaction durability.
 
+WAL ordering, crash/recovery timelines, log/page LSA reasoning, DWB internals and the detailed copied-generation protocol are deferred. Preserve their existing deep lectures and identify the next-session boundary; do not require them to follow this session. The previously proposed detailed flush timeline is consequently outside this revision's teaching scope. Daemon instruction stays at roles, handoffs, changing candidate state, fallback behavior and progress, without asking participants to reason about the deferred durability protocol.
 
-Observable scope criteria:
+### Q3 — Compare two outcomes from one checkpoint
 
-- The revised route explicitly reaches every prerequisite explanation needed by its scenarios before asking participants to use it.
-- Its linked explanations support a complete page-request/replacement/progress story. Q4 subsequently excludes a separate final diagnostic exercise.
-- Existing Core/Advanced depth and evidence remain available; completion of this revision does not assert completion of the full maintainer curriculum.
+Accepted A. Follow A's repeated H1/H2 reads and B's scan. Use one explicitly stated starting checkpoint and two branches differing in one named workload condition. Trace the final residency and causal transitions in both branches: retention in one branch and loss of a hot page in the other.
 
-## Q2 — Prerequisite placement (deferred)
+Choose and verify initial state and schedules against the pinned mechanism before claiming the contrast. An arbitrary delay is not presumed to guarantee eviction. Keep textbook models, constructed CUBRID scenarios and existing runtime receipts distinct. Reuse existing worked examples and counterexamples where applicable; no new native experiment is required by this design.
 
-Recommendation A: introduce constraints when the continuing request encounters them. Begin with a concrete record request, pages/frames/BCBs and textbook replacement. Establish basic fix/latch/dirty meanings before CUBRID policy; use a clean, unfixed scenario for admission, domains, zones and quota. Then let the request encounter fixed and dirty candidates, introducing the concurrency schedule and WAL/copied-generation explanation before resolving safe reuse and background progress. Finish with comparison and diagnosis.
+### Q4 — Omit a separate final diagnostic exercise
 
-Alternative B: teach the concurrency and durability foundations in full before the CUBRID replacement sequence, then apply them together during candidate selection and progress.
+The user chose to skip it. Short prediction questions embedded in explanations remain in scope. Close with the completed page journey and comparison takeaways rather than adding a diagnosis workshop.
 
-Trade-off: A reaches the central replacement topic sooner and gives each deeper mechanism an immediate problem to solve, but requires explicit scenario continuity and revisiting the pending request. B provides all prerequisites in advance but lengthens the introduction before participants reach the central policy story. Neither option permits using undefined concepts or silently assuming prior database knowledge. Exact section navigation and page boundaries remain downstream decisions.
+### Q5 — Use authored stepwise timelines
 
-## Q2 deferral clarification
+Accepted A. Keep actor lanes and state labels stable, state the initial assumptions, ask for the next transition and reveal the resulting state with its explanation. Use existing presentation controls and native disclosures; retain complete no-JavaScript reading. No interactive simulator is in scope. Q2 narrows the current timeline work to concurrent access and replacement rather than detailed WAL/flush-generation teaching.
 
-The user clarified “No, proceed to Q3.” Only Q2 is deferred; the interview continues. Q1 remains accepted and neither Q2 option is selected. Questions that require a chosen teaching order remain pending, while independent scenario decisions may proceed. No presentation implementation has begun.
+### Q6 — Include a complete Korean spoken script
 
-## Q3 — Outcome of the recurring workload (accepted A)
+The user requested the full Korean script, rather than only concise presenter notes. Align it with the revised participant route, including spoken explanations, transitions, diagram/page cues, prediction pauses and reveal explanations. It assumes no prior transaction-lock seminar. Keep presenter directions outside participant navigation.
 
-Question: should the H1/H2-plus-scan story demonstrate both conditional retention success and a contrasting loss of a hot page, or one successful main outcome with limitations covered by separate exercises?
+Use one clearly identified current script and align the existing runbook/older script routing so incompatible older assumptions cannot be mistaken for this session's preparation. Preserve useful historical material. English/Korean parity applies to participant HTML; the requested Korean presenter companion does not by itself require a second full English spoken script.
 
-The user selected A. Decision: use one explicitly stated checkpoint and two branches differing in a clearly named workload condition (for example, the interval before A reuses its hot pages while B continues scanning). Show the final residency and causal transitions in both branches. Exact initial state and schedules must be verified before selecting a pair that actually yields the contrasting outcomes; this is not an assertion that any chosen delay guarantees eviction.
+## Proposed route implementing the decisions
 
-Alternative B: complete one source-consistent successful main trace and use existing separate counterexamples to explain limitations. This is easier to follow, but less directly tests which assumptions are responsible for the main outcome.
+1. A concrete record request leads to a page request; introduce the buffer's responsibility and page/frame/BCB distinctions.
+2. Use the existing textbook replacement progression to establish capacity, locality and policy trade-offs.
+3. Introduce concurrent access: fix/unfix, latch protection and the state needed to reason about a frame's users. State the dirty-page constraint without teaching WAL.
+4. Follow CUBRID admission and final unfix into private/shared lists, zones, age and quota. Introduce each prerequisite before its first use.
+5. Complete the hot-set-plus-scan branches through candidate selection, protected recheck and frame reuse. Use the concurrency timeline where the previously introduced concepts become necessary.
+6. Explain background roles and handoffs when reusable candidates are scarce, preserving the current-state recheck and next-session durability boundary.
+7. Compare engine replacement mechanisms with the existing common workload, then recap the completed journey and each policy's limits.
 
-This decision is independent of Q2: it determines what the example must demonstrate, not where concurrency or WAL is introduced. Preserve the existing distinction between constructed CUBRID scenarios, textbook models and runtime observations.
+These are conceptual blocks, not new page URLs or fixed-duration slots. Keep existing anchors and useful depth; select section boundaries and link targets during implementation. Deferred durability lectures remain available for the next session.
 
+## Observable acceptance criteria
 
-Observable Q3 criteria:
+- Every concept required by an in-session prediction has been introduced before that prediction. No required step assumes earlier database, transaction-lock or WAL teaching.
+- Both languages and the Korean script agree on the current-session/next-session boundary. No current checkpoint requires WAL, LSA, crash-recovery or DWB reasoning.
+- The participant route follows a concrete page request; main example states are carried forward, and alternative branches explicitly return to a named checkpoint.
+- The two H1/H2 branches share the initial pool/domain/zone/page state, change one named workload condition, and show source-consistent resulting residency. Preserve the evidence for the chosen transitions.
+- Admission, final unfix and the applicable age quantity are explained before using them to justify zone behavior. Safety protection and replacement-policy preference are distinguished.
+- Timeline assumptions remain visible while predicted outcomes stay concealed until the presenter or reader reveals them. Worked examples may show their outcomes but are identified as demonstrations rather than unseen prediction tests.
+- Reuse existing explanation, trace and native evidence where sufficient. Do not claim new runtime measurements or participant comprehension from source review.
+- Remove author-specific conversation references and inaccessible local review paths from participant explanations; keep needed provenance in appropriate evidence notes.
+- Korean surrounding prose reads as explanatory sentences while exact identifiers and established technical terms remain searchable. Revise EN/KO meaning together; do not manufacture human-review receipts.
+- The complete Korean script references the corresponding participant pages/sections and supplies spoken transitions and prediction/reveal cues without introducing incompatible prerequisites or new unsupported claims.
+- Existing URLs, fragment targets, presentation controls and no-JavaScript reading remain valid. No simulator or separate final diagnostic exercise is added.
+- Run required aggregate source checks, relevant served/headless checks and editorial walkthroughs of the changed route. Report unavailable gates and outstanding human review distinctly from passes.
 
-- Both branches start from the same explicitly stated pool, domain, zone and page-state checkpoint.
-- One named workload condition differs; resulting state transitions are derived rather than independently assumed.
-- Show the final residency of H1/H2 in both branches and identify the events responsible for retention or loss.
-- Verify the chosen schedules against the pinned mechanism before claiming either outcome. Label constructed scenarios separately from runtime observations.
+## Recommended next flow
 
-## Q4 — Separate final diagnostic exercise (excluded)
+Use `/to-spec` followed by `/to-tickets`, then implementation. The work spans prerequisite order, a source-consistent branching trace, several bilingual lecture pairs, interactions/visibility and a full Korean script. A shared specification and small dependency-ordered tickets reduce drift between these artifacts.
 
-The user said “I think we can skip this.” The separate final diagnostic exercise is excluded from this revision. Short prediction checkpoints within explanations remain in scope. The following alternatives were considered but neither is selected.
+Suggested ticket boundaries, to be refined by the specification rather than treated as already created issues:
 
-Proposed A: progressively disclose evidence for a slow page request. Participants first identify plausible causes, choose the next observation and explain what would distinguish their hypotheses. Reveal prepared evidence, ask them to revise the diagnosis, then expose model reasoning and remaining uncertainty. Cases should exercise retention misses, fixed-candidate pressure and dirty-page progress without assuming every symptom has a unique cause.
+1. Establish the route, concrete request and concurrency prerequisites, including the explicit next-session durability boundary.
+2. Verify and integrate the paired replacement traces, zone explanation order and local prediction disclosures.
+3. Align daemon/comparison presentation and participant-facing language with the route; retain deep references.
+4. Write the full Korean spoken script against the stable route and reconcile presenter companion links.
+5. Complete route-level editorial, bilingual source and served/headless verification; preserve honest human-review status.
 
-Alternative B: provide all relevant observations at once and ask participants to classify the cause and explain the mechanism. This is easier to facilitate and checks conceptual application, but gives less evidence that participants can choose what to inspect.
-
-This question is independent of Q2. Exact counters, evidence cards and any source routes are factual implementation work after the exercise objective is agreed; no new runtime experiment or interactive scoring system is implied.
-
-
-## Q5 — Timeline presentation form (accepted A)
-
-The user selected A. Decision: use authored, numbered steps with stable lanes for actors and state. Show the initial conditions, ask for the next transition, and reveal the resulting state and explanation using existing presentation controls/native disclosures. Keep the complete sequence readable without JavaScript. Apply this format to both concurrency and copied-generation flush scenarios.
-
-Alternative B: add an interactive simulation in which participants choose thread actions or write/flush timing and observe derived transitions. This enables experimentation but requires a defined simulation model, controls and additional behavioral verification beyond the existing presentation workflow.
-
-Both alternatives retain concrete timelines; the decision concerns interaction scope, not teaching order. Q2 remains deferred. No new engine experiments are implied by either option.
-
-
-Observable Q5 criteria:
-
-- Each timeline declares its initial conditions and identifies its actors and relevant page state.
-- Actor lanes and state labels stay consistent across steps; the next outcome is concealed until explicitly revealed.
-- Reveal shows both the resulting state and its causal explanation; assumptions remain visible before the prediction.
-- Complete explanations remain readable without JavaScript. Reuse existing presentation controls and native disclosures; no new simulator is in scope.
-
-## Q6 — Presenter companion scope (pending)
-
-The participant HTML and the separate presenter script currently assume different prior knowledge. The script at `my-presentation-script.html` assumes a preceding transaction-lock seminar. The current editing design already keeps participant content separate from presenter instructions.
-
-Recommendation A: revise the participant HTML and align the existing presenter runbook with the accepted route, adding concise transitions and reminders for the prediction/reveal pauses. Mark or route the older incompatible script so it is not mistaken for the revised route's companion; preserve useful historical content. Avoid writing a second complete explanation of every lecture.
-
-Alternative B: additionally rewrite a complete Korean spoken script matching the revised route, with cue points into the HTML. This helps delivery preparation but creates a larger parallel artifact that must stay synchronized with the participant material.
-
-This is a deliverable-scope decision independent of deferred Q2. Exact route transitions will be written only after Q2 is resolved. Existing EN/KO participant parity and source-evidence rules remain unchanged.
+No new design questions remain. Obtain the user's confirmation of this consolidated understanding before the implementation flow; do not merge or publish.
