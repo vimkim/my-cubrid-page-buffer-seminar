@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>강의 6A — Page-buffer daemon의 lifecycle</title>
+  <title>Lecture 6A — 네 daemon은 각각 어떤 문제를 해결할까?</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
 <body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
@@ -12,16 +12,124 @@
   <div class="topline"><span>CUBRID page buffer · Lecture 0006A</span><a href="../index.html">과정 홈</a></div>
   <header class="hero">
     <div class="eyebrow">LECTURE 6A / 변경과 durability</div>
-    <h1>Page-buffer daemon의 lifecycle</h1>
-    <p>네 background 역할은 thread lifecycle을 공유하지만, recovery gate가 열린 뒤 수행하는 작업은 서로 다릅니다.</p>
-    <div class="pills"><span class="pill">One thread</span><span class="pill">Task</span><span class="pill">Looper</span><span class="pill">Boot gate</span><span class="pill">Wake</span><span class="pill">Join</span></div>
+    <h1>네 daemon은 각각 어떤 문제를 해결할까?</h1>
+    <p>빈 frame을 기다리는 요청에서 출발해, 후보 준비·완료 처리·보관 정책·기록 속도라는 네 문제를 하나씩 풀어 봅니다.</p>
+    <div class="pills"><span class="pill">Page-flush</span><span class="pill">Post-flush</span><span class="pill">Maintenance</span><span class="pill">Flush-control</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
-<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><h2>왜 일부 일을 background thread가 맡는가?</h2><p>여기서 daemon은 작업을 반복하고 기다리는, 관리되는 background thread다. 공통 유지보수나 cleaning을 개별 요청과 독립적으로 진행하게 한다. 별도의 DB 서버 process라는 뜻은 아니며, 네 page-buffer daemon이 모두 page를 쓰는 것도 아니다.</p><p>Background 실행이 없다면 필요한 일을 foreground 호출자나 다른 scheduler가 맡아야 한다. 요청 지연이 늘거나 미리 준비된 clean frame이 줄 수 있지만, 이것만으로 손상을 단정할 수는 없다. Queue나 대기 절차가 그대로 의존하는데 thread만 없애는 변경은 별개의 위험한 변경이다. Stand-alone mode는 동기 대안이 존재한다는 근거이지 실행 중인 서버 daemon을 끄는 방법이 아니다.</p><p>네 역할을 구분한다. Page-flush는 dirty page image를 제출한다. Post-flush는 queue에 넘긴 BCB 처리를 마친다. Maintenance는 quota와 zone을 조정한다. Flush-control은 soft I/O pacing credit을 갱신한다. 다음 강의에서 각 역할의 호출 경로와 없을 때의 영향을 확인한다.</p></section>
+<section class="section" id="first-principles"><h2>빈 frame이 없는데 새 페이지를 읽어야 한다면?</h2>
 
-      <section class="section" id="daemon">
+<p><a href="../reference/first-principles-route.html">발표 경로 ↑</a></p>
+<p>요청을 처리하는 thread가 페이지 E를 읽으려 합니다. E는 메모리에 없고, page buffer의 frame은 이미 사용 중입니다. <strong>Frame은 페이지 한 장을 담는 메모리 자리</strong>입니다. 자리가 모두 찼다면 기존 페이지 하나를 내보내야 E를 담을 수 있습니다.</p>
+<p>다음은 판단에 필요한 상태만 남긴 작은 예제입니다. 실제 CUBRID pool의 크기나 LRU 순서를 재현한 것은 아닙니다.</p>
+<div class="table-scroll"><table><thead><tr><th>Frame의 페이지</th><th>현재 상태</th><th>E를 위해 바로 덮어쓸 수 있을까?</th></tr></thead><tbody>
+<tr><td>A</td><td>다른 thread가 사용 중: fixed</td><td>안 됩니다. 그 thread가 쓰는 메모리를 빼앗게 됩니다.</td></tr>
+<tr><td>B</td><td>사용이 끝났지만 변경 내용이 남음: dirty</td><td>안 됩니다. 변경된 내용을 안전한 기록 경로로 보내야 합니다.</td></tr>
+<tr><td>C</td><td>사용이 끝났지만 변경 내용이 남음: dirty</td><td>B와 같은 준비가 필요합니다.</td></tr>
+<tr><td>D</td><td>다른 thread가 사용 중: fixed</td><td>사용이 끝나기 전에는 재사용할 수 없습니다.</td></tr>
+</tbody></table></div>
+<p><strong>질문: 오래 안 쓴 B를 골랐으니 이제 E로 덮어써도 될까요?</strong> 오래 안 썼다는 것은 선택의 이유일 뿐입니다. 안전하게 재사용할 수 있다는 뜻은 아닙니다. B의 변경 내용부터 처리해야 합니다.</p>
+<p>이제 네 가지 문제가 나옵니다. <strong>재사용할 후보를 미리 준비하기, 기록 후 상태 처리를 끝내기, 작업 변화에 맞춰 보관 정책을 조정하기, 기록 속도를 조절하기.</strong> 네 daemon은 이 서로 다른 일을 맡습니다.</p>
+</section>
+
+<section class="section" id="why-background"><h2>요청을 처리하는 thread가 전부 하면 안 될까?</h2>
+
+<p>할 수는 있습니다. 다만 E를 읽는 경로에 B의 변경 내용 기록까지 붙으면, E의 요청은 자기 페이지를 읽기 전에 다른 페이지의 정리 비용도 부담합니다. 이런 일이 반복될 때 후보를 미리 준비하는 별도 thread가 도움이 됩니다. 얼마나 빨라지는지는 부하와 I/O 상황에 달려 있습니다.</p>
+<ol><li><strong>요청 시점에 준비:</strong> E 요청 → 자리 부족 확인 → B 기록 처리 → 재사용 가능 여부 확인 → E 읽기.</li><li><strong>미리 준비된 후보가 있다면:</strong> 별도 thread가 B 기록 처리 → 나중에 E 요청 → 안전 조건 재확인 → frame 재사용.</li></ol>
+<p>이런 일을 맡아 반복해서 작업하고 기다리는 background thread를 여기서는 <strong>daemon</strong>이라고 부릅니다. DB 서버 안의 thread이며 별도 서버 process가 아닙니다. 요청 thread를 foreground라고 부르면, background는 요청 처리와 별도로 진행하는 실행 역할입니다.</p>
+<p><strong>질문: daemon 하나가 모든 일을 차례로 하면 되지 않을까요?</strong> 가능한 설계입니다. CUBRID는 일이 생기는 조건과 기다리는 이유가 달라 네 역할을 나눴습니다. 아래 네 역할은 항상 순서대로 통과하는 네 단계가 아닙니다. 특히 maintenance와 flush-control은 페이지를 다음 worker에게 전달하는 단계가 아닙니다.</p>
+</section>
+
+<section class="section" id="page-flush-purpose"><h2>1. Page-flush — 재사용할 후보를 누가 미리 준비할까?</h2>
+
+<p><strong>질문: B가 dirty라는 이유로 매번 요청을 기다리게 한다면, 미리 할 수 있는 일은 무엇일까요?</strong> 자주 쓰지 않는 dirty page를 찾아 변경 내용의 사본을 기록 경로에 보내는 일입니다. <code>pgbuf-page-flush</code>가 이 일을 맡습니다.</p>
+<ol><li>교체 후보 영역에서 최근 사용이 뜸한 dirty page를 찾습니다.</li><li>여전히 같은 페이지인지, 사용 중이지 않은지, 이미 flush 중이지 않은지 등을 다시 확인합니다.</li><li>조건을 만족하면 안전한 사본을 만들고 필요한 WAL 순서를 지켜 기록 경로에 제출합니다. WAL은 복구에 필요한 로그를 데이터보다 먼저 기록하는 규칙입니다.</li><li>그 사이 새 변경이 없고 나머지 재사용 조건도 맞으면, 그 frame은 이후 요청에 쓰일 후보가 될 수 있습니다.</li></ol>
+<p><strong>질문: B를 flush하면 B가 메모리에서 사라질까요?</strong> 아닙니다. Flush는 변경 내용의 기록 처리이고, eviction은 기존 페이지를 내보내 frame을 재사용하는 일입니다. B가 메모리에 남아 있으면 다음 B 요청은 계속 그 페이지를 사용할 수 있습니다.</p>
+<div class="callout"><strong>없으면?</strong> 이 background 준비 경로가 사라집니다. 필요한 정리를 다른 수행자가 맡지 않으면 dirty 후보가 남아 새 frame 확보가 지연될 수 있습니다. Checkpoint와 명시적 flush도 있으므로 모든 기록이 멈추거나 즉시 데이터가 손상된다고 말할 수는 없습니다. Stand-alone mode에서는 요청자가 victim flushing을 동기적으로 수행하는 경로가 있습니다.</div>
+<p>기록 경로가 DWB(double-write buffer)를 사용하면 제출 성공 시점에 원래 데이터 파일 위치까지 기록이 끝난 것은 아닐 수 있습니다. 또 사본을 제출한 사이 B가 다시 변경되거나 사용 중이 되면 즉시 재사용할 수 없습니다.</p>
+<pre><code>pgbuf_page_flush_daemon_task::execute
+  → pgbuf_flush_victim_candidates
+    → pgbuf_bcb_flush_with_wal</code></pre>
+<p>위 경로는 이웃 페이지를 함께 기록하지 않는 분기입니다. WAL이 아직 준비되지 않은 후보는 건너뛰고 log flush를 요청할 수 있습니다.</p>
+<p><a href="0006b-follow-page-flush-handoff.html#selection">후보 선택과 기록 경로 자세히 보기 →</a></p>
+</section>
+
+<section class="section" id="post-flush-purpose"><h2>2. Post-flush — 기록 처리가 끝나면 기다리던 요청은 저절로 알까?</h2>
+
+<p><strong>질문: B의 사본을 제출했습니다. 그러면 다른 thread는 “B의 flush 처리가 끝났다”는 것을 어떻게 알까요?</strong> 메모리의 관리 상태를 바꾸고 필요한 대기자를 깨우는 작업이 남습니다. 페이지마다 이런 상태를 담는 관리 객체가 <strong>BCB(Buffer Control Block)</strong>입니다. 페이지 내용과 BCB의 관리 상태는 서로 다릅니다.</p>
+<p>평소에는 flush를 수행한 thread가 이 처리를 직접 끝낼 수 있습니다. 그런데 frame을 기다리는 요청이 있고 page-flush가 바쁘다면, 뒷정리를 다른 thread에 맡겨 다음 후보를 처리하게 할 수 있습니다. 이것이 <code>pgbuf-page-post-flush</code>의 역할입니다.</p>
+<ol><li>Page-flush는 조건이 맞으면 완료 처리가 남은 <strong>BCB의 pointer</strong>를 <code>flushed_bcbs</code> queue에 넣습니다. 페이지 사본을 보내는 것이 아닙니다.</li><li>Post-flush가 BCB를 꺼내 잠그고 현재 상태를 확인합니다. 다시 dirty가 되었거나 누군가 fix했다면 frame을 배정하면 안 됩니다.</li><li>안전 조건과 정책을 만족하면 기다리는 요청에 frame을 직접 배정할 수 있습니다. 배정 여부와 별도로 flush 진행 상태를 정리하고 flush 대기자를 깨웁니다.</li></ol>
+<div class="callout"><strong>없으면?</strong> Post-flush daemon이 처음부터 없거나 queue에 넣지 못하면 기존 경로가 BCB 상태 처리를 직접 끝냅니다. 따라서 이 별도 thread가 모든 flush의 필수 단계는 아닙니다. 반대로 queue에 일은 계속 넣는데 consumer만 멈추면, 넘겨진 BCB의 완료 처리와 대기자 깨우기가 남을 수 있습니다.</div>
+<p><strong>질문: Post-flush가 B를 한 번 더 기록하나요?</strong> 아닙니다. 전달받은 관리 상태를 처리합니다. 또 “기록한 페이지이니 무조건 배정”하지 않습니다. 제출 이후 달라진 현재 상태를 다시 확인해야 합니다.</p>
+<pre><code>pgbuf_bcb_flush_with_wal
+  → flushed_bcbs queue: PGBUF_BCB pointer
+  ⇢ pgbuf_page_post_flush_execute
+    → pgbuf_assign_flushed_pages</code></pre>
+<p>점선 방향(⇢)은 다른 thread가 나중에 queue를 읽는다는 뜻입니다. 하나의 동기 호출 stack이 아닙니다. <a href="0006b-follow-page-flush-handoff.html#handoff">위임 조건과 직접 처리 경로 →</a></p>
+</section>
+
+<section class="section" id="maintenance-purpose"><h2>3. Maintenance — 어제 바빴던 작업을 오늘도 똑같이 우대할까?</h2>
+
+<p><strong>질문: 오전에는 작업 X가 활발했지만 오후에는 X가 조용해지고 Y가 활발해졌습니다. 페이지 보관 정책을 그대로 두어도 될까요?</strong> 예전 활동에 맞춘 보관 목표를 계속 쓰면 현재 자주 쓰는 페이지에 맞지 않을 수 있습니다.</p>
+<p>CUBRID는 페이지를 private/shared LRU 목록으로 관리합니다. 여기서 <strong>quota는 private 목록의 보관 목표</strong>이지, 미리 잘라 독점 배정한 메모리 영역이 아닙니다. <strong>Zone은 같은 목록 안에서 더 보호할 쪽과 교체 후보 쪽을 구분하는 영역</strong>입니다. 한 페이지가 여러 zone에 동시에 들어 있는 것은 아닙니다.</p>
+<ol><li>일반 페이지 사용 경로가 접근 활동의 표본을 남깁니다.</li><li><code>pgbuf-maintain</code>이 주기적으로 조정을 시도합니다. 내부 시간·활동 조건을 통과하면 그 활동을 바탕으로 quota와 zone 경계를 갱신합니다.</li><li>이후 교체와 목록 관리가 바뀐 정책을 활용합니다. Maintenance가 페이지 내용을 기록하거나 별도 메모리를 만들어 주는 것은 아닙니다.</li></ol>
+<p>예를 들어 X의 활동 표본은 줄고 Y의 표본은 늘었다면, 정책은 이런 변화를 반영할 기회를 얻습니다. “X에서 정확히 두 frame을 빼서 즉시 Y에게 준다”는 식의 고정 분배를 뜻하지는 않습니다.</p>
+<div class="callout"><strong>없으면?</strong> 이 주기적 정책 조정이 사라집니다. Private LRU 획득·반환 때의 다른 quota 조정 호출은 남지만, 지속적으로 최근 활동 변화를 반영할 기회를 잃으므로 작업 변화에 대응하기 어려워질 수 있습니다. 일반 fix/unfix나 모든 교체가 곧바로 멈춘다는 뜻은 아닙니다. 요청마다 전체 활동을 계산하는 대안도 생각할 수 있지만 요청 경로에 공통 조정 비용이 붙습니다.</div>
+<pre><code>pgbuf_page_maintenance_execute
+  → pgbuf_adjust_quotas</code></pre>
+<p><a href="0006c-follow-maintenance-and-pacing.html#maintain">활동 표본과 quota 계산 자세히 보기 →</a></p>
+<details class="technical-detail"><summary>직접 frame 배정 backup의 소스상 한계</summary><p>이 task는 <code>pgbuf_direct_victims_maintenance()</code>도 호출하지만, 고정 revision에서는 그 안의 두 반복문이 최초 조건부터 거짓이어서 본문에 진입하지 않습니다. 따라서 maintenance가 대기 요청을 반드시 구제한다고 설명하지 않습니다. <a href="../../unresolved-or-version-sensitive-findings.md">VS-20의 근거와 미확인 영향</a>을 참조하세요.</p></details>
+</section>
+
+<section class="section" id="flush-control-purpose"><h2>4. Flush-control — 미리 기록하는 일을 무조건 빠르게 해도 될까?</h2>
+
+<p><strong>질문: Dirty page를 빨리 정리하려고 writer들이 계속 기록하면 항상 좋을까요?</strong> 저장장치는 다른 읽기·쓰기 작업과도 공유합니다. Background 일을 몰아서 진행하면 다른 작업과 I/O를 놓고 경쟁할 수 있습니다. 그래서 “무엇을 기록할까?”와 별도로 “얼마나 빠르게 계속 진행할까?”를 조절합니다.</p>
+<p><code>pgbuf-flush-control</code>은 페이지 단위의 공유 <strong>credit 잔액</strong>을 주기적으로 갱신합니다. Credit은 이 속도 조절에 쓰는 계산 단위입니다. 참여하는 writer는 <strong>OS write가 성공한 뒤</strong> 기록한 page 수에 해당하는 credit을 소비하고, 부족하면 이후 진행 전에 기다릴 수 있습니다. 이를 soft pacing이라고 합니다.</p>
+<ol><li>예제에서 공유 잔액이 2 credit이라고 합시다. 실제 설정값을 뜻하지는 않습니다.</li><li>참여 writer가 한 page의 OS write를 마치고 1 credit을 소비하면 1이 남습니다.</li><li>다음 한 page도 write 후 소비하면 0이 됩니다.</li><li>그다음 page의 write도 이미 성공한 뒤 credit을 요청합니다. 잔액이 부족하므로 여기서 기다릴 수 있습니다.</li><li>Flush-control이 잔액을 갱신하고 대기자를 깨우면 writer가 소비를 다시 시도합니다.</li></ol>
+<p><strong>질문: 그러면 credit이 0이면 OS write를 시작할 수 없나요?</strong> 아닙니다. 검사 위치가 write 뒤입니다. 따라서 엄격한 사전 I/O 허가나 저장장치 전체의 속도 상한이 아닙니다. 일부 경로의 우회도 있으므로 모든 write가 같은 방식으로 기다린다고 생각하면 안 됩니다.</p>
+<div class="callout"><strong>없으면?</strong> Token bucket 자체가 없으면 소비 경로는 우회하므로 이 pacing 효과가 사라집니다. 반면 bucket과 대기 절차는 남겨 두고 공급 daemon만 멈추면, credit을 기다리는 writer가 계속 대기할 수 있습니다. “속도 조절 기능을 없앤 설계”와 “공급자만 고장 난 상태”는 결과가 다릅니다.</div>
+<pre><code>pgbuf_flush_control_daemon_task::execute
+  → fileio_flush_control_add_tokens
+
+fileio_write: successful OS write
+  → fileio_compensate_flush
+    → fileio_flush_control_get_token</code></pre>
+<p>위쪽은 credit 공급, 아래쪽은 소비 경로입니다. Flush-control이 페이지를 직접 쓰는 호출 흐름이 아닙니다. <a href="0006c-follow-maintenance-and-pacing.html#control">갱신 주기·계산·우회 조건 →</a></p>
+</section>
+
+<section class="section" id="cadence"><h2>네 질문으로 역할을 구분한다</h2>
+<div class="journey"><article><strong>Page-flush</strong><h3>후보 준비</h3><p>B: dirty → 안전한 사본 제출</p></article><article><strong>Post-flush</strong><h3>완료 처리</h3><p>BCB pointer → 상태 재확인·대기자 깨우기</p></article><article><strong>Maintenance</strong><h3>정책 조정</h3><p>활동 표본 → quota·zone</p></article><article><strong>Flush-control</strong><h3>속도 조절</h3><p>기록한 page 수 ↔ credit 잔액</p></article></div>
+<div class="table-scroll"><table><thead><tr><th>Daemon</th><th>답하는 질문</th><th>페이지 쓰기</th></tr></thead><tbody><tr><td>Page-flush</td><td>재사용할 dirty 후보를 누가 미리 준비할까?</td><td>있음</td></tr><tr><td>Post-flush</td><td>제출 뒤 관리 상태 처리와 깨우기는 누가 끝낼까?</td><td>새 write 없음</td></tr><tr><td>Maintenance</td><td>지금 바쁜 작업에 맞춰 보관 목표를 누가 조정할까?</td><td>없음</td></tr><tr><td>Flush-control</td><td>Writer들이 얼마나 빠르게 계속 진행하게 할까?</td><td>없음</td></tr></tbody></table></div><p>Timer와 wakeup은 일을 확인할 기회를 줍니다. 실제 작업은 boot gate, queue, 교체 압력 등의 현재 조건을 만족해야 진행합니다.</p><details class="technical-detail"><summary>실행 주기와 wakeup 세부 동작</summary>
+
+
+
+        <img class="diagram" src="../../assets/page-buffer-daemon-cadence.svg" alt="maintenance, page-flush, post-flush, flush-control의 실행 주기와 깨우기 조건">
+        <div class="table-scroll"><table>
+          <thead><tr><th>Daemon</th><th>쉽게 말한 역할</th><th>Nominal pause</th><th>명시적 work wake</th><th>Page-image I/O?</th></tr></thead>
+          <tbody>
+            <tr><td><code>pgbuf-maintain</code></td><td>replacement quota/zone 다시 계산</td><td>100 ms attempt</td><td>없음</td><td>아니요</td></tr>
+            <tr><td><code>pgbuf-page-flush</code></td><td>cold dirty page에서 clean replacement supply 만들기</td><td>기본 1,000 ms; 0은 wake-only</td><td>victim/allocation pressure</td><td><strong>예</strong></td></tr>
+            <tr><td><code>pgbuf-page-post-flush</code></td><td>submission 뒤 BCB bookkeeping을 끝내고 기다리는 allocator에 frame을 제공할 수 있음</td><td>1 → 10 → 100 ms 뒤 wake-only</td><td><code>flushed_bcbs</code> enqueue</td><td>새 write 없음</td></tr>
+            <tr><td><code>pgbuf-flush-control</code></td><td>성공한 OS write 뒤 writer를 잠시 늦출 수 있는 공유 page-credit 잔액 교체</td><td>50 ms 목표</td><td>없음</td><td>아니요</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout"><strong>Wake는 hint이며 durable event가 아닙니다.</strong> generic waiter는 sleep 중일 때만 <code>wakeup()</code>을 받아들입니다. task가 이미 RUNNING이면 다음 pause를 위한 event로 저장하지 않습니다. 따라서 task는 실행될 때 shared pressure 또는 queue state를 다시 확인합니다.</div>
+
+</details>
+</section>
+
+<section class="section" id="plain-language-bridge" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-post-flush-payload="PGBUF_BCB-pointer" data-post-flush-new-io="none">
+
+
+        <h2>Post-flush와 flush-control은 페이지를 다시 쓰지 않는다</h2>
+        <div class="callout"><strong>File-I/O token bucket:</strong> 여러 writer가 공유하는 page 단위 credit 잔액입니다. 참여하는 writer는 OS write가 성공한 뒤 credit을 소비하고, 잔액이 없으면 계속 진행하기 전에 잠시 기다릴 수 있습니다. Flush-control은 주기적으로 잔액을 교체하므로 write 수행 허가가 아니라 soft pacing입니다. <a href="0006c-follow-maintenance-and-pacing.html#control">정확한 producer, consumer, bypass rule 보기 →</a></div>
+        <div class="callout"><strong>Page-flush가 completion을 post-flush에 넘김:</strong> page submission은 끝났지만 in-memory BCB bookkeeping이 남았다는 뜻입니다. allocator pressure가 있으면 page-flush는 BCB pointer만 queue에 넣어 post-flush가 마무리하게 할 수 있습니다. page byte를 넘기거나 새 write를 요청하지 않습니다. <a href="0006b-follow-page-flush-handoff.html#handoff">이동하는 것, 네 조건, local fallback 보기 →</a></div>
+
+</section>
+
+<section class="section" id="daemon">
 <h2>각 daemon은 독립적으로 일하고 기다린다</h2>
 <p>네 daemon은 서로 다른 역할을 가진 background thread입니다. Timer나 wakeup은 실행 기회이고, 실제 작업 여부는 현재 상태를 확인한 뒤 결정합니다.</p>
 <details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
@@ -33,7 +141,7 @@
 </details>
 </section>
 
-      <section class="section" id="lifecycle">
+<section class="section" id="lifecycle">
 <h2>복구가 끝난 뒤 작업하고, pool보다 먼저 종료한다</h2>
 <p>서버는 복구 중에 thread를 만들지만 boot gate가 열리기 전에는 page-buffer 작업을 하지 않습니다. 정상 종료에서는 pool을 정리하기 전에 daemon을 멈춥니다. Stand-alone mode에서는 이 네 thread를 만들지 않습니다.</p>
 <details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
@@ -53,37 +161,7 @@
 </details>
 </section>
 
-      <section class="section" id="cadence">
-<h2>네 daemon이 나누어 맡는 일</h2>
-<div class="table-scroll"><table><thead><tr><th>Daemon</th><th>하는 일</th><th>페이지 쓰기</th></tr></thead><tbody><tr><td>Page-flush</td><td>조건에 맞는 dirty page의 사본을 기록 경로에 제출</td><td>있음</td></tr><tr><td>Post-flush</td><td>전달받은 BCB 상태 처리를 마치고 안전한 frame 배정을 시도</td><td>새 write 없음</td></tr><tr><td>Maintenance</td><td>접근 활동에 따라 quota와 zone 경계를 조정</td><td>없음</td></tr><tr><td>Flush-control</td><td>성공한 OS write 뒤에 소비하는 credit을 공급</td><td>없음</td></tr></tbody></table></div><p>Timer와 wakeup은 일을 확인할 기회를 줍니다. 실제 작업은 boot gate, queue, 교체 압력 등의 현재 조건을 만족해야 진행합니다.</p><details class="technical-detail"><summary>실행 주기와 wakeup 세부 동작</summary>
-
-
-
-        <img class="diagram" src="../../assets/page-buffer-daemon-cadence.svg" alt="maintenance, page-flush, post-flush, flush-control의 실행 주기와 깨우기 조건">
-        <div class="table-scroll"><table>
-          <thead><tr><th>Daemon</th><th>쉽게 말한 역할</th><th>Nominal pause</th><th>명시적 work wake</th><th>Page-image I/O?</th></tr></thead>
-          <tbody>
-            <tr><td><code>pgbuf-maintain</code></td><td>replacement quota/zone 다시 계산</td><td>100 ms attempt</td><td>없음</td><td>아니요</td></tr>
-            <tr><td><code>pgbuf-page-flush</code></td><td>cold dirty page에서 clean replacement supply 만들기</td><td>기본 1,000 ms; 0은 wake-only</td><td>victim/allocation pressure</td><td><strong>예</strong></td></tr>
-            <tr><td><code>pgbuf-page-post-flush</code></td><td>submission 뒤 BCB bookkeeping을 끝내고 기다리는 allocator에 frame을 제공할 수 있음</td><td>1 → 10 → 100 ms 뒤 wake-only</td><td><code>flushed_bcbs</code> enqueue</td><td>새 write 없음</td></tr>
-            <tr><td><code>pgbuf-flush-control</code></td><td>성공한 OS write 뒤 writer를 잠시 늦출 수 있는 공유 page-credit 잔액 교체</td><td>50 ms 목표</td><td>없음</td><td>아니요</td></tr>
-          </tbody>
-        </table></div>
-        <div class="callout"><strong>Wake는 hint이며 durable event가 아닙니다.</strong> generic waiter는 sleep 중일 때만 <code>wakeup()</code>을 받아들입니다. task가 이미 RUNNING이면 다음 pause를 위한 event로 저장하지 않습니다. 따라서 task는 실행될 때 shared pressure 또는 queue state를 다시 확인합니다.</div>
-
-</details>
-</section>
-
-      <section class="section" id="plain-language-bridge" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-post-flush-payload="PGBUF_BCB-pointer" data-post-flush-new-io="none">
-
-
-        <h2>Post-flush와 flush-control은 페이지를 다시 쓰지 않는다</h2>
-        <div class="callout"><strong>File-I/O token bucket:</strong> 여러 writer가 공유하는 page 단위 credit 잔액입니다. 참여하는 writer는 OS write가 성공한 뒤 credit을 소비하고, 잔액이 없으면 계속 진행하기 전에 잠시 기다릴 수 있습니다. Flush-control은 주기적으로 잔액을 교체하므로 write 수행 허가가 아니라 soft pacing입니다. <a href="0006c-follow-maintenance-and-pacing.html#control">정확한 producer, consumer, bypass rule 보기 →</a></div>
-        <div class="callout"><strong>Page-flush가 completion을 post-flush에 넘김:</strong> page submission은 끝났지만 in-memory BCB bookkeeping이 남았다는 뜻입니다. allocator pressure가 있으면 page-flush는 BCB pointer만 queue에 넣어 post-flush가 마무리하게 할 수 있습니다. page byte를 넘기거나 새 write를 요청하지 않습니다. <a href="0006b-follow-page-flush-handoff.html#handoff">이동하는 것, 네 조건, local fallback 보기 →</a></div>
-
-</section>
-
-      <section class="section" id="routes">
+<section class="section" id="routes">
 
 
         <h2>Cleaning과 상태 처리 / 정책과 속도 조절</h2>
@@ -93,17 +171,14 @@
 
 </section>
 
-      <section class="section" id="retrieval">
-<h2>Frame이 부족할 때 누가 어떤 일을 할까?</h2>
-<div class="quiz" data-audience-checkpoint><p>Dirty page가 많아 allocator가 기다립니다. 네 daemon이 모두 페이지를 쓰는 것일까요?</p><details class="answer-disclosure"><summary>설명 펼치기</summary><p>아닙니다. Page-flush는 조건에 맞는 page image를 제출합니다. Post-flush는 전달받은 BCB 처리를 마치고 안전할 때 allocator에 배정할 수 있습니다. Maintenance는 quota와 zone, flush-control은 성공한 OS write 이후의 pacing credit을 관리합니다.</p></details></div>
-</section>
+<section class="section" id="retrieval"><h2>이 상황에서는 누가 필요할까?</h2><div class="quiz" data-audience-checkpoint><p><strong>1. B를 flush한 사이 다른 thread가 B를 다시 수정했습니다. Post-flush는 E에게 그 frame을 바로 줘도 될까요?</strong></p><details class="answer-disclosure"><summary>예측한 뒤 설명 펼치기</summary><p>안 됩니다. 제출한 사본과 현재 메모리 내용은 달라졌습니다. 이전 flush의 상태 처리를 끝내더라도 새 DIRTY 상태는 남겨야 하고, 현재 재사용 조건을 다시 확인해야 합니다.</p></details></div><div class="quiz" data-audience-checkpoint><p><strong>2. Post-flush thread가 없어도 완료 처리를 호출자가 직접 한다면, 반드시 별도 thread가 있어야 한다고 말할 수 있을까요?</strong></p><details class="answer-disclosure"><summary>예측한 뒤 설명 펼치기</summary><p>아닙니다. 반드시 수행해야 하는 완료 처리와 그 일을 별도 thread에 분담하는 선택을 구별해야 합니다. 다만 이미 queue에 위임했다면 누군가는 그 queue를 처리해야 합니다.</p></details></div><div class="quiz" data-audience-checkpoint><p><strong>3. X가 조용해지고 Y가 바빠졌습니다. 이 변화에 맞춰 보관 목표를 조정하려면 page-flush를 더 자주 깨우면 될까요?</strong></p><details class="answer-disclosure"><summary>예측한 뒤 설명 펼치기</summary><p>Page-flush는 후보의 변경 내용을 기록하는 역할입니다. 활동 표본을 quota와 zone에 반영하는 역할은 maintenance입니다. 기록량과 보관 정책은 다른 문제입니다.</p></details></div><div class="quiz" data-audience-checkpoint><p><strong>4. Credit이 0인데 writer가 방금 한 page를 기록했습니다. Flush-control의 규칙을 어긴 것일까요?</strong></p><details class="answer-disclosure"><summary>예측한 뒤 설명 펼치기</summary><p>아닙니다. 참여 경로의 credit 소비는 OS write 성공 뒤에 옵니다. 이미 수행한 write를 취소하는 것이 아니라 이후 진행을 늦출 수 있습니다.</p></details></div></section>
 
-      <section class="section" id="primary-reading">
+<section class="section" id="primary-reading">
 <h2>참고 자료</h2>
-<details class="technical-detail"><summary>소스와 참고 자료</summary><ul><li><a href="../../reference/page-buffer-daemon-lifecycle-audit.md">전체 pinned-source lifecycle audit 열기 →</a></li></ul></details>
+<details class="technical-detail"><summary>소스와 참고 자료</summary><p>CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>: <code>page_buffer.c:4010–4165, 10925–10952, 14260–14624, 15489–15556, 16997–17144</code>; <code>file_io.c:752–827, 4123–4370</code>.</p><ul><li><a href="../../reference/dirty-page-flush-actors.md">Flush actors and source evidence</a></li><li><a href="../../reference/page-buffer-daemon-lifecycle-audit.md">전체 pinned-source lifecycle audit 열기 →</a></li></ul></details>
 </section>
-    </article>
-    <nav class="lesson-nav" aria-label="Lesson 목차"><a href="#first-principles">왜 일부 일을 background thread가 맡는가?</a><strong>Lecture map</strong><a href="#daemon">각 daemon은 독립적으로 일하고 기다린다</a><a href="#lifecycle">복구가 끝난 뒤 작업하고, pool보다 먼저 종료한다</a><a href="#cadence">네 daemon이 나누어 맡는 일</a><a href="#plain-language-bridge">Post-flush와 flush-control은 페이지를 다시 쓰지 않는다</a><a href="#routes">Cleaning과 상태 처리 / 정책과 속도 조절</a><a href="#retrieval">Frame이 부족할 때 누가 어떤 일을 할까?</a><a href="#primary-reading">참고 자료</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">과정 홈</a></nav>
+</article>
+    <nav class="lesson-nav" aria-label="Lesson 목차"><a href="#first-principles">빈 frame이 없는데 새 페이지를 읽어야 한다면?</a><a href="#why-background">요청을 처리하는 thread가 전부 하면 안 될까?</a><a href="#page-flush-purpose">1. Page-flush — 재사용할 후보를 누가 미리 준비할까?</a><a href="#post-flush-purpose">2. Post-flush — 기록 처리가 끝나면 기다리던 요청은 저절로 알까?</a><a href="#maintenance-purpose">3. Maintenance — 어제 바빴던 작업을 오늘도 똑같이 우대할까?</a><a href="#flush-control-purpose">4. Flush-control — 미리 기록하는 일을 무조건 빠르게 해도 될까?</a><a href="#cadence">네 질문으로 역할을 구분한다</a><a href="#plain-language-bridge">Post-flush와 flush-control은 페이지를 다시 쓰지 않는다</a><a href="#daemon">각 daemon은 독립적으로 일하고 기다린다</a><a href="#lifecycle">복구가 끝난 뒤 작업하고, pool보다 먼저 종료한다</a><a href="#routes">Cleaning과 상태 처리 / 정책과 속도 조절</a><a href="#retrieval">이 상황에서는 누가 필요할까?</a><a href="#primary-reading">참고 자료</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">과정 홈</a></nav>
   </div>
 
 <nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0006-flush-one-generation.html">← Lecture 6 · Flush generation과 WAL 순서</a><a rel="next" href="0006b-follow-page-flush-handoff.html">Lecture 6B · Page-flush와 post-flush handoff →</a></nav></main>
