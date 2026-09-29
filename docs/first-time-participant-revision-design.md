@@ -82,6 +82,16 @@ Alternative B: teach the concurrency and durability foundations in full before t
 
 Trade-off: A reaches the central replacement topic sooner and gives each deeper mechanism an immediate problem to solve, but requires explicit scenario continuity and revisiting the pending request. B provides all prerequisites in advance but lengthens the introduction before participants reach the central policy story. Neither option permits using undefined concepts or silently assuming prior database knowledge. Exact section navigation and page boundaries remain downstream decisions.
 
-## Interview pause
+## Q2 deferral clarification
 
-The user deferred Q2 with “not today.” The interview is paused at their request. Q1 remains accepted; neither Q2 option is selected. Resume with Q2 when the user returns. No presentation implementation has begun.
+The user clarified “No, proceed to Q3.” Only Q2 is deferred; the interview continues. Q1 remains accepted and neither Q2 option is selected. Questions that require a chosen teaching order remain pending, while independent scenario decisions may proceed. No presentation implementation has begun.
+
+## Q3 — Outcome of the recurring workload (pending)
+
+Question: should the H1/H2-plus-scan story demonstrate both conditional retention success and a contrasting loss of a hot page, or one successful main outcome with limitations covered by separate exercises?
+
+Recommendation A: use one explicitly stated checkpoint and two branches differing in a clearly named workload condition (for example, the interval before A reuses its hot pages while B continues scanning). Show the final residency and causal transitions in both branches. Exact initial state and schedules must be verified before selecting a pair that actually yields the contrasting outcomes; this is not an assertion that any chosen delay guarantees eviction.
+
+Alternative B: complete one source-consistent successful main trace and use existing separate counterexamples to explain limitations. This is easier to follow, but less directly tests which assumptions are responsible for the main outcome.
+
+This decision is independent of Q2: it determines what the example must demonstrate, not where concurrency or WAL is introduced. Preserve the existing distinction between constructed CUBRID scenarios, textbook models and runtime observations.
