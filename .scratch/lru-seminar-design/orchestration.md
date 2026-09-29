@@ -16,8 +16,8 @@ Before 03/04 start, use the verified ticket02 state as an integration baseline a
 | --- | --- | --- | --- |
 | 01 | Prior completed work | Preserved | ticket01-handoff.md |
 | F01 | implement_f01 | Implemented and verified | 74bec21, f8ace01; F01-handoff.md |
-| F02 | implement_f02 | Ready to start | F01 interface verified |
-| 02 | Not spawned | Blocked by F02 | |
+| F02 | implement_f02 | Implemented and verified | fb78b76, b9bf97d; F02-handoff.md |
+| 02 | implement_02 | Ready to start | F02 interface verified; preserve ticket01 state |
 | 03 | Not spawned | Blocked by 02 | |
 | 04 | Not spawned | Blocked by 02 | |
 | 05 | Not spawned | Blocked by 03 and 04 | |
