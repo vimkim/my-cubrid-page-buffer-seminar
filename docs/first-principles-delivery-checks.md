@@ -47,8 +47,9 @@ trials are documented in the experiment record and excluded from results.
 Configured `ctest` contains no tests at this pin; that command does not certify
 the experiment. The actual native runs and receipt checks provide its validation.
 
-Current automatic source gates pass for 53 pairs. Maintainer-guide source, SVG,
-HTTP and live DOM checks pass for 43 pages and 60 displayed SVGs (103 resources).
+Current automatic source gates pass for 54 pairs after rebasing onto `187ebb3`,
+including its NEW_PAGE/OLD_PAGE material. Maintainer-guide source, SVG,
+HTTP and live DOM checks pass for 43 pages and 63 displayed SVGs (106 resources).
 Existing browser regressions pass 22/22 without skips. The dedicated lab check
 runs the independent finite-trace OPT oracle, all 36 policy traces, controls,
 zone steps, 1440/390px light/dark layouts and no-JavaScript reading in both
@@ -56,13 +57,12 @@ languages on headless Chromium and Firefox. Its durable receipt is
 [browser-checks.json](../experiments/replacement/browser-checks.json).
 
 The presenter notes, cue card and deep-dive Markdown render with headings and
-tables in Copyparty; relative presenter-to-lab navigation was exercised. Review
-links currently resolve to the retained seminar task worktree. When approving
-merges and cleanup across both repositories, update those links to the agreed
-permanent location before removing that worktree.
+tables in Copyparty; relative presenter-to-lab navigation was exercised. Presenter
+links now use the permanent seminar main worktree, preserving navigation after
+the approved fast-forward merge and task-worktree cleanup.
 
-The full bilingual aggregate still fails the human-review currency gate: 53
-missing Korean review receipts and 106 absent/stale language fingerprints. No
+The full bilingual aggregate still fails the human-review currency gate: 54
+missing Korean review receipts and 108 absent/stale language fingerprints. No
 human acceptance receipt or presenter-mastery evidence was invented. This gate
 remains separately tracked as work item 55.
 
@@ -71,7 +71,8 @@ Final recorded native executions use source commit
 validated pairs of raw receipts. The fitting control's frozen quota was 1995 and
 1990 respectively, while its repeated reads were all hits; the cyclic case had
 quota 2048 and all misses on each pass in both executions. The patch applies
-cleanly to the original clean pinned worktree. Both validator regression suites
-pass (45 tests); the receipt analyzer rejects four deliberately corrupted traces.
-Final served checks pass for 266 resources and 107 pages. Source whitespace and
+cleanly to the original clean pinned worktree. Validator, curriculum-contract
+and existing browser regression suites pass together (73 tests); the receipt
+analyzer rejects four deliberately corrupted traces.
+Final served checks pass for 272 resources and 109 pages. Source whitespace and
 presenter links/anchors, fences, and contiguous schedules pass.
