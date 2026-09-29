@@ -2,7 +2,7 @@
 
 ## Status and provenance
 
-Design questions are resolved; the consolidated design awaits the user's final shared-understanding confirmation. Presentation implementation has not begun. Work item: 241. Current review baseline: `fd44ccf` on `main`, inspected on 2026-09-30.
+Design accepted on 2026-09-30. The user confirmed the consolidated scope and shared understanding with “yes.” The interview is complete. Presentation implementation has not begun. Work item: 241. Current review baseline: `fd44ccf` on `main`, inspected on 2026-09-30.
 
 Input: `critics.md` at commit `c421d40` on `docs/seminar-critique`, available in `/home/vimkim/gh/my-cubrid-page-buffer-seminar-critique/critics.md`. The critique describes baseline `c793ee6`; current main additionally clarifies private/shared zone placement and the always-promote alternative. The critique remains a set of proposals, not accepted requirements or observed participant feedback.
 
@@ -122,4 +122,4 @@ Suggested ticket boundaries, to be refined by the specification rather than trea
 4. Write the full Korean spoken script against the stable route and reconcile presenter companion links.
 5. Complete route-level editorial, bilingual source and served/headless verification; preserve honest human-review status.
 
-No new design questions remain. Obtain the user's confirmation of this consolidated understanding before the implementation flow; do not merge or publish.
+No design questions remain. The user has confirmed the consolidated understanding; the next phase can use this document as its accepted design input without repeating the interview. The selected flow is specification, dependency-ordered tickets, then implementation. Merge and publication remain unauthorized.
