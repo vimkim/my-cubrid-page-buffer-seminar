@@ -4,7 +4,9 @@
 
 **Blocked by:** None.
 
-**Status:** ready-for-agent
+**Status:** implemented — integrated and technically verified; human acceptance pending
+
+Implementation and acceptance mapping: [F01 handoff](../F01-handoff.md). The checklist below remains the acceptance contract; implementation evidence does not constitute a human language receipt.
 
 ## Context
 

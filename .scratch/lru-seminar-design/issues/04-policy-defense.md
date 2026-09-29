@@ -4,7 +4,9 @@
 
 **Blocked by:** 02 — Predict cooling, migration, and victim-list selection.
 
-**Status:** ready-for-agent
+**Status:** implemented — integrated and technically verified; human acceptance pending
+
+Implementation and acceptance mapping: [ticket04 handoff](../ticket04-handoff.md) and [combined integration](../integration-handoff.md). The checklist below remains the acceptance contract; implementation evidence does not constitute a human language receipt.
 
 ## Context
 

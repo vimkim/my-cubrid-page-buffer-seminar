@@ -4,7 +4,9 @@
 
 **Blocked by:** 01 — Predict admission and reuse in one bilingual trace (implemented); [F02 — Database bridge](F02-database-bridge.md).
 
-**Status:** ready-for-agent
+**Status:** implemented — integrated and technically verified; human acceptance pending
+
+Implementation and acceptance mapping: [ticket02 handoff](../ticket02-handoff.md). The checklist below remains the acceptance contract; implementation evidence does not constitute a human language receipt.
 
 ## Context
 
