@@ -1,0 +1,23 @@
+/* Lecture 18A: readable mechanism snapshots in reading and presentation modes. */
+.comparison-flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: .8rem;
+  margin: 1.4rem 0;
+}
+.comparison-flow > div {
+  padding: 1rem;
+  border: 1px solid #8ca8a5;
+  border-top: .3rem solid #27675e;
+  border-radius: .5rem;
+  background: #f1f7f5;
+  color: #173b35;
+}
+.comparison-flow p { font-weight: 650; margin: .7rem 0; }
+.comparison-flow span { font-size: .92em; line-height: 1.5; }
+.comparison-tradeoffs { margin: 1rem 0; }
+.comparison-tradeoffs dt { font-weight: 750; margin-top: 1.2rem; }
+.comparison-tradeoffs dd { margin: .35rem 0 1rem; line-height: 1.75; }
+@media print {
+  .comparison-flow > div { break-inside: avoid; }
+}

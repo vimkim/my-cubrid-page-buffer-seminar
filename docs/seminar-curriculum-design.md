@@ -162,3 +162,14 @@ known workload pattern. The existing 20-minute textbook block targets FIFO/LRU
 victim prediction, one Clock sweep and OPT's conceptual advantage; full tracing
 remains available for the longer curriculum. The [design and verification
 record](replacement-foundations-clarity.md) owns these scoped decisions.
+
+
+## Expanded replacement comparison (2026-09-30)
+
+The user confirmed an expanded Lecture 18A for participants unfamiliar with
+PostgreSQL and InnoDB. A shared hot-set-plus-scan story leads into a CUBRID recap,
+each alternative from first principles, worked mechanism snapshots, explicit
+CUBRID-relative advantages and disadvantages, and a conclusion. The full lecture
+exceeds the former 15-minute comparison scope. The integrated first-principles
+route is now untimed, following the replacement lecture revision. No revised
+fixed total duration is asserted. See [the confirmed design](comparison-clarity-design.md).
