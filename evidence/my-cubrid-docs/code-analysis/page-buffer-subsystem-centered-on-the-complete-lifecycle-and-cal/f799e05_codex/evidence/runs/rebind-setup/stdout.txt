@@ -1,0 +1,32 @@
+Execute OK. (0.007000 sec) Committed. (0.000000 sec) 
+10000 rows affected. (1.474025 sec) Committed. (0.031001 sec) 
+Execute OK. (0.005000 sec) Committed. (0.000000 sec) 
+Execute OK. (0.004000 sec) Committed. (0.001000 sec) 
+10000 rows affected. (1.386024 sec) Committed. (0.037001 sec) 
+Execute OK. (0.006000 sec) Committed. (0.000000 sec) 
+10000 rows affected. (1.456025 sec) Committed. (0.019001 sec) 
+Execute OK. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 18> ===
+
+              count(*)      sum(id)
+===================================
+                 10000     50005000
+
+1 row selected. (0.021000 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 19> ===
+
+              count(*)      sum(id)
+===================================
+                 10000     50005000
+
+1 row selected. (0.022001 sec) Committed. (0.000000 sec) 
+
+=== <Result of SELECT Command in Line 20> ===
+
+              count(*)      sum(id)
+===================================
+                 10000     50005000
+
+1 row selected. (0.021000 sec) Committed. (0.000000 sec) 

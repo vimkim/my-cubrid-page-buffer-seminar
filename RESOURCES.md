@@ -22,7 +22,7 @@
   Primary authority for the comparison's split pin/content-lock lifetime, backend-private nested pin accounting, ResourceOwner cleanup, miss publication, and WAL-gated flush behavior.
 - [Pinned InnoDB buffer pool: `buf0buf.cc`](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0buf.cc)
   Primary authority for page-hash lookup, `buf_fix_count`, pre-I/O `BUF_IO_READ` publication, requested latch acquisition, and MTR integration in the compared InnoDB revision.
-- [Audited three-engine comparison](../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html)
+- [Audited three-engine comparison](./evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html)
   Same-scenario synthesis across CUBRID, PostgreSQL, and InnoDB with explicit `equivalent`, `partial analogy`, and `no equivalent` boundaries. Use after learning the CUBRID mechanism from the Canonical pages.
 
 ## Wisdom (Communities)

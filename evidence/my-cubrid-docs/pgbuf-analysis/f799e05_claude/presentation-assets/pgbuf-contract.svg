@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="410" viewBox="0 0 1120 410" role="img" aria-labelledby="title desc">
+  <title id="title">pgbuf_fix hit and miss paths converge on the same ownership contract</title>
+  <desc id="desc">A VPID and policy enter pgbuf_fix. A resident hit follows lock-free or hash lookup; a miss claims a BCB and loads the page. Both paths acquire a latch, update holder and fix accounting, and return a PAGE_PTR valid until unfix.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" x2="1"><stop stop-color="#123a52"/><stop offset="1" stop-color="#007c78"/></linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .box{fill:#fff;stroke:#cbd7dc;stroke-width:2}.accent{fill:url(#g);stroke:none}.hit{fill:#e8f5f3;stroke:#43a9a1;stroke-width:2}.miss{fill:#fff3df;stroke:#db9453;stroke-width:2}.t{font:700 20px Inter,Arial,sans-serif;fill:#173443}.s{font:15px Inter,Arial,sans-serif;fill:#526874}.w{fill:#fff}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect x="28" y="144" rx="18" width="185" height="112" class="accent"/>
+  <text x="120" y="185" text-anchor="middle" class="t w">VPID + policy</text>
+  <text x="120" y="216" text-anchor="middle" class="s w">fetch / latch / wait</text>
+  <path d="M213 200 H284" class="line"/>
+  <rect x="285" y="144" rx="18" width="170" height="112" class="box"/>
+  <text x="370" y="187" text-anchor="middle" class="t">Locate</text>
+  <text x="370" y="217" text-anchor="middle" class="s">resident?</text>
+  <path d="M455 180 C510 180 500 86 555 86" class="line"/>
+  <path d="M455 220 C510 220 500 314 555 314" class="line"/>
+  <text x="493" y="125" class="s">hit</text>
+  <text x="488" y="291" class="s">miss</text>
+  <rect x="556" y="32" rx="18" width="235" height="108" class="hit"/>
+  <text x="674" y="75" text-anchor="middle" class="t">Existing BCB</text>
+  <text x="674" y="105" text-anchor="middle" class="s">lock-free RO or hash chain</text>
+  <rect x="556" y="260" rx="18" width="235" height="108" class="miss"/>
+  <text x="674" y="303" text-anchor="middle" class="t">Claim + load BCB</text>
+  <text x="674" y="333" text-anchor="middle" class="s">victim / I/O / hash connect</text>
+  <path d="M791 86 C850 86 825 180 874 180" class="line"/>
+  <path d="M791 314 C850 314 825 220 874 220" class="line"/>
+  <rect x="875" y="128" rx="18" width="218" height="144" class="accent"/>
+  <text x="984" y="168" text-anchor="middle" class="t w">Ownership grant</text>
+  <text x="984" y="199" text-anchor="middle" class="s w">compatible latch</text>
+  <text x="984" y="224" text-anchor="middle" class="s w">holder + fix count</text>
+  <text x="984" y="249" text-anchor="middle" class="s w">PAGE_PTR → unfix</text>
+  <text x="560" y="397" class="s">Different residency work; identical success postcondition.</text>
+</svg>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="520" viewBox="0 0 1160 520" role="img" aria-labelledby="title desc">
+  <title id="title">Write latch, durable WAL, and data-page propagation are separate moments</title>
+  <desc id="desc">A write fix grants memory concurrency permission. Logging, page LSA, dirty marking, and durable commit WAL make a change recoverable. Later flush snapshots the page, forces WAL through the page LSA, writes via DWB or the data volume, and cleans only the written generation.</desc>
+  <defs>
+    <marker id="arrow-d" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#506875"/></marker>
+    <style>
+      .lane{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.b{fill:#fff;stroke:#8ca5af;stroke-width:2}.c{fill:#e8f5f3;stroke:#168d86;stroke-width:2}.w{fill:#fff3df;stroke:#cf7a2e;stroke-width:2}.d{fill:#edf1fb;stroke:#536eaf;stroke-width:2}.t{font:700 18px Inter,Arial,sans-serif;fill:#173443}.s{font:14px Inter,Arial,sans-serif;fill:#526874}.label{font:800 15px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.line{fill:none;stroke:#506875;stroke-width:2.5;marker-end:url(#arrow-d)}
+    </style>
+  </defs>
+  <rect x="20" y="22" width="1120" height="135" rx="20" class="lane"/>
+  <rect x="20" y="187" width="1120" height="135" rx="20" class="lane"/>
+  <rect x="20" y="352" width="1120" height="145" rx="20" class="lane"/>
+  <text x="45" y="51" class="label">CONCURRENCY</text>
+  <text x="45" y="216" class="label">RECOVERABILITY</text>
+  <text x="45" y="381" class="label">PAGE PROPAGATION</text>
+  <rect x="175" y="65" width="205" height="70" rx="14" class="c"/><text x="278" y="94" text-anchor="middle" class="t">WRITE fix</text><text x="278" y="119" text-anchor="middle" class="s">exclusive memory access</text>
+  <path d="M380 100H465" class="line"/>
+  <rect x="466" y="65" width="205" height="70" rx="14" class="b"/><text x="569" y="94" text-anchor="middle" class="t">Mutate bytes</text><text x="569" y="119" text-anchor="middle" class="s">while ownership is held</text>
+  <rect x="130" y="230" width="190" height="70" rx="14" class="w"/><text x="225" y="259" text-anchor="middle" class="t">Append log</text><text x="225" y="284" text-anchor="middle" class="s">associate page LSA</text>
+  <path d="M320 265H385" class="line"/>
+  <rect x="386" y="230" width="165" height="70" rx="14" class="w"/><text x="469" y="259" text-anchor="middle" class="t">Mark DIRTY</text><text x="469" y="284" text-anchor="middle" class="s">needs propagation</text>
+  <path d="M551 265H616" class="line"/>
+  <rect x="617" y="230" width="250" height="70" rx="14" class="c"/><text x="742" y="259" text-anchor="middle" class="t">Commit WAL durable</text><text x="742" y="284" text-anchor="middle" class="s">redo can reconstruct page</text>
+  <text x="900" y="258" class="t">Transaction durable</text><text x="900" y="284" class="s">data page may still be dirty</text>
+  <path d="M867 265H890" class="line"/>
+  <rect x="90" y="401" width="185" height="70" rx="14" class="d"/><text x="183" y="430" text-anchor="middle" class="t">Snapshot generation</text><text x="183" y="455" text-anchor="middle" class="s">FLUSHING + re-dirty split</text>
+  <path d="M275 436H335" class="line"/>
+  <rect x="336" y="401" width="190" height="70" rx="14" class="w"/><text x="431" y="430" text-anchor="middle" class="t">Force WAL</text><text x="431" y="455" text-anchor="middle" class="s">through snapshot page LSA</text>
+  <path d="M526 436H586" class="line"/>
+  <rect x="587" y="401" width="205" height="70" rx="14" class="d"/><text x="690" y="430" text-anchor="middle" class="t">DWB / data write</text><text x="690" y="455" text-anchor="middle" class="s">persist page image</text>
+  <path d="M792 436H852" class="line"/>
+  <rect x="853" y="401" width="215" height="70" rx="14" class="c"/><text x="961" y="430" text-anchor="middle" class="t">Complete generation</text><text x="961" y="455" text-anchor="middle" class="s">clean or preserve re-dirty</text>
+  <path d="M569 135V180C569 202 469 202 469 226" class="line"/>
+  <path d="M469 300V340C469 370 183 370 183 397" class="line"/>
+</svg>

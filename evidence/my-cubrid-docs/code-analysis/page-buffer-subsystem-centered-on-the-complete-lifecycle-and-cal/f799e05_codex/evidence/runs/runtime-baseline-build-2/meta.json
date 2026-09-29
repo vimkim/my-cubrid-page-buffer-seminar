@@ -1,0 +1,87 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "just",
+    "build"
+  ],
+  "bound_files": [],
+  "build_receipt": {
+    "cmake_cache": {
+      "install_prefix": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc",
+      "path": "evidence/runs/runtime-baseline-build-2/CMakeCache.txt",
+      "sha256": "23ce2a3e2cb6e2e8086a783330fffa4f09e2a492ba23ea518bc741f1625be6e9",
+      "source_root": "/home/vimkim/gh/cb/pgbuf-analysis"
+    },
+    "environment": {
+      "CUBRID": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc",
+      "CUBRID_BUILD_DIR": "/home/vimkim/gh/cb/pgbuf-analysis/build_preset_debug_gcc",
+      "CUBRID_DATABASES": "/home/vimkim/.cub/db/pgbuf-analysis/commondb",
+      "PRESET_MODE": "debug_gcc"
+    },
+    "install_identity": {
+      "release_identity": {
+        "exit": 0,
+        "output": "CUBRID 11.5.0 (11.5.0.2397-f799e05) (64bit debug build for Linux) (Aug 28 2026 16:17:27)",
+        "path": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/cubrid_rel",
+        "sha256": "4a1300e46e19adf69ff1dabbb9a64f389ea05fbbdda8197046d822e9c7275779"
+      },
+      "tools": {
+        "csql": {
+          "path": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/csql",
+          "sha256": "35ce6c42dcc93cff2a3977875c7f84cd153cea2b5ef6403cda9f157685756842"
+        },
+        "cub_server": {
+          "path": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/cub_server",
+          "sha256": "d4a2a773c6f76ee7313dfdc65a8c84756b31588f794c93849aa96527db705a46"
+        },
+        "cubrid": {
+          "path": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/cubrid",
+          "sha256": "cba84279e3e1eb0339ac6de3aa7af4db1aec49a3ee7d3353b2ac4c70f29ee345"
+        }
+      }
+    },
+    "source_after": {
+      "cached_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diff_sha256": "3f3e8df89882050c7e774209111200c1f62adbdb3e25d4ecb6484d3e7ed0f202",
+      "head": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "root": "/home/vimkim/gh/cb/pgbuf-analysis",
+      "status_sha256": "95343c7f9967014240e9f1bb6fd5320a10f834ab09caa4ea52076c5303a0ad6b"
+    },
+    "source_before": {
+      "cached_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diff_sha256": "3f3e8df89882050c7e774209111200c1f62adbdb3e25d4ecb6484d3e7ed0f202",
+      "head": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "root": "/home/vimkim/gh/cb/pgbuf-analysis",
+      "status_sha256": "95343c7f9967014240e9f1bb6fd5320a10f834ab09caa4ea52076c5303a0ad6b"
+    },
+    "source_snapshots": {
+      "index.diff": {
+        "path": "evidence/runs/runtime-baseline-build-2/source-index.diff",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "status.porcelain-v1.z": {
+        "path": "evidence/runs/runtime-baseline-build-2/source-status.porcelain-v1.z",
+        "sha256": "95343c7f9967014240e9f1bb6fd5320a10f834ab09caa4ea52076c5303a0ad6b"
+      },
+      "worktree.diff": {
+        "path": "evidence/runs/runtime-baseline-build-2/source-worktree.diff",
+        "sha256": "3f3e8df89882050c7e774209111200c1f62adbdb3e25d4ecb6484d3e7ed0f202"
+      }
+    },
+    "source_unchanged": true,
+    "worktree_environment_sha256": "ad0176413410235a3f8efdac2d02c8fb637a735deedd24ec1bc308c09348518b"
+  },
+  "cwd": "/home/vimkim/gh/cb/pgbuf-analysis",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-08-28T07:28:16.845021+00:00",
+  "id": "runtime-baseline-build-2",
+  "kind": "build",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "ad0176413410235a3f8efdac2d02c8fb637a735deedd24ec1bc308c09348518b",
+  "runtime_tools_snapshot": "",
+  "schema_version": 1,
+  "started_at_utc": "2026-08-28T07:28:15.246783+00:00",
+  "stderr_sha256": "f6772848fd1e39913c4dfd92120b0e49311c957bc63ca374ac2e0ba8db09e7b9",
+  "stdout_sha256": "2bbf730ef26306b87de48f4ce074d5d44a5194cd2d4ed08c1a848f15b350c332"
+}

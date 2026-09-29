@@ -1,0 +1,42 @@
+
+Time: 08/28/26 16:44:59.193 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/boot_cl.c, line 1682
+trying to connect 'ca_pgbuf_f799e05@localhost'
+
+Time: 08/28/26 16:44:59.194 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/boot_cl.c, line 1704
+ping server with handshake
+
+Time: 08/28/26 16:44:59.194 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/boot_cl.c, line 875  CODE = -971, Tran = -1, EID = 1
+Program '/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/csql' (pid 607616) connected to database server 'ca_pgbuf_f799e05' on the host 'localhost' (port 1523).
+
+Time: 08/28/26 16:44:59.194 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/boot_cl.c, line 1217
+boot_restart_client: register client { type 2 db ca_pgbuf_f799e05 user dba password **** program /home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/csql login vimkim host dev2 pid 607616 }
+
+Time: 08/28/26 16:44:59.205 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/communication/network_interface_cl.c, line 7295
+qmgr_execute_query requested: EXECUTION_WITH_AUTOCOMMIT
+
+Time: 08/28/26 16:44:59.210 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/communication/network_interface_cl.c, line 7295
+qmgr_execute_query requested: EXECUTION_WITH_AUTOCOMMIT
+
+Time: 08/28/26 16:45:01.397 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/communication/network_interface_cl.c, line 7295
+qmgr_execute_query requested: EXECUTION_WITH_AUTOCOMMIT
+
+Time: 09/01/26 14:11:28.367 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/boot_cl.c, line 1682
+trying to connect 'ca_pgbuf_f799e05@localhost'
+
+Time: 09/01/26 14:11:28.368 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/boot_cl.c, line 1704
+ping server with handshake
+
+Time: 09/01/26 14:11:28.368 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/boot_cl.c, line 875  CODE = -971, Tran = -1, EID = 1
+Program '/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql' (pid 1687006) connected to database server 'ca_pgbuf_f799e05' on the host 'localhost' (port 1523).
+
+Time: 09/01/26 14:11:28.369 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/boot_cl.c, line 1217
+boot_restart_client: register client { type 2 db ca_pgbuf_f799e05 user dba password **** program /home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql login vimkim host dev2 pid 1687006 }
+
+Time: 09/01/26 14:11:28.380 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/communication/network_interface_cl.c, line 7295
+qmgr_execute_query requested: EXECUTION_WITH_AUTOCOMMIT
+
+Time: 09/01/26 14:11:28.385 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/communication/network_interface_cl.c, line 7295
+qmgr_execute_query requested: EXECUTION_WITH_AUTOCOMMIT
+
+Time: 09/01/26 14:11:30.932 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/communication/network_interface_cl.c, line 7295
+qmgr_execute_query requested: EXECUTION_WITH_AUTOCOMMIT

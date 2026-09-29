@@ -1,0 +1,21 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "just",
+    "build"
+  ],
+  "bound_files": [],
+  "cwd": "/home/vimkim/gh/cb/pgbuf-grill",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-09-01T05:09:43.401972+00:00",
+  "id": "runtime-grill-build-3",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "",
+  "runtime_tools_snapshot": "",
+  "schema_version": 1,
+  "started_at_utc": "2026-09-01T05:09:41.909796+00:00",
+  "stderr_sha256": "a2ba05fe5fbcbebaf091efe2e2bbd42d9cce1537a3faa0775d2eb451180b2575",
+  "stdout_sha256": "476613ebfc9ec61e6bbae644825ee00816c680b76780013ad7f6df00fcf202f5"
+}

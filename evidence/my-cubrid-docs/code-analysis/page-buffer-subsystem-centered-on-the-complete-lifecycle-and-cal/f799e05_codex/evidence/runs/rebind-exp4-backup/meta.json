@@ -1,0 +1,26 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/cubrid",
+    "backupdb",
+    "-D",
+    "/tmp/pgbuf-rebind.aEyO1f/backup",
+    "-C",
+    "-r",
+    "ca_pgbuf_f799e05"
+  ],
+  "bound_files": [],
+  "cwd": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-09-01T05:12:03.428217+00:00",
+  "id": "rebind-exp4-backup",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "0c23b2fc0885fcd36bb87c7b7fa105876300e298e72ceb095d77beb59946032f",
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "schema_version": 1,
+  "started_at_utc": "2026-09-01T05:12:01.428941+00:00",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "bd318dbf533eb1703ba94fa68eaa49f410aa2717c41f0f3bf0eec2c8dad28b84"
+}

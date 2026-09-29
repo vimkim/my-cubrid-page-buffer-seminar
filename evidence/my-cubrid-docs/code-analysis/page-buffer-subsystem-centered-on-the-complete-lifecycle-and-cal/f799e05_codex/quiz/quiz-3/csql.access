@@ -1,0 +1,12 @@
+
+Time: 08/28/26 17:25:09.765 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/boot_sr.c, line 3303  CODE = -972, Tran = -1, EID = 4
+Program '/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/csql' (pid 807107) was connected from the host 'dev2'. (transaction index 1)
+
+*** The previous error message is the last one. ***
+
+
+Time: 09/01/26 14:13:15.105 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/boot_sr.c, line 3303  CODE = -972, Tran = -1, EID = 4
+Program '/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql' (pid 1698719) was connected from the host 'dev2'. (transaction index 1)
+
+*** The previous error message is the last one. ***
+

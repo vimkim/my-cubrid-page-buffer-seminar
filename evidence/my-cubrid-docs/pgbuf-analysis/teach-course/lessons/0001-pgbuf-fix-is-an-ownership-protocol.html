@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0001 — pgbuf_fix() is an ownership protocol</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script defer src="../assets/retrieval.js"></script>
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID PAGE BUFFER · LESSON 0001</span><span>8–12 min · explain + retrieve</span></div>
+  <header class="hero">
+    <div class="eyebrow">Your first presentation win</div>
+    <h1><code>pgbuf_fix()</code> is an ownership protocol</h1>
+    <p>이 수업이 끝나면 “page를 메모리에서 찾는 함수입니다”보다 강한 30초 답변을 만들고, hit/miss 양쪽을 하나의 contract로 설명할 수 있다.</p>
+    <div class="meta-row"><span class="pill">Identity</span><span class="pill">Residency</span><span class="pill">Latch</span><span class="pill">Holder</span><span class="pill">Unfix</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="wrong-abstraction">
+        <div class="eyebrow">01 · Reframe</div>
+        <h2>“Get page”는 절반만 맞다</h2>
+        <p class="lede">호출자는 논리 주소인 <code>VPID</code>와 접근 정책을 넘긴다. 성공하면 byte pointer만 얻는 것이 아니라, 해당 frame을 안전하게 사용할 수 있는 <em>시간 제한 소유권</em>을 얻는다.</p>
+        <p class="big-claim"><code>pgbuf_fix()</code>는 page identity를 resident frame에 결속하고, latch와 fix ownership을 부여한 뒤, 그 권리가 기록된 상태에서만 <code>PAGE_PTR</code>를 반환한다.</p>
+        <div class="callout warn"><strong>발표 함정:</strong> <code>PAGE_PTR</code> 자체가 독립적인 ownership token은 아니다. 실제 protocol state는 BCB의 atomic latch/fix count와 thread holder 쪽에 추적된다. pointer는 그 계약 아래에서 쓰는 접근 수단이다.</div>
+        <p class="source-note">Evidence: <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:2246–2516</code></a>; public macro boundary: <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h"><code>page_buffer.h:275–330</code></a>.</p>
+      </section>
+
+      <section class="section" id="convergence">
+        <div class="eyebrow">02 · One contract, two residency paths</div>
+        <h2>Hit와 miss의 차이는 준비 작업이다</h2>
+        <img class="diagram" src="../assets/pgbuf-contract.svg" alt="The resident hit and buffer miss paths converge on an ownership grant">
+        <p class="caption">찾는 방법은 다르지만 성공의 의미는 같다.</p>
+        <div class="cards">
+          <div class="card"><span class="number">1</span><h3>Locate</h3><p>READ 조건이 맞으면 lock-free read fast path를 먼저 시도하고, 아니면 buffer hash에서 BCB를 찾는다.</p></div>
+          <div class="card"><span class="number">2</span><h3>Materialize</h3><p>miss이면 victim/replacement와 I/O가 포함될 수 있는 BCB claim/load 경로를 탄다.</p></div>
+          <div class="card"><span class="number">3</span><h3>Grant</h3><p>올바른 page인지 검증하고 compatible latch와 holder/fix accounting을 만든 뒤 반환한다.</p></div>
+        </div>
+        <p class="source-note">Evidence: lock-free attempt <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>2362–2376</code></a>; hash/miss split <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>2380–2439</code></a>; latch grant <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>2485–2516</code></a>.</p>
+      </section>
+
+      <section class="section" id="postcondition">
+        <div class="eyebrow">03 · The sentence to defend</div>
+        <h2>성공 반환 시 무엇이 참인가?</h2>
+        <table>
+          <thead><tr><th>축</th><th>성공 postcondition</th><th>왜 필요한가</th></tr></thead>
+          <tbody>
+            <tr><td>Identity</td><td><code>VPID</code>가 BCB/frame의 page와 일치한다.</td><td>잘못 재사용된 frame을 읽지 않는다.</td></tr>
+            <tr><td>Residency</td><td>page가 buffer frame에 있고 반환 pointer로 접근 가능하다.</td><td>disk identity를 memory address로 바꾼다.</td></tr>
+            <tr><td>Concurrency</td><td>요청한 READ/WRITE access와 호환되는 latch가 부여됐다.</td><td>동시 접근의 허용 범위를 정한다.</td></tr>
+            <tr><td>Ownership</td><td>thread holder와 global fix accounting이 이 보유를 추적한다.</td><td>release와 replacement safety를 연결한다.</td></tr>
+            <tr><td>Lifetime</td><td>caller는 matching <code>pgbuf_unfix()</code>까지 계약을 유지한다.</td><td>frame이 사용 중 재활용되는 것을 막는다.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>중요한 경계:</strong> durability는 이 성공 조건에 들어가지 않는다. 수정 경로는 별도로 logging, page LSA, dirty marking, WAL-before-data flush 규칙을 지켜야 한다. 따라서 “WRITE fix를 했으니 crash-safe하다”는 답은 틀리다.</div>
+      </section>
+
+      <section class="section" id="release">
+        <div class="eyebrow">04 · Close the lifetime</div>
+        <h2><code>unfix()</code>가 계약을 닫는다</h2>
+        <pre><code>PAGE_PTR pg = pgbuf_fix (...);
+if (pg == NULL) { /* fetch/latch failure policy */ }
+
+/* read or modify only within the granted latch contract */
+
+pgbuf_unfix (thread_p, pg);  /* release exactly this acquisition */</code></pre>
+        <p><code>pgbuf_unfix()</code>는 page pointer에서 BCB를 되찾고, thread holder를 줄이며, fast read라면 lock-free release를 시도하고, 아니라면 BCB latch/fix accounting을 갱신한다. 마지막 보유가 사라지면 그 frame은 <em>replacement 대상이 될 수 있지만</em>, unfix가 즉시 eviction이나 disk write를 명령하는 것은 아니다.</p>
+        <p class="source-note">Evidence: <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:3062–3203</code></a>. The source comment states the page becomes subject to replacement if no other thread fixes it.</p>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">05 · Retrieval practice</div>
+        <h2>소스를 닫고 30초 답변을 써라</h2>
+        <div class="quiz" data-retrieval data-concepts='[{"label":"logical identity (VPID)","terms":["vpid","identity","논리"]},{"label":"resident BCB/frame", "terms":["bcb","frame","resident","버퍼"]},{"label":"compatible latch", "terms":["latch","래치","read","write"]},{"label":"holder/fix accounting", "terms":["holder","fcnt","fix count","account","소유"]},{"label":"matching unfix lifetime", "terms":["unfix","release","해제","lifetime"]}]'>
+          <h3>Question</h3>
+          <p>“<code>pgbuf_fix()</code>가 단순 page lookup이 아닌 이유와 성공 시 보장되는 것을 설명해 보세요.”</p>
+          <p><strong>Model / recommended answer:</strong> <code>pgbuf_fix()</code>는 <code>VPID</code>라는 logical identity를 resident BCB/frame에 연결하고, 요청과 호환되는 latch를 획득하며, thread holder와 global fix count에 ownership을 기록한 뒤 <code>PAGE_PTR</code>를 반환한다. 따라서 반환 pointer는 matching <code>pgbuf_unfix()</code>까지 그 contract 아래에서만 유효하다. 다만 fix 자체가 logging이나 durability를 보장하지는 않는다.</p>
+          <p><strong>Your task:</strong> 위 답을 복사하지 말고, 각 보장이 빠지면 어떤 failure가 가능한지 자신의 말로 설명하세요.</p>
+          <textarea aria-label="Your 30-second explanation" placeholder="Memory only—do not copy the model sentence."></textarea>
+          <button type="button" data-check>Check contract coverage</button>
+          <button type="button" class="secondary" data-reveal>Reveal model spine</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>자동 점검은 단어 포함 여부만 보는 얕은 feedback이다. 진짜 mastery check는 답을 이 채팅에 붙여 넣는 것이다. 그러면 정확성, 빠진 invariant, 위험한 표현을 공격적으로 검토한다.</p>
+      </section>
+
+      <section class="section" id="next">
+        <div class="eyebrow">Continue</div>
+        <div class="next">
+          <div><h2>다음: 입력 5개가 정책을 어떻게 바꾸는가</h2><p>먼저 오늘 답변으로 baseline을 세운 뒤, <code>fetch_mode × latch_mode × condition</code>을 interleave한다.</p></div>
+          <a href="../reference/pgbuf-fix-contract.html">Open the contract card →</a>
+        </div>
+        <div class="callout"><strong>Primary reading:</strong> 전체 함수부터 읽지 말고 <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:2246–2516</code></a>의 outer spine만 읽어라. 상세 latch CAS는 오늘의 working-memory budget 밖이다. 전체 맥락이 필요하면 <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/04-fix-lookup-load.html">offline book chapter 4</a>를 연다.</div>
+        <p><a href="0002-write-latch-is-not-durability.html">Continue to Lesson 0002: WRITE latch is not durability →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#wrong-abstraction">1. Reframe “get page”</a>
+      <a href="#convergence">2. Hit / miss converge</a>
+      <a href="#postcondition">3. Success postcondition</a>
+      <a href="#release">4. Close with unfix</a>
+      <a href="#retrieval">5. Retrieval practice</a>
+      <a href="#next">Primary reading</a>
+      <hr>
+      <a href="../reference/pgbuf-fix-contract.html">Contract reference card</a>
+      <a href="../reference/pgbuf-question-bank.html">38-question model-answer bank</a>
+      <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html">Full offline book</a>
+    </nav>
+  </div>
+  <footer class="footer">Questions are part of the lesson. Ask the teaching agent about any transition you cannot defend from source.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "experiment-1",
+  "behavior_ids": [
+    "fix-lookup-load"
+  ],
+  "claim_ids": [
+    "CUBRID-C005"
+  ],
+  "oracle_ko": "cold 첫 scan의 ioread가 양수이고 즉시 반복 scan은 0이며 결과 checksum이 같다.",
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "cleanup_verified": true,
+  "runner": "experiment.sql",
+  "runner_sha256": "fe6296928a1f4333475b62aa40d623c73c8301bca25d197a809d82ddd18d2435",
+  "runner_argv": [
+    "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql",
+    "-u",
+    "dba",
+    "ca_pgbuf_f799e05",
+    "-i",
+    "experiment.sql"
+  ],
+  "run_ids": [
+    "rebind-exp1"
+  ],
+  "repetitions": 1,
+  "controls_ko": "owned DB 정상 재시작을 cold control로, 즉시 동일 query를 warm control로 사용했다.",
+  "alternative_explanations_ko": "OS page cache, catalog page, prefetch와 background activity는 exact count에 영향을 줄 수 있다."
+}

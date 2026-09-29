@@ -1,0 +1,21 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "/usr/bin/bash",
+    "stop-suite.sh"
+  ],
+  "bound_files": [],
+  "cwd": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-08-28T08:24:16.768541+00:00",
+  "id": "quiz-runtime-stop",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "a16a6bf59f0551b472ff7d939c96f000e6d221aec92362454f657676dcb63ac5",
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "schema_version": 1,
+  "started_at_utc": "2026-08-28T08:24:10.656288+00:00",
+  "stderr_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166",
+  "stdout_sha256": "c2af6436d24062f6816a5fe0428d2c832f2a58e12d4dc4ab9818b826641f65f0"
+}

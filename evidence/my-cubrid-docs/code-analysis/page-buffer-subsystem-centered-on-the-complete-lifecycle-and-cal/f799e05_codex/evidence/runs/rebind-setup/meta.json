@@ -1,0 +1,32 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql",
+    "-S",
+    "-u",
+    "dba",
+    "ca_pgbuf_f799e05",
+    "-i",
+    "setup.sql"
+  ],
+  "bound_files": [
+    {
+      "after_sha256": "185a599804a12fd60386cb16039c33069819b23e1535c051f76f5ce77628eec3",
+      "before_sha256": "185a599804a12fd60386cb16039c33069819b23e1535c051f76f5ce77628eec3",
+      "path": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/setup.sql"
+    }
+  ],
+  "cwd": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-09-01T05:11:05.704883+00:00",
+  "id": "rebind-setup",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "0c23b2fc0885fcd36bb87c7b7fa105876300e298e72ceb095d77beb59946032f",
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "schema_version": 1,
+  "started_at_utc": "2026-09-01T05:10:58.419466+00:00",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "c9c314c64ed58e2a699ade44044b5b8c883bf2fa57bb968d7e3b4e8a174be8c3"
+}

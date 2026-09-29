@@ -1,0 +1,374 @@
+{
+  "central_behaviors": [
+    {
+      "id": "fix-lookup-load",
+      "name_ko": "page fix의 lookup, hit, miss, load 흐름",
+      "claim_ids": [
+        "CUBRID-C001",
+        "CUBRID-C005",
+        "PG-C001",
+        "MYSQL-C001",
+        "CMP-C001"
+      ],
+      "coverage_ids": [
+        "data-ownership-lifetime",
+        "core-workflows",
+        "policies-algorithms",
+        "errors-resource-pressure"
+      ],
+      "experiment_ids": [
+        "experiment-1"
+      ],
+      "quiz_ids": [
+        "quiz-1"
+      ],
+      "chapter": "chapters/04-fix-lookup-load.html",
+      "anchor": "fix-lookup-load",
+      "grill_concepts": [
+        "data-ownership-lifetime",
+        "lifecycle-state-machines"
+      ]
+    },
+    {
+      "id": "latch-holder-unfix",
+      "name_ko": "latch, holder, wait와 unfix 생명주기",
+      "claim_ids": [
+        "CUBRID-C002",
+        "CUBRID-C006",
+        "PG-C002",
+        "MYSQL-C002",
+        "CMP-C002"
+      ],
+      "coverage_ids": [
+        "concurrency",
+        "lifecycle-state-machines",
+        "errors-resource-pressure"
+      ],
+      "experiment_ids": [
+        "experiment-2"
+      ],
+      "quiz_ids": [
+        "quiz-2"
+      ],
+      "chapter": "chapters/05-latch-holder-unfix.html",
+      "anchor": "latch-holder-unfix",
+      "grill_concepts": [
+        "concurrency"
+      ]
+    },
+    {
+      "id": "caller-contracts",
+      "name_ko": "heap, B-tree, recovery caller의 page buffer 계약",
+      "claim_ids": [
+        "CUBRID-C003",
+        "CUBRID-C007",
+        "PG-C003",
+        "MYSQL-C003",
+        "CMP-C003"
+      ],
+      "coverage_ids": [
+        "scope-interface-seams",
+        "core-workflows",
+        "errors-resource-pressure"
+      ],
+      "experiment_ids": [
+        "experiment-3"
+      ],
+      "quiz_ids": [
+        "quiz-3"
+      ],
+      "chapter": "chapters/06-caller-contracts.html",
+      "anchor": "caller-contracts",
+      "grill_concepts": [
+        "scope-interface-seams",
+        "experiment-interpretation"
+      ]
+    },
+    {
+      "id": "dirty-wal-flush-replace",
+      "name_ko": "dirty page의 WAL, flush, replacement 흐름",
+      "claim_ids": [
+        "CUBRID-C004",
+        "CUBRID-C008",
+        "PG-C004",
+        "MYSQL-C004",
+        "CMP-C004"
+      ],
+      "coverage_ids": [
+        "storage-durability-recovery",
+        "policies-algorithms",
+        "performance-observability"
+      ],
+      "experiment_ids": [
+        "experiment-4"
+      ],
+      "quiz_ids": [
+        "quiz-4"
+      ],
+      "chapter": "chapters/07-dirty-wal-flush-replace.html",
+      "anchor": "dirty-wal-flush-replace",
+      "grill_concepts": [
+        "durability-recovery-failures",
+        "policy-performance",
+        "cross-database-non-equivalence"
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "anchor": "orientation",
+      "chapter": "chapters/01-orientation.html",
+      "claim_ids": [
+        "CUBRID-C001"
+      ],
+      "id": "orientation",
+      "rationale_ko": "고정 provenance와 public contract를 같은 anchor에서 확인한다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "data-contract",
+      "chapter": "chapters/11-contract-evidence.html",
+      "claim_ids": [
+        "CUBRID-C001",
+        "CUBRID-C002",
+        "CUBRID-C004"
+      ],
+      "id": "mental-model",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "caller-contracts",
+      "chapter": "chapters/06-caller-contracts.html",
+      "claim_ids": [
+        "CUBRID-C003",
+        "CUBRID-C007"
+      ],
+      "id": "scope-interface-seams",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "mental-model",
+      "chapter": "chapters/01-orientation.html",
+      "claim_ids": [
+        "CUBRID-C002"
+      ],
+      "id": "data-ownership-lifetime",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "lifecycle-contract",
+      "chapter": "chapters/11-contract-evidence.html",
+      "claim_ids": [
+        "CUBRID-C009"
+      ],
+      "id": "lifecycle-state-machines",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "fix-lookup-load",
+      "chapter": "chapters/04-fix-lookup-load.html",
+      "claim_ids": [
+        "CUBRID-C001",
+        "CUBRID-C005"
+      ],
+      "id": "core-workflows",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "latch-holder-unfix",
+      "chapter": "chapters/05-latch-holder-unfix.html",
+      "claim_ids": [
+        "CUBRID-C002",
+        "CUBRID-C006",
+        "CUBRID-C011",
+        "CUBRID-C012"
+      ],
+      "id": "concurrency",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "dirty-wal-flush-replace",
+      "chapter": "chapters/07-dirty-wal-flush-replace.html",
+      "claim_ids": [
+        "CUBRID-C004",
+        "CUBRID-C008"
+      ],
+      "id": "storage-durability-recovery",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "replacement",
+      "chapter": "chapters/07-dirty-wal-flush-replace.html",
+      "claim_ids": [
+        "CUBRID-C004"
+      ],
+      "id": "policies-algorithms",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "error-contract",
+      "chapter": "chapters/11-contract-evidence.html",
+      "claim_ids": [
+        "CUBRID-C001",
+        "CUBRID-C002",
+        "CUBRID-C010",
+        "CUBRID-C012"
+      ],
+      "id": "errors-resource-pressure",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "performance-contract",
+      "chapter": "chapters/11-contract-evidence.html",
+      "claim_ids": [
+        "CUBRID-C005",
+        "CUBRID-C006",
+        "CUBRID-C007",
+        "CUBRID-C008"
+      ],
+      "id": "performance-observability",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "experiment-transcript",
+      "chapter": "chapters/11-contract-evidence.html",
+      "claim_ids": [
+        "CUBRID-C005",
+        "CUBRID-C006",
+        "CUBRID-C007",
+        "CUBRID-C008"
+      ],
+      "id": "experimental-validation",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "postgresql",
+      "chapter": "chapters/09-comparison.html",
+      "claim_ids": [
+        "PG-C001",
+        "PG-C002",
+        "PG-C003",
+        "PG-C004"
+      ],
+      "id": "postgresql-analysis",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "mysql",
+      "chapter": "chapters/09-comparison.html",
+      "claim_ids": [
+        "MYSQL-C001",
+        "MYSQL-C002",
+        "MYSQL-C003",
+        "MYSQL-C004"
+      ],
+      "id": "mysql-analysis",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "cross-database-comparison",
+      "chapter": "chapters/09-comparison.html",
+      "claim_ids": [
+        "CMP-C001",
+        "CMP-C002",
+        "CMP-C003",
+        "CMP-C004",
+        "CMP-C005",
+        "CMP-C006",
+        "CMP-C007",
+        "CMP-C008",
+        "CMP-C009",
+        "CMP-C010"
+      ],
+      "id": "cross-database-comparison",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "blueprint",
+      "chapter": "chapters/10-blueprint.html",
+      "claim_ids": [
+        "CUBRID-C001",
+        "CUBRID-C003",
+        "CUBRID-C004",
+        "CUBRID-C009",
+        "CUBRID-C010",
+        "CUBRID-C011",
+        "CUBRID-C012"
+      ],
+      "id": "reimplementation-blueprint",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "glossary",
+      "chapter": "chapters/10-blueprint.html",
+      "claim_ids": [
+        "CUBRID-C001",
+        "CUBRID-C002",
+        "CUBRID-C009",
+        "CUBRID-C010",
+        "CUBRID-C011",
+        "CUBRID-C012"
+      ],
+      "id": "glossary-evidence-unknowns",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    },
+    {
+      "anchor": "teaching-map",
+      "chapter": "chapters/10-blueprint.html",
+      "claim_ids": [
+        "CUBRID-C001",
+        "CUBRID-C002",
+        "CUBRID-C003",
+        "CUBRID-C004",
+        "CUBRID-C005",
+        "CUBRID-C006",
+        "CUBRID-C007",
+        "CUBRID-C008"
+      ],
+      "id": "teaching-map",
+      "rationale_ko": "고정 source claim과 해당 chapter의 causal explanation으로 범위 내에서 다룬다.",
+      "status": "covered"
+    }
+  ],
+  "instrumentation": {
+    "markers": [],
+    "post_clean_build_run_id": null,
+    "status": "not-used",
+    "target_files": []
+  },
+  "readiness": "READY WITHIN DECLARED SCOPE",
+  "runtime": {
+    "active_tools_snapshot": "evidence/runtime-tools-baseline.json",
+    "baseline_tools_snapshot": "evidence/runtime-tools-baseline.json",
+    "runtime_build_run_id": "runtime-grill-build-4"
+  },
+  "runtime_run_ids": [
+    "rebind-exp1",
+    "rebind-exp2",
+    "rebind-exp3",
+    "rebind-exp4"
+  ],
+  "schema_version": 1,
+  "scope": {
+    "frozen": true,
+    "path": "research/scope.md",
+    "sha256": "77a1a4741a884d8946d86ce645469a71a3b322bd86d2ee0f3bdf64d99e486ca3"
+  },
+  "status": "REPORT_READY"
+}

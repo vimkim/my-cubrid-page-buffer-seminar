@@ -14,12 +14,12 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 
 | Source set | Input | Expected items |
 |---|---|---:|
-| `TEACH` | [Progressive teaching bank](../../../pgbuf-analysis/teach-course/reference/pgbuf-question-bank.md) | 38 |
-| `ADV` | [Adversarial questions](../../../pgbuf-analysis/f799e05_claude/analysis/research/qa-questions.md) and [paired answers](../../../pgbuf-analysis/f799e05_claude/analysis/research/qa-answers.md) | 55 |
-| `HIST` | [Historical workbook](../../../pgbuf-analysis/e6ed61e_claude/07-qa-workbook.md) | 24 |
-| `PLAN` | [Experiment and quiz design packet](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md) | 27 |
-| `EXEC` | [Executed quiz tree](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/) | 17 |
-| `GRILL` | [Live-grill seeds](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md) | 12 |
+| `TEACH` | [Progressive teaching bank](../evidence/my-cubrid-docs/pgbuf-analysis/teach-course/reference/pgbuf-question-bank.md) | 38 |
+| `ADV` | [Adversarial questions](../evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/qa-questions.md) and [paired answers](../evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/qa-answers.md) | 55 |
+| `HIST` | [Historical workbook](../evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/07-qa-workbook.md) | 24 |
+| `PLAN` | [Experiment and quiz design packet](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md) | 27 |
+| `EXEC` | [Executed quiz tree](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/) | 17 |
+| `GRILL` | [Live-grill seeds](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md) | 12 |
 | `READER` | [Unedited Reader question intake](../questions-b4179ee/questions.md) | 16 |
 | `READER2` | [Unedited second reader pass](../questions-4fe4e7e/questions.md), recorded by an agent standing in for the reader after the first intake was folded into the guide | 7 |
 
@@ -60,9 +60,9 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `TEACH` | `TEACH-31` | Progress under pressure | Rewritten | PGBUF-QB-040 | Deferred to Advanced allocation and victim progress. |
 | `TEACH` | `TEACH-32` | Hit-rate evidence limits | Rewritten | PGBUF-QB-064 | Converted to a diagnostic evidence scenario. |
 | `TEACH` | `TEACH-33` | Counter increment sites | Rewritten | PGBUF-QB-065 | Converted to a metric-definition scenario. |
-| `TEACH` | `TEACH-34` | Cross-database ownership comparison | Excluded | — | Cross-database Canonical questions are outside the confirmed CUBRID-only scope; retain the separately pinned [comparison evidence](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
-| `TEACH` | `TEACH-35` | Cross-database fix comparison | Excluded | — | Existing [comparison evidence](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison) remains outside the Canonical bank. |
-| `TEACH` | `TEACH-36` | Cross-database durability comparison | Excluded | — | Would introduce separately pinned comparator baselines; retain the existing [comparison evidence](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
+| `TEACH` | `TEACH-34` | Cross-database ownership comparison | Excluded | — | Cross-database Canonical questions are outside the confirmed CUBRID-only scope; retain the separately pinned [comparison evidence](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
+| `TEACH` | `TEACH-35` | Cross-database fix comparison | Excluded | — | Existing [comparison evidence](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison) remains outside the Canonical bank. |
+| `TEACH` | `TEACH-36` | Cross-database durability comparison | Excluded | — | Would introduce separately pinned comparator baselines; retain the existing [comparison evidence](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
 | `TEACH` | `TEACH-37` | Reimplementation invariants | Rewritten | PGBUF-QB-030 | Reframed as a change-impact and proof packet. |
 | `TEACH` | `TEACH-38` | Complete page lifecycle explanation | Merged | PGBUF-QB-001, PGBUF-QB-005, PGBUF-QB-023, PGBUF-QB-028, PGBUF-QB-029 | Split across Canonical owners instead of recreating a monolithic answer. |
 | `READER` | `READER-01` | Why recheck VPID | Merged | PGBUF-QB-009 | Answered at the protected identity-transition boundary. |
@@ -139,10 +139,10 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `ADV` | `PGBUF-Q049` | Lock-free reuse race | Rewritten | PGBUF-QB-031, PGBUF-QB-060 | Split mechanism proof from the maintenance verification packet. |
 | `ADV` | `PGBUF-Q050` | Dead exported interface | Rewritten | PGBUF-QB-053 | Dedicated availability question. |
 | `ADV` | `PGBUF-Q051` | Deallocation diagnostic identity | Merged | PGBUF-QB-055, PGBUF-QB-061 | Kept revision-bound and routed to anomaly-promotion review. |
-| `ADV` | `PGBUF-Q052` | Cross-database ownership analogue | Excluded | — | Cross-database Canonical questions are outside the confirmed scope; retain the separately pinned [comparison evidence](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
+| `ADV` | `PGBUF-Q052` | Cross-database ownership analogue | Excluded | — | Cross-database Canonical questions are outside the confirmed scope; retain the separately pinned [comparison evidence](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
 | `ADV` | `PGBUF-Q053` | In-progress miss publication | Rewritten | PGBUF-QB-032 | Retained as a CUBRID-only publication-boundary trace. |
-| `ADV` | `PGBUF-Q054` | Cross-database replacement analogy | Excluded | — | Analogy requires separately pinned comparator baselines retained in the [comparison evidence](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
-| `ADV` | `PGBUF-Q055` | Cross-database durability comparison | Excluded | — | Local durability questions remain CUBRID-only; retain the separately pinned [comparison evidence](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
+| `ADV` | `PGBUF-Q054` | Cross-database replacement analogy | Excluded | — | Analogy requires separately pinned comparator baselines retained in the [comparison evidence](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
+| `ADV` | `PGBUF-Q055` | Cross-database durability comparison | Excluded | — | Local durability questions remain CUBRID-only; retain the separately pinned [comparison evidence](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
 | `HIST` | `HIST-01` | Module contract | Merged | PGBUF-QB-001 | Current Core boundary supersedes the older summary. |
 | `HIST` | `HIST-02` | PAGE_PTR reverse mapping | Merged | PGBUF-QB-003 | The Canonical object map owns reverse mapping and hash identity. |
 | `HIST` | `HIST-03` | Latch versus transaction lock | Merged | PGBUF-QB-013, PGBUF-QB-014 | Split ownership domain from compatibility choice. |
@@ -204,7 +204,7 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `PLAN` | `PLAN-23` | Concurrent re-dirty interleaving | Superseded | PGBUF-QB-028, PGBUF-QB-074 | Core owns G/G+1; exercise applies it. |
 | `PLAN` | `PLAN-24` | Victim restrictions diagram | Superseded | PGBUF-QB-029, PGBUF-QB-074 | Eligibility remains source-derived and unexecuted. |
 | `PLAN` | `PLAN-25` | Flush-failure dirty restoration | Merged | PGBUF-QB-055, PGBUF-QB-067 | Candidate status belongs to the registry and scenario route. |
-| `PLAN` | `PLAN-26` | Cross-database durability comparison | Excluded | — | Cross-database Canonical questions are outside the confirmed scope; retain the separately pinned [comparison evidence](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
+| `PLAN` | `PLAN-26` | Cross-database durability comparison | Excluded | — | Cross-database Canonical questions are outside the confirmed scope; retain the separately pinned [comparison evidence](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
 | `PLAN` | `PLAN-27` | Clean restart proof limit | Superseded | PGBUF-QB-070, PGBUF-QB-074 | Preserved as a boundary and risk-matched verification decision. |
 | `EXEC` | `EXEC-01` | Predict cold/warm direction | Retained | PGBUF-QB-071 | Executed Quiz 1 prompt is consolidated into one evidence card. |
 | `EXEC` | `EXEC-02` | Explain row versus ioread count | Merged | PGBUF-QB-071 | Same executed family and evidence boundary. |
@@ -222,7 +222,7 @@ This audit owns migration provenance; reader-facing prompts and answers do not r
 | `EXEC` | `EXEC-14` | WAL and DWB/direct sequence | Merged | PGBUF-QB-027, PGBUF-QB-074 | Core owns ordering; exercise bounds the receipt. |
 | `EXEC` | `EXEC-15` | Re-dirty after successful copy | Merged | PGBUF-QB-028, PGBUF-QB-074 | G/G+1 remains source-derived. |
 | `EXEC` | `EXEC-16` | Zero-fcnt victim counterexamples | Merged | PGBUF-QB-029, PGBUF-QB-074 | Actual eviction was not executed. |
-| `EXEC` | `EXEC-17` | Cross-database mechanism comparison | Excluded | — | Cross-database Canonical questions are outside the confirmed scope; retain the separately pinned [comparison evidence](../../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
+| `EXEC` | `EXEC-17` | Cross-database mechanism comparison | Excluded | — | Cross-database Canonical questions are outside the confirmed scope; retain the separately pinned [comparison evidence](../evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html#cross-database-comparison). |
 
 ## Authoring navigation
 

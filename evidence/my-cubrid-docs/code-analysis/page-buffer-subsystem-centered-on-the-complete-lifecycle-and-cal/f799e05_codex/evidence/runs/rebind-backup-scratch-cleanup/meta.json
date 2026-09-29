@@ -1,0 +1,21 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "/usr/bin/bash",
+    "/tmp/pgbuf-rebind-cleanup.sh"
+  ],
+  "bound_files": [],
+  "cwd": "/tmp",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-09-01T05:35:40.490317+00:00",
+  "id": "rebind-backup-scratch-cleanup",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "0c23b2fc0885fcd36bb87c7b7fa105876300e298e72ceb095d77beb59946032f",
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "schema_version": 1,
+  "started_at_utc": "2026-09-01T05:35:40.482599+00:00",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "d2c06e00ef7e835a7e1c46d7d964c02124636b5c9618736d1516afbe40e53be0"
+}

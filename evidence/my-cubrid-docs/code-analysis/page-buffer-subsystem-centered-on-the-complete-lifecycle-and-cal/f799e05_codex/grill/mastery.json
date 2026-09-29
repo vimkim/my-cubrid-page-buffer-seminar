@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "state": "WAIT_FOR_USER",
+  "concepts": {
+    "scope-interface-seams": "MASTERED",
+    "data-ownership-lifetime": "MASTERED",
+    "lifecycle-state-machines": "MASTERED",
+    "concurrency": "MASTERED",
+    "durability-recovery-failures": "MASTERED",
+    "policy-performance": "MASTERED",
+    "experiment-interpretation": "MASTERED",
+    "cross-database-non-equivalence": "NOT_STARTED"
+  },
+  "capstone": "NOT_STARTED",
+  "current": {
+    "concept": "cross-database-non-equivalence",
+    "attempt": 2,
+    "question_ko": "PostgreSQL backend가 한 buffer의 pointer lifetime은 유지하면서 page bytes를 읽는 짧은 구간만 보호하려면 pin과 content lock을 어떻게 사용하며, 각각 무엇을 보호합니까?",
+    "model_answer_ko": "먼저 pin을 유지해 buffer frame의 eviction/reuse를 막는다. Page bytes를 읽는 구간에만 shared content lock을 획득하고 읽은 뒤 lock을 해제하되 pin은 계속 보유할 수 있다. 마지막 pointer 사용이 끝날 때 pin을 release한다.",
+    "why_correct_ko": "Pin은 frame identity와 residency lifetime을 보호하고 content lock은 bytes의 concurrent consistency를 보호하므로 두 lifetime을 독립적으로 줄이거나 늘릴 수 있다.",
+    "assessment_mode": "MODEL_VISIBLE_CAUSAL_EXPLANATION",
+    "references": [
+      "chapters/09-comparison.html#cross-database-comparison"
+    ]
+  }
+}

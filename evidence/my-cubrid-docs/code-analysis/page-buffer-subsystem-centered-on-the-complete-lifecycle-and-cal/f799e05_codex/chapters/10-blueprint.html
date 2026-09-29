@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>10 Blueprint glossary teaching</title>
+<link rel="stylesheet" href="../assets/report.css">
+</head>
+<body>
+<nav class="book-nav"><a rel="prev" href="09-comparison.html">이전</a><a href="../index.html">목차</a><a rel="next" href="11-contract-evidence.html">다음</a></nav><main><h1>10. Source를 닫고 재구현·발표하기</h1>
+<section class="callout"><h2>학습 목표와 concrete scenario</h2>
+<p>완전한 Interface/ADT/transition/algorithm/error/recovery contract와 구현 순서를 제시한다.</p>
+<p><strong>질문:</strong> source를 닫은 채 duplicate residency, use-after-unfix, WAL violation과 lost re-dirty를 어떤 tests로 막을 것인가?</p>
+<p><strong>직관:</strong> 한 page journey를 identity, ownership, concurrency, durability, release 순서로 따라가며 각 abstraction을 exact state와 guard로 교체한다.</p></section><section id="blueprint" data-claim-id="CUBRID-C001 CUBRID-C003 CUBRID-C004 CUBRID-C009 CUBRID-C010 CUBRID-C011 CUBRID-C012"><h2>Reimplementation blueprint</h2>
+<ol>
+<li>
+<strong>Interface:</strong> logical PageId, fetch mode, read/write latch, conditionality, explicit borrowed handle/release.</li>
+<li>
+<strong>Single-thread:</strong> hash, BCB/frame identity generation, hit/miss/load validation, clean unfix.</li>
+<li>
+<strong>Concurrency:</strong> per-page miss ownership, pin/holder ledger, latch matrix, wait/retry, ordered multi-page acquisition.</li>
+<li>
+<strong>Durability:</strong> dirty generation, page LSN/oldest LSA, WAL gate, snapshot I/O, error rollback and concurrent re-dirty.</li>
+<li>
+<strong>Policy:</strong> eligibility predicate before LRU policy, background flush and no-victim progress.</li>
+<li>
+<strong>Conformance:</strong> duplicate-residency race, use-after-release assertion, conditional failure balance, WAL fault points, re-dirty test.</li>
+</ol>
+<div class="table-wrap"><table>
+<caption>최소 conformance oracle</caption>
+<thead><tr>
+<th>Invariant</th>
+<th>Test</th>
+<th>Falsifier</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>one resident identity</td>
+<td>N concurrent cold fixes, barriered I/O</td>
+<td>two published frames for PageId</td>
+</tr>
+<tr>
+<td>borrowed lifetime</td>
+<td>generation poison after release/reuse</td>
+<td>stale handle reads new identity</td>
+</tr>
+<tr>
+<td>balanced ownership</td>
+<td>success/failure path ledger</td>
+<td>pin or waiter survives request</td>
+</tr>
+<tr>
+<td>WAL-before-data</td>
+<td>fault at log/data boundaries</td>
+<td>durable page LSN beyond durable log</td>
+</tr>
+<tr>
+<td>re-dirty preserved</td>
+<td>pause flush after snapshot, mutate again</td>
+<td>completion clears new dirty</td>
+</tr>
+</tbody>
+</table></div></section><section id="glossary" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C009 CUBRID-C010 CUBRID-C011 CUBRID-C012"><h2>Glossary and evidence boundaries</h2>
+<dl>
+<dt><strong>VPID</strong></dt>
+<dd>volume/page logical identity.</dd>
+<dt><strong>BCB</strong></dt>
+<dd>resident identity, latch/fcnt, flags, lists, frame를 묶는 control block.</dd>
+<dt><strong>fix / holder</strong></dt>
+<dd>frame replacement을 막는 global accounting과 thread-local nested ownership.</dd>
+<dt><strong>latch</strong></dt>
+<dd>resident page bytes의 short physical consistency; transaction lock과 다르다.</dd>
+<dt><strong>dirty / flushing</strong></dt>
+<dd>resident generation이 storage image보다 새로움 / snapshot I/O가 진행 중임.</dd>
+<dt><strong>victim eligibility / policy</strong></dt>
+<dd>재사용해도 안전한 hard predicate / 후보 중 무엇을 고를지의 heuristic.</dd>
+</dl>
+<h3>Source-confirmed behavior와 관찰 한계</h3>
+<ul>
+<li>현재 source에는 lock-free READ fast path의 post-CAS VPID recheck가 없다. 외부 재구현 blueprint는 증명되지 않은 최적화를 복제하지 않고 locked fallback 또는 post-CAS backout을 사용한다.</li>
+<li>DWB read direct return, TDE/DWB-slot early return, async-unfix error clearing은 source-confirmed current behavior다. 재구현은 strict-compatibility와 hardened-rollback 중 mode를 명시한다.</li>
+<li>Lock-free READ와 normal idle/compatible/blocked grant의 holder allocation 실패는 이미 commit된 latch/fcnt를 backout하지 않는 source-confirmed current behavior다. Hardened blueprint는 holder reserve-first 또는 explicit latch/fcnt rollback을 요구한다.</li>
+<li>SQL experiments는 actual latch waiter와 victim eviction을 식별하지 않았다. 이는 runtime 관찰 한계이지 lifecycle rule의 미정 상태가 아니다.</li>
+<li>대표 heap/B-tree/recovery family를 깊게 추적했으며 모든 transitive call site의 전수 catalog와 performance parity는 선언한 범위 밖이다.</li>
+</ul></section><section id="teaching-map" data-claim-id="CUBRID-C001 CUBRID-C002 CUBRID-C003 CUBRID-C004 CUBRID-C005 CUBRID-C006 CUBRID-C007 CUBRID-C008"><h2>Teaching map, presenter notes, hard questions</h2>
+<div class="table-wrap"><table>
+<caption>50–60분 발표 흐름</caption>
+<thead><tr>
+<th>시간</th>
+<th>핵심</th>
+<th>Prediction question</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>0–10</td>
+<td>다섯 질문, object graph</td>
+<td>fix 성공이 무엇을 보장하나?</td>
+</tr>
+<tr>
+<td>10–22</td>
+<td>hit/miss/concurrent loader</td>
+<td>hit도 왜 block하나?</td>
+</tr>
+<tr>
+<td>22–32</td>
+<td>latch/holder/unfix</td>
+<td>fcnt=0이면 왜 victim이 아닐 수 있나?</td>
+</tr>
+<tr>
+<td>32–40</td>
+<td>caller contracts</td>
+<td>왜 caller가 retry만 하면 안 되나?</td>
+</tr>
+<tr>
+<td>40–50</td>
+<td>dirty/WAL/flush/replacement</td>
+<td>unfix 직후 무엇이 durable한가?</td>
+</tr>
+<tr>
+<td>50–56</td>
+<td>experiments/comparison</td>
+<td>counter가 무엇을 증명하지 못하나?</td>
+</tr>
+<tr>
+<td>56–60</td>
+<td>source-closed blueprint</td>
+<td>어떤 invariant/test로 다시 만들까?</td>
+</tr>
+</tbody>
+</table></div>
+<h3>Teammate pressure bank</h3>
+<ol>
+<li>같은 cold VPID의 duplicate read와 duplicate published frame을 각각 무엇이 막는가?</li>
+<li>Buffer hit 뒤에도 latch timeout이 가능한 이유는?</li>
+<li>Global fcnt와 holder fix_count 중 하나만 있으면 어떤 bug가 생기는가?</li>
+<li>READ holder reentry를 waiter보다 앞세우는 정책이 어떤 starvation trade-off를 만드는가?</li>
+<li>conditional failure와 timed wait expiration은 같은 failure인가?</li>
+<li>ordered refix 후 old PAGE_PTR와 record slot을 왜 다시 검증해야 하나?</li>
+<li>Descending sibling traversal이 unconditional wait 대신 abort/restart를 택하는 이유는?</li>
+<li>RECOVERY_PAGE가 allocation metadata를 우회해야 하는 이유는?</li>
+<li>Dirty, page LSA, oldest-unflush-LSA는 각각 어떤 질문에 답하는가?</li>
+<li>Flush가 old dirty를 clear하고 FLUSHING을 set하는 이유는?</li>
+<li>WAL force 뒤 data write failure에서 어떤 state를 restore해야 하는가?</li>
+<li>DWB가 WAL rule을 대체하지 못하는 이유는?</li>
+<li>Flush success 직후 resident BCB가 dirty인 interleaving을 설명하라.</li>
+<li>fcnt=0이고 clean이어도 victim이 아닌 반례 세 가지는?</li>
+<li><code>Num_data_page_flushed=0</code>이 checkpoint failure가 아닌 이유는?</li>
+<li>Clean restart가 WAL-before-data를 증명하지 못하는 이유는?</li>
+<li>PostgreSQL pin/content lock을 CUBRID fix/latch와 equivalent라 부르면 무엇을 잃는가?</li>
+<li>InnoDB secondary→clustered traversal이 B-tree→heap handoff의 직접 대응물이 아닌 이유는?</li>
+<li>I/O-before-publication과 publication-before-I/O의 waiter/failure cost를 비교하라.</li>
+<li>현재 report의 가장 위험한 unknown과 다음 focused experiment를 선택하라.</li>
+</ol>
+<h3 id="pressure-bank-model-answers">Model / recommended answer key</h3>
+<div class="table-wrap"><table><caption>질문 번호별 방어 가능한 핵심 답</caption><thead><tr><th>#</th><th>Model / recommended answer</th></tr></thead><tbody>
+<tr><td>1</td><td>VPID-keyed buffer lock이 cold loader를 하나로 직렬화한다. Owner만 provisional BCB를 load·publish하고 waiter는 wake 뒤 hash lookup부터 재시도하므로 duplicate published frame도 막힌다.</td></tr>
+<tr><td>2</td><td>Hit은 residency만 보장한다. Incompatible latch holder가 남으면 unconditional request는 waiter queue와 <code>pgbuf_timed_sleep</code>에 들어가 timeout/interrupt될 수 있다.</td></tr>
+<tr><td>3</td><td>Global fcnt는 모든 successful fix를 세어 frame replacement를 막고, thread holder는 어느 thread의 nested ownership·reentry·dirty history인지를 기록한다. Global만 있으면 caller ownership을 검증 못 하고 holder만 있으면 다른 threads를 합산한 victim safety를 판단 못 한다.</td></tr>
+<tr><td>4</td><td>waiter bit가 새 non-holder READ barging을 막아 queued writer progress를 돕고, 기존 holder reentry는 self-deadlock을 피하려 허용한다. 공정성과 reentrant progress 사이의 의도적 trade-off다.</td></tr>
+<tr><td>5</td><td>Conditional failure는 queue/ownership 없이 즉시 NULL이다. Timed wait는 waiter로 등록된 뒤 timeout/interrupt cleanup과 error code를 거치므로 같은 failure가 아니다.</td></tr>
+<tr><td>6</td><td>Ordered refix는 실제 unfix/refix를 수행할 수 있어 old PAGE_PTR, record pointer, slot과 header-derived state가 stale하다. <code>page_was_unfixed</code>이면 identity와 record lookup을 다시 검증한다.</td></tr>
+<tr><td>7</td><td>Descending sibling 조건부 fix는 반대 방향 latch-order wait를 피한다. Conflict이면 held page를 풀고 <code>ER_DESC_ISCAN_ABORTED</code>로 상위 scan을 재시작해 순환대기 위험을 줄인다.</td></tr>
+<tr><td>8</td><td>Recovery는 allocation/deallocation metadata 자체를 재생 중일 수 있다. <code>RECOVERY_PAGE</code>는 정상 OLD-page 존재 전제를 강제하지 않고 image를 fix할 수 있게 한다.</td></tr>
+<tr><td>9</td><td>DIRTY는 resident image가 data volume보다 새롭다는 뜻, page LSA는 그 image가 포함한 log 상한, oldest-unflush-LSA는 언제부터 flush debt가 생겼는지를 뜻한다.</td></tr>
+<tr><td>10</td><td>Snapshot generation의 old DIRTY를 clear하고 FLUSHING을 set해야 I/O 중 writer가 세운 새 DIRTY를 별도 generation으로 보존할 수 있다.</td></tr>
+<tr><td>11</td><td>일반 write failure는 FLUSHING을 끝내고 pre-flush DIRTY와 oldest-unflush-LSA를 복원해 retry 가능하게 해야 한다. 조기 TDE/DWB 오류는 별도 fault-injection 대상이다.</td></tr>
+<tr><td>12</td><td>DWB는 torn/partial data-page write를 복구하지만, durable log가 없으면 transaction-consistent redo/undo 근거가 없다. 따라서 DWB는 WAL ordering을 대체하지 않는다.</td></tr>
+<tr><td>13</td><td>Flusher가 G를 copy한 뒤 writer가 resident page를 G+1로 수정·re-dirty할 수 있다. G write success 뒤 FLUSHING만 지우고 G+1 DIRTY는 남는다.</td></tr>
+<tr><td>14</td><td>예: LRU1/2처럼 zone3 밖, latch waiter/비-NO_LATCH state, FLUSHING/direct-victim invalid-candidate flag. Avoid-deallocation count는 vacuum deallocation을 막지만 victimization 자체를 막지 않는다.</td></tr>
+<tr><td>15</td><td><code>Num_data_page_flushed</code>는 특정 victim-candidate flush site의 counter이지 모든 checkpoint write의 합이 아니다. 0은 해당 site 미관찰이지 checkpoint failure 증거가 아니다.</td></tr>
+<tr><td>16</td><td>Clean restart는 최종 복구 가능성만 관찰하며 각 data page 전에 해당 WAL이 durable했는지의 I/O 순서를 보여주지 않는다. 이미 durable한 log와 다른 flush 경로도 대안이다.</td></tr>
+<tr><td>17</td><td>둘 다 replacement protection과 content concurrency를 다루지만 CUBRID는 holder/latch/fcnt를 결합하고 PostgreSQL은 private/shared pin과 content lock을 분리한다. 그래서 partial analogy다.</td></tr>
+<tr><td>18</td><td>InnoDB base row는 clustered index에 있고 MTR memo/latch coupling을 쓴다. CUBRID는 B-tree OID에서 별도 heap page로 handoff하므로 responsibility는 비슷해도 직접 equivalent가 아니다.</td></tr>
+<tr><td>19</td><td>CUBRID는 load+latch 뒤 publish해 waiter가 lookup을 재시도한다. PostgreSQL/InnoDB는 I/O-in-progress mapping을 먼저 publish해 waiter를 같은 frame에 모은다. 전자는 provisional cleanup을 숨기고, 후자는 I/O state와 failure wakeup을 공개한다.</td></tr>
+<tr><td>20</td><td>가장 위험한 unknown은 TDE/DWB 조기 오류가 DIRTY/FLUSHING/oldest-LSA를 남기는 reachability다. 각 callee failure를 inject하고 flags, retry, victim eligibility와 restart invariant를 검사하는 focused test가 최소 다음 단계다.</td></tr>
+</tbody></table></div>
+<aside class="callout"><strong>Final presenter rule.</strong> function name을 외우는 것보다 before/guard/action/after/failure/evidence limit를 끊김 없이 말한다. “모른다”는 허용하지만 unknown을 guarantee로 포장하지 않는다.</aside></section><section><h2>이 장의 요약과 다음 전환</h2>
+<p>Blueprint와 pressure bank를 준비했다. 다음 부록에서 exact provenance, total contracts, experiment transcript, coverage와 readiness를 audit한다.</p></section></main><footer><a href="../index.html">목차로</a></footer>
+</body>
+</html>

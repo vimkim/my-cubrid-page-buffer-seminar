@@ -1,0 +1,14 @@
+[
+  "RESOURCES.md",
+  "advanced/recovery-and-lifecycle.md",
+  "advanced/replacement-progress.md",
+  "advanced/specialized-interfaces.md",
+  "maintainer-guide-notes.md",
+  "questions/applied-exercises-answers.md",
+  "questions/applied-exercises.md",
+  "questions/migration-audit.md",
+  "scripts/check-replacement-progress.test.mjs",
+  "scripts/check-specialized-interfaces.test.mjs",
+  "source-inventory.md",
+  "unresolved-or-version-sensitive-findings.md"
+]

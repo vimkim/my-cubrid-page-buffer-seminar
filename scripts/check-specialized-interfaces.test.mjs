@@ -28,7 +28,7 @@ test("owner groups and approximate diagnostics route outward", async () => {
   const m = await readFile(page, "utf8");
   for (const owner of ["Recovery owner", "Invalidation/deallocation owner", "Daemon owner", "Diagnostic owner"]) assert.ok(m.includes(`**${owner}**`), owner);
   for (const term of ["SHOW", "statistics", "validation", "lock-free snapshot", "approximate", "increment site"]) assert.match(m, new RegExp(term, "i"), term);
-  assert.ok(m.includes("](../../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md)"));
+  assert.ok(m.includes("](../evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md)"));
   assert.ok(m.includes("](../learning/01-contract-and-objects.md)"));
   assert.ok(m.includes("](../learning/02-fix-hold-release.md)"));
 });

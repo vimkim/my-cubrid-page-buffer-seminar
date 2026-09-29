@@ -1,0 +1,3 @@
+@ cubrid server stop: ca_pgbuf_f799e05
+++ cubrid server 'ca_pgbuf_f799e05' is not running.
+cleaned owned database: ca_pgbuf_f799e05

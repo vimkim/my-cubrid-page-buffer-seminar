@@ -1,0 +1,15 @@
+✖ NEW_PAGE and the B-tree contrast stay on the core-page boundary (2.51639ms)
+✖ the document set exposes exactly the approved page boundaries (6.671783ms)
+✖ private LRU counts, index namespaces, lifetimes, and victim order have a focused lesson (11.355678ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 14
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 95.632064
+✖ failing tests:
+✖ NEW_PAGE and the B-tree contrast stay on the core-page boundary (2.51639ms)
+✖ the document set exposes exactly the approved page boundaries (6.671783ms)
+✖ private LRU counts, index namespaces, lifetimes, and victim order have a focused lesson (11.355678ms)

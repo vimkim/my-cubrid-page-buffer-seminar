@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "experiment-4",
+  "behavior_ids": [
+    "dirty-wal-flush-replace"
+  ],
+  "claim_ids": [
+    "CUBRID-C008"
+  ],
+  "oracle_ko": "logged update는 10000 rows의 generation을 정확히 1로 만들고 dirty call이 양수이며 오류 없이 commit한다.",
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "cleanup_verified": true,
+  "runner": "experiment.sql",
+  "runner_sha256": "122449570c2a2aba64044f98a1bb846ce70e95128f31cb041a19da979b184649",
+  "runner_argv": [
+    "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql",
+    "-u",
+    "dba",
+    "ca_pgbuf_f799e05",
+    "-i",
+    "experiment.sql"
+  ],
+  "run_ids": [
+    "rebind-exp4"
+  ],
+  "repetitions": 1,
+  "controls_ko": "row count, min/max generation과 payload length violation 0을 data control로 사용했다.",
+  "alternative_explanations_ko": "per-session log와 post-hoc I/O counter가 0이므로 WAL order, physical write와 replacement는 source-only다."
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "quiz-4",
+  "behavior_ids": ["dirty-wal-flush-replace"],
+  "claim_ids": ["CUBRID-C004", "CUBRID-C008"],
+  "runner": "quiz.sql",
+  "runner_sha256": "f5c2c3ae85ce7674a5345313e57eedfa5bc4fa0b7b338436c80b1aee349dad7e",
+  "runner_argv": ["/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql", "-S", "-u", "dba", "ca_pgbuf_f799e05", "-i", "quiz.sql"],
+  "run_ids": ["rebind-quiz4"],
+  "oracle_ko": "백 행의 generation이 1이 되고 dirty page 활동이 출력되지만 물리 flush 순서는 직접 증명하지 않는다.",
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "cleanup_verified": true
+}

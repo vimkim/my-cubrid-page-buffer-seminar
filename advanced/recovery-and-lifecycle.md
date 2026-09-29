@@ -4,7 +4,7 @@
 **Prerequisites:** [Caller Completes Correctness](../learning/03-caller-completes-correctness.md) and [Flush One Generation](../learning/04-flush-one-generation.md)
 **Capability gained:** Connect checkpoint, redo, allocation state, and module lifetime to caller ownership, generation, identity, and idempotence invariants.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** Verified mechanism, Implementation policy, and Runtime observation from the [pinned-source inventory](../source-inventory.md), exact source ranges below, and the [same-revision caller survey](../../../pgbuf-analysis/f799e05_claude/analysis/research/caller-use-cases.md).
+**Evidence used:** Verified mechanism, Implementation policy, and Runtime observation from the [pinned-source inventory](../source-inventory.md), exact source ranges below, and the [same-revision caller survey](../evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/caller-use-cases.md).
 
 ## Data pages and log pages use different buffer pools
 

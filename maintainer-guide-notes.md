@@ -24,8 +24,8 @@ Use evidence in this order:
 
 1. Pinned CUBRID source through `git show f799e05:<path>` or a clean matching worktree.
 2. [`source-inventory.md`](./source-inventory.md) for provenance, accepted runtime receipts, conflict resolution, and source routing.
-3. Same-revision packets under `../../pgbuf-analysis/f799e05_claude/`.
-4. The audited lifecycle report under `../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/`.
+3. Same-revision packets under `./evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/`.
+4. The audited lifecycle report under `./evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/`.
 5. Historical `e6ed61e` and `5cd4f860e` material only when explicitly labeled revision-bound.
 
 Never use an older defect summary as proof of a current defect. Carry candidates through
@@ -144,7 +144,7 @@ Both aggregate validators accept `PLAYWRIGHT_MODULE` as an optional absolute pat
 ## Retired presentation material
 
 The previous 52-minute narrative and 55-question appendix remain available as source material at
-[`CUBRID_PAGE_BUFFER_PRESENTATION_KO.md`](../../pgbuf-analysis/f799e05_claude/CUBRID_PAGE_BUFFER_PRESENTATION_KO.md).
+[`CUBRID_PAGE_BUFFER_PRESENTATION_KO.md`](./evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/CUBRID_PAGE_BUFFER_PRESENTATION_KO.md).
 Do not merge that deck back into the maintainer guide wholesale. Pull only evidence or explanations that directly help a maintainer locate, change, debug, or verify the Module.
 
 ## Monolith migration audit

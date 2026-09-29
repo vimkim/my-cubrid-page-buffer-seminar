@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "quiz-3",
+  "behavior_ids": ["caller-contracts"],
+  "claim_ids": ["CUBRID-C003", "CUBRID-C007"],
+  "runner": "quiz.sql",
+  "runner_sha256": "4cba0c7eefe5de87d653cbf4d7fd820dc68663eabee4092b2e366e2e57ffa596",
+  "runner_argv": ["/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql", "-S", "-u", "dba", "ca_pgbuf_f799e05", "-i", "quiz.sql"],
+  "run_ids": ["rebind-quiz3"],
+  "oracle_ko": "covered와 payload 조회가 동일한 키 범위를 반환하고 서로 다른 caller 경로를 토론할 자료를 만든다.",
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "cleanup_verified": true
+}

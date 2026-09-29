@@ -1,0 +1,27 @@
+{
+  "actual_exit": 1,
+  "argv": [
+    "bash",
+    "cleanup-suite.sh"
+  ],
+  "bound_files": [
+    {
+      "after_sha256": "89d25c6cfe683e71adbdb8eee0c318b1de9dd94150ff0539a405b6d6bdd56015",
+      "before_sha256": "89d25c6cfe683e71adbdb8eee0c318b1de9dd94150ff0539a405b6d6bdd56015",
+      "path": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/cleanup-suite.sh"
+    }
+  ],
+  "cwd": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-08-28T08:02:55.375958+00:00",
+  "id": "runtime-cleanup",
+  "kind": "command",
+  "matched_expectation": false,
+  "runtime_environment_sha256": "a16a6bf59f0551b472ff7d939c96f000e6d221aec92362454f657676dcb63ac5",
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "schema_version": 1,
+  "started_at_utc": "2026-08-28T08:02:55.284401+00:00",
+  "stderr_sha256": "b2491113df05c1a478f34cc37c5609dc1d4b8f72804f5036e1cea157533a5550",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

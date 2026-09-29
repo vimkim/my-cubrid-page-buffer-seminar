@@ -1,0 +1,128 @@
+
+Time: 08/28/26 17:24:58.435 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/boot_cl.c, line 1217
+boot_restart_client: register client { type 2 db ca_pgbuf_f799e05 user dba password **** program /home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/csql login vimkim host dev2 pid 806208 }
+
+Time: 08/28/26 17:24:58.436 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/sp/pl_connection.cpp, line 185
+pl_connection_pool: connection retire (0)
+
+Time: 08/28/26 17:25:00.551 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/storage/file_io.c, line 2198
+Created volume /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_dwb
+
+Time: 08/28/26 17:25:00.553 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/log_manager.c, line 1063
+LOG INITIALIZE
+	db_fullname = /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05 
+	logpath = /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments 
+	prefix_logname = ca_pgbuf_f799e05 
+	ismedia_crash = 0 
+
+Time: 08/28/26 17:25:00.696 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/storage/file_io.c, line 2758
+Destroyed volume /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_lgar_t
+
+Time: 08/28/26 17:25:00.697 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/storage/file_io.c, line 2198
+Created volume /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_lgar_t
+
+Time: 08/28/26 17:25:00.711 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/log_manager.c, line 1517
+log_initialize_internal: end of log initializaton, append_lsa = (717|3288) 
+
+Time: 08/28/26 17:25:00.734 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-analysis/src/query/vacuum.c, line 1005  CODE = -1190, Tran = -1, EID = 1
+Stand-alone vacuum execution is started.
+
+Time: 08/28/26 17:25:00.734 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/query/vacuum.c, line 1006
+Stand-alone vacuum start.
+
+Time: 08/28/26 17:25:00.734 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-analysis/src/query/vacuum.c, line 1098  CODE = -1191, Tran = -1, EID = 2
+Stand-alone vacuum execution is ended.
+
+Time: 08/28/26 17:25:00.734 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/query/vacuum.c, line 1099
+Stand-alone vacuum end.
+
+Time: 08/28/26 17:25:00.747 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/sp/pl_connection.cpp, line 185
+pl_connection_pool: connection retire (1)
+
+Time: 08/28/26 17:25:00.749 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/sp/pl_connection.cpp, line 185
+pl_connection_pool: connection retire (2)
+
+Time: 08/28/26 17:25:00.749 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/query/partition.c, line 725
+creating partition cache
+
+Time: 08/28/26 17:25:00.749 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/boot_sr.c, line 238  CODE = -973, Tran = -1, EID = 3
+Server status is UP.
+
+Time: 08/28/26 17:25:00.760 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/sp/pl_session.cpp, line 90
+pl_session (delete): 1
+
+Time: 08/28/26 17:25:00.815 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/storage/file_io.c, line 2758
+Destroyed volume /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_dwb
+
+Time: 08/28/26 17:25:00.818 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-analysis/src/transaction/boot_sr.c, line 238  CODE = -973, Tran = 1, EID = 5
+Server status is DOWN.
+
+Time: 08/28/26 17:25:00.818 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/query/partition.c, line 760
+deleting partition cache
+
+Time: 08/28/26 17:25:00.818 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-analysis/src/session/session.c, line 364
+[unexpected] session 1's pl_session_p is NULL in session_state_uninit()
+
+Time: 09/01/26 14:13:09.239 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/boot_cl.c, line 1217
+boot_restart_client: register client { type 2 db ca_pgbuf_f799e05 user dba password **** program /home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql login vimkim host dev2 pid 1698517 }
+
+Time: 09/01/26 14:13:09.240 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/sp/pl_connection.cpp, line 185
+pl_connection_pool: connection retire (0)
+
+Time: 09/01/26 14:13:11.340 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/storage/file_io.c, line 2198
+Created volume /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_dwb
+
+Time: 09/01/26 14:13:11.345 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/log_manager.c, line 1063
+LOG INITIALIZE
+	db_fullname = /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05 
+	logpath = /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments 
+	prefix_logname = ca_pgbuf_f799e05 
+	ismedia_crash = 0 
+
+Time: 09/01/26 14:13:11.474 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/storage/file_io.c, line 2758
+Destroyed volume /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_lgar_t
+
+Time: 09/01/26 14:13:11.474 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/storage/file_io.c, line 2198
+Created volume /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_lgar_t
+
+Time: 09/01/26 14:13:11.488 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/log_manager.c, line 1517
+log_initialize_internal: end of log initializaton, append_lsa = (717|3184) 
+
+Time: 09/01/26 14:13:11.509 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-grill/src/query/vacuum.c, line 1005  CODE = -1190, Tran = -1, EID = 1
+Stand-alone vacuum execution is started.
+
+Time: 09/01/26 14:13:11.509 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/query/vacuum.c, line 1006
+Stand-alone vacuum start.
+
+Time: 09/01/26 14:13:11.510 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-grill/src/query/vacuum.c, line 1098  CODE = -1191, Tran = -1, EID = 2
+Stand-alone vacuum execution is ended.
+
+Time: 09/01/26 14:13:11.510 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/query/vacuum.c, line 1099
+Stand-alone vacuum end.
+
+Time: 09/01/26 14:13:11.522 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/sp/pl_connection.cpp, line 185
+pl_connection_pool: connection retire (1)
+
+Time: 09/01/26 14:13:11.524 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/sp/pl_connection.cpp, line 185
+pl_connection_pool: connection retire (2)
+
+Time: 09/01/26 14:13:11.524 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/query/partition.c, line 725
+creating partition cache
+
+Time: 09/01/26 14:13:11.524 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/boot_sr.c, line 238  CODE = -973, Tran = -1, EID = 3
+Server status is UP.
+
+Time: 09/01/26 14:13:11.535 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/sp/pl_session.cpp, line 90
+pl_session (delete): 1
+
+Time: 09/01/26 14:13:11.598 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/storage/file_io.c, line 2758
+Destroyed volume /home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_dwb
+
+Time: 09/01/26 14:13:11.602 - NOTIFICATION *** file /home/vimkim/gh/cb/pgbuf-grill/src/transaction/boot_sr.c, line 238  CODE = -973, Tran = 1, EID = 5
+Server status is DOWN.
+
+Time: 09/01/26 14:13:11.602 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/query/partition.c, line 760
+deleting partition cache
+
+Time: 09/01/26 14:13:11.602 - DEBUG *** file /home/vimkim/gh/cb/pgbuf-grill/src/session/session.c, line 364
+[unexpected] session 1's pl_session_p is NULL in session_state_uninit()

@@ -19,12 +19,12 @@
 
 | ID | Status | Finding | Evidence and teaching treatment |
 |---|---|---|---|
-| `VS-01` | **Verified at f799e05** | Release builds declare/macro-map `pgbuf_fix_without_validation_release`, but repository-wide analysis found no definition or caller. Calling it would create a link failure. | `src/storage/page_buffer.h:320-326`; [`api-inventory.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Teach it as a dead/incomplete interface, never as an optimization option. |
-| `VS-02` | **Verified at f799e05** | `pgbuf_copy_to_area()` prose and executable `do_fetch` branch disagree. On a normally compiled miss with `do_fetch=false`, the function may return the caller area without filling it. | `src/storage/page_buffer.c:4701-4817`, especially `4739-4760`; [`api-inventory.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Do not present this helper as a general page-read abstraction. |
-| `VS-03` | **Verified at f799e05** | Outside `ENABLE_UNUSED_FUNCTION`, `pgbuf_copy_from_area()` effectively ignores `do_fetch` and always follows the `NEW_PAGE` fix/skip-logging path. | `src/storage/page_buffer.c:4819-4912`; [`api-inventory.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Restrict the helper to its existing owner protocol. |
+| `VS-01` | **Verified at f799e05** | Release builds declare/macro-map `pgbuf_fix_without_validation_release`, but repository-wide analysis found no definition or caller. Calling it would create a link failure. | `src/storage/page_buffer.h:320-326`; [`api-inventory.md`](./evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Teach it as a dead/incomplete interface, never as an optimization option. |
+| `VS-02` | **Verified at f799e05** | `pgbuf_copy_to_area()` prose and executable `do_fetch` branch disagree. On a normally compiled miss with `do_fetch=false`, the function may return the caller area without filling it. | `src/storage/page_buffer.c:4701-4817`, especially `4739-4760`; [`api-inventory.md`](./evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Do not present this helper as a general page-read abstraction. |
+| `VS-03` | **Verified at f799e05** | Outside `ENABLE_UNUSED_FUNCTION`, `pgbuf_copy_from_area()` effectively ignores `do_fetch` and always follows the `NEW_PAGE` fix/skip-logging path. | `src/storage/page_buffer.c:4819-4912`; [`api-inventory.md`](./evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Restrict the helper to its existing owner protocol. |
 | `VS-04` | **Verified at f799e05** | Names in the `pgbuf_peek_stats()` declaration drift from the meanings used by the definition for later output positions. Types remain compatible. | `src/storage/page_buffer.h:449-454`; `src/storage/page_buffer.c:14748-14847`. Do not label dashboards from parameter names alone. |
-| `VS-05` | **Verified at f799e05** | Some waiter, prevent-deallocation, SHOW, and statistics interfaces deliberately expose approximate snapshots, sometimes without the BCB mutex. | `src/storage/page_buffer.c:14748-14847,17323-17530`; [`internal-mechanisms.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/internal-mechanisms.md). Use them for diagnostics and scheduling, not as mutation/deallocation authorization. |
-| `VS-06` | **Verified at f799e05** | Historical comments call some validation/page-type/temporary-LSA behavior debug-only even though executable release paths also use it. | [`api-inventory.md`](../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Follow code behavior; avoid repeating stale scope language. |
+| `VS-05` | **Verified at f799e05** | Some waiter, prevent-deallocation, SHOW, and statistics interfaces deliberately expose approximate snapshots, sometimes without the BCB mutex. | `src/storage/page_buffer.c:14748-14847,17323-17530`; [`internal-mechanisms.md`](./evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/internal-mechanisms.md). Use them for diagnostics and scheduling, not as mutation/deallocation authorization. |
+| `VS-06` | **Verified at f799e05** | Historical comments call some validation/page-type/temporary-LSA behavior debug-only even though executable release paths also use it. | [`api-inventory.md`](./evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md). Follow code behavior; avoid repeating stale scope language. |
 
 ## B. Current pinned-revision cleanup and proof obligations
 
@@ -59,7 +59,7 @@ These are source-visible candidates, not observed production failures.
 ## D. Historical findings requiring revalidation
 
 The older defect report
-[`pgbuf-defects-report_5cd4f860e_claude.md`](../../pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md)
+[`pgbuf-defects-report_5cd4f860e_claude.md`](./evidence/my-cubrid-docs/pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md)
 was produced at `5cd4f860e`, not the teaching baseline `f799e05`.
 
 | Historical ID | Older finding | Current use |
@@ -84,9 +84,9 @@ was produced at `5cd4f860e`, not the teaching baseline `f799e05`.
 
 Sources:
 
-- [`runtime-path-monitoring.md`](../../pgbuf-analysis/f799e05_claude/analysis/monitoring/runtime-path-monitoring.md)
-- [`report-audit.md`](../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/report-audit.md)
-- [`experiments-and-quizzes.md`](../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md)
+- [`runtime-path-monitoring.md`](./evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/monitoring/runtime-path-monitoring.md)
+- [`report-audit.md`](./evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/report-audit.md)
+- [`experiments-and-quizzes.md`](./evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md)
 
 ## F. Questions deliberately left open
 

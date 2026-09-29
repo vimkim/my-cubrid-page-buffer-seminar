@@ -48,7 +48,7 @@ test("AOUT routes to a separate dormant-design page and runtime evidence stays b
   assert.doesNotMatch(m, /CUBRID (?:currently )?uses 2Q/i);
   assert.match(m, /no-eviction evidence/i);
   assert.match(m, /does not prove.*replacement schedule/is);
-  assert.ok(m.includes("](../../../pgbuf-analysis/research/cubrid-lru-victim.md)"));
+  assert.ok(m.includes("](../evidence/my-cubrid-docs/pgbuf-analysis/research/cubrid-lru-victim.md)"));
   assert.match(m, /Historical evidence.*`5cd4f860e`/is);
 });
 

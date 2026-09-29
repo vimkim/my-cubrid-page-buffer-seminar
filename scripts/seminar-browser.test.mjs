@@ -8,7 +8,7 @@ try {
   if (error.code !== 'ERR_MODULE_NOT_FOUND') throw error;
 }
 const unavailable = chromium ? false : 'UNAVAILABLE: install Playwright or set PLAYWRIGHT_MODULE';
-const base = (process.env.SEMINAR_URL || 'http://127.0.0.1:3923/code-analysis/page-buffer-presentation') + '/';
+const base = (process.env.SEMINAR_URL || 'http://127.0.0.1:3935') + '/';
 let browser;
 before(async () => { if (chromium) browser = await chromium.launch({ headless: true }); });
 after(async () => { await browser?.close(); });

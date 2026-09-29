@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reference — pgbuf structure map</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID PAGE BUFFER · REFERENCE</span><span>structure map · printable</span></div>
+  <header class="hero">
+    <div class="eyebrow">Data-structure glossary</div>
+    <h1>pgbuf structure map</h1>
+    <p>모든 것은 static 전역 <code>pgbuf_Pool</code> (<code>PGBUF_BUFFER_POOL</code>) 하나에 매달린다. 색인은 별도 node가 아니라 BCB 안의 링크 field로 꿰인 intrusive list다.</p>
+  </header>
+
+  <section class="section">
+    <img class="diagram" src="../assets/pgbuf-pool-map.svg" alt="pgbuf_Pool structure map">
+    <table>
+      <thead><tr><th>구조</th><th>한 줄 정의</th><th>답하는 질문</th><th>보호 lock</th><th>Source (branch <code>1daa9d2</code>)</th></tr></thead>
+      <tbody>
+        <tr><td><code>PGBUF_BCB</code> (<code>BCB_table</code>)</td><td>frame당 관리 카드: <code>vpid</code>, <code>atomic_latch</code>(mode/fcnt/waiter), <code>flags</code>(DIRTY|FLUSHING|…), <code>oldest_unflush_lsa</code>, hash/LRU 링크</td><td>이 frame의 identity·사용자·상태는?</td><td>BCB <code>mutex</code> + atomic latch</td><td><code>page_buffer.c:513–545</code></td></tr>
+        <tr><td><code>PGBUF_IOPAGE_BUFFER</code> (<code>iopage_table</code>)</td><td>BCB와 1:1. 실제 <code>FILEIO_PAGE iopage</code> — disk에 기록되는 bytes, <code>prv.lsa</code>(page LSA) 포함</td><td>page의 실제 내용</td><td>BCB latch 계약</td><td><code>548–557</code></td></tr>
+        <tr><td><code>PGBUF_BUFFER_HASH</code> (<code>buf_hash_table</code>)</td><td>bucket 배열; bucket = <code>hash_mutex</code> + BCB chain 앵커 + lock chain 앵커</td><td><code>VPID</code>가 어느 BCB에 resident인가?</td><td>bucket <code>hash_mutex</code></td><td><code>577–584</code></td></tr>
+        <tr><td><code>PGBUF_BUFFER_LOCK</code> (<code>buf_lock_table</code>)</td><td>"이 VPID를 지금 disk에서 적재 중" 자리표; 같은 page 요청자는 대기. 항목 수 = thread 수(고정)</td><td>중복 disk read 방지</td><td>같은 bucket <code>hash_mutex</code></td><td><code>559–571</code></td></tr>
+        <tr><td><code>PGBUF_LRU_LIST</code> (<code>buf_LRU_list[]</code>)</td><td>여러 개(shared/private)로 분할된 LRU; zone 1|2|3, <code>bottom_1/2</code> 경계, <code>victim_hint</code>, tick 나이 계산</td><td>다음 victim은 누구인가?</td><td>list별 <code>mutex</code></td><td><code>587–625</code></td></tr>
+        <tr><td><code>PGBUF_AOUT_LIST</code> (<code>buf_AOUT_list</code>)</td><td>2Q의 이력 축: victim으로 쫓겨난 <code>VPID</code>만 FIFO 보관 (frame 없음)</td><td>최근에 쫓아냈던 page인가? (재진입 승격)</td><td><code>Aout_mutex</code></td><td><code>637–668</code></td></tr>
+        <tr><td><code>PGBUF_INVALID_LIST</code> (<code>buf_invalid_list</code>)</td><td>deallocate된 page의 빈 BCB free list</td><td>당장 재사용 가능한 BCB는?</td><td><code>invalid_mutex</code></td><td><code>628–635</code></td></tr>
+        <tr><td><code>PGBUF_HOLDER_ANCHOR</code> (<code>thrd_holder_info[]</code>)</td><td>thread당 1개, 64B cache-line 정렬; <code>thrd_hold_list</code> = 이 thread가 fix 중인 <code>PGBUF_HOLDER</code>(bufptr + <code>fix_count</code>) 목록</td><td>이 thread가 지금 무엇을 쥐고 있나?</td><td>per-thread 소유</td><td><code>463–492</code></td></tr>
+        <tr><td><code>victim_cand_list</code> / <code>flushed_bcbs</code></td><td>flush daemon의 victim 후보 스냅샷 / post-flush 처리 lock-free queue</td><td>flusher의 작업 목록</td><td>daemon 소유 / lock-free</td><td><code>778, 821, 836–845</code></td></tr>
+        <tr><td><code>pgbuf_Pool</code> (<code>PGBUF_BUFFER_POOL</code>)</td><td>위 전부를 담는 유일한 static 전역</td><td>—</td><td>—</td><td><code>757–847</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn"><strong>자주 틀리는 것:</strong> dirty page 전용 list는 없다. DIRTY는 BCB <code>flags</code>의 bit일 뿐이고, flusher는 LRU를 훑어 dirty victim 후보를 모은다. InnoDB flush_list와 혼동 금지.</div>
+  </section>
+
+  <section class="section">
+    <h2>Cardinality &amp; sizing</h2>
+    <p><code>pgbuf_Pool</code>은 server 프로세스당(=DB당) static 전역 1개. 기본값: <code>data_buffer_size</code> 512MB ÷ <code>IO_PAGESIZE</code> 16KB = <code>num_buffers</code> 32,768 (<code>PRM_ID_PB_NBUFFERS</code>).</p>
+    <table>
+      <thead><tr><th>구조</th><th>몇 개?</th><th>크기 공식</th><th>기본 512MB pool</th></tr></thead>
+      <tbody>
+        <tr><td><code>iopage_table</code></td><td>frame당 1</td><td><code>num_buffers × (16KB+8B)</code> (5693)</td><td>≈512MB (본체)</td></tr>
+        <tr><td><code>BCB_table</code></td><td>frame당 1 (iopage와 1:1)</td><td><code>num_buffers × sizeof(PGBUF_BCB)</code> ≈140B (5679)</td><td>≈4–5MB</td></tr>
+        <tr><td><code>buf_hash_table</code></td><td>pool당 1, bucket 수 고정</td><td><code>1&lt;&lt;20</code> buckets × 56B (297–298)</td><td>≈56MB 고정 (pool 크기 무관)</td></tr>
+        <tr><td><code>buf_lock_table</code></td><td><strong>thread당 slot 1</strong></td><td><code>thread_num_total_threads() × ~32B</code> (5822)</td><td>KB</td></tr>
+        <tr><td>shared LRU</td><td>pool당 N</td><td>기본 자동: <code>MAX_NTRANS</code> 기준, list당 ≥1000 pages, 최소 4 (5858–5871)</td><td>≈32 lists</td></tr>
+        <tr><td>private LRU</td><td><strong>transaction당 1 + vacuum worker당 1</strong></td><td>기본 <code>MAX_NTRANS + VACUUM_MAX_WORKER_COUNT</code> (14072–14076)</td><td>KB</td></tr>
+        <tr><td><code>buf_AOUT_list</code></td><td>pool당 1</td><td><code>num_buffers × pb_aout_ratio</code>, 상한 32768 (5919–5942)</td><td><strong>기본 ratio 0.0 → 꺼짐</strong></td></tr>
+        <tr><td><code>thrd_holder_info</code></td><td>thread당 anchor 1 (64B 고정)</td><td>+ thread당 holder 7개 사전 할당, 10개 단위 증가·반납 없음 (6064–6098)</td><td>KB (debug는 holder당 <code>fixed_at[64KB]</code> 주의)</td></tr>
+        <tr><td><code>victim_cand_list</code></td><td>pool당 1</td><td><code>num_buffers × 24B</code> (1895)</td><td>≈0.8MB</td></tr>
+      </tbody>
+    </table>
+    <div class="callout"><strong>기억할 세 가지:</strong> thread당인 것은 lock slot과 holder뿐("지금 하는 일" 추적) · transaction당인 것은 private LRU뿐(quota 단위) · hash table은 줄지 않는 고정 비용(bucket 하드코딩 <code>1&lt;&lt;20</code>).</div>
+    <p class="source-note">Lines cite the lab tracer branch commit <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>1daa9d2</code></a>; struct definitions are identical to pinned <code>f799e05</code>.</p>
+  </section>
+
+  <footer class="footer"><a href="../lessons/0003-one-bcb-many-lists.html">← Lesson 0003: One BCB, many lists</a></footer>
+</main>
+</body>
+</html>

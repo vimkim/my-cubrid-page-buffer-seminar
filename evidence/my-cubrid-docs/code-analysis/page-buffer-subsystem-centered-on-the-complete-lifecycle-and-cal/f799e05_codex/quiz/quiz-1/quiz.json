@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "quiz-1",
+  "behavior_ids": ["fix-lookup-load"],
+  "claim_ids": ["CUBRID-C001", "CUBRID-C005"],
+  "runner": "quiz.sql",
+  "runner_sha256": "73a6d453c991a253220908e9b86557c7d1af8b5ff435c6c2756f848444f69f43",
+  "runner_argv": ["/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql", "-S", "-u", "dba", "ca_pgbuf_f799e05", "-i", "quiz.sql"],
+  "run_ids": ["rebind-quiz1"],
+  "oracle_ko": "두 SELECT가 같은 checksum을 내고 histogram이 page-buffer 활동을 출력한다.",
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "cleanup_verified": true
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "experiment-2",
+  "behavior_ids": [
+    "latch-holder-unfix"
+  ],
+  "claim_ids": [
+    "CUBRID-C006"
+  ],
+  "oracle_ko": "empty read는 promotion 0이고 insert는 positive promotion, dirty와 HOLDER_DIRTY WRITE 또는 MIXED unfix를 보인다.",
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "cleanup_verified": true,
+  "runner": "experiment.sql",
+  "runner_sha256": "2d90971c97beca979d9a0bb7aa523707be29e6d098aff8cf8e0fcc2a2619af92",
+  "runner_argv": [
+    "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql",
+    "-u",
+    "dba",
+    "ca_pgbuf_f799e05",
+    "-i",
+    "experiment.sql"
+  ],
+  "run_ids": [
+    "rebind-exp2"
+  ],
+  "repetitions": 1,
+  "controls_ko": "single-session read-only phase가 negative control이며 write phase가 positive control이다.",
+  "alternative_explanations_ko": "promotion count는 row 수가 아니고 actual latch contention 또는 waiter scheduling을 뜻하지 않는다."
+}

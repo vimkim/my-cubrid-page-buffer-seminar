@@ -1,0 +1,6 @@
+@ cubrid server stop: ca_pgbuf_f799e05
+
+Server ca_pgbuf_f799e05 notified of shutdown.
+This may take several minutes. Please wait.
+++ cubrid server stop: success
+restarted owned database: ca_pgbuf_f799e05

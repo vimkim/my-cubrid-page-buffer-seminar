@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "quiz-2",
+  "behavior_ids": ["latch-holder-unfix"],
+  "claim_ids": ["CUBRID-C002", "CUBRID-C006"],
+  "runner": "quiz.sql",
+  "runner_sha256": "b69cc81755e2b6ca4a100d7662586e83d33849402f5fe1ae9641447de88a6619",
+  "runner_argv": ["/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql", "-S", "-u", "dba", "ca_pgbuf_f799e05", "-i", "quiz.sql"],
+  "run_ids": ["rebind-quiz2"],
+  "oracle_ko": "열 개 행을 삽입·수정하고 길이 161을 확인하며 dirty holder 활동을 출력한다.",
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "cleanup_verified": true
+}

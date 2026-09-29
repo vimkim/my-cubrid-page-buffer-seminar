@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pgbuf_fix() Contract Card</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID PAGE BUFFER · QUICK REFERENCE</span><a href="../lessons/0001-pgbuf-fix-is-an-ownership-protocol.html">Lesson 0001</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print this one</div>
+    <h1><code>pgbuf_fix()</code> contract card</h1>
+    <p>코드 리뷰와 발표 중 한 장으로 확인하는 identity → residency → concurrency → ownership → release.</p>
+    <div class="meta-row"><span class="pill">Pinned: f799e05</span><span class="pill">Offline</span><span class="pill">Source-confirmed</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card">
+      <h2>입력 5개</h2>
+      <ul>
+        <li><code>thread_p</code>: holder/accounting과 wait context</li>
+        <li><code>vpid</code>: <code>(volid, pageid)</code> identity</li>
+        <li><code>fetch_mode</code>: 어떤 page 상태가 허용되는가</li>
+        <li><code>request_mode</code>: READ 또는 WRITE latch</li>
+        <li><code>condition</code>: 기다릴 수 있는가</li>
+      </ul>
+    </article>
+    <article class="reference-card">
+      <h2>성공 postcondition</h2>
+      <ul>
+        <li>요청한 VPID가 올바른 resident frame에 대응한다.</li>
+        <li>요청과 호환되는 latch 권한이 부여되었다.</li>
+        <li>thread holder와 BCB fix accounting에 소유가 기록되었다.</li>
+        <li>반환된 <code>PAGE_PTR</code>는 matching unfix까지 접근 가능하다.</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>Hit와 miss는 어디에서 합쳐지는가?</h2>
+      <img class="diagram" src="../assets/pgbuf-contract.svg" alt="Hit and miss converge on ownership grant">
+      <p class="caption">resident 여부는 경로를 바꾸지만 성공 계약은 바꾸지 않는다.</p>
+    </article>
+    <article class="reference-card">
+      <h2>다섯 질문</h2>
+      <ol>
+        <li><strong>Identity</strong> — 어느 <code>VPID</code>인가?</li>
+        <li><strong>Residency</strong> — 이미 frame에 있는가?</li>
+        <li><strong>Concurrency</strong> — 어떤 latch를 언제 얻는가?</li>
+        <li><strong>Ownership</strong> — 누가 몇 번 fix했는가?</li>
+        <li><strong>Release</strong> — 언제 replacement 가능해지는가?</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>경계선</h2>
+      <ul>
+        <li><code>fix</code>는 durability 자체가 아니다.</li>
+        <li>수정자는 WRITE latch 아래에서 logging/dirty protocol을 지킨다.</li>
+        <li><code>unfix</code>는 보통 disk write가 아니다.</li>
+        <li><code>fcnt == 0</code>은 replacement eligibility의 필요조건이지 즉시 eviction 명령이 아니다.</li>
+      </ul>
+    </article>
+    <article class="reference-card full">
+      <h2>Source anchors</h2>
+      <table>
+        <thead><tr><th>Claim</th><th>Pinned source</th></tr></thead>
+        <tbody>
+          <tr><td>debug/release macro boundary and five arguments</td><td><a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h"><code>page_buffer.h:275–330</code></a></td></tr>
+          <tr><td>validation, fast read path, hash lookup, miss claim</td><td><a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:2246–2439</code></a></td></tr>
+          <tr><td>BCB verification and latch/holder grant</td><td><a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:2442–2516</code></a></td></tr>
+          <tr><td>holder release, lock-free unfix, normal unlatch</td><td><a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:3062–3203</code></a></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+  <footer class="footer">Ask the teaching agent whenever an invariant or source transition is unclear.</footer>
+</main>
+</body>
+</html>

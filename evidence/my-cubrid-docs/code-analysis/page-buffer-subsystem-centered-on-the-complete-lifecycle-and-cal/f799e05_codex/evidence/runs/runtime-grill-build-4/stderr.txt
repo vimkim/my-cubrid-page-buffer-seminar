@@ -1,0 +1,95 @@
+bash: scl: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `scl'
+bash: module: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `module'
+bash: which: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `which'
+bash: _module_raw: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `_module_raw'
+bash: ml: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `ml'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: which: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `which'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: scl: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `scl'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: module: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `module'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: ml: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `ml'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: _module_raw: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `_module_raw'
+[0mdirenv: loading ~/gh/cb/pgbuf-grill/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/pgbuf-grill/debug_gcc
+DB Dir: /home/vimkim/.cub/db/pgbuf-grill/commondb
+Build Dir: /home/vimkim/gh/cb/pgbuf-grill/build_preset_debug_gcc
+bash: ml: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `ml'
+bash: which: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `which'
+bash: module: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `module'
+bash: _module_raw: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `_module_raw'
+bash: scl: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `scl'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: ml: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `ml'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: _module_raw: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `_module_raw'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: scl: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `scl'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: module: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `module'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: which: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `which'
+[0mdirenv: loading ~/gh/cb/pgbuf-grill/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/pgbuf-grill/debug_gcc
+DB Dir: /home/vimkim/.cub/db/pgbuf-grill/commondb
+Build Dir: /home/vimkim/gh/cb/pgbuf-grill/build_preset_debug_gcc
+bash: _module_raw: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `_module_raw'
+bash: module: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `module'
+bash: scl: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `scl'
+bash: ml: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `ml'
+bash: which: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `which'
+bash: scl: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `scl'
+bash: module: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `module'
+bash: which: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `which'
+bash: _module_raw: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `_module_raw'
+bash: ml: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `ml'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: which: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `which'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: scl: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `scl'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: _module_raw: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `_module_raw'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: module: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `module'
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: ml: line 1: syntax error: unexpected end of file
+/nix/store/1q9lw4r2mbap8rsr8cja46nap6wvrw2p-bash-interactive-5.2p37/bin/bash: error importing function definition for `ml'
+[0mdirenv: loading ~/gh/cb/pgbuf-grill/.envrc
+Preset Mode: debug_gcc
+Install Dir: /home/vimkim/.cub/install/pgbuf-grill/debug_gcc
+DB Dir: /home/vimkim/.cub/db/pgbuf-grill/commondb
+Build Dir: /home/vimkim/gh/cb/pgbuf-grill/build_preset_debug_gcc
+bash: _module_raw: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `_module_raw'
+bash: scl: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `scl'
+bash: which: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `which'
+bash: ml: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `ml'
+bash: module: line 1: syntax error: unexpected end of file
+bash: error importing function definition for `module'

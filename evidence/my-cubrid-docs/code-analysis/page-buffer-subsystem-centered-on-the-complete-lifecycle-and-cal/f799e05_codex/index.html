@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CUBRID Page Buffer Field Guide</title>
+<link rel="stylesheet" href="assets/report.css">
+</head>
+<body>
+<header><h1>CUBRID Page Buffer Field Guide</h1>
+<p><code>pgbuf_fix()</code> 한 줄을 identity, ownership, concurrency, durability, release의 다섯 질문으로 재구성한 발표·재구현용 offline book.</p></header><main><section class="callout"><h2>읽는 법</h2>
+<p>기본 경로는 1→4→5→7→11, 발표 경로는 1→2→4→5→6→7→9→10→11, 구현 경로는 2→3→4→5→7→10→11이다. 11장은 provenance, total contracts, evidence index와 readiness를 닫는 필수 종착점이다. 고정 CUBRID revision은 <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>다.</p></section><ol class="toc">
+<li><a href="chapters/01-orientation.html">01. 방향과 mental model</a></li>
+<li><a href="chapters/02-boundary-ownership.html">02. boundary와 object ownership</a></li>
+<li><a href="chapters/03-state-machines.html">03. 상태 기계</a></li>
+<li><a href="chapters/04-fix-lookup-load.html">04. fix lookup/load</a></li>
+<li><a href="chapters/05-latch-holder-unfix.html">05. latch/holder/unfix</a></li>
+<li><a href="chapters/06-caller-contracts.html">06. heap/B-tree/recovery callers</a></li>
+<li><a href="chapters/07-dirty-wal-flush-replace.html">07. dirty/WAL/flush/replacement</a></li>
+<li><a href="chapters/08-experiments.html">08. experiments와 observability</a></li>
+<li><a href="chapters/09-comparison.html">09. PostgreSQL/InnoDB 비교</a></li>
+<li><a href="chapters/10-blueprint.html">10. reimplementation, glossary, teaching map</a></li>
+<li><a href="chapters/11-contract-evidence.html">11. 계약·증거·준비도 부록</a></li>
+</ol>
+<h2>Evidence labels</h2>
+<p><strong>SOURCE-CONFIRMED</strong>는 pinned source가 보장한 mechanism, <strong>SOURCE+RUNTIME-CONFIRMED</strong>는 captured CUBRID run이 좁은 관찰을 보탠 claim이다. inferred와 unknown은 보장으로 승격하지 않았다.</p></main><footer>Offline Korean book · companion Markdown은 notion/page-buffer-guide.md</footer>
+</body>
+</html>

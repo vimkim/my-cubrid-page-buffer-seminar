@@ -1,0 +1,45 @@
+{
+  "build_meta_sha256": "1b4ba79b3faeb1ced911aaf22539a934eba5021cd19c4c34651deac7bbb79eb1",
+  "build_run_id": "runtime-baseline-build-2",
+  "captured_at_utc": "2026-08-28T07:28:25.844142+00:00",
+  "id": "baseline",
+  "release_identity": {
+    "exit": 0,
+    "output": "CUBRID 11.5.0 (11.5.0.2397-f799e05) (64bit debug build for Linux) (Aug 28 2026 16:17:27)",
+    "path": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/cubrid_rel",
+    "sha256": "4a1300e46e19adf69ff1dabbb9a64f389ea05fbbdda8197046d822e9c7275779"
+  },
+  "runtime_environment": {
+    "ASAN_OPTIONS": "halt_on_error=0:log_path=./asan.log",
+    "CUBRID": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc",
+    "CUBRID_DATABASES": "/home/vimkim/.cub/db/pgbuf-analysis/commondb",
+    "HOME": "/home/vimkim",
+    "LANG": "en_US.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "LC_CTYPE": "C.UTF-8",
+    "LD_LIBRARY_PATH": "/home/vimkim/.local/opt/bison-3.0.5/lib:/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/cci/lib:/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/lib:/home/vimkim/CUB3LIB/lib:/usr/local/lib:",
+    "LOGNAME": "vimkim",
+    "LSAN_OPTIONS": "halt_on_error=0:log_path=./lsan.log",
+    "PATH": "/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/shims:/home/vimkim/.cargo/bin/:/opt/bison-3.0.5/bin/:/home/vimkim/.local/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/vimkim/.config/my-scripts/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin",
+    "SHELL": "/home/linuxbrew/.linuxbrew/bin/nu",
+    "USER": "vimkim"
+  },
+  "schema_version": 1,
+  "source_head": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+  "source_root": "/home/vimkim/gh/cb/pgbuf-analysis",
+  "tools": {
+    "csql": {
+      "path": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/csql",
+      "sha256": "35ce6c42dcc93cff2a3977875c7f84cd153cea2b5ef6403cda9f157685756842"
+    },
+    "cub_server": {
+      "path": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/cub_server",
+      "sha256": "d4a2a773c6f76ee7313dfdc65a8c84756b31588f794c93849aa96527db705a46"
+    },
+    "cubrid": {
+      "path": "/home/vimkim/.cub/install/pgbuf-analysis/debug_gcc/bin/cubrid",
+      "sha256": "cba84279e3e1eb0339ac6de3aa7af4db1aec49a3ee7d3353b2ac4c70f29ee345"
+    }
+  },
+  "worktree_environment_sha256": "ad0176413410235a3f8efdac2d02c8fb637a735deedd24ec1bc308c09348518b"
+}

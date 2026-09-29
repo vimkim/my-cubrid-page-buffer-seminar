@@ -4,7 +4,7 @@
 **Prerequisites:** [Flush One Generation](../learning/04-flush-one-generation.md) and [Replace One Frame](../learning/05-replace-one-frame.md)
 **Capability gained:** Follow one BCB from a cold miss through list placement, aging, victim selection, detach, and reuse; explain how private-list assignment and activity change where CUBRID searches.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** Verified mechanism and Implementation policy from pinned CUBRID source. The available runtime observations did not force an eviction. Historical evidence at `5cd4f860e` is used only as a revision-bound navigation aid in the [older replacement fact sheet](../../../pgbuf-analysis/research/cubrid-lru-victim.md).
+**Evidence used:** Verified mechanism and Implementation policy from pinned CUBRID source. The available runtime observations did not force an eviction. Historical evidence at `5cd4f860e` is used only as a revision-bound navigation aid in the [older replacement fact sheet](../evidence/my-cubrid-docs/pgbuf-analysis/research/cubrid-lru-victim.md).
 
 ## Begin with the reason replacement runs
 

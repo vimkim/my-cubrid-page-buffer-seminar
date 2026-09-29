@@ -1,0 +1,31 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql",
+    "-u",
+    "dba",
+    "ca_pgbuf_f799e05",
+    "-i",
+    "experiment.sql"
+  ],
+  "bound_files": [
+    {
+      "after_sha256": "2d90971c97beca979d9a0bb7aa523707be29e6d098aff8cf8e0fcc2a2619af92",
+      "before_sha256": "2d90971c97beca979d9a0bb7aa523707be29e6d098aff8cf8e0fcc2a2619af92",
+      "path": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/experiment.sql"
+    }
+  ],
+  "cwd": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-09-01T05:11:30.966667+00:00",
+  "id": "rebind-exp2",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "0c23b2fc0885fcd36bb87c7b7fa105876300e298e72ceb095d77beb59946032f",
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "schema_version": 1,
+  "started_at_utc": "2026-09-01T05:11:28.348121+00:00",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "3841dbd75d2c0ff52bda2883cfcbcc6c43748daf3fa5f1900cdeab306c6fb67a"
+}

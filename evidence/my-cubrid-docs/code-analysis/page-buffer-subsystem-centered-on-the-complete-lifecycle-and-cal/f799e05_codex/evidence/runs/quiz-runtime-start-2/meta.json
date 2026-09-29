@@ -1,0 +1,21 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "/usr/bin/bash",
+    "start-suite.sh"
+  ],
+  "bound_files": [],
+  "cwd": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-08-28T08:23:03.142803+00:00",
+  "id": "quiz-runtime-start-2",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "a16a6bf59f0551b472ff7d939c96f000e6d221aec92362454f657676dcb63ac5",
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "schema_version": 1,
+  "started_at_utc": "2026-08-28T08:23:00.001489+00:00",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "a6528378df87b7d67f62e86b6eff49721b26dde9921726d099504cbade54eaf9"
+}

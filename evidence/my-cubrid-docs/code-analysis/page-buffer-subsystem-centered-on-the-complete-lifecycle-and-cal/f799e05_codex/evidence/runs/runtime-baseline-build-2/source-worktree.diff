@@ -1,0 +1,6 @@
+diff --git a/cubrid-cci b/cubrid-cci
+--- a/cubrid-cci
++++ b/cubrid-cci
+@@ -1 +1 @@
+-Subproject commit 2fb8d6d02c41386be0d56c3cfc6a14ad7e17ac15
++Subproject commit 2fb8d6d02c41386be0d56c3cfc6a14ad7e17ac15-dirty

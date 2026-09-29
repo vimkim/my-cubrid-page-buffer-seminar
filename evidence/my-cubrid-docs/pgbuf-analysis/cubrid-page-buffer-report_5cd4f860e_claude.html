@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CUBRID Page Buffer 완전 정복 — PostgreSQL·InnoDB 비교 리포트</title>
+<style>
+:root {
+  --bg: #ffffff; --fg: #1a1d21; --muted: #5c6570; --line: #dde3ea;
+  --accent: #0b6bcb; --accent-soft: #e8f1fb;
+  --warn-bg: #fff7e6; --warn-line: #e6b800;
+  --quiz-bg: #eefaf0; --quiz-line: #2e9e44;
+  --code-bg: #f4f6f8; --code-fg: #24313f;
+  --cub: #0b6bcb; --pg: #336791; --inno: #e48312;
+  --th-bg: #f0f4f8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14181d; --fg: #dfe6ee; --muted: #93a0ad; --line: #2c343d;
+    --accent: #62a8ee; --accent-soft: #1b2836;
+    --warn-bg: #2a2413; --warn-line: #c7a325;
+    --quiz-bg: #14251a; --quiz-line: #3fae57;
+    --code-bg: #1d232a; --code-fg: #cfd8e3;
+    --cub: #62a8ee; --pg: #7fa8c9; --inno: #e8a04c;
+    --th-bg: #1b2129;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: "Pretendard", "Noto Sans KR", -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.75; font-size: 16px;
+}
+main { max-width: 980px; margin: 0 auto; padding: 2rem 1.2rem 6rem; }
+h1, h2, h3, h4 { line-height: 1.35; scroll-margin-top: 1rem; }
+h1 { font-size: 2rem; margin: 0.5rem 0 0.4rem; }
+h2 { font-size: 1.55rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.35rem; margin-top: 3.2rem; }
+h3 { font-size: 1.2rem; margin-top: 2.2rem; }
+h4 { font-size: 1.03rem; margin-top: 1.6rem; }
+p { margin: 0.8rem 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code {
+  font-family: "JetBrains Mono", "D2Coding", Consolas, monospace;
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.86em;
+}
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 0.9rem 1.1rem; border-radius: 8px; overflow-x: auto;
+  font-size: 0.84rem; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.92rem; }
+.tablewrap { overflow-x: auto; }
+th, td { border: 1px solid var(--line); padding: 0.45rem 0.7rem; text-align: left; vertical-align: top; }
+th { background: var(--th-bg); }
+.box { border: 1px solid var(--line); border-left: 5px solid var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 0.8rem 1.1rem; margin: 1.2rem 0; }
+.box.analogy { border-left-color: var(--accent); }
+.box.warn { border-left-color: var(--warn-line); background: var(--warn-bg); }
+.box.quiz { border-left-color: var(--quiz-line); background: var(--quiz-bg); }
+.box .label { font-weight: 700; font-size: 0.85rem; letter-spacing: 0.04em; color: var(--muted); display: block; margin-bottom: 0.2rem; }
+.ref { color: var(--muted); font-size: 0.82em; }
+.small { color: var(--muted); font-size: 0.88em; }
+.eng { color: var(--cub); font-weight: 600; }
+.eng.pg { color: var(--pg); } .eng.inno { color: var(--inno); }
+figure { margin: 1.6rem 0; text-align: center; }
+figure svg { max-width: 100%; height: auto; }
+figcaption { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; }
+.toc { border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.4rem; background: var(--code-bg); }
+.toc ol { margin: 0.4rem 0; padding-left: 1.4rem; }
+.toc li { margin: 0.22rem 0; }
+.cover-meta { border: 1px solid var(--line); border-radius: 10px; padding: 0.4rem 1.2rem; margin: 1.4rem 0; }
+kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 0.35em; font-size: 0.85em; background: var(--code-bg); }
+.svg-label { font: 600 13px sans-serif; fill: var(--fg); }
+.svg-small { font: 12px sans-serif; fill: var(--fg); }
+.svg-muted { font: 11px sans-serif; fill: var(--muted); }
+hr { border: none; border-top: 1px solid var(--line); margin: 2.5rem 0; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+<p class="small">CUBRID Internals Seminar</p>
+<h1>CUBRID Page Buffer 완전 정복</h1>
+<p style="font-size:1.1rem; color:var(--muted); margin-top:0;">— 디스크와 메모리 사이의 사서(司書): PostgreSQL · InnoDB와 함께 읽는 버퍼 풀의 모든 것</p>
+
+<div class="cover-meta">
+<p><b>이 리포트가 다루는 것</b> — 데이터베이스 서버의 심장인 <b>버퍼 풀(buffer pool)</b>이 무엇이고 왜 필요한지부터,
+CUBRID <code>src/storage/page_buffer.c</code>(17,500여 줄)의 실제 동작 — fix/unfix, LRU zone, private/shared 리스트와 quota,
+victim 선택, WAL 규칙, flush, checkpoint, Double Write Buffer — 까지. 같은 문제를 PostgreSQL과 MySQL(InnoDB)은
+어떻게 다르게 푸는지 나란히 비교한다. 모든 주장에는 <code>파일:줄번호</code> 근거를 달았다.</p>
+<p><b>함께 보는 실습</b> — 저장소의 <code>quizzes/01~12</code> 디렉터리에 이 리포트의 각 장에 대응하는
+<b>실행 가능한 퀴즈</b>가 있다. 본문의 <span style="color:var(--quiz-line)">🧪 실습</span> 박스가 해당 퀴즈를 가리킨다.</p>
+<div class="tablewrap"><table>
+<tr><th>엔진</th><th>분석한 소스</th><th>버전/커밋</th><th>핵심 파일</th></tr>
+<tr><td><span class="eng">CUBRID</span></td><td><code>~/gh/cb/pgbuf-analysis</code></td><td>11.5.x, <code>5cd4f860e</code> (branch <code>pgbuf-analysis</code>)</td><td><code>src/storage/page_buffer.c</code> · <code>double_write_buffer.cpp</code></td></tr>
+<tr><td><span class="eng pg">PostgreSQL</span></td><td><code>~/gh/pg/postgres</code></td><td><b>20devel</b> master, <code>fd2b89854d9</code></td><td><code>storage/buffer/bufmgr.c</code> · <code>freelist.c</code></td></tr>
+<tr><td><span class="eng inno">InnoDB</span></td><td><code>~/gh/mysql/mysql-server</code></td><td>MySQL <b>26.7.0</b> (innovation)</td><td><code>innobase/buf/buf0buf.cc</code> · <code>buf0lru.cc</code> · <code>buf0flu.cc</code></td></tr>
+</table></div>
+<p class="small">⚠️ 버전 주의 — 세 소스 모두 "지금 이 트리"를 기준으로 서술한다.
+(1) CUBRID 트리는 stock 11.5가 아니라 <b>BCB latch를 64-bit atomic으로 재설계한 로컬 커밋들</b>(CBRD-26941/26898/27041/27084/26975)을 포함한다.
+(2) PostgreSQL은 릴리스판이 아닌 <b>20devel master</b>로, freelist 삭제·AIO 읽기·content lock 재구현 등 블로그 상식과 크게 다르다.
+(3) MySQL 26.7도 8.0 시절 상식과 다른 부분(예: <code>innodb_io_capacity</code> 기본 10000)이 있다. 본문에서 그때그때 짚는다.</p>
+</div>
+</header>
+
+<nav class="toc">
+<b>목차</b>
+<ol>
+  <li><a href="#ch1">버퍼 풀은 왜 존재하는가 — 도서관과 책상의 물리학</a></li>
+  <li><a href="#ch2">모든 버퍼 풀의 공통 해부학 — 4가지 보편 과제</a></li>
+  <li><a href="#ch3">CUBRID 해부학 ①: pgbuf_Pool의 구조물들</a></li>
+  <li><a href="#ch4">CUBRID 해부학 ②: fix/unfix — 페이지 하나를 빌리는 일</a></li>
+  <li><a href="#ch5">교체 정책: LRU zone, private/shared 리스트, quota, AOUT</a></li>
+  <li><a href="#ch6">victim 선택과 direct victim — 프레임이 없을 때 벌어지는 일</a></li>
+  <li><a href="#ch7">dirty 페이지, WAL 규칙, flush, checkpoint</a></li>
+  <li><a href="#ch8">Double Write Buffer — 반쪽 페이지와의 전쟁</a></li>
+  <li><a href="#ch9">PostgreSQL은 어떻게 푸는가 (20devel)</a></li>
+  <li><a href="#ch10">InnoDB는 어떻게 푸는가 (MySQL 26.7)</a></li>
+  <li><a href="#ch11">축별 비교 — 같은 문제, 세 가지 답</a></li>
+  <li><a href="#ch12">부록: 코드맵 · 관측 치트시트 · 퀴즈 매핑 · grill 준비 체크리스트</a></li>
+</ol>
+</nav>
+
+<!-- ============================ CH 1 ============================ -->
+<h2 id="ch1">1. 버퍼 풀은 왜 존재하는가 — 도서관과 책상의 물리학</h2>
+
+<div class="box analogy"><span class="label">🎨 비유</span>
+당신은 거대한 도서관(디스크)에서 일하는 연구원이다. 서고에서 책 한 권을 가져오는 데는 <b>몇 분</b>이 걸리지만,
+일단 <b>책상(메모리)</b> 위에 올려 둔 책은 <b>몇 초</b> 만에 펼칠 수 있다. 책상은 좁아서 몇십 권밖에 못 올린다.
+그렇다면 전략은 자명하다 — <b>자주 보는 책은 책상에 두고, 안 보는 책부터 서고로 돌려보낸다.</b>
+버퍼 풀은 정확히 이 책상이고, page buffer 코드는 이 책상을 관리하는 <b>사서</b>다.
+</div>
+
+<p>수치로 보면 이 비유는 과장이 아니다. DRAM 접근은 ~100ns, NVMe SSD 랜덤 읽기는 ~100μs(1,000배),
+HDD라면 ~10ms(100,000배)다. 디스크를 한 번 읽을 시간에 메모리는 수천~수만 번 읽는다.
+그래서 모든 디스크 기반 DBMS는 예외 없이 "디스크의 데이터를 메모리에 캐시하고, 가능한 한 메모리에서만 논다"는
+구조를 갖는다.</p>
+
+<p>이때 캐시의 <b>단위</b>가 중요하다. 버퍼 풀이 캐시하는 것은 "쿼리 결과"도 "행(row)"도 아닌
+<b>페이지(page)</b> — 디스크 파일을 일정 크기(CUBRID 16KB, PostgreSQL 8KB, InnoDB 16KB)로 자른 블록이다.
+한 페이지에는 보통 수십~수백 개의 행이 들어 있다. 디스크와의 모든 입출력은 페이지 단위로 일어난다.</p>
+
+<figure>
+<svg viewBox="0 0 760 240" role="img" aria-label="메모리 계층 구조">
+  <rect x="20"  y="30" width="200" height="170" rx="10" fill="none" stroke="var(--accent)" stroke-width="2"/>
+  <text x="120" y="55" text-anchor="middle" class="svg-label">CPU / 캐시</text>
+  <text x="120" y="75" text-anchor="middle" class="svg-muted">~1 ns</text>
+  <rect x="280" y="30" width="200" height="170" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2.5"/>
+  <text x="380" y="55" text-anchor="middle" class="svg-label">메모리 (버퍼 풀)</text>
+  <text x="380" y="75" text-anchor="middle" class="svg-muted">~100 ns</text>
+  <rect x="300" y="95" width="70" height="40" rx="4" fill="none" stroke="var(--accent)"/>
+  <rect x="390" y="95" width="70" height="40" rx="4" fill="none" stroke="var(--accent)"/>
+  <rect x="300" y="145" width="70" height="40" rx="4" fill="none" stroke="var(--accent)"/>
+  <rect x="390" y="145" width="70" height="40" rx="4" fill="none" stroke="var(--muted)" stroke-dasharray="4 3"/>
+  <text x="335" y="120" text-anchor="middle" class="svg-small">page</text>
+  <text x="425" y="120" text-anchor="middle" class="svg-small">page</text>
+  <text x="335" y="170" text-anchor="middle" class="svg-small">page</text>
+  <text x="425" y="170" text-anchor="middle" class="svg-muted">빈 프레임</text>
+  <rect x="540" y="30" width="200" height="170" rx="10" fill="none" stroke="var(--muted)" stroke-width="2"/>
+  <text x="640" y="55" text-anchor="middle" class="svg-label">디스크 (데이터 볼륨)</text>
+  <text x="640" y="75" text-anchor="middle" class="svg-muted">~100 μs (SSD)</text>
+  <g stroke="var(--muted)" fill="none"><rect x="560" y="95" width="50" height="30"/><rect x="620" y="95" width="50" height="30"/><rect x="680" y="95" width="50" height="30"/><rect x="560" y="135" width="50" height="30"/><rect x="620" y="135" width="50" height="30"/><rect x="680" y="135" width="50" height="30"/></g>
+  <path d="M 480 100 L 535 100" stroke="var(--accent)" stroke-width="2" marker-end="url(#arr)"/>
+  <path d="M 535 150 L 480 150" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr2)"/>
+  <text x="508" y="92"  text-anchor="middle" class="svg-muted">write(flush)</text>
+  <text x="508" y="172" text-anchor="middle" class="svg-muted">read</text>
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--accent)"/></marker>
+    <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--muted)"/></marker>
+  </defs>
+</svg>
+<figcaption>그림 1. 버퍼 풀은 디스크 페이지의 메모리 사본을 유지하는 캐시다. 모든 읽기/쓰기는 페이지 단위.</figcaption>
+</figure>
+
+<div class="box quiz"><span class="label">🧪 실습 — Quiz 01 · 02</span>
+<code>quizzes/01-cold-vs-hot-read</code>: 서버 재시작 직후(cold) 스캔은 <code>ioreads +28</code>,
+같은 스캔 두 번째(hot)는 <code>ioreads 0</code> — 그러나 <code>fetches</code>(페이지 요청)는 두 번 모두 발생한다.
+"버퍼는 결과가 아니라 페이지를 캐시한다"를 눈으로 확인해 보라.
+<code>quizzes/02-fix-lifecycle</code>은 쿼리가 끝난 후 몇 페이지가 '고정'되어 있는지 보여준다 (답: 거의 0).
+</div>
+
+<!-- ============================ CH 2 ============================ -->
+<h2 id="ch2">2. 모든 버퍼 풀의 공통 해부학 — 4가지 보편 과제</h2>
+
+<p>어느 엔진이든 버퍼 풀을 만들려면 정확히 같은 네 가지 문제를 풀어야 한다.
+이 네 가지가 이 리포트 전체의 뼈대이고, 3사 비교(11장)의 축이다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>#</th><th>과제</th><th>질문</th><th>CUBRID의 답</th><th>PostgreSQL의 답</th><th>InnoDB의 답</th></tr>
+<tr><td>①</td><td><b>찾기 (lookup)</b></td><td>"3번 볼륨 271페이지, 지금 메모리에 있나?"를 어떻게 빨리 아나?</td>
+<td>고정 1M 버킷 해시 + 버킷당 mutex</td><td>128-파티션 공유 해시</td><td>인스턴스별 해시 + 16 rw-lock 샤드</td></tr>
+<tr><td>②</td><td><b>교체 (replacement)</b></td><td>책상이 꽉 찼을 때 누구를 서고로 돌려보내나?</td>
+<td>다중 LRU 리스트(3-zone) + private quota</td><td>clock-sweep (usage_count)</td><td>midpoint LRU (old/young sublist)</td></tr>
+<tr><td>③</td><td><b>더티 관리 (dirty)</b></td><td>메모리에서 고친 페이지를 언제·어떻게 디스크에 반영하나?</td>
+<td>flush daemon + checkpoint + DWB</td><td>bgwriter + checkpointer + FPW</td><td>page cleaner + fuzzy checkpoint + doublewrite</td></tr>
+<tr><td>④</td><td><b>동시성 (concurrency)</b></td><td>수백 스레드가 같은 페이지를 만질 때 어떻게 안전한가?</td>
+<td>fix count + page latch (R/W)</td><td>pin + content lock (S/SX/X)</td><td>buf_fix_count + rw-latch (S/SX/X)</td></tr>
+</table></div>
+
+<h3>2.1 용어 통일: 같은 개념, 세 가지 이름</h3>
+
+<p>세 엔진의 문서를 오가면 용어 때문에 길을 잃기 쉽다. 아래 대응표를 머리에 넣어 두면
+이후의 모든 장이 쉬워진다.</p>
+
+<div class="tablewrap"><table>
+<tr><th>개념</th><th><span class="eng">CUBRID</span></th><th><span class="eng pg">PostgreSQL</span></th><th><span class="eng inno">InnoDB</span></th></tr>
+<tr><td>페이지의 메타데이터(관리 딱지)</td><td><code>PGBUF_BCB</code> (Buffer Control Block)</td><td><code>BufferDesc</code></td><td><code>buf_page_t</code> / <code>buf_block_t</code></td></tr>
+<tr><td>페이지 실물이 담긴 메모리 칸</td><td>frame (<code>PGBUF_IOPAGE_BUFFER</code>)</td><td>buffer (별도 배열)</td><td>frame (<code>buf_block_t::frame</code>)</td></tr>
+<tr><td>"쓰는 동안 빼앗지 마" 참조 카운트</td><td><b>fix</b> (<code>fcnt</code>)</td><td><b>pin</b> (refcount)</td><td><b>fix</b> (<code>buf_fix_count</code>)</td></tr>
+<tr><td>페이지 내용 보호 락 (짧게 잡음)</td><td><b>latch</b> (READ/WRITE)</td><td>content lock (SHARE/SX/EXCLUSIVE)</td><td>rw-latch (S/SX/X)</td></tr>
+<tr><td>수정됐지만 아직 디스크에 안 쓴 페이지</td><td colspan="3">dirty page (셋 다 같은 용어)</td></tr>
+<tr><td>쫓아낼 페이지</td><td>victim</td><td>victim</td><td>victim</td></tr>
+<tr><td>페이지의 마지막 수정 로그 위치</td><td>LSA (Log Sequence Address)</td><td>LSN</td><td>LSN</td></tr>
+</table></div>
+
+<div class="box"><span class="label">📌 핵심 구분 — fix(pin) vs latch</span>
+<b>fix</b>는 "이 페이지를 지금 누가 참조 중이니 프레임을 재활용하지 마라"는 <b>존재 보증</b>이고,
+<b>latch</b>는 "지금 내용을 읽는/고치는 중이니 끼어들지 마라"는 <b>내용 보호</b>다.
+fix는 여러 스레드가 동시에 가질 수 있고, latch는 READ는 공유·WRITE는 배타다.
+둘 다 트랜잭션 락(lock)과는 완전히 다른, <b>마이크로초 단위</b>의 물리적 보호 장치다.
+CUBRID는 이 둘을 한 호출(<code>pgbuf_fix</code>)로 함께 잡는다 — 4장에서 자세히.
+</div>
+
+<h3>2.2 왜 그냥 OS 페이지 캐시를 쓰지 않나?</h3>
+<p>OS도 파일 캐시를 갖고 있다. 그런데 왜 DBMS는 굳이 자체 버퍼 풀을 만들까?
+(1) <b>쓰기 순서 제어</b> — WAL 규칙(7장)처럼 "로그가 먼저, 데이터가 나중" 순서를 OS 캐시는 보장해 주지 않는다.
+(2) <b>교체 정책 제어</b> — DBMS는 "이건 인덱스 루트라 계속 쓴다", "이건 풀스캔이라 한 번 보고 만다"를 알지만 OS는 모른다.
+(3) <b>fix/latch 같은 동시성 규약</b>은 페이지가 항상 같은 주소에 고정되어 있어야 성립한다.
+그래서 세 엔진 모두 direct I/O 또는 자체 버퍼 풀 + OS 캐시 조합으로 스스로 관리한다.</p>
+
+<!-- ============================ CH 3 ============================ -->
+<h2 id="ch3">3. CUBRID 해부학 ①: pgbuf_Pool의 구조물들</h2>
+
+<div class="box analogy"><span class="label">🎨 비유</span>
+책상(버퍼 풀)을 자세히 보자. 책마다 <b>대출 카드</b>(BCB)가 붙어 있어 "누가 보는 중인지, 낙서(수정)했는지"를 기록한다.
+책 제목으로 카드를 바로 찾는 <b>카드 색인함</b>(hash table)이 있고, 책상 위 책들은 인기순으로 <b>여러 줄</b>(LRU 리스트)로
+정렬되어 있다. 빈 자리 목록(invalid list)과, 사서 보조 알바 4명(daemon)도 있다.
+</div>
+
+<p>CUBRID의 버퍼 풀 전체는 단 하나의 전역 구조체 <code>pgbuf_Pool</code>에 담긴다
+<span class="ref">(PGBUF_BUFFER_POOL, page_buffer.c:755-832; 인스턴스는 :845)</span>. 주요 구성물:</p>
+
+<figure>
+<svg viewBox="0 0 900 430" role="img" aria-label="pgbuf_Pool 구조">
+  <rect x="8" y="8" width="884" height="414" rx="12" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+  <text x="24" y="34" class="svg-label">pgbuf_Pool (전역 1개)</text>
+
+  <rect x="24" y="52" width="250" height="110" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+  <text x="149" y="74" text-anchor="middle" class="svg-label">buf_hash_table</text>
+  <text x="149" y="94" text-anchor="middle" class="svg-small">VPID → BCB 해시</text>
+  <text x="149" y="112" text-anchor="middle" class="svg-muted">고정 1,048,576 버킷</text>
+  <text x="149" y="130" text-anchor="middle" class="svg-muted">버킷마다 mutex + BCB 체인</text>
+  <text x="149" y="148" text-anchor="middle" class="svg-muted">+ buffer lock 체인(읽기 중복 방지)</text>
+
+  <rect x="24" y="180" width="250" height="80" rx="8" fill="none" stroke="var(--accent)"/>
+  <text x="149" y="202" text-anchor="middle" class="svg-label">BCB_table + iopage_table</text>
+  <text x="149" y="222" text-anchor="middle" class="svg-small">i번째 BCB ↔ i번째 16KB 프레임</text>
+  <text x="149" y="240" text-anchor="middle" class="svg-muted">data_buffer_size로 개수 결정</text>
+
+  <rect x="24" y="278" width="250" height="60" rx="8" fill="none" stroke="var(--muted)"/>
+  <text x="149" y="300" text-anchor="middle" class="svg-label">buf_invalid_list</text>
+  <text x="149" y="320" text-anchor="middle" class="svg-muted">아직 안 쓴/무효화된 빈 BCB 목록</text>
+
+  <rect x="310" y="52" width="300" height="200" rx="8" fill="none" stroke="var(--accent)" stroke-width="2"/>
+  <text x="460" y="74" text-anchor="middle" class="svg-label">buf_LRU_list[] — 여러 개의 LRU 리스트</text>
+  <rect x="330" y="90" width="260" height="40" rx="5" fill="var(--accent-soft)" stroke="var(--accent)"/>
+  <text x="460" y="115" text-anchor="middle" class="svg-small">shared 리스트 × N (모두가 공유)</text>
+  <rect x="330" y="142" width="260" height="40" rx="5" fill="none" stroke="var(--accent)"/>
+  <text x="460" y="167" text-anchor="middle" class="svg-small">private 리스트 × M (세션마다 하나)</text>
+  <text x="460" y="205" text-anchor="middle" class="svg-muted">각 리스트는 zone1(hot)/zone2/zone3(victim)</text>
+  <text x="460" y="225" text-anchor="middle" class="svg-muted">으로 3분할 — 5장</text>
+
+  <rect x="310" y="278" width="300" height="60" rx="8" fill="none" stroke="var(--muted)" stroke-dasharray="5 3"/>
+  <text x="460" y="300" text-anchor="middle" class="svg-label">buf_AOUT_list (2Q 유령 리스트)</text>
+  <text x="460" y="320" text-anchor="middle" class="svg-muted">⚠️ 이 빌드에서는 강제 비활성 (5.5절)</text>
+
+  <rect x="646" y="52" width="230" height="130" rx="8" fill="none" stroke="var(--accent)"/>
+  <text x="761" y="74" text-anchor="middle" class="svg-label">victim 배급 인프라 (6장)</text>
+  <text x="761" y="96" text-anchor="middle" class="svg-small">direct_victims (대기 스레드 큐)</text>
+  <text x="761" y="116" text-anchor="middle" class="svg-small">flushed_bcbs (flush 완료 큐)</text>
+  <text x="761" y="136" text-anchor="middle" class="svg-small">*_lrus_with_victims (lock-free 큐)</text>
+  <text x="761" y="158" text-anchor="middle" class="svg-muted">quota / monitor 통계 (5장)</text>
+
+  <rect x="646" y="200" width="230" height="138" rx="8" fill="none" stroke="var(--muted)"/>
+  <text x="761" y="222" text-anchor="middle" class="svg-label">4개의 데몬 스레드</text>
+  <text x="761" y="244" text-anchor="middle" class="svg-small">pgbuf-page-flush (dirty 내리기)</text>
+  <text x="761" y="264" text-anchor="middle" class="svg-small">pgbuf-page-post-flush (victim 배급)</text>
+  <text x="761" y="284" text-anchor="middle" class="svg-small">pgbuf-maintain (quota 조정, 100ms)</text>
+  <text x="761" y="304" text-anchor="middle" class="svg-small">pgbuf-flush-control (쓰기 속도 토큰)</text>
+  <text x="761" y="326" text-anchor="middle" class="svg-muted">page_buffer.c:17169 (daemons_init)</text>
+
+  <text x="24" y="376" class="svg-muted">그 외: thrd_holder_info(스레드별 fix 장부), seq_chkpt_flusher(checkpoint 전용 flusher),</text>
+  <text x="24" y="396" class="svg-muted">victim_cand_list(flush 후보 배열), show_status(SHOW 통계 샤드)</text>
+</svg>
+<figcaption>그림 2. pgbuf_Pool의 전경. <span class="ref">page_buffer.c:755-832</span></figcaption>
+</figure>
+
+<h3>3.1 BCB — 페이지마다 붙는 대출 카드</h3>
+
+<p>프레임(16KB 실물)과 1:1로 짝지어진 관리 구조체가 <code>PGBUF_BCB</code>다
+<span class="ref">(page_buffer.c:511-543)</span>. 배열 인덱스가 같으므로 BCB↔프레임 변환은 조회가 아니라
+<b>포인터 산술</b>이다 <span class="ref">(CAST_PGPTR_TO_BFPTR, :148-169)</span>. 카드에 적히는 것들:</p>
+
+<ul>
+<li><b><code>vpid</code></b> — 어느 볼륨의 몇 번 페이지인가 (Volume + Page ID).</li>
+<li><b><code>atomic_latch</code></b> — 이 트리의 백미. <code>latch_mode</code>(16b) + <code>waiter_exists</code>(16b) + <code>fcnt</code>(32b)를
+<b>한 개의 64-bit atomic</b>에 패킹했다 <span class="ref">(:499-508)</span>. 거의 모든 전이가 CAS 루프라서,
+읽기 fix/unfix는 mutex 없이 처리된다(4.3절). <span class="small">※ 로컬 커밋(CBRD-26941 등)의 설계 — stock 11.5는 셋이 분리된 필드다.</span></li>
+<li><b><code>flags</code></b> — 32-bit int 하나에 <b>플래그 7개 + zone(4종) + 소속 LRU 리스트 번호(16b)</b>를 전부 패킹
+<span class="ref">(:224-241, :178-216)</span>. dirty, flushing-to-disk, victim-direct 등이 여기 산다.
+부팅 때 마스크가 안 겹치는지 검사하고 겹치면 <code>abort()</code>한다 <span class="ref">(:16777-16798)</span>.</li>
+<li><b><code>oldest_unflush_lsa</code></b> — 이 페이지가 dirty가 된 후 <b>첫 수정</b>의 로그 위치. checkpoint가 "어디까지의
+수정이 아직 디스크에 없나"를 계산하는 근거다(7장).</li>
+<li><b><code>count_fix_and_avoid_dealloc</code></b> — int 하나에 카운터 2개: 상위 16b는 fix 누적 횟수(64에서 포화 —
+"hot 페이지" 판정용), 하위 16b는 "vacuum아, 이 페이지 지우지 마" 참조 수 <span class="ref">(:267-269, :533-538)</span>.</li>
+</ul>
+
+<h3>3.2 해시 테이블 — 항상 1,048,576 버킷</h3>
+
+<p>VPID로 BCB를 찾는 해시는 <b>풀 크기와 무관하게 항상 2<sup>20</sup> = 1M 버킷</b>이고, 버킷마다
+pthread mutex가 하나씩 있다 <span class="ref">(HASH_SIZE_BITS 20, page_buffer.c:295-296; :5631-5642)</span>.
+버킷 구조체는 mutex + BCB 체인 + <b>buffer lock 체인</b>으로 구성된다 <span class="ref">(:575-582)</span>.
+buffer lock 체인은 "지금 이 VPID를 디스크에서 읽는 중"이라는 팻말이다 — 같은 페이지를 두 스레드가
+동시에 읽어오는 낭비를 막는다(4.2절 miss 경로).</p>
+
+<div class="box warn"><span class="label">⚠️ 알아두면 좋은 사실</span>
+1M개의 mutex는 x86-64 glibc 기준 대략 56MiB를 <b>항상</b> 차지한다. 16M짜리 미니 풀(퀴즈 환경)에서도 그렇다.
+또한 해시 탐색 1차 시도는 <b>버킷 mutex 없이</b> 체인을 걷고, BCB를 잠근 뒤 VPID를 재검증한다
+<span class="ref">(pgbuf_search_hash_chain, :7544-7667)</span> — 락 비용을 아끼는 낙관적 패턴.
+</div>
+
+<h3>3.3 프레임 — 페이지 실물과 머리/꼬리 도장</h3>
+
+<p>프레임에 담기는 <code>FILEIO_PAGE</code>는 3부분이다 <span class="ref">(file_io.h:186-193)</span>:
+머리의 시스템 영역 <code>prv</code>(마지막 수정 <b>LSA</b>, pageid, volid, 페이지 타입 등),
+사용자 데이터 영역, 그리고 페이지 <b>맨 끝</b>의 <code>prv2</code> — <b>prv.lsa의 복사본</b>이다.
+머리와 꼬리의 LSA가 다르면 그 페이지는 쓰다가 만 것(torn page)이다. CUBRID에는 페이지 checksum이 없고,
+이 <b>머리/꼬리 LSA 워터마크</b>가 유일한 torn 감지 수단이다(8장).</p>
+
+<!-- ============================ CH 4 ============================ -->
+<h2 id="ch4">4. CUBRID 해부학 ②: fix/unfix — 페이지 하나를 빌리는 일</h2>
+
+<div class="box analogy"><span class="label">🎨 비유</span>
+연구원이 책을 보려면: ① 색인함에서 카드를 찾고(없으면 서고에서 가져오고), ② 대출 도장을 찍고(fix),
+③ "읽는 중" 또는 "수정 중" 팻말을 세우고(latch), ④ 다 보면 팻말을 내리고 도장을 지운다(unfix).
+이 왕복 한 번이 <code>Num_data_page_fetches</code> 1이다. 쿼리 하나가 이 왕복을 수백~수만 번 한다.
+</div>
+
+<p>모든 것의 입구는 <code>pgbuf_fix (thread_p, &vpid, fetch_mode, latch_mode, condition)</code>
+<span class="ref">(pgbuf_fix_release, page_buffer.c:2211)</span>이다. 인자의 의미:</p>
+<ul>
+<li><b>fetch_mode</b> — <code>OLD_PAGE</code>(보통), <code>NEW_PAGE</code>(디스크 읽기 생략 — 새로 할당한 페이지),
+<code>OLD_PAGE_IF_IN_BUFFER</code>(있을 때만) 등 <span class="ref">(page_buffer.h:172-187)</span>.</li>
+<li><b>latch_mode</b> — <code>PGBUF_LATCH_READ</code>(공유) / <code>PGBUF_LATCH_WRITE</code>(배타).</li>
+<li><b>condition</b> — <code>UNCONDITIONAL</code>(잠들어서라도 기다림) / <code>CONDITIONAL</code>(못 잡으면 바로 포기).</li>
+</ul>
+
+<figure>
+<svg viewBox="0 0 900 330" role="img" aria-label="pgbuf_fix 흐름">
+  <rect x="20" y="20" width="190" height="52" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+  <text x="115" y="42" text-anchor="middle" class="svg-label">pgbuf_fix(vpid)</text>
+  <text x="115" y="60" text-anchor="middle" class="svg-muted">READ+OLD+UNCOND?</text>
+
+  <rect x="20" y="120" width="190" height="60" rx="8" fill="none" stroke="var(--quiz-line)" stroke-width="2"/>
+  <text x="115" y="143" text-anchor="middle" class="svg-label">무잠금 fast path</text>
+  <text x="115" y="162" text-anchor="middle" class="svg-small">해시 걷기 + fcnt CAS만</text>
+  <text x="115" y="176" text-anchor="middle" class="svg-muted">:7669 lockfree_fix_ro</text>
+
+  <rect x="280" y="120" width="180" height="60" rx="8" fill="none" stroke="var(--accent)"/>
+  <text x="370" y="143" text-anchor="middle" class="svg-label">해시 HIT</text>
+  <text x="370" y="162" text-anchor="middle" class="svg-small">BCB mutex → latch 획득</text>
+  <text x="370" y="176" text-anchor="middle" class="svg-muted">:6246 latch_bcb_upon_fix</text>
+
+  <rect x="540" y="90" width="340" height="200" rx="8" fill="none" stroke="var(--muted)"/>
+  <text x="710" y="112" text-anchor="middle" class="svg-label">해시 MISS — 페이지 데려오기</text>
+  <text x="560" y="140" class="svg-small">① buffer lock 팻말 세우기 (내가 첫 요청자?)</text>
+  <text x="560" y="162" class="svg-small">   → 이미 있으면 잠들었다 깨어나 재시도</text>
+  <text x="560" y="188" class="svg-small">② 빈 BCB 확보: invalid list → victim (6장)</text>
+  <text x="560" y="214" class="svg-small">③ DWB 확인 → 디스크 읽기 (ioreads +1)</text>
+  <text x="560" y="240" class="svg-small">④ latch 걸고 → 해시에 등록 + 팻말 제거</text>
+  <text x="560" y="266" class="svg-muted">pgbuf_claim_bcb_for_fix :8349, 등록 :2483-2493</text>
+
+  <path d="M 115 72 L 115 115" stroke="var(--quiz-line)" stroke-width="2" marker-end="url(#arr3)"/>
+  <path d="M 210 46 L 370 46 L 370 115" stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arr3)"/>
+  <path d="M 460 150 L 535 150" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr3)"/>
+  <text x="240" y="38" class="svg-muted">그 외 경로</text>
+  <text x="470" y="142" class="svg-muted">없으면</text>
+  <defs><marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--muted)"/></marker></defs>
+</svg>
+<figcaption>그림 3. fix의 세 경로. 대부분의 읽기는 왼쪽의 무잠금 경로로 끝난다.</figcaption>
+</figure>
+
+<h3>4.1 HIT — 이미 책상에 있는 경우</h3>
+<p>해시에서 BCB를 찾으면 latch를 요청한다. 부여 규칙 <span class="ref">(pgbuf_latch_bcb_upon_fix, :6246-6583)</span>:</p>
+<ul>
+<li>READ 요청 + 현재 READ latch → <b>waiter가 없으면</b> 합류 허용(fcnt++). 대기 중인 WRITE가 있으면
+새 READ는 줄을 선다(writer 기아 방지) — 단, <b>이미 이 페이지를 잡고 있는 스레드는 예외</b>(자기-데드락 방지)
+<span class="ref">(:6326-6349)</span>.</li>
+<li>WRITE latch를 쥔 스레드의 재요청 → 항상 허용 (재귀 fix) <span class="ref">(:6356-6360)</span>.</li>
+<li>충돌 → <code>pgbuf_block_bcb</code>로 대기 큐에 들어가 잠든다 <span class="ref">(:6995-7114)</span>.</li>
+</ul>
+
+<div class="box warn"><span class="label">⚠️ 페이지 latch에는 데드락 감지기가 없다</span>
+행 락(lock)은 wait-for graph로 데드락을 찾지만, 페이지 latch는 <b>타임아웃이 유일한 해결책</b>이다.
+소스의 자백: <i>"We do not guarantee that there is no deadlock between page latches... the request will be
+waken up by timeout... treated as a victim"</i> <span class="ref">(:7093-7100)</span>.
+기본 타임아웃은 5분(<code>pgbuf_latch_timeout_msecs = 300,000ms</code>, :107)이고 트랜잭션의
+<code>wait_msecs</code>와는 <b>무관</b>하다 <span class="ref">(:7250-7262)</span>.
+그래서 여러 페이지를 잡을 땐 순서가 생명이다 — heap 코드가 쓰는 <code>pgbuf_ordered_fix</code>는
+(그룹, 랭크, VPID) 순으로 <b>정렬해서</b> 잡고, 순서가 꼬이면 이미 잡은 페이지를 놓았다가 다시 잡는다
+<span class="ref">(:12185-13014)</span>.
+</div>
+
+<h3>4.2 MISS — 서고에서 가져오는 경우</h3>
+<p>그림 3의 오른쪽 경로다. 핵심 디테일 셋:
+(1) <b>buffer lock</b> — 같은 VPID를 읽는 두 번째 스레드는 팻말을 보고 잠들며, 깨어나면 <b>페이지를 건네받는 게 아니라
+처음부터 재시도</b>한다(이제는 해시에서 발견됨) <span class="ref">(:7935-8033, PGBUF_LOCK_WAITER)</span>.
+(2) 빈 BCB는 invalid list에서, 없으면 <b>victim 선택</b>(6장)으로 확보한다.
+(3) 디스크를 읽기 전에 반드시 <b>DWB부터 확인</b>한다 <span class="ref">(:8454)</span> — 디스크의 원위치가
+구버전일 수 있기 때문(8장).</p>
+
+<h3>4.3 이 트리의 특기: 무잠금 읽기 fast path</h3>
+<p>READ + OLD_PAGE + UNCONDITIONAL 조합(전체 fix의 대부분)은 <code>pgbuf_lockfree_fix_ro</code>
+<span class="ref">(:7669-7732)</span>로 들어간다: 버킷 mutex 없이 체인을 걷고, <code>latch_mode==READ &&
+!waiter_exists && fcnt!=0</code>이면 64-bit latch 워드를 CAS 한 번으로 fcnt++하고 끝. BCB mutex도, LRU 조작도 없다.
+unfix 쪽 짝은 <code>pgbuf_lockfree_unfix_ro</code> <span class="ref">(:7751-7774)</span>인데,
+<b><code>fcnt != 1</code> 조건이 묘수</b>다 — 마지막으로 놓는 스레드만 느린 경로로 보내
+LRU 정리(5장)가 반드시 실행되게 한다. <span class="small">(이 fast path 전체가 이 브랜치의 로컬 설계다.)</span></p>
+
+<h3>4.4 unfix — 반납의 순간이 정책의 순간</h3>
+<p><code>pgbuf_unfix</code> <span class="ref">(:3024)</span>는 fcnt를 내리고, <b>0이 되는 순간</b>에만 일이 커진다
+<span class="ref">(pgbuf_unlatch_bcb_upon_unfix, :6605-6832)</span>: LRU zone별 결정(5장), 대기자 깨우기,
+비동기 flush 요청 처리. 재미있는 최적화 — <b>대기자가 있으면 LRU 정리를 전부 건너뛰고</b> 페이지를 최대한 빨리
+넘긴다 <span class="ref">(:6674-6680)</span>.</p>
+
+<div class="box quiz"><span class="label">🧪 실습 — Quiz 02</span>
+<code>quizzes/02-fix-lifecycle</code>: 550번의 fetch가 일어난 쿼리 직후 <code>Num_data_page_fixed</code> 게이지는 1.
+fix는 마이크로초짜리 대출이고, 캐시 상주(LRU)와는 별개 상태임을 확인한다.
+</div>
+<!-- ============================ CH 5 ============================ -->
+<h2 id="ch5">5. 교체 정책: LRU zone, private/shared 리스트, quota, AOUT</h2>
+
+<div class="box analogy"><span class="label">🎨 비유</span>
+책상 위 책들을 한 줄로 세우면(전역 LRU) 두 가지 문제가 생긴다.
+① 모두가 같은 줄을 만지느라 <b>줄 자체가 병목</b>이 되고,
+② 한 명이 전집 1,000권을 훑기 시작하면 <b>모두의 애독서가 밀려난다</b>.
+CUBRID의 답: 줄을 <b>여러 개</b>로 쪼개고(리스트 샤딩), 연구원마다 <b>개인 책꽂이</b>(private list)를 주되
+<b>칸 수 제한</b>(quota)을 건다. 전집을 훑는 사람은 자기 책꽂이만 넘치고, 남의 책은 안전하다.
+</div>
+
+<h3>5.1 한 리스트의 내부: 3개의 zone</h3>
+
+<p>각 LRU 리스트는 위에서부터 zone 1(hot) / zone 2(완충) / zone 3(victim 후보)로 나뉜다.
+설계 주석 <span class="ref">(page_buffer.c:188-196)</span>이 의도를 명확히 말한다:</p>
+
+<figure>
+<svg viewBox="0 0 880 250" role="img" aria-label="LRU 3 zone">
+  <rect x="30" y="40" width="250" height="150" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>
+  <text x="155" y="66" text-anchor="middle" class="svg-label">zone 1 — hot</text>
+  <text x="155" y="90" text-anchor="middle" class="svg-small">victim 불가</text>
+  <text x="155" y="112" text-anchor="middle" class="svg-small">unfix 시 아무것도 안 함</text>
+  <text x="155" y="134" text-anchor="middle" class="svg-muted">(top 이동 비용 절약)</text>
+  <text x="155" y="170" text-anchor="middle" class="svg-muted">shared: 풀의 40% (lru_hot_ratio)</text>
+
+  <rect x="315" y="40" width="220" height="150" rx="8" fill="none" stroke="var(--accent)" stroke-width="2"/>
+  <text x="425" y="66" text-anchor="middle" class="svg-label">zone 2 — 완충</text>
+  <text x="425" y="90" text-anchor="middle" class="svg-small">victim 불가</text>
+  <text x="425" y="112" text-anchor="middle" class="svg-small">unfix 시 "충분히 늙었으면"</text>
+  <text x="425" y="132" text-anchor="middle" class="svg-small">top으로 boost</text>
+  <text x="425" y="170" text-anchor="middle" class="svg-muted">shared: 5% (lru_buffer_ratio)</text>
+
+  <rect x="570" y="40" width="280" height="150" rx="8" fill="none" stroke="var(--warn-line)" stroke-width="2.5"/>
+  <text x="710" y="66" text-anchor="middle" class="svg-label">zone 3 — victim 후보 지대</text>
+  <text x="710" y="90" text-anchor="middle" class="svg-small">victim은 여기서만 나온다</text>
+  <text x="710" y="112" text-anchor="middle" class="svg-small">unfix 시 항상 boost (구출)</text>
+  <text x="710" y="134" text-anchor="middle" class="svg-small">dirty면 먼저 flush 필요 (7장)</text>
+  <text x="710" y="170" text-anchor="middle" class="svg-muted">shared: ~55% / private: ~90%!</text>
+
+  <path d="M 30 215 L 850 215" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <text x="70" y="238" class="svg-muted">top (최근 사용)</text>
+  <text x="760" y="238" class="svg-muted">bottom (victim 탐색 시작점)</text>
+  <defs><marker id="arr4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--muted)"/></marker></defs>
+</svg>
+<figcaption>그림 4. LRU 리스트 하나의 3-zone 구조. BCB의 소속 zone과 리스트 번호는 <code>bcb-&gt;flags</code>에 패킹된다.</figcaption>
+</figure>
+
+<p>핵심 규칙 — <b>"매번 top으로"는 순진한 교과서 LRU다.</b> CUBRID의 boost 규칙
+<span class="ref">(pgbuf_lru_boost_bcb :10072-10137; unfix 분기 :6691-6799)</span>:</p>
+<ul>
+<li><b>zone 1</b>: 아무것도 하지 않는다. 어차피 victim이 될 수 없는데 리스트 mutex를 잡고 포인터 수술을 할 이유가 없다.</li>
+<li><b>zone 2</b>: 리스트에 들어온 뒤 충분히 시간이 지난 경우에만(<code>PGBUF_IS_BCB_OLD_ENOUGH</code>,
+나이차 ≥ count_lru2/2 <span class="ref">:1004-1009</span>) top으로 boost. "연속 두 번 fix"로는 승격되지 않는다.</li>
+<li><b>zone 3</b>: 살아있다는 신호가 오면 무조건 구출(boost).</li>
+</ul>
+
+<div class="box quiz"><span class="label">🧪 실습 — Quiz 06</span>
+<code>quizzes/06-lru-zones</code>: 같은 테이블을 10번 스캔하며 <code>Num_unfix_lru1_*_keep</code> vs
+<code>*_to_top</code> 카운터로 위 규칙이 실제로 작동함을 관측한다.
+</div>
+
+<h3>5.2 리스트는 왜 여러 개인가 — shared와 private</h3>
+
+<p>리스트 수 <span class="ref">(:5693-5749, :13884-13922)</span>:
+<b>shared</b>는 기본적으로 max_clients에서 출발해 "리스트당 최소 1,000페이지" 조건으로 줄이고(최소 4개),
+<b>private</b>는 <code>MAX_NTRANS + vacuum worker 50</code>개를 만든다. private 리스트는 <b>세션마다 하나씩</b> 배정되고
+(세션 생성 시 <code>pgbuf_assign_private_lru</code>, <span class="ref">session.c:740</span>),
+그 세션을 처리하는 워커 스레드로 전파된다. vacuum 워커도 저마다 하나씩 갖는다.</p>
+
+<p><b>새로 읽은 페이지는 어디로 가나?</b> 첫 unfix 때 결정된다 <span class="ref">(pgbuf_unlatch_void_zone_bcb, :6844-6939)</span>.
+원래 설계: AOUT(유령 리스트)에 있던 페이지(재방문)는 private <b>top</b>, 처음 보는 페이지는 private <b>middle</b>.
+그런데 —</p>
+
+<div class="box warn"><span class="label">⚠️ 충격 사실: AOUT은 꺼져 있다</span>
+<code>page_buffer.c:635</code>는 교체 정책을 "LRU + Aout of 2Q"라고 소개하지만, 이 빌드에서 AOUT은
+<b>코드로 강제 비활성</b>이다: <code>prm_tune_parameters()</code>가 conf 파싱이 끝난 <b>뒤에</b>
+<code>data_aout_ratio</code>를 무조건 0으로 덮어쓴다 — <i>"disable AOUT list until we fix CBRD-20741"</i>
+<span class="ref">(system_parameter.c:9985-9986)</span>. conf에 뭘 적어도 소용없다.
+그 결과 (1) 모든 새 페이지는 <b>private top</b>으로 들어가고(middle 삽입 코드는 도달 불가),
+(2) <code>Num_unfix_void_aout_found</code>는 영원히 0이다.
+"주석은 설계를, 바이너리는 현실을 말한다"의 교과서적 사례.
+→ <code>quizzes/07-aout-ghost-list</code>에서 직접 확인.
+</div>
+
+<h3>5.3 quota — 개인 책꽂이의 칸 수 제한</h3>
+
+<p>private 리스트가 무한정 크면 한 세션이 풀을 독식한다. 그래서 <b>quota</b>가 있다
+<span class="ref">(PGBUF_PAGE_QUOTA, :716-736)</span>. 100ms마다 도는 <code>pgbuf-maintain</code> 데몬이
+<code>pgbuf_adjust_quotas</code> <span class="ref">(:14195-14447)</span>로 재계산한다:</p>
+<ul>
+<li>각 리스트의 <b>활동량(activity)</b>을 히트 수로 측정하되, <b>같은 BCB는 조정 주기당 1히트만</b> 인정한다
+<span class="ref">(:16534-16544)</span> — 한 페이지를 백만 번 두드려도 1점. 즉 quota는 접근 빈도가 아니라
+<b>워킹셋의 넓이</b>를 따라간다.</li>
+<li>전체 private 몫 = 풀 × (private 히트 비율), 각 리스트 몫 = 활동량 비례 배분.
+상한: <b>5,000페이지</b> 또는 풀의 절반 <span class="ref">(:14384-14386)</span>.</li>
+<li>quota 초과분은 zone 3으로 강등되어 victim 후보가 된다 <span class="ref">(:14393-14400)</span>.</li>
+<li>private 리스트의 zone 1/2는 quota의 <b>5%씩으로 고정</b>이다 <span class="ref">(:14390-14391)</span> —
+<code>lru_hot_ratio</code>(기본 0.4)는 <b>shared 리스트에만</b> 적용된다. private 리스트는 사실상 90%가 victim 지대다.</li>
+</ul>
+
+<h3>5.4 이 설계의 실전 효과 — 실측</h3>
+
+<p>16M(1,024프레임) 풀에서 <b>~920페이지짜리 테이블</b>(풀보다 작다!)을 두 번 연속 full scan한 실측
+(<code>quizzes/05</code>):</p>
+
+<div class="tablewrap"><table>
+<tr><th>카운터</th><th>1차 스캔</th><th>2차 스캔</th></tr>
+<tr><td><code>Num_data_page_ioreads</code> (디스크 읽기)</td><td>+917</td><td><b>+914</b></td></tr>
+<tr><td><code>Num_victim_own_private_lru_success</code></td><td>+914</td><td>+911</td></tr>
+<tr><td><code>Num_data_page_private_quota</code> (게이지)</td><td colspan="2">128</td></tr>
+</table></div>
+
+<p>테이블이 풀에 들어가는 크기인데도 2차 스캔이 전부 디스크를 다시 읽었다. 스캔 세션의 quota가 128이라
+스캔이 <b>자기 페이지를 자기가 쫓아냈기 때문</b>이다(own_private 914 ≈ ioreads). 이것은 버그가 아니라
+격리 설계다: 대량 스캔의 비용을 <b>스캔 자신에게만</b> 물린다. 이웃 세션의 hot 페이지가 살아남는 것은
+<code>quizzes/08</code>이 보여준다.</p>
+
+<div class="box"><span class="label">📌 다른 엔진과의 첫 비교</span>
+같은 문제(스캔이 캐시를 오염)를 PostgreSQL은 <b>ring buffer</b>(스캔 하나가 256KB 링만 재사용, 9장)로,
+InnoDB는 <b>midpoint 삽입</b>(새 페이지를 old sublist에 꽂고 1초 내 재접근은 무시, 10장)으로 푼다.
+CUBRID만 "<b>누가</b> 읽었는가"(세션)로 격리한다는 점이 독특하다.
+</div>
+
+<!-- ============================ CH 6 ============================ -->
+<h2 id="ch6">6. victim 선택과 direct victim — 프레임이 없을 때 벌어지는 일</h2>
+
+<div class="box analogy"><span class="label">🎨 비유</span>
+새 책을 올릴 자리가 없다. 규칙: ① 자기 책꽂이가 규정 초과면 <b>자기 것부터</b> 반납.
+② 남의 초과분, ③ 공용 서가 순서. 그런데 반납 후보가 전부 <b>낙서된 책</b>(dirty)이라면?
+당신은 접수대에서 번호표를 뽑고 기다리고, 사서 알바(flush daemon)가 낙서를 정서(flush)한 책을
+<b>당신 손에 직접 쥐여준다</b>. 이것이 direct victim이다.
+</div>
+
+<h3>6.1 3단계 탐색 순서</h3>
+
+<p><code>pgbuf_get_victim</code> <span class="ref">(:9020-9197)</span>의 설계 주석 <span class="ref">(:9037-9057)</span> 그대로:</p>
+<ol>
+<li><b>자기 private 리스트</b> — 단, <b>quota를 넘겼을 때만</b> <span class="ref">(:9067-9068)</span>.
+게다가 초과 스레드는 남의 리스트 사용이 제한된다(<code>restrict_other</code> <span class="ref">:9091-9099</span>)
+— 폭식한 세션은 남의 것을 빼앗지 못하고 자기 것을 게워 낸다.</li>
+<li><b>다른 스레드의 (큰) private 리스트</b> — lock-free 순환 큐에서 꺼낸다.</li>
+<li><b>shared 리스트</b> — 역시 lock-free 큐 경유.</li>
+</ol>
+
+<p>리스트 안에서의 탐색 <span class="ref">(pgbuf_get_victim_from_lru_list, :9267-9482)</span>:
+<code>victim_hint</code>(또는 bottom)에서 위로 최대 1,000개(<code>MAX_DEPTH</code>)를 걷는다.
+dirty / flush 중 / 이미 배정됨 → 건너뜀. fix됨 → 후보로만 기록. 깨끗하고 한가한 BCB → trylock 성공 시
+리스트에서 떼어 반환. 실패로 끝나면 <b>flush daemon을 깨운다</b> <span class="ref">(:9473)</span> —
+"victim이 없다 = dirty가 너무 많다"이기 때문.</p>
+
+<h3>6.2 direct victim — 번호표와 배급</h3>
+
+<p>그래도 victim이 없으면 스레드는 <code>direct_victims.waiter_threads_high/low_priority</code> 큐에 자신을 넣고
+잠든다 <span class="ref">(:8192-8300)</span>. vacuum 스레드와 btree 루트급 hot 페이지를 쥔 스레드는 high 우선순위.
+이후 깨끗한 BCB가 생기는 <b>모든 곳</b>에서 배급이 일어난다 <span class="ref">(:15364-15421 pgbuf_assign_direct_victim; 배급처 목록은 8.4절 팩트시트)</span>:
+flush를 마친 페이지(post-flush 데몬), zone 3으로 떨어지는 깨끗한 페이지, vacuum이 놓아주는 페이지 등이
+대기 스레드의 <b>전용 슬롯</b>(<code>bcb_victims[thread_index]</code>)에 직접 꽂힌다.</p>
+
+<p>기아 방지 장치들: 매 4번째 배급은 low 큐 우선 <span class="ref">(:15508-15514)</span>,
+low 큐가 꽉 차면 high로 승격 <span class="ref">(:8224-8233)</span>, 최후엔 5분 타임아웃.
+<code>ER_PB_ALL_BUFFERS_DIRTY</code> 에러는 flush daemon이 없는 환경(SA mode)에서나 도달하는 마지막 수단이다
+<span class="ref">(:8326-8330)</span>.</p>
+
+<figure>
+<svg viewBox="0 0 880 260" role="img" aria-label="direct victim 흐름">
+  <rect x="20" y="30" width="220" height="70" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+  <text x="130" y="58" text-anchor="middle" class="svg-label">워커 스레드</text>
+  <text x="130" y="80" text-anchor="middle" class="svg-small">victim 못 찾음 → 번호표 뽑고 잠듦</text>
+  <rect x="20" y="150" width="220" height="60" rx="8" fill="none" stroke="var(--muted)"/>
+  <text x="130" y="175" text-anchor="middle" class="svg-small">waiter_threads_high/low</text>
+  <text x="130" y="195" text-anchor="middle" class="svg-small">(lock-free 대기 큐)</text>
+
+  <rect x="330" y="30" width="220" height="70" rx="8" fill="none" stroke="var(--warn-line)" stroke-width="2"/>
+  <text x="440" y="58" text-anchor="middle" class="svg-label">pgbuf-page-flush 데몬</text>
+  <text x="440" y="80" text-anchor="middle" class="svg-small">LRU 바닥의 dirty를 모아 flush</text>
+  <rect x="330" y="150" width="220" height="60" rx="8" fill="none" stroke="var(--muted)"/>
+  <text x="440" y="175" text-anchor="middle" class="svg-small">flushed_bcbs 큐 (8,192칸)</text>
+  <text x="440" y="195" text-anchor="middle" class="svg-small">flush 끝난 BCB들</text>
+
+  <rect x="640" y="30" width="220" height="70" rx="8" fill="none" stroke="var(--quiz-line)" stroke-width="2"/>
+  <text x="750" y="58" text-anchor="middle" class="svg-label">pgbuf-page-post-flush 데몬</text>
+  <text x="750" y="80" text-anchor="middle" class="svg-small">깨끗해진 BCB를 대기자에게 배급</text>
+  <rect x="640" y="150" width="220" height="60" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+  <text x="750" y="175" text-anchor="middle" class="svg-small">bcb_victims[스레드번호] 슬롯</text>
+  <text x="750" y="195" text-anchor="middle" class="svg-small">→ 스레드 깨움 (RESUMED)</text>
+
+  <path d="M 130 100 L 130 145" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr5)"/>
+  <path d="M 240 65 L 325 65" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr5)"/>
+  <path d="M 440 100 L 440 145" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr5)"/>
+  <path d="M 550 65 L 635 65" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr5)"/>
+  <path d="M 750 100 L 750 145" stroke="var(--quiz-line)" stroke-width="2" marker-end="url(#arr5)"/>
+  <path d="M 640 180 C 500 240 260 230 150 210" stroke="var(--quiz-line)" stroke-width="2" fill="none" marker-end="url(#arr5)"/>
+  <text x="400" y="245" class="svg-muted">깨어난 스레드가 슬롯에서 BCB 수령</text>
+  <text x="250" y="52" class="svg-muted">daemon 깨움</text>
+  <defs><marker id="arr5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--muted)"/></marker></defs>
+</svg>
+<figcaption>그림 5. "전부 dirty" 상황의 협업: 대기 → flush → 직접 배급. <span class="ref">Num_victim_assign_direct_flush</span> 카운터가 이 경로의 증거다.</figcaption>
+</figure>
+
+<div class="box quiz"><span class="label">🧪 실습 — Quiz 09</span>
+<code>quizzes/09-victim-under-pressure</code>: 풀 크기와 맞먹는 테이블을 통째로 UPDATE해서 거의 모든 victim 후보를
+dirty로 만들고, <code>Num_victim_assign_direct_flush</code>가 실제로 증가하는 것을 관측한다.
+비교 상식: 옛 InnoDB는 이때 요청 스레드가 <b>직접 동기 flush</b>(single-page flush)를 했다 — 26.7에도 이 경로가
+남아 있다(10장). PostgreSQL은 backend가 직접 <code>FlushBuffer</code>를 실행한다(9장). CUBRID는 "flush는 데몬,
+배급은 큐"로 분업했다.
+</div>
+
+<div class="box warn"><span class="label">⚠️ 사문화(死文化) 코드 3종 — 소스를 읽을 때 속지 말 것</span>
+이 빌드에는 "있지만 실행되지 않는" 교체 정책 코드가 셋 있다:
+① AOUT 전체(5.2절), ② <code>big_private_lrus_with_victims</code> 큐 — 생산자가 자기 소비자뿐이라 영원히 비어 있음
+<span class="ref">(유일한 produce가 :16401, 같은 함수의 consume 뒤)</span>,
+③ <code>pgbuf_direct_victims_maintenance</code> — 루프 조건이 진입 즉시 거짓(<code>index != prv_index</code>인데
+<code>index=prv_index</code>로 초기화) <span class="ref">(:9574-9588)</span>.
+grill 세션의 단골 소재가 될 것이다.
+</div>
+<!-- ============================ CH 7 ============================ -->
+<h2 id="ch7">7. dirty 페이지, WAL 규칙, flush, checkpoint</h2>
+
+<div class="box analogy"><span class="label">🎨 비유</span>
+연구원이 책에 수정 메모를 붙였다(dirty). 원본(서고 사본)에 바로 반영하러 뛰어가지 않는다 —
+대신 <b>수정 일지</b>(WAL log)에 "몇 쪽을 이렇게 고쳤다"를 적고 일지만 금고에 넣는다(COMMIT).
+책 자체는 나중에 사서 알바가 한가할 때 서고에 반영한다. 단 <b>철칙</b>이 하나 있다:
+<b>책을 서고에 반영하기 전에, 그 수정의 일지가 반드시 금고에 먼저 들어가 있어야 한다.</b>
+이것이 Write-Ahead Logging의 'Ahead'다.
+</div>
+
+<h3>7.1 dirty의 탄생</h3>
+<p>페이지를 고친 코드는 <code>pgbuf_set_dirty</code> <span class="ref">(:4874)</span>를 불러
+BCB의 dirty 플래그를 세운다 — <b>WRITE latch를 쥔 채로만</b> 가능하다(디버그 빌드에서 assert)
+<span class="ref">(:11599-11610)</span>. 동시에 log manager가 <code>pgbuf_set_lsa</code>로 페이지 머리의
+LSA를 갱신하고, dirty가 된 후 <b>첫</b> 수정이면 <code>oldest_unflush_lsa</code>를 기록한다
+<span class="ref">(:4944-5031)</span>.</p>
+
+<div class="tablewrap"><table>
+<tr><th></th><th>디스크에 쓰나?</th><th>보장 수단</th></tr>
+<tr><td><b>COMMIT 시</b></td><td>데이터 페이지 ❌ / 로그 ⭕ (commit LSA까지)</td><td>durability = 로그가 책임 (no-force)</td></tr>
+<tr><td><b>수정 도중</b></td><td>flush daemon이 커밋 전에도 쓸 수 있음 ⭕</td><td>UNDO 로그가 있어 안전 (steal)</td></tr>
+</table></div>
+
+<p>CUBRID는 <b>steal / no-force</b> 조합이다 — 그래서 REDO와 UNDO 로그가 모두 필요하다.
+실측(<code>quizzes/03·04</code>): 2,000행 UPDATE + COMMIT 직후 → <code>dirties +9,669</code>,
+<code>data iowrites 0</code>. 1,000행 INSERT + COMMIT → <code>log_append_records +2,052</code>,
+<code>log_page_iowrites +21</code>, <code>data iowrites 0</code>. <b>커밋이 디스크에 남기는 것은 로그뿐이다.</b></p>
+
+<h3>7.2 WAL 규칙의 강제 지점 — 모든 페이지 쓰기의 단일 관문</h3>
+
+<p>버퍼에서 디스크로 나가는 모든 데이터 페이지는 <b>단 하나의 함수</b>를 지난다:
+<code>pgbuf_bcb_flush_with_wal</code> <span class="ref">(:10671-10898)</span>. 순서가 전부다:</p>
+
+<ol>
+<li>BCB에 <b>flushing-to-disk</b> 플래그를 세우고 dirty를 <b>미리 끈다</b> <span class="ref">(:10739, :16018-16033)</span>
+— 쓰는 동안 다른 스레드가 또 수정하면 그 수정이 새로 dirty를 켜므로 유실되지 않는다.</li>
+<li>페이지를 <b>스택 버퍼로 복사</b>한다 <span class="ref">(:10744-10758)</span> — 디스크에 나가는 것은 사본이다.
+(DWB 사용 시 사본이 곧장 DWB 슬롯으로 들어간다.)</li>
+<li>BCB mutex를 <b>풀고</b> <span class="ref">(:10779)</span> —</li>
+<li><b>WAL 규칙 집행</b>: <code>logpb_flush_log_for_wal(페이지의 현재 LSA)</code>
+<span class="ref">(:10786; log_page_buffer.c:4162)</span>. 이 페이지의 마지막 수정 로그까지 디스크에 없으면
+로그부터 내린다. 이때 <code>Num_log_wals</code>가 1 오른다.</li>
+<li>그 다음에야 실제 쓰기: DWB 경유(8장) 또는 <code>fileio_write</code> <span class="ref">(:10811-10837)</span>.</li>
+</ol>
+
+<div class="box"><span class="label">📌 두 개의 부등식으로 외우기</span>
+<b>① log flush ≥ commit LSA</b> — COMMIT 응답 전에 (durability)<br>
+<b>② log flush ≥ 페이지의 LSA</b> — 데이터 페이지 flush 전에 (WAL 규칙, 위 4단계)<br>
+②가 없으면 "로그에 없는 미래"가 데이터 파일에 존재하게 되어 크래시 복구의 전제가 깨진다.
+</div>
+
+<h3>7.3 누가 언제 flush하나 — 데몬의 경제학</h3>
+
+<p><b>page flush daemon</b>(<code>pgbuf-page-flush</code>)이 주역이다. 깨어나는 조건: 1초 주기(기본) +
+victim을 기다리는 스레드가 있을 때 + 히트율이 낮을 때(기준이 무려 <b>99.9%</b>
+<span class="ref">(:16568-16579)</span>). 본체 <code>pgbuf_flush_victim_candidates</code>
+<span class="ref">(:3818-4119)</span>는:</p>
+<ul>
+<li>각 LRU 리스트의 <b>바닥(zone 3)</b>에서 dirty 후보를 모은다 — flush 우선순위는 quota 초과분이 많은
+리스트일수록 높다 <span class="ref">(pgbuf_compute_lru_vict_target, :14062-14185)</span>.</li>
+<li><b>(volid, pageid)로 정렬</b>해 물리적 순차 쓰기로 만든다 <span class="ref">(:3954-3957)</span>.</li>
+<li>로그가 아직 안 내려간 페이지는 <b>건너뛰고</b>(<code>Num_data_page_skipped_flush_need_wal</code>)
+log flush daemon을 깨운다 <span class="ref">(:4013-4028)</span>.</li>
+<li>쓰기 속도는 <b>토큰 버킷</b>으로 제한된다(<code>pgbuf-flush-control</code> 데몬이 50ms마다 토큰 충전,
+adaptive 모드에선 "풀의 절반이 dirty"를 목표로 부족분의 제곱에 비례해 가속
+<span class="ref">(:14788-14821)</span>). 단, <b>로그 쓰기는 토큰을 무시한다</b> —
+LOG_CS를 쥔 스레드는 면제 <span class="ref">(file_io.c:771-812)</span>.</li>
+</ul>
+
+<h3>7.4 checkpoint — 복구 시간의 상한을 사는 비용</h3>
+
+<p>checkpoint가 없다면 한 달 뒤 크래시의 복구는 한 달치 로그 재생이다. checkpoint는 주기적으로
+(기본 6분 / <code>checkpoint_interval</code>) dirty 페이지들을 내려서 <b>REDO 시작점(redo LSA)을 앞으로
+당긴다</b>. <code>pgbuf_flush_checkpoint</code> <span class="ref">(:4133-4264)</span>의 특징:</p>
+<ul>
+<li>LRU가 아니라 <b>BCB 테이블 전체를 인덱스 순으로 스캔</b>한다 <span class="ref">(:4172)</span>.</li>
+<li>수집 기준은 <code>oldest_unflush_lsa ≤ flush_upto_lsa</code> — checkpoint 시작 시점 이전의 수정만 책임진다.
+진행 중 새로 생긴 dirty는 다음 checkpoint 몫(그래서 "그 순간을 얼리는" 것이 아니다).</li>
+<li>여기도 (volid,pageid) 정렬 + 초당 1,000페이지 페이스 제어(burst 16장 단위)
+<span class="ref">(:4275-4362)</span>.</li>
+<li><b>flush하지 못한</b> 페이지들의 최소 <code>oldest_unflush_lsa</code>가 다음 redo LSA가 되어
+로그 매니저에 반환된다 <span class="ref">(log_page_buffer.c:7010-7030)</span>.</li>
+<li>victim flusher와 <b>서로 양보한다</b>: checkpoint는 victim flush 중 최대 1.5초/interval 대기
+<span class="ref">(:4331-4337)</span>, victim flusher는 checkpoint 중 ×10 부스트를 끈다
+<span class="ref">(:3905-3916)</span>.</li>
+</ul>
+
+<div class="box quiz"><span class="label">🧪 실습 — Quiz 03 · 04 · 10</span>
+<code>quizzes/10-checkpoint</code> 실측: checkpoint 후 dirty 게이지 14 → 2, <code>iowrites +206</code>,
+그리고 <code>Num_log_wals</code>가 정확히 <b>+1</b> — checkpoint는 페이지마다 로그를 미는 게 아니라
+<b>시작할 때 한 번</b> <code>flush_upto_lsa</code>까지 밀기 때문이다 <span class="ref">(:4155-4156)</span>.
+또 하나의 함정: <code>Num_data_page_flushed</code>는 checkpoint 경로에선 <b>증가하지 않는다</b> —
+victim flusher 전용 카운터다 <span class="ref">(:4113)</span>.
+</div>
+
+<!-- ============================ CH 8 ============================ -->
+<h2 id="ch8">8. Double Write Buffer — 반쪽 페이지와의 전쟁</h2>
+
+<div class="box analogy"><span class="label">🎨 비유</span>
+16KB 페이지를 디스크에 쓰는 도중 정전이 나면? 디스크가 원자성을 보장하는 단위는 섹터(0.5~4KB)라서,
+앞 4KB만 새 내용이고 뒤는 옛 내용인 <b>반쪽짜리 페이지(torn page)</b>가 남을 수 있다.
+수정 일지(WAL)도 소용없다 — REDO는 "온전한 옛 페이지" 위에서만 성립하니까.
+CUBRID의 답: 서고에 반영하기 전에 <b>복사본을 먼저 안전 금고(DWB 파일)에 넣고 확인 도장(fsync)</b>을 받는다.
+원본 반영 중 정전이 나도 금고의 사본으로 복구하면 된다.
+</div>
+
+<h3>8.1 쓰기 경로 — 순서가 생명</h3>
+
+<figure>
+<svg viewBox="0 0 880 210" role="img" aria-label="DWB 쓰기 순서">
+  <rect x="20" y="60" width="170" height="80" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+  <text x="105" y="88" text-anchor="middle" class="svg-label">① DWB 슬롯에 복사</text>
+  <text x="105" y="110" text-anchor="middle" class="svg-small">dwb_add_page</text>
+  <text x="105" y="128" text-anchor="middle" class="svg-muted">같은 VPID는 dedup</text>
+  <rect x="250" y="60" width="180" height="80" rx="8" fill="none" stroke="var(--warn-line)" stroke-width="2"/>
+  <text x="340" y="88" text-anchor="middle" class="svg-label">② _dwb 파일 쓰기+fsync</text>
+  <text x="340" y="110" text-anchor="middle" class="svg-small">블록 통째, offset 0에</text>
+  <text x="340" y="128" text-anchor="middle" class="svg-muted">← 사본 확보 완료 시점</text>
+  <rect x="490" y="60" width="170" height="80" rx="8" fill="none" stroke="var(--accent)"/>
+  <text x="575" y="88" text-anchor="middle" class="svg-label">③ 원위치(볼륨) 쓰기</text>
+  <text x="575" y="110" text-anchor="middle" class="svg-small">VPID 정렬 순서로</text>
+  <rect x="720" y="60" width="140" height="80" rx="8" fill="none" stroke="var(--muted)"/>
+  <text x="790" y="88" text-anchor="middle" class="svg-label">④ 볼륨별 fsync</text>
+  <text x="790" y="110" text-anchor="middle" class="svg-small">helper 데몬 병행</text>
+  <path d="M 190 100 L 245 100" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr6)"/>
+  <path d="M 430 100 L 485 100" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr6)"/>
+  <path d="M 660 100 L 715 100" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr6)"/>
+  <text x="440" y="35" text-anchor="middle" class="svg-muted">dwb_flush_block (double_write_buffer.cpp:2192-2458) — 블록은 한 번에 하나만 flush</text>
+  <defs><marker id="arr6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--muted)"/></marker></defs>
+</svg>
+<figcaption>그림 6. ②의 fsync가 끝나기 전에는 어떤 원위치 쓰기도 시작되지 않는다 — 그래서 torn page는 언제나 복구 가능하다.</figcaption>
+</figure>
+
+<p>구성: 기본 2MB 버퍼를 2블록으로 나눠 사용(블록당 64페이지) <span class="ref">(dwb 파라미터, :769-811)</span>.
+읽기 경로가 <b>디스크보다 DWB를 먼저</b> 확인하는 것 <span class="ref">(page_buffer.c:8454)</span>은 최적화가 아니라
+<b>정합성 요건</b>이다 — ②와 ③ 사이에는 원위치가 구버전이기 때문.</p>
+
+<h3>8.2 복구 — 재기동 때 벌어지는 일</h3>
+<p>부팅 시 <code>dwb_load_and_recover_pages</code> <span class="ref">(dwb:3199-3403)</span>가 <code>&lt;db&gt;_dwb</code>
+파일을 읽어 각 사본의 원위치 페이지를 검사한다: <b>머리/꼬리 LSA 워터마크</b>가 일치하면 sane —
+<b>절대 덮어쓰지 않는다</b>(버전 복원은 REDO의 몫, DWB는 torn 수리만) <span class="ref">(:3155-3161)</span>.
+불일치(torn)면 DWB 사본으로 교체. 둘 다 깨져 있으면 복구 불능으로 실패한다 <span class="ref">(:3163-3176)</span>.</p>
+
+<div class="box warn"><span class="label">⚠️ 반(反)직관 3연발</span>
+① <code>&lt;db&gt;_dwb</code> 파일 크기는 buffer_size가 아니라 <b>블록 1개</b> 크기다(기본 1MB) — 모든 블록 flush가
+offset 0에 덮어쓴다 <span class="ref">(:1193, :2329)</span>.
+② torn 감지는 checksum이 아니라 <b>LSA 워터마크</b>이고, 이 검사는 <b>DWB 복구 때만</b> 수행된다 —
+일반 읽기 경로는 검사하지 않는다(수리 수단이 있는 곳에서만 검사한다는 일관성).
+③ DWB가 켜져 있으면 <code>Num_data_page_iowrites</code>는 페이지당 <b>2회</b> 집계된다(DWB 쓰기+원위치 쓰기)
+<span class="ref">(dwb:2339, :2115, :2150)</span> — 퀴즈 10의 "+206 ≈ 103페이지 × 2"의 정체.
+</div>
+
+<div class="box quiz"><span class="label">🧪 실습 — Quiz 11</span>
+<code>quizzes/11-double-write-buffer</code>: 같은 워크로드를 DWB on/off로 실행. off일 때 iowrites가 페이지당
+1회로 떨어지고 DWB 카운터가 사라지는 것을 비교 관측한다. (<code>double_write_buffer_size=0</code>이 off 스위치.)
+</div>
+<!-- ============================ CH 9 ============================ -->
+<h2 id="ch9">9. PostgreSQL은 어떻게 푸는가 (20devel)</h2>
+
+<div class="box warn"><span class="label">⚠️ 버전 주의</span>
+분석한 트리는 <b>master(20devel, fd2b89854d9)</b>다. 릴리스판 PG와 크게 다르다:
+<b>freelist 삭제</b>, <b>content lock을 LWLock에서 자체 구현으로 교체</b>(모드 3개), <b>AIO 읽기 기본화</b>
+(<code>io_method=worker</code>), <code>BM_JUST_DIRTIED</code> 폐지 등. "PG 상식"과 다른 부분은 그때그때 표시한다.
+</div>
+
+<h3>9.1 구조 한눈에</h3>
+<ul>
+<li><b>BufferDesc</b> — CUBRID의 BCB에 해당. 20devel의 특징: refcount(18b) + usage_count(4b) + 플래그(12b) +
+<b>content lock 상태(20b)</b>까지 <b>하나의 64-bit atomic</b>에 패킹 <span class="ref">(buf_internals.h:33-86)</span>.
+CUBRID 이 브랜치의 64-bit <code>atomic_latch</code>와 발상이 정확히 같다 — 두 코드베이스가 독립적으로
+같은 결론(한 워드 + CAS)에 도달했다는 점이 흥미롭다.</li>
+<li><b>lookup</b> — 공유 해시를 <b>128개 파티션</b>으로 나눠 파티션당 LWLock 하나
+<span class="ref">(NUM_BUFFER_PARTITIONS, lwlock.h:83)</span>. CUBRID의 "버킷마다 mutex 1M개"보다 락은 훨씬 적고 굵다.</li>
+<li><b>pin</b> — 백엔드-로컬 참조 카운트 배열(8칸+해시)로 같은 페이지 재-pin 시 공유 atomic을 건드리지 않는다
+<span class="ref">(bufmgr.c:230-269)</span>. CUBRID의 per-thread holder 장부와 같은 역할.</li>
+</ul>
+
+<h3>9.2 교체: 리스트가 없다 — clock-sweep</h3>
+
+<p>PG에는 LRU 리스트 자체가 없다. 버퍼마다 <b>usage_count</b>(0~5)만 두고, <b>시계 바늘</b>
+(<code>nextVictimBuffer</code>, 락 없는 단조 증가 카운터 mod NBuffers)이 배열을 돌며
+"usage_count &gt; 0이면 1 깎고 통과, 0이면 victim" <span class="ref">(ClockSweepTick freelist.c:109-166;
+StrategyGetBuffer :183-317)</span>. pin 시 usage_count는 5까지 증가 <span class="ref">(bufmgr.c:3338)</span>.</p>
+
+<div class="box"><span class="label">📌 20devel 뉴스: freelist가 아예 삭제됐다</span>
+"빈 버퍼는 freelist에서, 없으면 clock-sweep"이 오랜 상식이었지만, 이 트리에서 freelist는 코드째 사라졌다
+<span class="ref">(commit 2c789405275 "Remove freelist, always use clock-sweep"; freelist.c:32-56)</span>.
+갓 부팅한 서버의 버퍼는 전부 usage 0이라 첫 sweep이 즉시 찾아낸다 — cold-start와 steady-state가 같은 경로가 됐다.
+CUBRID의 invalid list(빈 BCB 목록)는 여전히 존재한다는 점과 대조적.
+</div>
+
+<p><b>LRU 근사 수준 비교</b> — usage_count 4비트는 CUBRID의 리스트 순서보다 훨씬 거친 근사다.
+그 대신 접근 시 <b>어떤 전역 자료구조도 조작하지 않는다</b>(atomic 하나). CUBRID는 zone 1 무이동 정책으로
+같은 목표(핫 패스에서 리스트 조작 제거)를 리스트를 유지한 채 달성한다.</p>
+
+<h3>9.3 scan resistance: ring buffer</h3>
+<p>대량 스캔은 <b>ring buffer</b>를 배정받는다: seq scan 256KB(+AIO 여유분), VACUUM 2MB, 대량쓰기 16MB
+<span class="ref">(GetAccessStrategy, freelist.c:425-501)</span>. 스캔은 이 링 안의 버퍼만 돌려쓰고,
+usage_count를 1 이상으로 올리지 못한다 <span class="ref">(bufmgr.c:3344-3346)</span>.
+링 버퍼가 다른 백엔드에 의해 재사용되면(usage&gt;1) <b>말없이 링에서 제외</b>되어 일반 풀로 승격된다
+<span class="ref">(freelist.c:664-666)</span>.
+CUBRID의 private quota가 "<b>세션</b>"을 격리 단위로 쓰는 반면, PG는 "<b>스캔의 종류</b>"를 단위로 쓴다.</p>
+
+<h3>9.4 dirty와 WAL — 같은 규칙, 다른 배선</h3>
+<p><code>FlushBuffer</code> <span class="ref">(bufmgr.c:4526-4642)</span>:
+LSN 읽기 → <b><code>XLogFlush(recptr)</code></b>(WAL 규칙!) → checksum 계산 → <code>smgrwrite</code>.
+CUBRID의 <code>pgbuf_bcb_flush_with_wal</code>과 1:1로 대응한다. 쓰는 주체는 셋: 아무 백엔드나(victim이 dirty일 때
+<b>자기 손으로</b> flush — CUBRID처럼 데몬에 위임하지 않는다!), bgwriter(시계 바늘 앞을 미리 청소,
+풀 전체를 최소 120초에 한 바퀴 <span class="ref">(bufmgr.c:4051)</span>), checkpointer.</p>
+<p><b>checkpoint</b>는 dirty를 (tablespace, relfile, block) 순으로 정렬하고 <b>tablespace 간 라운드로빈</b>으로
+써서 여러 디스크를 동시에 굴린다 <span class="ref">(BufferSync, bufmgr.c:3575-3840)</span>.
+<code>checkpoint_completion_target</code>(0.9)으로 다음 checkpoint 직전까지 시간을 발라 쓴다 —
+CUBRID의 고정 페이스(초당 1,000장)보다 정교한 스케줄링.</p>
+
+<h3>9.5 torn page: doublewrite가 없다 — full_page_writes</h3>
+<p>PG의 소스에 doublewrite는 한 글자도 없다. 대신 <b>checkpoint 후 첫 수정</b>인 페이지는
+WAL 레코드에 <b>페이지 전체 이미지(FPI)</b>를 태워 보낸다 — 판정은 <code>page_lsn &lt;= RedoRecPtr</code> 한 줄
+<span class="ref">(XLogRecordAssemble, xloginsert.c:678-700)</span>. 복구는 디스크의 (어쩌면 torn인) 페이지를
+쳐다보지도 않고 WAL의 이미지에서 재구성한다. 비용의 위치가 다르다:
+CUBRID/InnoDB는 <b>데이터 쓰기 2배</b>, PG는 <b>WAL 볼륨 증가</b>(checkpoint 직후 폭증).</p>
+
+<h3>9.6 20devel의 새 물건: AIO 읽기</h3>
+<p>읽기는 기본적으로 <b>io worker 프로세스</b>가 수행하며(<code>io_method=worker</code>
+<span class="ref">(aio.h:42)</span>), read stream이 최대 <code>io_combine_limit</code>(16블록=128KB)씩 묶어서
+비동기 발행한다. 같은 페이지를 읽는 두 번째 백엔드는 CV에서 자는 게 아니라 <b>남의 AIO 핸들에 합류</b>해
+기다린다 <span class="ref">(bufmgr.c:7304-7310)</span>. CUBRID의 buffer lock(팻말+재시도)과 목적은 같고
+수단이 다르다. <b>쓰기는 아직 전부 동기</b>다.</p>
+
+<!-- ============================ CH 10 ============================ -->
+<h2 id="ch10">10. InnoDB는 어떻게 푸는가 (MySQL 26.7)</h2>
+
+<h3>10.1 구조 한눈에</h3>
+<ul>
+<li><b>버퍼 풀이 여러 개</b> — <code>innodb_buffer_pool_instances</code>(기본 auto, 최대 64)개의 독립 인스턴스로
+쪼개고, page id의 <b>하위 6비트를 버린</b> 해시로 배정해 64페이지 extent가 같은 인스턴스에 모이게 한다
+<span class="ref">(buf0buf.ic:823-832)</span>. 전역 mutex는 <b>존재하지 않는다</b> — 인스턴스당 7개의
+전문 mutex(LRU_list, free_list, flush_list...)로 분해됐다 <span class="ref">(buf0buf.h:2288-2313)</span>.</li>
+<li><b>buf_page_t / buf_block_t</b> — 관리 데이터(BCB 상당)와 프레임 포인터. fix는 atomic
+<code>buf_fix_count</code>, 내용 보호는 블록별 rw-latch(S/SX/X).</li>
+<li><b>free list가 있다</b> — PG(삭제), CUBRID(invalid list는 부팅 직후용)와 달리 InnoDB는 상시 free list를
+유지하고, page cleaner가 LRU 꼬리를 flush/evict해서 <b>미리 채워 놓는다</b>.</li>
+</ul>
+
+<h3>10.2 교체: midpoint LRU — "37% 지점에 꽂는다"</h3>
+
+<p>리스트는 하나(인스턴스당)지만 <b>중간점(LRU_old)</b>이 있어 young(앞 ~63%)/old(뒤 ~37%) 두 구역으로 나뉜다.
+새로 읽힌 페이지는 head가 아니라 <b>old 구역의 머리</b>에 꽂힌다 <span class="ref">(buf_LRU_add_block_low,
+buf0lru.cc:862-908)</span>. 그 페이지가 young으로 승격되는 조건이 정교하다
+<span class="ref">(buf_page_peek_if_too_old, buf0buf.ic:180-203)</span>:</p>
+<ol>
+<li><b>워밍업 게이트</b>: 아직 아무도 쫓겨난 적 없으면(<code>freed_page_clock==0</code>) 승격 자체를 안 한다 —
+새 서버에서 "Pages made young 0"은 정상이다.</li>
+<li><b><code>innodb_old_blocks_time</code>(기본 1초)</b>: <b>첫 접근 후</b> 1초 안의 재접근은 무시.
+풀스캔이 한 페이지를 연달아 만지는 것은 승격 사유가 아니다 — 이것이 InnoDB scan resistance의 핵심.</li>
+<li><b>승격 스로틀</b>: 이미 young이면, 풀의 ~16%만큼 eviction이 지나기 전엔 재승격하지 않는다 —
+핫 페이지가 LRU mutex를 반복해서 잡는 것을 막는다.</li>
+</ol>
+
+<div class="box"><span class="label">📌 상식 교정</span>
+"old 구역은 3/8"이라는 유명한 숫자는 상수가 아니라 sysvar 기본값이고, 실제로는
+<code>innodb_old_blocks_pct=37</code> → 378/1024 ≈ <b>36.9%</b>다 <span class="ref">(ha_innodb.cc:23091-23093)</span>.
+또 old 구역 자체가 리스트 512페이지 미만에서는 아예 생기지 않는다 <span class="ref">(BUF_LRU_OLD_MIN_LEN)</span>.
+26.7에는 <code>Page_fetch::SCAN</code>이라는 <b>호출자 선언형 스캔 힌트</b>도 있다(승격+random read-ahead 억제)
+<span class="ref">(buf0buf.h:61-64)</span> — CUBRID/PG에는 없는 API 레벨 장치.
+</div>
+
+<h3>10.3 dirty: flush list와 fuzzy checkpoint</h3>
+<p>InnoDB는 LRU와 <b>별도로</b> dirty 페이지만의 <b>flush list</b>를 유지한다 — <code>oldest_modification</code>
+LSN 순서(느슨하게: 최대 2MiB LSN 어긋남 허용 <span class="ref">(buf0flu.h:410-417)</span>).
+덕분에 checkpoint는 페이지를 쓸 필요가 없다: <b>flush list 꼬리의 최소 LSN이 곧 checkpoint LSN</b>이다
+(fuzzy checkpoint — <code>log_checkpointer</code> 스레드가 주기적으로 기록만 한다).
+CUBRID·PG의 "checkpoint = dirty 일괄 flush 이벤트"와 가장 크게 갈리는 지점이다. 대신 redo 로그 공간이
+차오르면 page cleaner가 <b>강제로</b> 낮은 LSN 페이지들을 flush해 checkpoint를 전진시킨다(sync flush).</p>
+<p>WAL 규칙의 집행 지점은 물론 여기도 있다: 페이지를 쓰기 직전
+<code>persist_smaller_than(newest_modification)</code> — 26.7에서 <code>log_write_up_to</code>를 대체한
+인터페이스다 <span class="ref">(buf0flu.cc:985-993)</span>.</p>
+<p><b>page cleaner</b>는 코디네이터+워커 구조로, 매 틱마다 (a) LRU 꼬리 청소(free list 충전)와
+(b) flush list flush(redo 생산 속도·dirty 비율 기반 <b>adaptive</b> 산정)를 수행한다.
+기준 처리량 <code>innodb_io_capacity</code>의 기본이 26.7에서 <b>10,000</b>(8.0의 50배!)이라는 점은
+튜닝 상식을 뒤집는다 <span class="ref">(ha_innodb.cc:22234)</span>.</p>
+
+<h3>10.4 torn page: doublewrite 파일</h3>
+<p>CUBRID DWB와 동일한 원리: 페이지를 <code>#ib_16384_N.dblwr</code> 파일들에 먼저 쓰고 fsync 후 원위치에 쓴다.
+차이: 감지가 <b>checksum</b> 기반이고(CUBRID는 LSA 워터마크), 인스턴스×2개의 병렬 dblwr 파일 + 배치/단일 세그먼트
+분리 등 동시성 구조가 크고, <b>DETECT_ONLY</b> 모드(16바이트 요약만 기록, 수리는 포기하고 감지만)라는 절충안이 있다
+<span class="ref">(buf0dblwr.cc:2772-2924, buf0dblwr.h:260-295)</span>.
+O_DIRECT 계열에선 dblwr 파일 fsync를 생략한다 <span class="ref">(:872-876)</span>.</p>
+
+<h3>10.5 "전부 dirty" 상황의 답</h3>
+<p>free block이 없으면 사용자 스레드는: free list → LRU 꼬리 100개 스캔 → <b>자기 손으로 single page flush</b>
+(동기, 재시도 상한 없음 <span class="ref">(buf0lru.cc:630, buf0flu.cc:1896-1971)</span>) → 20회 반복 후엔
+매회 10ms 슬립. CUBRID의 "파킹+배급"(6장)과 정반대로 <b>요청자가 직접 값을 치르는</b> 모델이다.
+극단 상황에선 <code>ER_IB_BUFFER_POOL_FULL</code>로 서버가 의도적으로 죽기도 한다 <span class="ref">(buf0lru.cc:465-471)</span>.</p>
+<!-- ============================ CH 11 ============================ -->
+<h2 id="ch11">11. 축별 비교 — 같은 문제, 세 가지 답</h2>
+
+<div class="tablewrap"><table>
+<tr><th>축</th><th><span class="eng">CUBRID</span> (11.5 + 로컬 latch 개선)</th><th><span class="eng pg">PostgreSQL</span> (20devel)</th><th><span class="eng inno">InnoDB</span> (26.7)</th></tr>
+<tr><td><b>lookup 구조</b></td>
+<td>고정 1M 버킷 해시, 버킷당 mutex + 1차 무락 탐색</td>
+<td>공유 HTAB, 128 파티션 LWLock</td>
+<td>인스턴스별 해시, 16 rw-lock 샤드 (S-lock만으로 히트 처리)</td></tr>
+<tr><td><b>fix/pin 핫패스</b></td>
+<td>64-bit atomic latch 워드 CAS (무mutex read fix/unfix)</td>
+<td>64-bit state CAS + 백엔드-로컬 refcount 캐시</td>
+<td>atomic <code>buf_fix_count</code> + rw-latch</td></tr>
+<tr><td><b>교체 정책</b></td>
+<td>다중 LRU 리스트 × 3-zone + private/shared + quota</td>
+<td>clock-sweep (usage_count 0–5), 리스트 없음</td>
+<td>단일 LRU(인스턴스당) + midpoint(young/old 37%)</td></tr>
+<tr><td><b>scan resistance 단위</b></td>
+<td><b>세션</b> — private list quota로 격리, 초과자는 남의 것 못 뺏음</td>
+<td><b>스캔 종류</b> — ring buffer(256KB~16MB) + usage 1 상한</td>
+<td><b>페이지 나이</b> — old 삽입 + 첫 접근 1초 필터 + SCAN 힌트</td></tr>
+<tr><td><b>빈 프레임 공급</b></td>
+<td>invalid list(초기) → victim 탐색 → 파킹+direct 배급</td>
+<td>항상 clock-sweep (freelist 삭제됨), victim이 dirty면 백엔드가 직접 flush</td>
+<td>상시 free list (page cleaner가 충전), 고갈 시 요청자가 single-page flush</td></tr>
+<tr><td><b>dirty 인덱싱</b></td>
+<td>없음 — flush 시 LRU 바닥/BCB 전수 스캔</td>
+<td>없음 — checkpoint가 전 버퍼 스캔 후 정렬</td>
+<td><b>flush list</b> (LSN 느슨 정렬) 상시 유지</td></tr>
+<tr><td><b>WAL 규칙 집행점</b></td>
+<td><code>pgbuf_bcb_flush_with_wal</code> → <code>logpb_flush_log_for_wal</code></td>
+<td><code>FlushBuffer</code> → <code>XLogFlush</code></td>
+<td><code>buf_flush_write_block</code> → <code>persist_smaller_than</code></td></tr>
+<tr><td><b>checkpoint 방식</b></td>
+<td>이벤트형: oldest_unflush_lsa 기준 일괄 flush + redo LSA 반환</td>
+<td>이벤트형: 정렬 + tablespace 밸런싱 + completion_target 페이싱</td>
+<td><b>fuzzy</b>: flush list 꼬리 LSN을 기록만; flush는 cleaner가 상시</td></tr>
+<tr><td><b>torn page 대책</b></td>
+<td>DWB(전용 파일 1블록) / 감지 = <b>LSA 워터마크</b></td>
+<td><b>FPI</b>(WAL에 페이지 이미지) / 감지 = checksum(옵션)</td>
+<td>doublewrite 파일들 / 감지 = checksum, DETECT_ONLY 모드</td></tr>
+<tr><td><b>백그라운드 쓰기꾼</b></td>
+<td>flush + post-flush + maintain + flush-control (4 데몬)</td>
+<td>bgwriter + checkpointer (+io workers)</td>
+<td>page cleaner 코디네이터 + 워커들 + log_checkpointer</td></tr>
+<tr><td><b>latch 데드락</b></td>
+<td>감지 없음 — 5분 타임아웃 + ordered_fix 규약</td>
+<td>감지 없음 — 순서 규약 (+condition lock 실패 허용)</td>
+<td>감지 없음 — latching order 규약 (문서화된 rank)</td></tr>
+<tr><td><b>동시 read miss 합류</b></td>
+<td>buffer lock 팻말 + 잠들었다 재시도</td>
+<td>남의 <b>AIO 핸들에 합류</b> (CV는 폴백)</td>
+<td>블록 latch를 잡았다 놓는 스핀</td></tr>
+</table></div>
+
+<h3>11.1 "왜"의 관점에서 다시 보기</h3>
+<ul>
+<li><b>CUBRID</b>의 설계는 "<b>다중 리스트 + 세션 격리</b>"로 요약된다. 정확한 LRU 순서를 유지하면서도
+핫패스 비용을 zone-1 무이동·무락 fast path로 상쇄한다. 대가는 복잡도다 — victim 탐색 3단계, 배급 큐,
+quota 조정 데몬이 서로 맞물린 정교한 기계이고, 실제로 사문화 코드(AOUT 등)가 남을 만큼 진화 흔적이 많다.</li>
+<li><b>PostgreSQL</b>은 "<b>자료구조 최소주의</b>"다. 리스트도 free list도 없이 카운터 하나(usage)와
+바늘 하나로 승부한다. 근사는 거칠지만 경합 지점이 가장 적고, 코드가 가장 작다. 스캔 격리도 별도 정책이
+아니라 "링이 usage를 1 이상 못 올린다"는 규칙 하나로 해결한다.</li>
+<li><b>InnoDB</b>는 "<b>전문화</b>"다. dirty에는 flush list, 빈 프레임에는 free list, 교체에는 midpoint —
+목적별 자료구조를 다 만들고 mutex도 목적별로 쪼갰다. fuzzy checkpoint는 그 보상이다:
+dirty가 LSN 순으로 정리되어 있으니 checkpoint가 공짜에 가깝다.</li>
+</ul>
+
+<div class="box"><span class="label">📌 하나만 기억한다면</span>
+세 엔진 모두 <b>같은 불변식</b> 위에 서 있다:
+"<b>fix/pin된 페이지는 쫓아낼 수 없다</b>", "<b>dirty는 로그가 먼저 내려간 뒤에만 쓴다</b>",
+"<b>커밋은 로그만 기다린다</b>". 나머지 전부 — 리스트냐 시계냐, 링이냐 quota냐, DWB냐 FPI냐 — 는
+이 불변식을 지키면서 <b>경합과 I/O를 어디로 옮길 것인가</b>에 대한 서로 다른 선택이다.
+</div>
+
+<!-- ============================ CH 12 ============================ -->
+<h2 id="ch12">12. 부록</h2>
+
+<h3>12.1 코드맵 — 개념 → 함수 (CUBRID @5cd4f860e)</h3>
+<div class="tablewrap"><table>
+<tr><th>개념</th><th>진입점</th><th>위치 (src/storage/page_buffer.c)</th></tr>
+<tr><td>페이지 fix</td><td><code>pgbuf_fix_release</code> / <code>pgbuf_lockfree_fix_ro</code></td><td>:2211 / :7669</td></tr>
+<tr><td>페이지 unfix + LRU 결정</td><td><code>pgbuf_unfix</code> → <code>pgbuf_unlatch_bcb_upon_unfix</code></td><td>:3024 → :6605</td></tr>
+<tr><td>latch 부여/대기</td><td><code>pgbuf_latch_bcb_upon_fix</code> / <code>pgbuf_block_bcb</code> / <code>pgbuf_timed_sleep</code></td><td>:6246 / :6995 / :7232</td></tr>
+<tr><td>miss 처리(읽기)</td><td><code>pgbuf_claim_bcb_for_fix</code></td><td>:8349</td></tr>
+<tr><td>다중 페이지 순서 fix</td><td><code>pgbuf_ordered_fix</code> (+ <code>PGBUF_WATCHER</code>)</td><td>:12202</td></tr>
+<tr><td>victim 선택</td><td><code>pgbuf_get_victim</code> → <code>pgbuf_get_victim_from_lru_list</code></td><td>:9020 → :9267</td></tr>
+<tr><td>direct victim 배급</td><td><code>pgbuf_assign_direct_victim</code> / <code>pgbuf_get_direct_victim</code></td><td>:15364 / :15533</td></tr>
+<tr><td>LRU 삽입/boost/강등</td><td><code>pgbuf_lru_add_new_bcb_to_*</code> / <code>pgbuf_lru_boost_bcb</code> / <code>pgbuf_lru_fall_bcb_to_zone_3</code></td><td>:10147+ / :10072 / :10002</td></tr>
+<tr><td>quota 조정</td><td><code>pgbuf_adjust_quotas</code> (100ms 데몬)</td><td>:14195</td></tr>
+<tr><td>dirty 표시</td><td><code>pgbuf_set_dirty</code> / <code>pgbuf_set_lsa</code></td><td>:4874 / :4944</td></tr>
+<tr><td>페이지 flush (WAL 관문)</td><td><code>pgbuf_bcb_flush_with_wal</code></td><td>:10671</td></tr>
+<tr><td>victim 후보 flush</td><td><code>pgbuf_flush_victim_candidates</code></td><td>:3818</td></tr>
+<tr><td>checkpoint flush</td><td><code>pgbuf_flush_checkpoint</code></td><td>:4133</td></tr>
+<tr><td>DWB 블록 flush / 복구</td><td><code>dwb_flush_block</code> / <code>dwb_load_and_recover_pages</code></td><td>double_write_buffer.cpp:2192 / :3199</td></tr>
+<tr><td>torn 감지</td><td><code>fileio_is_page_sane</code> (머리/꼬리 LSA)</td><td>file_io.h:230-236</td></tr>
+</table></div>
+
+<p class="small">PostgreSQL 대응: <code>bufmgr.c</code>의 <code>PinBuffer</code>(:3294) / <code>StrategyGetBuffer</code>(freelist.c:183) /
+<code>FlushBuffer</code>(:4526) / <code>BufferSync</code>(:3575), FPI는 <code>xloginsert.c:678</code>.
+InnoDB 대응: <code>buf_page_get_gen</code>(buf0buf.cc) / <code>buf_LRU_add_block</code>(buf0lru.cc:862) /
+<code>buf_page_peek_if_too_old</code>(buf0buf.ic:180) / <code>buf_flush_page</code>(buf0flu.cc) / dblwr(buf0dblwr.cc).</p>
+
+<h3>12.2 관측 치트시트 (CUBRID)</h3>
+<div class="tablewrap"><table>
+<tr><th>보고 싶은 것</th><th>수단</th><th>주의</th></tr>
+<tr><td>누적 카운터 전부</td><td><code>cubrid statdump &lt;db&gt;</code></td><td><b>watcher가 켜져 있는 동안만 누적</b>된다
+(<code>perfmon_start_watch</code>). 배치로 보려면 <code>cubrid statdump -i 2</code>를 백그라운드로 켜 두고 전/후 델타를 떠라 — 퀴즈 공통 헬퍼(<code>quizzes/lib/common.sh</code>)가 이 패턴이다.</td></tr>
+<tr><td>fetch/히트/디스크I/O</td><td><code>Num_data_page_fetches / ioreads / iowrites</code></td><td>히트율 = 1 − ioreads/fetches. DWB on이면 iowrites는 페이지당 2회.</td></tr>
+<tr><td>zone/quota 게이지</td><td><code>Num_data_page_lru1/2/3, victim_candidate, private_quota/count, fixed, dirty</code></td><td>스냅샷 값 (누적 아님)</td></tr>
+<tr><td>unfix 결정 전수</td><td><code>Num_unfix_*</code> 계열</td><td>zone×(keep/to_top)×(private/shared) — 5장의 결정 트리 그대로</td></tr>
+<tr><td>victim 경로 상세</td><td><code>Num_victim_*</code> 계열</td><td><b><code>extended_statistics_activation</code>에 PB_VICTIMIZATION(0x10) 비트가 켜져 있어야</b> 집계</td></tr>
+<tr><td>세션 단위 통계</td><td><code>SET @collect_exec_stats=1; ... SHOW EXEC STATISTICS;</code></td><td>data_page_fetches/dirties/ioreads/iowrites 4종</td></tr>
+<tr><td>버퍼 전경</td><td><code>SHOW PAGE BUFFER STATUS</code> (DBA)</td><td>Victim_candidate_pages는 내부 victim 후보와 <b>정의가 다르다</b>(dirty∧zone3)</td></tr>
+</table></div>
+
+<h3>12.3 퀴즈 ↔ 리포트 장 매핑</h3>
+<div class="tablewrap"><table>
+<tr><th>퀴즈</th><th>주제</th><th>장</th><th>실측 하이라이트</th></tr>
+<tr><td>01 cold-vs-hot</td><td>버퍼의 존재 이유</td><td>1</td><td>cold +28 ioreads → hot 0</td></tr>
+<tr><td>02 fix-lifecycle</td><td>fix vs 캐시 상주</td><td>2·4</td><td>550 fetch 후 fixed 게이지 1</td></tr>
+<tr><td>03 dirty-lazy-write</td><td>no-force</td><td>7</td><td>UPDATE 후 data iowrites 0</td></tr>
+<tr><td>04 wal-before-data</td><td>WAL 규칙</td><td>7</td><td>log +21장 vs data 0장</td></tr>
+<tr><td>05 eviction-pressure</td><td>private quota</td><td>5</td><td>테이블&lt;풀인데 재스캔 전부 miss (quota 128)</td></tr>
+<tr><td>06 lru-zones</td><td>3-zone boost 규칙</td><td>5</td><td>lru1 keep +2,853 vs to_top +38</td></tr>
+<tr><td>07 aout-ghost-list</td><td>비활성화된 2Q</td><td>5</td><td>conf 1.0 vs 유효값 0.0</td></tr>
+<tr><td>08 private-vs-shared</td><td>세션 격리</td><td>5</td><td>이웃 스캔 +2,081 ioreads 후에도 내 재스캔 miss 0</td></tr>
+<tr><td>09 victim-under-pressure</td><td>direct victim</td><td>6</td><td>+281,700 dirties 폭탄 속 협업 flush</td></tr>
+<tr><td>10 checkpoint</td><td>redo LSA 전진</td><td>7</td><td>dirty 14→2, Num_log_wals 딱 +1</td></tr>
+<tr><td>11 double-write-buffer</td><td>torn page</td><td>8</td><td>DWB off 시 iowrites 절반</td></tr>
+<tr><td>12 trace-a-page-journey</td><td>페이지 일생 [instrumented]</td><td>전체</td><td>READ→ENTER→FALL/BOOST→EVICTED→재READ→SET_DIRTY→FLUSHED 전 과정 포착</td></tr>
+</table></div>
+
+<h3>12.4 Grill 준비 체크리스트</h3>
+<p>리포트와 퀴즈를 마친 뒤, 아래 질문에 막힘없이 답할 수 있으면 grill 준비 완료다.</p>
+<ol>
+<li>fix / latch / 트랜잭션 lock의 차이를 수명과 보호 대상으로 설명할 수 있다.</li>
+<li>miss 경로에서 buffer lock 팻말이 무엇을 막고, 깨어난 대기자가 왜 "재시도"하는지 안다.</li>
+<li>BCB flags 워드에 무엇 무엇이 패킹되어 있는지 나열할 수 있다.</li>
+<li>zone 1/2/3의 boost 규칙 세 가지와 그 이유(비용)를 말할 수 있다.</li>
+<li>새로 읽힌 페이지가 (이 빌드에서) 정확히 어디에 꽂히는지, AOUT이 살아 있었다면 어떻게 달랐을지 안다.</li>
+<li>quota가 접근 "빈도"가 아니라 워킹셋 "넓이"를 추적하는 이유(히트의 epoch 중복 제거)를 설명할 수 있다.</li>
+<li>victim 탐색 3단계 순서와 restrict_other의 의미를 안다.</li>
+<li>"모든 후보가 dirty"일 때의 전체 협업(파킹→flush→배급)을 그릴 수 있다.</li>
+<li>pgbuf_bcb_flush_with_wal의 5단계 순서(플래그→복사→unlock→WAL→쓰기)를 재현할 수 있다.</li>
+<li>checkpoint가 반환하는 redo LSA가 정확히 무엇의 최소값인지 안다.</li>
+<li>DWB의 쓰기 순서(②fsync가 왜 ③보다 먼저인가)와 복구 규칙("sane이면 절대 덮지 않는다")을 안다.</li>
+<li>세 엔진의 scan resistance 격리 단위(세션/스캔종류/나이)를 비교할 수 있다.</li>
+<li>PG 20devel에서 freelist가 사라진 뒤 cold-start가 어떻게 동작하는지 안다.</li>
+<li>InnoDB fuzzy checkpoint가 왜 flush list의 존재 덕분에 가능한지 안다.</li>
+<li>DWB on/off에 따라 iowrites 카운터 해석이 어떻게 달라지는지 안다.</li>
+</ol>
+
+<hr>
+<p class="small">작성: Claude (Fable 5) · 2026-08-06 · 근거 소스: CUBRID <code>5cd4f860e</code>(branch pgbuf-analysis),
+PostgreSQL <code>fd2b89854d9</code>(20devel), MySQL <code>mysql-26.7.0</code>.
+상세 팩트시트: <code>my-cubrid-docs/pgbuf-analysis/research/*.md</code> (모든 주장의 file:line 근거 포함).
+실습: 저장소 <code>quizzes/</code>. 이 리포트의 수치는 전부 실제 실행으로 검증되었다.</p>
+
+</main>
+</body>
+</html>

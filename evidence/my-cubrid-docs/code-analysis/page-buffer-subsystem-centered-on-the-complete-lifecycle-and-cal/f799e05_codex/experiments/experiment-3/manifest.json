@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "experiment-3",
+  "behavior_ids": [
+    "caller-contracts"
+  ],
+  "claim_ids": [
+    "CUBRID-C007"
+  ],
+  "oracle_ko": "covered query는 covered 100/noncovered 0, payload query는 noncovered 100, update는 exact 100 rows와 dirty heap holder signature를 보인다.",
+  "cubrid_runtime_only": true,
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "cleanup_verified": true,
+  "runner": "experiment.sql",
+  "runner_sha256": "8f15e36b53806af3ee59e4fe83f44481bab5c7925214ad79a2f2da5b9c085c3b",
+  "runner_argv": [
+    "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql",
+    "-u",
+    "dba",
+    "ca_pgbuf_f799e05",
+    "-i",
+    "experiment.sql"
+  ],
+  "run_ids": [
+    "rebind-exp3"
+  ],
+  "repetitions": 1,
+  "controls_ko": "covered와 noncovered query를 같은 PK range에 두고 result checksum과 counter direction을 함께 확인했다.",
+  "alternative_explanations_ko": "optimizer drift와 catalog heap access가 counter에 섞일 수 있으므로 exact call stack 증거로 쓰지 않는다."
+}

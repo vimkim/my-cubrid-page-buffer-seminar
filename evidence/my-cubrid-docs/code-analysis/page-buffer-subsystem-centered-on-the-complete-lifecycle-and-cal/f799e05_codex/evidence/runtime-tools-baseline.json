@@ -1,0 +1,44 @@
+{
+  "build_meta_sha256": "1b31196b59e79247aeec490722275a115f69cee45225bf9ef5301a2aa864306b",
+  "build_run_id": "runtime-grill-build-4",
+  "captured_at_utc": "2026-09-01T05:10:08.623913+00:00",
+  "id": "baseline",
+  "release_identity": {
+    "exit": 0,
+    "output": "CUBRID 11.5.0 (11.5.0.2397-f799e05) (64bit debug build for Linux) (Sep  1 2026 14:07:48)",
+    "path": "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/cubrid_rel",
+    "sha256": "5bfcf1096f0595796efeb80fac1b31e0e0c6b931d01d6efb7b0c01df4b907bce"
+  },
+  "runtime_environment": {
+    "ASAN_OPTIONS": "halt_on_error=0:log_path=./asan.log",
+    "CUBRID": "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc",
+    "CUBRID_DATABASES": "/home/vimkim/.cub/db/pgbuf-grill/commondb",
+    "HOME": "/home/vimkim",
+    "LANG": "C.UTF-8",
+    "LC_CTYPE": "C.UTF-8",
+    "LD_LIBRARY_PATH": "/home/vimkim/.local/opt/bison-3.0.5/lib:/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/cci/lib:/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/lib:/home/vimkim/CUB3LIB/lib:/usr/local/lib:",
+    "LOGNAME": "vimkim",
+    "LSAN_OPTIONS": "halt_on_error=0:log_path=./lsan.log",
+    "PATH": "/home/vimkim/gh/ctp/run-sql/CTP/bin:/home/vimkim/gh/ctp/run-sql/CTP/common/script:/home/vimkim/.local/opt/bison-3.0.5/bin:/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin:/home/vimkim/.cargo/bin:/home/vimkim/.local/share/mise/shims:/home/vimkim/.cargo/bin/:/opt/bison-3.0.5/bin/:/home/vimkim/.local/bin/:/home/vimkim/mybin/:/home/vimkim/my-cubrid/bin/:/home/vimkim/.config/my-scripts/bin/:/home/linuxbrew/.linuxbrew/bin:/home/vimkim/.nix-profile/bin/:/nix/var/nix/profiles/default/bin/:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin",
+    "SHELL": "/home/linuxbrew/.linuxbrew/bin/nu",
+    "USER": "vimkim"
+  },
+  "schema_version": 1,
+  "source_head": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+  "source_root": "/home/vimkim/gh/cb/pgbuf-grill",
+  "tools": {
+    "csql": {
+      "path": "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql",
+      "sha256": "18e8bd6a4c8d15242013b9d822f913d94511412a8d3929546bda5ecee487b2f3"
+    },
+    "cub_server": {
+      "path": "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/cub_server",
+      "sha256": "caf0f7460792486f256f76af51461a3d75743d3163ffdcb9745a152ded0ffc7b"
+    },
+    "cubrid": {
+      "path": "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/cubrid",
+      "sha256": "b882967ded26250c192649a0b512f52a99e188517684a72a20054156ebe35bb3"
+    }
+  },
+  "worktree_environment_sha256": "d1d35d4e61c205cebef1f4ffd0f27171b46fe75fd47ab02852eadf0b8c89ddd7"
+}

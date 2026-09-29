@@ -1,0 +1,32 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "/home/vimkim/.cub/install/pgbuf-grill/debug_gcc/bin/csql",
+    "-S",
+    "-u",
+    "dba",
+    "ca_pgbuf_f799e05",
+    "-i",
+    "quiz.sql"
+  ],
+  "bound_files": [
+    {
+      "after_sha256": "b69cc81755e2b6ca4a100d7662586e83d33849402f5fe1ae9641447de88a6619",
+      "before_sha256": "b69cc81755e2b6ca4a100d7662586e83d33849402f5fe1ae9641447de88a6619",
+      "path": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/quiz.sql"
+    }
+  ],
+  "cwd": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-09-01T05:13:12.494355+00:00",
+  "id": "rebind-quiz2",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "0c23b2fc0885fcd36bb87c7b7fa105876300e298e72ceb095d77beb59946032f",
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "schema_version": 1,
+  "started_at_utc": "2026-09-01T05:13:09.216513+00:00",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "ae0eab956cb4c43399f9c4a16015cffa8cdb078adfe54b7d31ff8d961ac59676"
+}

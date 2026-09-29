@@ -4,9 +4,9 @@
 **Prerequisites:** [Contract and Objects](../learning/01-contract-and-objects.md) and [Fix, Hold, and Release](../learning/02-fix-hold-release.md)
 **Capability gained:** Route narrow owner protocols and approximate diagnostics without treating them as general caller conveniences or correctness authority.
 **Source baseline:** `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`
-**Evidence used:** Interface contract, Verified mechanism, and Implementation policy from the [complete pinned API inventory](../../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and exact ranges below.
+**Evidence used:** Interface contract, Verified mechanism, and Implementation policy from the [complete pinned API inventory](../evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md), [uncertainty registry](../unresolved-or-version-sensitive-findings.md), and exact ranges below.
 
-This page groups hazardous/narrow interfaces by owner. It is not an API catalog; use the [complete API inventory](../../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md) for signatures and exhaustive coverage.
+This page groups hazardous/narrow interfaces by owner. It is not an API catalog; use the [complete API inventory](../evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md) for signatures and exhaustive coverage.
 
 ## Simple fix: a temporary-file owner protocol
 
@@ -62,4 +62,4 @@ Source: `src/storage/page_buffer.h:320-326`; status and evidence remain in the [
 - Core prerequisite: [Fix, Hold, and Release](../learning/02-fix-hold-release.md)
 - Investigate a symptom: [Diagnose Page-buffer Symptoms](../playbooks/debug-by-symptom.md)
 - Locate symbols and callers: [Source and Caller Map](../reference/source-map.md)
-- Complete inventory: [Pinned API inventory](../../../pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md)
+- Complete inventory: [Pinned API inventory](../evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md)

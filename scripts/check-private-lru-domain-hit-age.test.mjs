@@ -20,8 +20,8 @@ test("private LRU counts, index namespaces, lifetimes, and victim order have a f
   ]);
 
   assert.ok(research.includes("f799e05d77d5300c6ea5753b4a6cc7caee6d8912"));
-  assert.ok(en.includes("<title>Lesson 0012B — Understand private LRU indexes</title>"));
-  assert.ok(ko.includes("<title>Lesson 0012B — Private LRU index 이해하기</title>"));
+  assert.ok(en.includes("<title>Lecture 12B — Private LRU indexes and selection</title>"));
+  assert.ok(ko.includes("<title>강의 12B — Private LRU index와 선택</title>"));
   assert.ok(en.includes("../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned"));
   assert.ok(ko.includes("../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned"));
   assert.ok(lesson12.includes('href="0012b-understand-private-lru-index.html"'));

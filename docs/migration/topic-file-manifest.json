@@ -1,0 +1,2315 @@
+{
+  "extracted_baseline": "4bb23b14b1c368533424f13be9caf0169da6443d",
+  "files": [
+    {
+      "path": ".scratch/bcb-victim-handoff/research.md",
+      "source_sha256": "ced44777bb4edf754a6b831b2f19b3f392a286ac571ae3eb2c0bee50f51b2b96",
+      "migrated_sha256": "ced44777bb4edf754a6b831b2f19b3f392a286ac571ae3eb2c0bee50f51b2b96",
+      "changed": false
+    },
+    {
+      "path": ".scratch/clarify-daemon-concepts/research.md",
+      "source_sha256": "db85dc8cae5f17f24d65e082bad98fa0ed404a697486b7583bc0ca5e63504bd7",
+      "migrated_sha256": "db85dc8cae5f17f24d65e082bad98fa0ed404a697486b7583bc0ca5e63504bd7",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-foundations-design/design.md",
+      "source_sha256": "f126e72389388d76f19b5042ac29f2dfb251ef6463df81758ccdcadf4552019e",
+      "migrated_sha256": "f126e72389388d76f19b5042ac29f2dfb251ef6463df81758ccdcadf4552019e",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-foundations-design/interview.md",
+      "source_sha256": "24d150ff4d1a1a45af18d2489c10ba4eb0d89031777a029130b47651a6cafabf",
+      "migrated_sha256": "24d150ff4d1a1a45af18d2489c10ba4eb0d89031777a029130b47651a6cafabf",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/F01-handoff.md",
+      "source_sha256": "78778588429ef3351c9c27c73edb6044058ec4baf19f2002a30baee26a078832",
+      "migrated_sha256": "78778588429ef3351c9c27c73edb6044058ec4baf19f2002a30baee26a078832",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/F02-handoff.md",
+      "source_sha256": "c9ed517daf28db4b393c84531eb4dfb69c35f30cff77e6d5e1af85fe317f73f5",
+      "migrated_sha256": "c9ed517daf28db4b393c84531eb4dfb69c35f30cff77e6d5e1af85fe317f73f5",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/design.md",
+      "source_sha256": "4ffc92f09f58688ca2848b19556075f40d5c7fabfb9fb2bcfcc6044a925d6de5",
+      "migrated_sha256": "4ffc92f09f58688ca2848b19556075f40d5c7fabfb9fb2bcfcc6044a925d6de5",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/integration-handoff.md",
+      "source_sha256": "32da7e216d05b5b16e53836bc674353218510c0fba9ddd7db6c46b26519a89cb",
+      "migrated_sha256": "32da7e216d05b5b16e53836bc674353218510c0fba9ddd7db6c46b26519a89cb",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/interview.md",
+      "source_sha256": "2a246ceab13d134fd99eea1d539211de8bbca202c0e9a0912ed7ff475846877d",
+      "migrated_sha256": "2a246ceab13d134fd99eea1d539211de8bbca202c0e9a0912ed7ff475846877d",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/issues/01-admission-and-reuse.md",
+      "source_sha256": "977dca190e1ce7bbe77e965cefb2cacf0655aabfa3a154ae58cf21f083037e81",
+      "migrated_sha256": "977dca190e1ce7bbe77e965cefb2cacf0655aabfa3a154ae58cf21f083037e81",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/issues/02-cooling-migration-and-selection.md",
+      "source_sha256": "240f8ed2d6cc562e925c65ef214fc6499ebc3f5de52203ed6324e1b77f14097f",
+      "migrated_sha256": "240f8ed2d6cc562e925c65ef214fc6499ebc3f5de52203ed6324e1b77f14097f",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/issues/03-safe-reuse-and-progress.md",
+      "source_sha256": "b57d9f9186a02a16a938582840a8beb0813eabb861be5a50eecd2a95dea5dbe9",
+      "migrated_sha256": "b57d9f9186a02a16a938582840a8beb0813eabb861be5a50eecd2a95dea5dbe9",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/issues/04-policy-defense.md",
+      "source_sha256": "012234237787e21a9ad080ac2423f4c890c1545aa4ee625032e133ca4f6483da",
+      "migrated_sha256": "012234237787e21a9ad080ac2423f4c890c1545aa4ee625032e133ca4f6483da",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/issues/05-integrated-delivery.md",
+      "source_sha256": "f494164279b93e8826071da65a0630e79b97f9e26a4d6e44d779ea06571a51e7",
+      "migrated_sha256": "f494164279b93e8826071da65a0630e79b97f9e26a4d6e44d779ea06571a51e7",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/issues/F01-replacement-foundations.md",
+      "source_sha256": "33ff7696b107e9189747ef53c75ed0f3902825190cc86f57b9ffe83c8624afd6",
+      "migrated_sha256": "33ff7696b107e9189747ef53c75ed0f3902825190cc86f57b9ffe83c8624afd6",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/issues/F02-database-bridge.md",
+      "source_sha256": "3579de15b2b88596b941bf057030055697fb4420622736500dac17bfa0961d3d",
+      "migrated_sha256": "3579de15b2b88596b941bf057030055697fb4420622736500dac17bfa0961d3d",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/orchestration.md",
+      "source_sha256": "7dbc5ad1bfcd31ce300d7db1f1f3cf6a50de82a2ac325b5ba015d822c483b865",
+      "migrated_sha256": "7dbc5ad1bfcd31ce300d7db1f1f3cf6a50de82a2ac325b5ba015d822c483b865",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/parallel-integration-contract.md",
+      "source_sha256": "95ab1c023a3e21cf44d05fd8d1ab4fe3408f4aea8b4a991d0ba29923ccd25cc1",
+      "migrated_sha256": "95ab1c023a3e21cf44d05fd8d1ab4fe3408f4aea8b4a991d0ba29923ccd25cc1",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/spec.md",
+      "source_sha256": "8135bc1648d885844eb5e20f81989b5f6eb2fd68bfddde5c2009cff0068d29ed",
+      "migrated_sha256": "8135bc1648d885844eb5e20f81989b5f6eb2fd68bfddde5c2009cff0068d29ed",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/ticket-breakdown.md",
+      "source_sha256": "619a8f16bd6d2c10b9dd63a14ad6761ef9dabb05edb77baed4b3c838960577b3",
+      "migrated_sha256": "619a8f16bd6d2c10b9dd63a14ad6761ef9dabb05edb77baed4b3c838960577b3",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/ticket01-handoff.md",
+      "source_sha256": "0f571fbaabc9139957998eaa11d8615ece387706af346a0fae5f0f23e282e7d0",
+      "migrated_sha256": "0f571fbaabc9139957998eaa11d8615ece387706af346a0fae5f0f23e282e7d0",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/ticket02-handoff.md",
+      "source_sha256": "78c7436e6e98c6e6271c0f112d71bbb036711dc87a2ac7c4d40dfc2ae61fc34d",
+      "migrated_sha256": "78c7436e6e98c6e6271c0f112d71bbb036711dc87a2ac7c4d40dfc2ae61fc34d",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/ticket03-handoff.md",
+      "source_sha256": "9bcb7ef4ca2f355ac3091c5d141a4f5f28f4d0bd494bab0505c65a2bc127148e",
+      "migrated_sha256": "9bcb7ef4ca2f355ac3091c5d141a4f5f28f4d0bd494bab0505c65a2bc127148e",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/ticket04-handoff.md",
+      "source_sha256": "e97bdc0027c2f3d928e8aa711264c7970e0089927f84b32c930fb840c9b16aa2",
+      "migrated_sha256": "e97bdc0027c2f3d928e8aa711264c7970e0089927f84b32c930fb840c9b16aa2",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-seminar-design/ticket05-handoff.md",
+      "source_sha256": "bf37d4cc23048ec07115bfb53b806b5e866b8054fd560a5af5b01498ed2bf3c5",
+      "migrated_sha256": "bf37d4cc23048ec07115bfb53b806b5e866b8054fd560a5af5b01498ed2bf3c5",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-textbook-comparison/design.md",
+      "source_sha256": "da9a00f34743254cf428146965f135add42d18dff6c3867091c8da85e3858d8e",
+      "migrated_sha256": "da9a00f34743254cf428146965f135add42d18dff6c3867091c8da85e3858d8e",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-textbook-comparison/handoff.md",
+      "source_sha256": "a386e75680078fca931c9ae7dd5588f13c12fafda44d3f1cfc4adeb04dd39eb6",
+      "migrated_sha256": "a386e75680078fca931c9ae7dd5588f13c12fafda44d3f1cfc4adeb04dd39eb6",
+      "changed": false
+    },
+    {
+      "path": ".scratch/lru-textbook-comparison/interview.md",
+      "source_sha256": "d537112e6eb2f99aa69373e9f34a5b9e0a41c145e12a420ba9b934fb7cf0b44e",
+      "migrated_sha256": "d537112e6eb2f99aa69373e9f34a5b9e0a41c145e12a420ba9b934fb7cf0b44e",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/issues/01-choose-legacy-url-transition.md",
+      "source_sha256": "3c616006392a1a55b2010c2448d31ccf56b16c539a4ffe54208726dd377f1979",
+      "migrated_sha256": "3c616006392a1a55b2010c2448d31ccf56b16c539a4ffe54208726dd377f1979",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/issues/02-choose-korean-visual-asset-boundary.md",
+      "source_sha256": "e144a3b7c0a0815748a052c44617e5d911395277be3dddbbf0c7e38e0e6b8050",
+      "migrated_sha256": "e144a3b7c0a0815748a052c44617e5d911395277be3dddbbf0c7e38e0e6b8050",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/issues/03-choose-bilingual-source-of-truth.md",
+      "source_sha256": "b4527fd6c0112764f7b34b7e20c4db12fb63a6b8c760af7e024b180bb44cd26e",
+      "migrated_sha256": "b4527fd6c0112764f7b34b7e20c4db12fb63a6b8c760af7e024b180bb44cd26e",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/issues/04-choose-per-page-language-navigation.md",
+      "source_sha256": "b455c2b9a26b8f2c4635dddd54c638f14f86e0eeb2eb5f2f2c6cc6e0eef61475",
+      "migrated_sha256": "b455c2b9a26b8f2c4635dddd54c638f14f86e0eeb2eb5f2f2c6cc6e0eef61475",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/issues/05-define-korean-translation-style-contract.md",
+      "source_sha256": "c7ccb307470b3cd31751a4fd8bf9befb9d93eecbeeeec275a2c0acc86c8e3c8f",
+      "migrated_sha256": "c7ccb307470b3cd31751a4fd8bf9befb9d93eecbeeeec275a2c0acc86c8e3c8f",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/issues/06-define-bilingual-validation-gates.md",
+      "source_sha256": "6d249f0f7e85093ac56b3576a290ef1303797d7aae790872131cc702d3f05584",
+      "migrated_sha256": "6d249f0f7e85093ac56b3576a290ef1303797d7aae790872131cc702d3f05584",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/issues/07-define-translation-review-and-drift-workflow.md",
+      "source_sha256": "6cb455ec3fd51c9eab21a3d09abb52e1cf1c25d80e694be7202390e28ed4e57e",
+      "migrated_sha256": "6cb455ec3fd51c9eab21a3d09abb52e1cf1c25d80e694be7202390e28ed4e57e",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/issues/08-choose-cutover-and-rollback-sequence.md",
+      "source_sha256": "4bab61730f59880cb91d11f7e9d8f57707d6126cf6462a56089131f4c59948b4",
+      "migrated_sha256": "4bab61730f59880cb91d11f7e9d8f57707d6126cf6462a56089131f4c59948b4",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/map.md",
+      "source_sha256": "8451f9e3f263777ee64ab7efef82572efb63b9ba4f8b3029979813615def525e",
+      "migrated_sha256": "8451f9e3f263777ee64ab7efef82572efb63b9ba4f8b3029979813615def525e",
+      "changed": false
+    },
+    {
+      "path": ".scratch/page-buffer-bilingual-teaching-site/spec.md",
+      "source_sha256": "cb72b29f408e60afa0796756a086ca77dd65b6225af4b5c277c60876187c56d2",
+      "migrated_sha256": "cb72b29f408e60afa0796756a086ca77dd65b6225af4b5c277c60876187c56d2",
+      "changed": false
+    },
+    {
+      "path": ".scratch/private-domain-aout-off-placement/research.md",
+      "source_sha256": "4cfe17da89d23340ee19227bc5125f81c6f640560774285ad96e21cf75556e77",
+      "migrated_sha256": "4cfe17da89d23340ee19227bc5125f81c6f640560774285ad96e21cf75556e77",
+      "changed": false
+    },
+    {
+      "path": ".scratch/private-lru-index/research.md",
+      "source_sha256": "5bd533e298ba8be8aa79088691f10f2688e11b50021be1a4726b05b9478da79d",
+      "migrated_sha256": "5bd533e298ba8be8aa79088691f10f2688e11b50021be1a4726b05b9478da79d",
+      "changed": false
+    },
+    {
+      "path": ".scratch/seminar-curriculum/README.md",
+      "source_sha256": "243adbb512d081fcce44d9137db8057ca88dae371f0018a4d74a9ee57599f57e",
+      "migrated_sha256": "243adbb512d081fcce44d9137db8057ca88dae371f0018a4d74a9ee57599f57e",
+      "changed": false
+    },
+    {
+      "path": ".scratch/seminar-curriculum/lectures.json",
+      "source_sha256": "a7dc44a3b4208b7e313732b2f327074b019976ba5f0379fb27cdf2d085f137a0",
+      "migrated_sha256": "a7dc44a3b4208b7e313732b2f327074b019976ba5f0379fb27cdf2d085f137a0",
+      "changed": false
+    },
+    {
+      "path": ".scratch/seminar-curriculum/migrate.mjs",
+      "source_sha256": "7bf584c1d9667919860126cc18493a53fe1e8eb18b72137f9b1fe357279afb3b",
+      "migrated_sha256": "7bf584c1d9667919860126cc18493a53fe1e8eb18b72137f9b1fe357279afb3b",
+      "changed": false
+    },
+    {
+      "path": ".scratch/seminar-repository-migration/spec.md",
+      "source_sha256": "4a8bbb6b6182406d0fc218fd15ae3c1a88efe530cddd11636064ab50a55a52ac",
+      "migrated_sha256": "4a8bbb6b6182406d0fc218fd15ae3c1a88efe530cddd11636064ab50a55a52ac",
+      "changed": false
+    },
+    {
+      "path": "AGENTS.md",
+      "source_sha256": "36e3aa0c0912d23f0dad9a90143e512aa68a5116a563ab237af20061d3a8189f",
+      "migrated_sha256": "36e3aa0c0912d23f0dad9a90143e512aa68a5116a563ab237af20061d3a8189f",
+      "changed": false
+    },
+    {
+      "path": "CLAUDE.md",
+      "source_sha256": "a54ff182c7e8acf56acfd6e4b9c3ff41e2c41a31c9b211b2deb9df75d9a478f9",
+      "migrated_sha256": "36e3aa0c0912d23f0dad9a90143e512aa68a5116a563ab237af20061d3a8189f",
+      "changed": true
+    },
+    {
+      "path": "CONTEXT.md",
+      "source_sha256": "9c40bbeef0d65ce583e051a082ef05ff86e2b8420b1b721865b2d83131b3aa61",
+      "migrated_sha256": "9c40bbeef0d65ce583e051a082ef05ff86e2b8420b1b721865b2d83131b3aa61",
+      "changed": false
+    },
+    {
+      "path": "MISSION.md",
+      "source_sha256": "ed1f8f85a3bbf607bb8db0268abb9e624f17195e73dcf173389d23a981ae3224",
+      "migrated_sha256": "ed1f8f85a3bbf607bb8db0268abb9e624f17195e73dcf173389d23a981ae3224",
+      "changed": false
+    },
+    {
+      "path": "NOTES.md",
+      "source_sha256": "cf34d017510c77bd69cbec6e3dc7f368659111651234c7671be40863ba77f4f7",
+      "migrated_sha256": "cf34d017510c77bd69cbec6e3dc7f368659111651234c7671be40863ba77f4f7",
+      "changed": false
+    },
+    {
+      "path": "RESOURCES.md",
+      "source_sha256": "c3f3553a81a4eadce16023b5ae45fd0b1cf2553c3778b4da9c87db565a4f4e35",
+      "migrated_sha256": "2cc8c3a36ecf9683e71418fa2149aac38e5854b02052ad33ef99ed19c05f7be3",
+      "changed": true
+    },
+    {
+      "path": "advanced/acquisition-concurrency.md",
+      "source_sha256": "cd27b2412b02648f9b24fb1fe4c3a11e7020c955dc25429f122375efff78d662",
+      "migrated_sha256": "cd27b2412b02648f9b24fb1fe4c3a11e7020c955dc25429f122375efff78d662",
+      "changed": false
+    },
+    {
+      "path": "advanced/aout-ghost-history.md",
+      "source_sha256": "9cc57f518fd4f9f1a17196797b4d6bfff55f093ca612b6e42b750237edc63d02",
+      "migrated_sha256": "9cc57f518fd4f9f1a17196797b4d6bfff55f093ca612b6e42b750237edc63d02",
+      "changed": false
+    },
+    {
+      "path": "advanced/failure-and-proof-obligations.md",
+      "source_sha256": "7f907d3e5ea918f1c45f0deacc90a382c11bc7af3441d7e9abb7faaf9bf1da3a",
+      "migrated_sha256": "7f907d3e5ea918f1c45f0deacc90a382c11bc7af3441d7e9abb7faaf9bf1da3a",
+      "changed": false
+    },
+    {
+      "path": "advanced/holder-entry-lifecycle.md",
+      "source_sha256": "a26dc25f14a563b9d8754eb538459cfee5a2f4a2c4a55ca6add0350978cc5db4",
+      "migrated_sha256": "a26dc25f14a563b9d8754eb538459cfee5a2f4a2c4a55ca6add0350978cc5db4",
+      "changed": false
+    },
+    {
+      "path": "advanced/recovery-and-lifecycle.md",
+      "source_sha256": "ada88907ac5c68a5a4c1984dc5ed1783d1cc135140a2805c0957aa948ee25fdc",
+      "migrated_sha256": "9aee753b0e65cf987d1ee6bd4dd4a705a8ba3efdde06b270247247c3cb7fbd1e",
+      "changed": true
+    },
+    {
+      "path": "advanced/replacement-progress.md",
+      "source_sha256": "1d896b9921ad0ad0d1978012f58edbea974becd69c25243b31274193475e5eee",
+      "migrated_sha256": "ffc8dbe774807f5d4761fa840f41cbebb7f052eb36bee24dc80457396f65f3b9",
+      "changed": true
+    },
+    {
+      "path": "advanced/specialized-interfaces.md",
+      "source_sha256": "4f2061140abb201392e8ca6b8a3eb87f614582798cf4d6b73238fa0bcb1857ae",
+      "migrated_sha256": "30ddb45dcf64229b168a9a411eb3a3990ec4fb991eeb7a94487f2b46ff5780ba",
+      "changed": true
+    },
+    {
+      "path": "assets/access-forms-compared.svg",
+      "source_sha256": "202cf2243a87e1c9214c38c5106f6906c264a9694d20080f4218c78acf40a400",
+      "migrated_sha256": "202cf2243a87e1c9214c38c5106f6906c264a9694d20080f4218c78acf40a400",
+      "changed": false
+    },
+    {
+      "path": "assets/allocation-progress.svg",
+      "source_sha256": "03eb1f5417a0109b83463eb38c5b1ab7b3d9dc1316656fe4cf1b390e91bb1f61",
+      "migrated_sha256": "03eb1f5417a0109b83463eb38c5b1ab7b3d9dc1316656fe4cf1b390e91bb1f61",
+      "changed": false
+    },
+    {
+      "path": "assets/alternating-read-write-waiters.svg",
+      "source_sha256": "1ebc1acbbc30093677744cff2ed2deebf4deefb061a7b258c1af175d66d31211",
+      "migrated_sha256": "1ebc1acbbc30093677744cff2ed2deebf4deefb061a7b258c1af175d66d31211",
+      "changed": false
+    },
+    {
+      "path": "assets/aout-ghost-admission.svg",
+      "source_sha256": "bf51f351dafbba22a84b25f926a5d5bb3fc04705ad2b18fbb1b93df67cc9bd31",
+      "migrated_sha256": "bf51f351dafbba22a84b25f926a5d5bb3fc04705ad2b18fbb1b93df67cc9bd31",
+      "changed": false
+    },
+    {
+      "path": "assets/bcb-page-header-identity.svg",
+      "source_sha256": "8832bd7920739834aea8fbdf160b70d5a00a8cbd187d79cb05c84c0507a4216b",
+      "migrated_sha256": "8832bd7920739834aea8fbdf160b70d5a00a8cbd187d79cb05c84c0507a4216b",
+      "changed": false
+    },
+    {
+      "path": "assets/bcb-replacement-state-machine.svg",
+      "source_sha256": "2f2d5e65c93b2164d059f8e7417904e7e43fb6e04cbf51b146e0f35c79b5b7f2",
+      "migrated_sha256": "2f2d5e65c93b2164d059f8e7417904e7e43fb6e04cbf51b146e0f35c79b5b7f2",
+      "changed": false
+    },
+    {
+      "path": "assets/checkpoint-selection-vs-wal.svg",
+      "source_sha256": "7869781405c0c72e1ec21963e7e6f3342f7c29a368d879d6d6c9ffb7257e557f",
+      "migrated_sha256": "7869781405c0c72e1ec21963e7e6f3342f7c29a368d879d6d6c9ffb7257e557f",
+      "changed": false
+    },
+    {
+      "path": "assets/claim-levels-ladder.svg",
+      "source_sha256": "4c18dd8c77eda65c20f45c43c6838e326ea2c153c16405f9981c41a93c21ffb3",
+      "migrated_sha256": "4c18dd8c77eda65c20f45c43c6838e326ea2c153c16405f9981c41a93c21ffb3",
+      "changed": false
+    },
+    {
+      "path": "assets/data-and-log-buffer-separation.svg",
+      "source_sha256": "bad5fa80e24dd738217f66b03415f5d33856ccd4bc6f8df5ece79b61a4baf594",
+      "migrated_sha256": "bad5fa80e24dd738217f66b03415f5d33856ccd4bc6f8df5ece79b61a4baf594",
+      "changed": false
+    },
+    {
+      "path": "assets/default-replacement-topology.svg",
+      "source_sha256": "8e3daa2a39e526f71744f68807595948ba9b58c818c8ac50df2f4cc87fd4cd99",
+      "migrated_sha256": "8e3daa2a39e526f71744f68807595948ba9b58c818c8ac50df2f4cc87fd4cd99",
+      "changed": false
+    },
+    {
+      "path": "assets/dirty-page-flush-actors.svg",
+      "source_sha256": "25a8b4cd0e1b19948bc964ca925d48f2b23f6d8052306bedc1a128bb2a19a95e",
+      "migrated_sha256": "25a8b4cd0e1b19948bc964ca925d48f2b23f6d8052306bedc1a128bb2a19a95e",
+      "changed": false
+    },
+    {
+      "path": "assets/durability-chain.svg",
+      "source_sha256": "c44c74b58ffe5b822746044e1c39ee045cacb96ee9aa3816543f1d55ea8cf0e3",
+      "migrated_sha256": "c44c74b58ffe5b822746044e1c39ee045cacb96ee9aa3816543f1d55ea8cf0e3",
+      "changed": false
+    },
+    {
+      "path": "assets/exceptional-return-gaps.svg",
+      "source_sha256": "44cbae132fabd9f5ff7d929745f40957dbdd5071845f141c38d7329d0ea66bec",
+      "migrated_sha256": "44cbae132fabd9f5ff7d929745f40957dbdd5071845f141c38d7329d0ea66bec",
+      "changed": false
+    },
+    {
+      "path": "assets/fix-contract.svg",
+      "source_sha256": "69148a390671324f9be795abeda4c2cc5b088bf611eb3d9009f210b363aa5fff",
+      "migrated_sha256": "69148a390671324f9be795abeda4c2cc5b088bf611eb3d9009f210b363aa5fff",
+      "changed": false
+    },
+    {
+      "path": "assets/fix-request-inputs.svg",
+      "source_sha256": "bce4e4f32012d0411f7bd0318091a37fb3b17a7696e57f18c3231e227a92ae8d",
+      "migrated_sha256": "bce4e4f32012d0411f7bd0318091a37fb3b17a7696e57f18c3231e227a92ae8d",
+      "changed": false
+    },
+    {
+      "path": "assets/fix-write-vs-promote.svg",
+      "source_sha256": "95056d8d42dc76b727382a2410b5174d912fe467e11be37590724caf0db7a24c",
+      "migrated_sha256": "95056d8d42dc76b727382a2410b5174d912fe467e11be37590724caf0db7a24c",
+      "changed": false
+    },
+    {
+      "path": "assets/holder-anchor-vs-entry.svg",
+      "source_sha256": "5459b42567865818e94ebd8f2ab0d931af0266ca7dea8b6d34d53aa2a2420274",
+      "migrated_sha256": "5459b42567865818e94ebd8f2ab0d931af0266ca7dea8b6d34d53aa2a2420274",
+      "changed": false
+    },
+    {
+      "path": "assets/holder-entry-lifetime.svg",
+      "source_sha256": "360ad4909d40107fda19e6588948b99210e2f3c949dc6e3ee8ca1868e9253ec3",
+      "migrated_sha256": "360ad4909d40107fda19e6588948b99210e2f3c949dc6e3ee8ca1868e9253ec3",
+      "changed": false
+    },
+    {
+      "path": "assets/identity-check-timeline.svg",
+      "source_sha256": "8b46af2242dc2bc325b3279f798edc458ffa3f92dede7f5df5f028aafdd8b999",
+      "migrated_sha256": "8b46af2242dc2bc325b3279f798edc458ffa3f92dede7f5df5f028aafdd8b999",
+      "changed": false
+    },
+    {
+      "path": "assets/latch-request-structures.svg",
+      "source_sha256": "438106de93c509d7b746e39e45d70c6282328241a06e32388c60a1fecc330bb6",
+      "migrated_sha256": "438106de93c509d7b746e39e45d70c6282328241a06e32388c60a1fecc330bb6",
+      "changed": false
+    },
+    {
+      "path": "assets/latch-versus-lock.svg",
+      "source_sha256": "964b0484b2f6e9f3d1eb0d4f2bd562bc73352f04a25de8e6e52f55266b1df93a",
+      "migrated_sha256": "964b0484b2f6e9f3d1eb0d4f2bd562bc73352f04a25de8e6e52f55266b1df93a",
+      "changed": false
+    },
+    {
+      "path": "assets/latch-wait-queue.svg",
+      "source_sha256": "335bfe27f774e340e25cf7127bc5ffecbed6c310d42eded4c9cdccaec0ea974c",
+      "migrated_sha256": "335bfe27f774e340e25cf7127bc5ffecbed6c310d42eded4c9cdccaec0ea974c",
+      "changed": false
+    },
+    {
+      "path": "assets/lifecycle-order.svg",
+      "source_sha256": "d34f28ffa108460ecceef3b4ee48eee04e93940b892f7e997d121fcc3e7c5394",
+      "migrated_sha256": "d34f28ffa108460ecceef3b4ee48eee04e93940b892f7e997d121fcc3e7c5394",
+      "changed": false
+    },
+    {
+      "path": "assets/load-owner-waiter.svg",
+      "source_sha256": "8192f584fdd85b69828c88278d6268809416570f0024775720814c2cadee4d52",
+      "migrated_sha256": "8192f584fdd85b69828c88278d6268809416570f0024775720814c2cadee4d52",
+      "changed": false
+    },
+    {
+      "path": "assets/log-memory-and-active-file-rings.svg",
+      "source_sha256": "7a2a9a97c8e670b91652f387efcaeebf7e220dd35480ff52a57f07812288d05c",
+      "migrated_sha256": "7a2a9a97c8e670b91652f387efcaeebf7e220dd35480ff52a57f07812288d05c",
+      "changed": false
+    },
+    {
+      "path": "assets/log-ring-archive-retention.svg",
+      "source_sha256": "ef1c4520f7f5cf8950e9b6ee88c009ac6057a24dd21d1769036cafcd8379b634",
+      "migrated_sha256": "ef1c4520f7f5cf8950e9b6ee88c009ac6057a24dd21d1769036cafcd8379b634",
+      "changed": false
+    },
+    {
+      "path": "assets/lru-cross-search-and-aging.svg",
+      "source_sha256": "83d9d4772affae6bac2b70596e94a540553cf32007ecce4ff227200889f5ce0b",
+      "migrated_sha256": "83d9d4772affae6bac2b70596e94a540553cf32007ecce4ff227200889f5ce0b",
+      "changed": false
+    },
+    {
+      "path": "assets/lru-domains-zones.svg",
+      "source_sha256": "b3be9e558f416077536030322907c8df5e3aa742b6b9a6e28708dbec43b7d21f",
+      "migrated_sha256": "b3be9e558f416077536030322907c8df5e3aa742b6b9a6e28708dbec43b7d21f",
+      "changed": false
+    },
+    {
+      "path": "assets/lru-scan-depth-vs-list-count.svg",
+      "source_sha256": "87b64a94f99766b5a91809deb8e13c8120ae8e588d1db25f74004ec73ab7aa00",
+      "migrated_sha256": "87b64a94f99766b5a91809deb8e13c8120ae8e588d1db25f74004ec73ab7aa00",
+      "changed": false
+    },
+    {
+      "path": "assets/maintenance-and-pacing-control.svg",
+      "source_sha256": "5ac2fa5acabe05296e82c7d2edd1ca373083b20483d0207a68ea285223a72e8c",
+      "migrated_sha256": "5ac2fa5acabe05296e82c7d2edd1ca373083b20483d0207a68ea285223a72e8c",
+      "changed": false
+    },
+    {
+      "path": "assets/mutation-ownership-spine.svg",
+      "source_sha256": "3a9727c82be732309392988e58ef2a7271116828cde21f93fa6c097922b8adb1",
+      "migrated_sha256": "3a9727c82be732309392988e58ef2a7271116828cde21f93fa6c097922b8adb1",
+      "changed": false
+    },
+    {
+      "path": "assets/object-ownership-map.svg",
+      "source_sha256": "ce3cf9f6796d65d18aaf2c2268860f0202cce7d472843974433c31fa6385596d",
+      "migrated_sha256": "ce3cf9f6796d65d18aaf2c2268860f0202cce7d472843974433c31fa6385596d",
+      "changed": false
+    },
+    {
+      "path": "assets/oldest-unflush-checkpoint.svg",
+      "source_sha256": "f6222dd0d871be9f859046a005354470b6644904e814e1fcf790e366ce4319f0",
+      "migrated_sha256": "f6222dd0d871be9f859046a005354470b6644904e814e1fcf790e366ce4319f0",
+      "changed": false
+    },
+    {
+      "path": "assets/one-bcb-victim-decision.svg",
+      "source_sha256": "2275c03df34cb82aba08893a79538779233e861701382379caf26e3aa5290823",
+      "migrated_sha256": "2275c03df34cb82aba08893a79538779233e861701382379caf26e3aa5290823",
+      "changed": false
+    },
+    {
+      "path": "assets/ordered-fix-deadlock-break.svg",
+      "source_sha256": "3a682443a153503f32ef31653594ed29f4e9d0402edf46bf7d23f6285e4c137e",
+      "migrated_sha256": "3a682443a153503f32ef31653594ed29f4e9d0402edf46bf7d23f6285e4c137e",
+      "changed": false
+    },
+    {
+      "path": "assets/ordered-fix-ledger-layers.svg",
+      "source_sha256": "056fd23dccf2bdfee03b0435653a773aec542163bda61f14638fbfbadb03a94b",
+      "migrated_sha256": "056fd23dccf2bdfee03b0435653a773aec542163bda61f14638fbfbadb03a94b",
+      "changed": false
+    },
+    {
+      "path": "assets/ordered-fix-stale-observation.svg",
+      "source_sha256": "de2cfb5acdde9aab1a694db1e58b1b5549cb9b4023f7625bec1a874607eafd38",
+      "migrated_sha256": "de2cfb5acdde9aab1a694db1e58b1b5549cb9b4023f7625bec1a874607eafd38",
+      "changed": false
+    },
+    {
+      "path": "assets/ordered-watcher-refix.svg",
+      "source_sha256": "ab4bcef195a8362df6791074e74b3ce459403d96ec5c7ad55b9bf2055c251ff0",
+      "migrated_sha256": "ab4bcef195a8362df6791074e74b3ce459403d96ec5c7ad55b9bf2055c251ff0",
+      "changed": false
+    },
+    {
+      "path": "assets/ownership-ledgers.svg",
+      "source_sha256": "e902f526f00ecb1cb939a458b1feabfbad28be82e073ddc7e82e97b6b6b91239",
+      "migrated_sha256": "e902f526f00ecb1cb939a458b1feabfbad28be82e073ddc7e82e97b6b6b91239",
+      "changed": false
+    },
+    {
+      "path": "assets/page-buffer-daemon-cadence.svg",
+      "source_sha256": "ba7b9dbbaffc79d8b61877f27cc950b7c7dbe95a27ed9443d96af98a5e7f5dce",
+      "migrated_sha256": "ba7b9dbbaffc79d8b61877f27cc950b7c7dbe95a27ed9443d96af98a5e7f5dce",
+      "changed": false
+    },
+    {
+      "path": "assets/page-buffer-daemon-control-loops.svg",
+      "source_sha256": "d3b13787322bdd8519319c224368d456521d9b9b0e48c7e43de12b8c2144846e",
+      "migrated_sha256": "d3b13787322bdd8519319c224368d456521d9b9b0e48c7e43de12b8c2144846e",
+      "changed": false
+    },
+    {
+      "path": "assets/page-buffer-daemon-lifecycle.svg",
+      "source_sha256": "4c94350ae5ada2dfadbe5cdd2c10000645e9cfa22f30abd9772ea6729b768760",
+      "migrated_sha256": "4c94350ae5ada2dfadbe5cdd2c10000645e9cfa22f30abd9772ea6729b768760",
+      "changed": false
+    },
+    {
+      "path": "assets/page-flush-post-flush-handoff.svg",
+      "source_sha256": "f8deab7b05a9d0bf157b5b4db248057a255b405b8a4cc7a5345f4126bc06c136",
+      "migrated_sha256": "f8deab7b05a9d0bf157b5b4db248057a255b405b8a4cc7a5345f4126bc06c136",
+      "changed": false
+    },
+    {
+      "path": "assets/private-lru-assignment-activity.svg",
+      "source_sha256": "ad091252979b3d7ac13e40c03c278b5b839c5e29b15a7197d0aca99e14b32e83",
+      "migrated_sha256": "ad091252979b3d7ac13e40c03c278b5b839c5e29b15a7197d0aca99e14b32e83",
+      "changed": false
+    },
+    {
+      "path": "assets/private-lru-domain.svg",
+      "source_sha256": "323f1146ae1b8e7d1f55566690960d109b069dc3c73533f297e6933f458ae0e0",
+      "migrated_sha256": "323f1146ae1b8e7d1f55566690960d109b069dc3c73533f297e6933f458ae0e0",
+      "changed": false
+    },
+    {
+      "path": "assets/promotion-condition-choice.svg",
+      "source_sha256": "c3fe403e122298fde1cbef2261e84401ae3a29ad70911351a350ea458fb2c25d",
+      "migrated_sha256": "c3fe403e122298fde1cbef2261e84401ae3a29ad70911351a350ea458fb2c25d",
+      "changed": false
+    },
+    {
+      "path": "assets/promotion-outcomes.svg",
+      "source_sha256": "81aa553e8c782d87ced952c08c8ac1d88a10aa6ce93434a5e2c04065b3b73f5d",
+      "migrated_sha256": "81aa553e8c782d87ced952c08c8ac1d88a10aa6ce93434a5e2c04065b3b73f5d",
+      "changed": false
+    },
+    {
+      "path": "assets/redo-lsa-gate.svg",
+      "source_sha256": "0b207b9623f0821b67dcad1134d7f776f1fe0c4ee0a0ff5cddb70218d84858ce",
+      "migrated_sha256": "0b207b9623f0821b67dcad1134d7f776f1fe0c4ee0a0ff5cddb70218d84858ce",
+      "changed": false
+    },
+    {
+      "path": "assets/repeated-read-lru-effects.svg",
+      "source_sha256": "6457068ab1a05c0fbf16febf306db8276061398d381a9aa6b7cfb57b27e2dc40",
+      "migrated_sha256": "6457068ab1a05c0fbf16febf306db8276061398d381a9aa6b7cfb57b27e2dc40",
+      "changed": false
+    },
+    {
+      "path": "assets/replacement-data-structures.svg",
+      "source_sha256": "2d76c64b1925d70e1fabd8fb8ca950f73d9ef2ce7c89dc90b1476a683ab67caf",
+      "migrated_sha256": "2d76c64b1925d70e1fabd8fb8ca950f73d9ef2ce7c89dc90b1476a683ab67caf",
+      "changed": false
+    },
+    {
+      "path": "assets/replacement-lifecycle-quantities.svg",
+      "source_sha256": "957afee6a183fe2e2a51768872b30a935a6d7533e8c9a126debf906ed2bca273",
+      "migrated_sha256": "957afee6a183fe2e2a51768872b30a935a6d7533e8c9a126debf906ed2bca273",
+      "changed": false
+    },
+    {
+      "path": "assets/seminar.css",
+      "source_sha256": "1208fb45ebe152c121ab06eae7843dd6b13af16b1f9de74f971dfe775db085d2",
+      "migrated_sha256": "1208fb45ebe152c121ab06eae7843dd6b13af16b1f9de74f971dfe775db085d2",
+      "changed": false
+    },
+    {
+      "path": "assets/seminar.js",
+      "source_sha256": "d834b1ab589a1121df93ccb005a50c7b318bac287473838c5cbb927bc969e759",
+      "migrated_sha256": "d834b1ab589a1121df93ccb005a50c7b318bac287473838c5cbb927bc969e759",
+      "changed": false
+    },
+    {
+      "path": "assets/startup-bcb-lifetime.svg",
+      "source_sha256": "21cebffb5ae5a27a13d897cf78b0be1d55d72f785ce767ff836664666429970f",
+      "migrated_sha256": "21cebffb5ae5a27a13d897cf78b0be1d55d72f785ce767ff836664666429970f",
+      "changed": false
+    },
+    {
+      "path": "assets/state-axes.svg",
+      "source_sha256": "809f6d8accb32a3bf94ec8ec7453487df0cce4cff4f22aed0c62f74d3eccbec9",
+      "migrated_sha256": "809f6d8accb32a3bf94ec8ec7453487df0cce4cff4f22aed0c62f74d3eccbec9",
+      "changed": false
+    },
+    {
+      "path": "assets/teach-course.css",
+      "source_sha256": "af919635e4db6b54fb697d7bcd9efd2f4d8abcb564f655ce467e115098c0dc28",
+      "migrated_sha256": "af919635e4db6b54fb697d7bcd9efd2f4d8abcb564f655ce467e115098c0dc28",
+      "changed": false
+    },
+    {
+      "path": "assets/teach-ledger.js",
+      "source_sha256": "a3f0e3e23d1bed1835ae59d97acb6ed9d275591ea98f89aedee72e6715f6cabb",
+      "migrated_sha256": "a3f0e3e23d1bed1835ae59d97acb6ed9d275591ea98f89aedee72e6715f6cabb",
+      "changed": false
+    },
+    {
+      "path": "assets/teach-retrieval.js",
+      "source_sha256": "8c6a72554ed465f66139418af92245015f0f6e8a52f2a2e5222c9aa274c62d64",
+      "migrated_sha256": "8c6a72554ed465f66139418af92245015f0f6e8a52f2a2e5222c9aa274c62d64",
+      "changed": false
+    },
+    {
+      "path": "assets/three-engine-replacement-paths.svg",
+      "source_sha256": "03de5d63f15e9e03f071e296058f4d24479b8d1d461845aa7953ecd31d19fe5e",
+      "migrated_sha256": "03de5d63f15e9e03f071e296058f4d24479b8d1d461845aa7953ecd31d19fe5e",
+      "changed": false
+    },
+    {
+      "path": "assets/three-engine-responsibility-seams.svg",
+      "source_sha256": "9bcb1f05234b3a056ac619da6327facefe6cc5d365dc26448931334cb37c9813",
+      "migrated_sha256": "9bcb1f05234b3a056ac619da6327facefe6cc5d365dc26448931334cb37c9813",
+      "changed": false
+    },
+    {
+      "path": "assets/two-lsa-timeline.svg",
+      "source_sha256": "ffbe4b2d18135f44932616b9ab3af795837ecb939998113c219bb89da07cc488",
+      "migrated_sha256": "ffbe4b2d18135f44932616b9ab3af795837ecb939998113c219bb89da07cc488",
+      "changed": false
+    },
+    {
+      "path": "assets/unconditional-latch-scenarios.svg",
+      "source_sha256": "f9c7b6dc66628741eb9fa44fca27bbe38d3095813c037a24ad75b3a0aeb94931",
+      "migrated_sha256": "f9c7b6dc66628741eb9fa44fca27bbe38d3095813c037a24ad75b3a0aeb94931",
+      "changed": false
+    },
+    {
+      "path": "assets/unfix-lru-placement.svg",
+      "source_sha256": "596945389b9c6fb20ef3200585e92224611fcdc5cf0da257824ea31908067ede",
+      "migrated_sha256": "596945389b9c6fb20ef3200585e92224611fcdc5cf0da257824ea31908067ede",
+      "changed": false
+    },
+    {
+      "path": "assets/victim-eligibility.svg",
+      "source_sha256": "fd28858292d816935368f6e9ded6433baa01fcd1c1db0f8774aa534c5d989e6f",
+      "migrated_sha256": "fd28858292d816935368f6e9ded6433baa01fcd1c1db0f8774aa534c5d989e6f",
+      "changed": false
+    },
+    {
+      "path": "assets/why-thread-holder.svg",
+      "source_sha256": "31b79fb2a925c8386b4594dd5a568e52d2b39a22e66275756cdffee0a175e394",
+      "migrated_sha256": "31b79fb2a925c8386b4594dd5a568e52d2b39a22e66275756cdffee0a175e394",
+      "changed": false
+    },
+    {
+      "path": "docs/adr/0001-split-guide-by-reading-mode.md",
+      "source_sha256": "b7150256d5be112608ec17e9799d3d873e2b2b71b97e098e70d7e94e87b1009c",
+      "migrated_sha256": "b7150256d5be112608ec17e9799d3d873e2b2b71b97e098e70d7e94e87b1009c",
+      "changed": false
+    },
+    {
+      "path": "docs/adr/0002-author-the-document-set-in-english.md",
+      "source_sha256": "8bef8d9e8e902b98de89825d354a39dbd3900905a17ecf9562ea07c69f929553",
+      "migrated_sha256": "8bef8d9e8e902b98de89825d354a39dbd3900905a17ecf9562ea07c69f929553",
+      "changed": false
+    },
+    {
+      "path": "docs/adr/0003-separate-question-prompts-from-answers.md",
+      "source_sha256": "2fc6e39b58855a71142696af19951a129b9e628a2a9627b9eb60a66a91ac9d6e",
+      "migrated_sha256": "2fc6e39b58855a71142696af19951a129b9e628a2a9627b9eb60a66a91ac9d6e",
+      "changed": false
+    },
+    {
+      "path": "docs/adr/0004-publish-bilingual-teaching-html.md",
+      "source_sha256": "ff0b02366e56010f155e8731b44f6282b4fd3a560fc524cfc280fa700e99006a",
+      "migrated_sha256": "ff0b02366e56010f155e8731b44f6282b4fd3a560fc524cfc280fa700e99006a",
+      "changed": false
+    },
+    {
+      "path": "docs/adr/0005-make-html-an-audience-facing-seminar-curriculum.md",
+      "source_sha256": "30a3c630147075c889e753f65e51190081c75df36eb27d7fadd91c18eb3531f6",
+      "migrated_sha256": "30a3c630147075c889e753f65e51190081c75df36eb27d7fadd91c18eb3531f6",
+      "changed": false
+    },
+    {
+      "path": "docs/adr/0006-maintain-page-buffer-as-an-independent-seminar-repository.md",
+      "source_sha256": "a372f6c49f129b997b467c572f5962beaf8986ffc1b696b37fb48b5dd92eb4a7",
+      "migrated_sha256": "a372f6c49f129b997b467c572f5962beaf8986ffc1b696b37fb48b5dd92eb4a7",
+      "changed": false
+    },
+    {
+      "path": "docs/completion-report.md",
+      "source_sha256": "5f1ced2f6895db2e97fe4b8a5b1367082b6c974af635486886153a068673a75a",
+      "migrated_sha256": "5f1ced2f6895db2e97fe4b8a5b1367082b6c974af635486886153a068673a75a",
+      "changed": false
+    },
+    {
+      "path": "docs/curriculum-coverage.md",
+      "source_sha256": "a804052b310a8de9c1060c09fbff7c333ad44e1d102005446f19130e629b98ee",
+      "migrated_sha256": "a804052b310a8de9c1060c09fbff7c333ad44e1d102005446f19130e629b98ee",
+      "changed": false
+    },
+    {
+      "path": "docs/seminar-curriculum-design.md",
+      "source_sha256": "6cfd021948f696abf34bf1dee6f2a4361a81c7b95ba1e99710d0893e43649bb7",
+      "migrated_sha256": "6cfd021948f696abf34bf1dee6f2a4361a81c7b95ba1e99710d0893e43649bb7",
+      "changed": false
+    },
+    {
+      "path": "docs/seminar-prototype-review.md",
+      "source_sha256": "8af90369a91721e10e37428fc6aea8df01bf7407096ac69173f7dd239a51fd88",
+      "migrated_sha256": "8af90369a91721e10e37428fc6aea8df01bf7407096ac69173f7dd239a51fd88",
+      "changed": false
+    },
+    {
+      "path": "en/index.html",
+      "source_sha256": "6c02fa37a0c9e63af9b830a119720e7b4d0f189d40a29ea4e7cf0c090863693a",
+      "migrated_sha256": "6c02fa37a0c9e63af9b830a119720e7b4d0f189d40a29ea4e7cf0c090863693a",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0000-replacement-foundations.html",
+      "source_sha256": "58198ebb75c0a2e52a94028965ed7d04256efbb1be9a35e3c7e4d0f9281867c1",
+      "migrated_sha256": "58198ebb75c0a2e52a94028965ed7d04256efbb1be9a35e3c7e4d0f9281867c1",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0000a-database-bridge.html",
+      "source_sha256": "265d4a3ab1205f72059124c7b85e47f1db0b4cd89e871258299583bd98ff7c03",
+      "migrated_sha256": "265d4a3ab1205f72059124c7b85e47f1db0b4cd89e871258299583bd98ff7c03",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0001-present-the-page-journey.html",
+      "source_sha256": "b0c02d528381405656095277569fba791534391903572f5d2483544587e585f9",
+      "migrated_sha256": "b0c02d528381405656095277569fba791534391903572f5d2483544587e585f9",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0002-separate-objects-from-state.html",
+      "source_sha256": "47c02f4c961c1178bff7d55392a12fb97d1c1abc0f6080d355345c3fd6dc4bdf",
+      "migrated_sha256": "47c02f4c961c1178bff7d55392a12fb97d1c1abc0f6080d355345c3fd6dc4bdf",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0003-trace-fix-convergence.html",
+      "source_sha256": "b5674e0674e24704bad1aacc0eb27d44857e0e30832bb1d5cd32dad8309e97eb",
+      "migrated_sha256": "b5674e0674e24704bad1aacc0eb27d44857e0e30832bb1d5cd32dad8309e97eb",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0004-repay-fix-debt.html",
+      "source_sha256": "7c2cac09c1a053c8f716672bc780e3863a71bd2552791a44758e64150b32115d",
+      "migrated_sha256": "7c2cac09c1a053c8f716672bc780e3863a71bd2552791a44758e64150b32115d",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0004a-understand-holder-anchor.html",
+      "source_sha256": "9ccd5976a86e834b9d9673ef4e6193a2d905c8cacba9755e5e514aee65638f0c",
+      "migrated_sha256": "9ccd5976a86e834b9d9673ef4e6193a2d905c8cacba9755e5e514aee65638f0c",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0005-audit-a-logged-mutation.html",
+      "source_sha256": "539bda0b763fa41a158d9942ce309032765b1a0255a086833e3f70156a7bdc0a",
+      "migrated_sha256": "539bda0b763fa41a158d9942ce309032765b1a0255a086833e3f70156a7bdc0a",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0006-flush-one-generation.html",
+      "source_sha256": "a5ae1446e50b1bf28b3a3f6978c4992d3a79fbbcb392a5bec19e5335a93e33c2",
+      "migrated_sha256": "a5ae1446e50b1bf28b3a3f6978c4992d3a79fbbcb392a5bec19e5335a93e33c2",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0006a-understand-page-buffer-daemons.html",
+      "source_sha256": "727d95138108e93d9f4f14a0a7a84acbeebcaf8fd2535f3fb58a6ac757212964",
+      "migrated_sha256": "727d95138108e93d9f4f14a0a7a84acbeebcaf8fd2535f3fb58a6ac757212964",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0006b-follow-page-flush-handoff.html",
+      "source_sha256": "372ec312196086655b0963660c597f47a7c656ff626dba6c0776fbee2a2aa063",
+      "migrated_sha256": "372ec312196086655b0963660c597f47a7c656ff626dba6c0776fbee2a2aa063",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0006c-follow-maintenance-and-pacing.html",
+      "source_sha256": "ac133bd9fd14a38afa7109f7520664b9e84b76471f4f3121910436e444b48f91",
+      "migrated_sha256": "ac133bd9fd14a38afa7109f7520664b9e84b76471f4f3121910436e444b48f91",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0007-replace-one-frame.html",
+      "source_sha256": "77b4959927f649a0bfc04365475094dad71fc2c456550c6302e470455296d63b",
+      "migrated_sha256": "77b4959927f649a0bfc04365475094dad71fc2c456550c6302e470455296d63b",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0008-defend-a-safe-change.html",
+      "source_sha256": "b540f23314d06c1528cb0a367e01adb85ffb4a05c8189a2a5e7942fdc936b232",
+      "migrated_sha256": "b540f23314d06c1528cb0a367e01adb85ffb4a05c8189a2a5e7942fdc936b232",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0009-classify-latch-wait.html",
+      "source_sha256": "678f494ce115702aa866afad3ff3181b42e37a711bc1bb5023a8fd1fa346938d",
+      "migrated_sha256": "678f494ce115702aa866afad3ff3181b42e37a711bc1bb5023a8fd1fa346938d",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0010-revalidate-after-promotion.html",
+      "source_sha256": "682700742eb1a39a567f2fe9a0e7686ca84029531078698ee929fec812164a2b",
+      "migrated_sha256": "682700742eb1a39a567f2fe9a0e7686ca84029531078698ee929fec812164a2b",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0011-rebuild-after-ordered-refix.html",
+      "source_sha256": "221f93ce8b4cae5a8f452548bdf18004fa9bdcdff54d596653665a1d6b57f5f2",
+      "migrated_sha256": "221f93ce8b4cae5a8f452548bdf18004fa9bdcdff54d596653665a1d6b57f5f2",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0012-prove-replacement-progress.html",
+      "source_sha256": "6f54bbf1c2b3c14bf962514322fd2f48fd64cbd8e3235f7f9fef06152d44f8e6",
+      "migrated_sha256": "6f54bbf1c2b3c14bf962514322fd2f48fd64cbd8e3235f7f9fef06152d44f8e6",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0012a-understand-aout-ghost-history.html",
+      "source_sha256": "54e6092ddd8987b04ae0324dad4a39ad3f7022014b6b0f7bb3c3aec0283d57cb",
+      "migrated_sha256": "54e6092ddd8987b04ae0324dad4a39ad3f7022014b6b0f7bb3c3aec0283d57cb",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0012b-understand-private-lru-index.html",
+      "source_sha256": "f38ea729a5120d13b989a545fb52888e6d523c1310d95155359729dcf8e106a2",
+      "migrated_sha256": "f38ea729a5120d13b989a545fb52888e6d523c1310d95155359729dcf8e106a2",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0013-gate-redo-by-page-lsa.html",
+      "source_sha256": "5969b8b42262261405aa2df72f685d2c2934092ae3391bc94a85431e2b2cf59b",
+      "migrated_sha256": "5969b8b42262261405aa2df72f685d2c2934092ae3391bc94a85431e2b2cf59b",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0014-preserve-lifecycle-order.html",
+      "source_sha256": "1b18235dfac7846caf89fd3c56bb3adc065b871a2d3fce4c26cc3281d650e36b",
+      "migrated_sha256": "1b18235dfac7846caf89fd3c56bb3adc065b871a2d3fce4c26cc3281d650e36b",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0015-route-a-specialized-interface.html",
+      "source_sha256": "36db0441993419fdd29de6168868697d7b50cdc5e9c5cf461a057f8ef7881bde",
+      "migrated_sha256": "36db0441993419fdd29de6168868697d7b50cdc5e9c5cf461a057f8ef7881bde",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0016-close-a-failure-proof.html",
+      "source_sha256": "12d25209d7ea619406b7a686d1b789b255da04e5c1ac6b6c2433e5bf98eab976",
+      "migrated_sha256": "12d25209d7ea619406b7a686d1b789b255da04e5c1ac6b6c2433e5bf98eab976",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0017-defend-the-module-live.html",
+      "source_sha256": "feae2e9415bfc7fbc2df0e06e6bedcd6040ba2331fbde73bb50f2ae9f0e7bc38",
+      "migrated_sha256": "feae2e9415bfc7fbc2df0e06e6bedcd6040ba2331fbde73bb50f2ae9f0e7bc38",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0018-compare-three-buffer-pools.html",
+      "source_sha256": "6cc1a957d6afbeffe463c0500293e4e81d2c9b042d3fac51ae40d5e310772afb",
+      "migrated_sha256": "6cc1a957d6afbeffe463c0500293e4e81d2c9b042d3fac51ae40d5e310772afb",
+      "changed": false
+    },
+    {
+      "path": "en/lessons/0018a-compare-replacement-policies.html",
+      "source_sha256": "e9d7b841a8c7e3ce96d3fa7436aca1007cb1279ffadf5387be114f500e014d1c",
+      "migrated_sha256": "e9d7b841a8c7e3ce96d3fa7436aca1007cb1279ffadf5387be114f500e014d1c",
+      "changed": false
+    },
+    {
+      "path": "en/reference/caller-mutation-card.html",
+      "source_sha256": "77dfdf462f2b3848728ef703641d21dd617c7db799458f022cf4714bd1e317f3",
+      "migrated_sha256": "77dfdf462f2b3848728ef703641d21dd617c7db799458f022cf4714bd1e317f3",
+      "changed": false
+    },
+    {
+      "path": "en/reference/change-defense-card.html",
+      "source_sha256": "aee37d01b45ab351787106ea5b597caf00ab5601d34d8c2cb092699fe6b160f3",
+      "migrated_sha256": "aee37d01b45ab351787106ea5b597caf00ab5601d34d8c2cb092699fe6b160f3",
+      "changed": false
+    },
+    {
+      "path": "en/reference/core-synthesis-studio.html",
+      "source_sha256": "6155eb2910e199954aea4b8bf559bed95b6dcf6e4b0c18757cb53df84274544e",
+      "migrated_sha256": "6155eb2910e199954aea4b8bf559bed95b6dcf6e4b0c18757cb53df84274544e",
+      "changed": false
+    },
+    {
+      "path": "en/reference/course-coverage-matrix.html",
+      "source_sha256": "47ac920a2065b34c784bfa22319b9c4dc8fe17c7068b920787153a7ac91ce3cb",
+      "migrated_sha256": "47ac920a2065b34c784bfa22319b9c4dc8fe17c7068b920787153a7ac91ce3cb",
+      "changed": false
+    },
+    {
+      "path": "en/reference/course-learning-path.html",
+      "source_sha256": "93c21d05aa687723b0df0b04aeee602ac57286ae874eb9a9586b40f9d0b1a962",
+      "migrated_sha256": "93c21d05aa687723b0df0b04aeee602ac57286ae874eb9a9586b40f9d0b1a962",
+      "changed": false
+    },
+    {
+      "path": "en/reference/expected-team-questions.html",
+      "source_sha256": "9b130d3afb5c5577ba79272ba91455d21a53a7d73b1faac16899970bd2bb07a9",
+      "migrated_sha256": "9b130d3afb5c5577ba79272ba91455d21a53a7d73b1faac16899970bd2bb07a9",
+      "changed": false
+    },
+    {
+      "path": "en/reference/failure-proof-ledger-card.html",
+      "source_sha256": "b2be36fbb759a55b3ad0071f90df1b0dc8909d9ed9c22d56598f120aa3ddd7ab",
+      "migrated_sha256": "b2be36fbb759a55b3ad0071f90df1b0dc8909d9ed9c22d56598f120aa3ddd7ab",
+      "changed": false
+    },
+    {
+      "path": "en/reference/fix-convergence-map.html",
+      "source_sha256": "7a3a59cb8499c8746741dba4de73e8299e340a4b5578b2fce48a261908ed80df",
+      "migrated_sha256": "7a3a59cb8499c8746741dba4de73e8299e340a4b5578b2fce48a261908ed80df",
+      "changed": false
+    },
+    {
+      "path": "en/reference/flush-generation-card.html",
+      "source_sha256": "3a95172f938589c8fea82a415d1c20d4eb0a8ff70d8819c44ecce30ed0b3db4e",
+      "migrated_sha256": "3a95172f938589c8fea82a415d1c20d4eb0a8ff70d8819c44ecce30ed0b3db4e",
+      "changed": false
+    },
+    {
+      "path": "en/reference/latch-queue-card.html",
+      "source_sha256": "10ae36753f9753e23bc197accc9400d69560270a1dbe7dcc47bb0e747e8ae680",
+      "migrated_sha256": "10ae36753f9753e23bc197accc9400d69560270a1dbe7dcc47bb0e747e8ae680",
+      "changed": false
+    },
+    {
+      "path": "en/reference/lifecycle-order-card.html",
+      "source_sha256": "b0b79dc6742875c7b5b46b856824bf30d38cc7e19ecf2affc201d1bb39abf3f8",
+      "migrated_sha256": "b0b79dc6742875c7b5b46b856824bf30d38cc7e19ecf2affc201d1bb39abf3f8",
+      "changed": false
+    },
+    {
+      "path": "en/reference/lru-worked-example.html",
+      "source_sha256": "388cc9cde8be31ac66daa1c38e3fe174802d986d26ead27c0d1ddd9d1fe78602",
+      "migrated_sha256": "388cc9cde8be31ac66daa1c38e3fe174802d986d26ead27c0d1ddd9d1fe78602",
+      "changed": false
+    },
+    {
+      "path": "en/reference/object-and-state-map.html",
+      "source_sha256": "093657dc42bf6795b9b402ed1fe99f9c0a0a32b1e2d1f8b4f8ae82aa24614e77",
+      "migrated_sha256": "093657dc42bf6795b9b402ed1fe99f9c0a0a32b1e2d1f8b4f8ae82aa24614e77",
+      "changed": false
+    },
+    {
+      "path": "en/reference/ordered-watcher-card.html",
+      "source_sha256": "b8d9d9b260241beeac2146dd6b329950b26933be959b6dfc8081c6d32546481c",
+      "migrated_sha256": "b8d9d9b260241beeac2146dd6b329950b26933be959b6dfc8081c6d32546481c",
+      "changed": false
+    },
+    {
+      "path": "en/reference/ownership-debt-card.html",
+      "source_sha256": "9a859ac5b58df25102fa8a8622996e9c1f79b9ddd143258c74494dfc03afe376",
+      "migrated_sha256": "9a859ac5b58df25102fa8a8622996e9c1f79b9ddd143258c74494dfc03afe376",
+      "changed": false
+    },
+    {
+      "path": "en/reference/presentation-rehearsal-card.html",
+      "source_sha256": "a0876845c1eba9c52529011193813fdd82a8a2879d0601d75a8c4cc99d3921ba",
+      "migrated_sha256": "a0876845c1eba9c52529011193813fdd82a8a2879d0601d75a8c4cc99d3921ba",
+      "changed": false
+    },
+    {
+      "path": "en/reference/presentation-spine.html",
+      "source_sha256": "d2cfba8816a57fd06f0d0eec8a36959e18297af611394fe70179306cc270d241",
+      "migrated_sha256": "d2cfba8816a57fd06f0d0eec8a36959e18297af611394fe70179306cc270d241",
+      "changed": false
+    },
+    {
+      "path": "en/reference/promotion-restart-card.html",
+      "source_sha256": "5a9e060c0220a433788edefc024b6c4f99921b518cea55bfb98eca0d022c9187",
+      "migrated_sha256": "5a9e060c0220a433788edefc024b6c4f99921b518cea55bfb98eca0d022c9187",
+      "changed": false
+    },
+    {
+      "path": "en/reference/redo-recovery-card.html",
+      "source_sha256": "656233c994de4d55af296af77fb0b8f294a8bfc136fca3f22c9ba67a1200b765",
+      "migrated_sha256": "656233c994de4d55af296af77fb0b8f294a8bfc136fca3f22c9ba67a1200b765",
+      "changed": false
+    },
+    {
+      "path": "en/reference/replacement-progress-card.html",
+      "source_sha256": "1b76fde29390da85a1270111753d94cbbdfba9591ccff17cbd02978aeadf5ae8",
+      "migrated_sha256": "1b76fde29390da85a1270111753d94cbbdfba9591ccff17cbd02978aeadf5ae8",
+      "changed": false
+    },
+    {
+      "path": "en/reference/replacement-safety-card.html",
+      "source_sha256": "e15383601f5fc06e835460b39acd512ac005b088b6cca6d8621fa6830ca4e0aa",
+      "migrated_sha256": "e15383601f5fc06e835460b39acd512ac005b088b6cca6d8621fa6830ca4e0aa",
+      "changed": false
+    },
+    {
+      "path": "en/reference/specialized-interface-card.html",
+      "source_sha256": "0a8331e2ebbef262ba43a807bd6a579f4d99295f0842fb277235e8287699d98a",
+      "migrated_sha256": "0a8331e2ebbef262ba43a807bd6a579f4d99295f0842fb277235e8287699d98a",
+      "changed": false
+    },
+    {
+      "path": "en/reference/three-engine-performance-card.html",
+      "source_sha256": "eca659de806cb7b0158c33f3a1a416bd6c7459f328923fef5a7733c3c0ba5d77",
+      "migrated_sha256": "eca659de806cb7b0158c33f3a1a416bd6c7459f328923fef5a7733c3c0ba5d77",
+      "changed": false
+    },
+    {
+      "path": "index.html",
+      "source_sha256": "3982fef04a204bee40799c41874408a04feef215f780f80120467cd5cb0e7b8a",
+      "migrated_sha256": "3982fef04a204bee40799c41874408a04feef215f780f80120467cd5cb0e7b8a",
+      "changed": false
+    },
+    {
+      "path": "ko/index.html",
+      "source_sha256": "192df25e13cd3ef61f47aeabd4d12bedbe4fe7bfc77cf54fa9cccad8c01ab886",
+      "migrated_sha256": "192df25e13cd3ef61f47aeabd4d12bedbe4fe7bfc77cf54fa9cccad8c01ab886",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0000-replacement-foundations.html",
+      "source_sha256": "ce02ef7eeff0989db13c03e605e34f6c85969245988a91b52152047a3df66902",
+      "migrated_sha256": "ce02ef7eeff0989db13c03e605e34f6c85969245988a91b52152047a3df66902",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0000a-database-bridge.html",
+      "source_sha256": "8be0b7fa9bfa4e1a06b943acacc48c4a9e7a44866715ab9029aa68c54d38b1b8",
+      "migrated_sha256": "8be0b7fa9bfa4e1a06b943acacc48c4a9e7a44866715ab9029aa68c54d38b1b8",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0001-present-the-page-journey.html",
+      "source_sha256": "01de92d2fc3c4eed5192b88befb513e4802c7120b9afae064270b8488639cd74",
+      "migrated_sha256": "01de92d2fc3c4eed5192b88befb513e4802c7120b9afae064270b8488639cd74",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0002-separate-objects-from-state.html",
+      "source_sha256": "be805a8d87d26c4d5fcd73a06872db5fb0881b662386a0a806e5a2ce9ea9a010",
+      "migrated_sha256": "be805a8d87d26c4d5fcd73a06872db5fb0881b662386a0a806e5a2ce9ea9a010",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0003-trace-fix-convergence.html",
+      "source_sha256": "7b9f06c42d0cb72f5d3267b60bd741bb84abe23ee6a695360f7f04779d3fcb46",
+      "migrated_sha256": "7b9f06c42d0cb72f5d3267b60bd741bb84abe23ee6a695360f7f04779d3fcb46",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0004-repay-fix-debt.html",
+      "source_sha256": "5614f77fdc2e9556ee01fda60fa4dd2b7a310fc8f11b02b93b906374aba5a31c",
+      "migrated_sha256": "5614f77fdc2e9556ee01fda60fa4dd2b7a310fc8f11b02b93b906374aba5a31c",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0004a-understand-holder-anchor.html",
+      "source_sha256": "239ef39566b8c3040fad547d6bc96ccf4f9bace9fbddab3ee3a00de2c322a2d9",
+      "migrated_sha256": "239ef39566b8c3040fad547d6bc96ccf4f9bace9fbddab3ee3a00de2c322a2d9",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0005-audit-a-logged-mutation.html",
+      "source_sha256": "d8b437ff38a52118b9a06b9670f9faa82f6967d6b042a95f5d9f48056c99330d",
+      "migrated_sha256": "d8b437ff38a52118b9a06b9670f9faa82f6967d6b042a95f5d9f48056c99330d",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0006-flush-one-generation.html",
+      "source_sha256": "f9061e3cd81f73d7eaded916d7d0583467e5d08fae89ee7476225444edbcc12e",
+      "migrated_sha256": "f9061e3cd81f73d7eaded916d7d0583467e5d08fae89ee7476225444edbcc12e",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0006a-understand-page-buffer-daemons.html",
+      "source_sha256": "3fdc188414af113e8748facbeb64dd9e913974c39fe94a92d8b33b55835fcaaa",
+      "migrated_sha256": "3fdc188414af113e8748facbeb64dd9e913974c39fe94a92d8b33b55835fcaaa",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0006b-follow-page-flush-handoff.html",
+      "source_sha256": "917fcfe5016df39be946cb5b3ac81265e01bef6a0f4e38cb585f5050364756a9",
+      "migrated_sha256": "917fcfe5016df39be946cb5b3ac81265e01bef6a0f4e38cb585f5050364756a9",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0006c-follow-maintenance-and-pacing.html",
+      "source_sha256": "df119c055db8e64fbdbf1e2490fc5eb05ef1923b608d7b6a7ea99dd9febb98b9",
+      "migrated_sha256": "df119c055db8e64fbdbf1e2490fc5eb05ef1923b608d7b6a7ea99dd9febb98b9",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0007-replace-one-frame.html",
+      "source_sha256": "0279170fa2732558b0f2f7b16a50aa93492c99d8850d7730162569458171c5e0",
+      "migrated_sha256": "0279170fa2732558b0f2f7b16a50aa93492c99d8850d7730162569458171c5e0",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0008-defend-a-safe-change.html",
+      "source_sha256": "27f7135ca9a2c8147f6545b640996ba80e65fc8c028c76483dc1ea5892730f9b",
+      "migrated_sha256": "27f7135ca9a2c8147f6545b640996ba80e65fc8c028c76483dc1ea5892730f9b",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0009-classify-latch-wait.html",
+      "source_sha256": "4ec82938080b7f7deea3451672a636b56307ee16cb24ab5d3272cf67fa48e7bf",
+      "migrated_sha256": "4ec82938080b7f7deea3451672a636b56307ee16cb24ab5d3272cf67fa48e7bf",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0010-revalidate-after-promotion.html",
+      "source_sha256": "4757e026575c10d8aebf8e820fc9acbf6189069a303cc80489f2117bd232b35c",
+      "migrated_sha256": "4757e026575c10d8aebf8e820fc9acbf6189069a303cc80489f2117bd232b35c",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0011-rebuild-after-ordered-refix.html",
+      "source_sha256": "50f762080545809fda32d7804f6542292923c155946844bb53be0f553727e2a6",
+      "migrated_sha256": "50f762080545809fda32d7804f6542292923c155946844bb53be0f553727e2a6",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0012-prove-replacement-progress.html",
+      "source_sha256": "4f5cd3e368476ce47b99b555a4ccdcd615274d8c309b82503e80fb87f74a4b56",
+      "migrated_sha256": "4f5cd3e368476ce47b99b555a4ccdcd615274d8c309b82503e80fb87f74a4b56",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0012a-understand-aout-ghost-history.html",
+      "source_sha256": "a42563aae2890d3ea1af41e95b0ba6c74aaae16ac01340ed7e4306fa068edf26",
+      "migrated_sha256": "a42563aae2890d3ea1af41e95b0ba6c74aaae16ac01340ed7e4306fa068edf26",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0012b-understand-private-lru-index.html",
+      "source_sha256": "074fe185d2bc0d93e255922b9250903e201ab5137abfe52363e3bace291e9e24",
+      "migrated_sha256": "074fe185d2bc0d93e255922b9250903e201ab5137abfe52363e3bace291e9e24",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0013-gate-redo-by-page-lsa.html",
+      "source_sha256": "138ceba3f4cbfc10f8b20ebfec00155b845ab7183505dac08b14ba86729d3e22",
+      "migrated_sha256": "138ceba3f4cbfc10f8b20ebfec00155b845ab7183505dac08b14ba86729d3e22",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0014-preserve-lifecycle-order.html",
+      "source_sha256": "5c57858cc793accb15a5004146f877578b9e611a84be5d1e4b6524b4c87864ab",
+      "migrated_sha256": "5c57858cc793accb15a5004146f877578b9e611a84be5d1e4b6524b4c87864ab",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0015-route-a-specialized-interface.html",
+      "source_sha256": "331a55f2df7387c6e74804205949fa1d52dff5f884d39ea5f7a422b99aec11da",
+      "migrated_sha256": "331a55f2df7387c6e74804205949fa1d52dff5f884d39ea5f7a422b99aec11da",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0016-close-a-failure-proof.html",
+      "source_sha256": "2f2525e18f39139a929036c017fdd49bc6a960eb4c834ddeb078bab6280c4d48",
+      "migrated_sha256": "2f2525e18f39139a929036c017fdd49bc6a960eb4c834ddeb078bab6280c4d48",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0017-defend-the-module-live.html",
+      "source_sha256": "90770e4b1fc4f5340d67a519365536f52ca7031acfb20d7a3bf718439113c5a1",
+      "migrated_sha256": "90770e4b1fc4f5340d67a519365536f52ca7031acfb20d7a3bf718439113c5a1",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0018-compare-three-buffer-pools.html",
+      "source_sha256": "6082a330c2bab098b7094c302a89aad881ebbff89f1d1642d557376bed3c68ff",
+      "migrated_sha256": "6082a330c2bab098b7094c302a89aad881ebbff89f1d1642d557376bed3c68ff",
+      "changed": false
+    },
+    {
+      "path": "ko/lessons/0018a-compare-replacement-policies.html",
+      "source_sha256": "541efec49df3b0ad71ae5d1178ae56f3f163e100d858e8c571661307fd264905",
+      "migrated_sha256": "541efec49df3b0ad71ae5d1178ae56f3f163e100d858e8c571661307fd264905",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/caller-mutation-card.html",
+      "source_sha256": "7b5290d1cf0e38800c51e7d7ada55a04acb37a5f406e8de906cfb8cfc6c58ec8",
+      "migrated_sha256": "7b5290d1cf0e38800c51e7d7ada55a04acb37a5f406e8de906cfb8cfc6c58ec8",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/change-defense-card.html",
+      "source_sha256": "553a61051df80692e4c408cd3ca3b49af392e04e9093cf6c694061772e822866",
+      "migrated_sha256": "553a61051df80692e4c408cd3ca3b49af392e04e9093cf6c694061772e822866",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/core-synthesis-studio.html",
+      "source_sha256": "ecb20e5a201a5dcb8ae027a60704380c29b07143822d9214d40ff6a6a3159abd",
+      "migrated_sha256": "ecb20e5a201a5dcb8ae027a60704380c29b07143822d9214d40ff6a6a3159abd",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/course-coverage-matrix.html",
+      "source_sha256": "3b1935fc889237f7281bc1aa94c996579e3d940a9126bfeed02ac5c01a7f66c0",
+      "migrated_sha256": "3b1935fc889237f7281bc1aa94c996579e3d940a9126bfeed02ac5c01a7f66c0",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/course-learning-path.html",
+      "source_sha256": "f2116e21059ed801744219fce0ccbb1468e06c6e13981a254e0aefe9e3b69385",
+      "migrated_sha256": "f2116e21059ed801744219fce0ccbb1468e06c6e13981a254e0aefe9e3b69385",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/expected-team-questions.html",
+      "source_sha256": "8274f0c81528ebe81a5daaedc78524129f8e59e0a36d7d9d1f70af156cd115cd",
+      "migrated_sha256": "8274f0c81528ebe81a5daaedc78524129f8e59e0a36d7d9d1f70af156cd115cd",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/failure-proof-ledger-card.html",
+      "source_sha256": "55b56953b5d13d9d152201758d92ee4384d4a2e2c0ff5ffa124870367282d3cd",
+      "migrated_sha256": "55b56953b5d13d9d152201758d92ee4384d4a2e2c0ff5ffa124870367282d3cd",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/fix-convergence-map.html",
+      "source_sha256": "32bf03fc3a7420e335e38d54b4c8362ee39bca3499e7ca373fbac5a63f9f4c6b",
+      "migrated_sha256": "32bf03fc3a7420e335e38d54b4c8362ee39bca3499e7ca373fbac5a63f9f4c6b",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/flush-generation-card.html",
+      "source_sha256": "2ccef21b2376d1a3b7383904fd67cd9baefb3eedef73458d1dc2855c579ad906",
+      "migrated_sha256": "2ccef21b2376d1a3b7383904fd67cd9baefb3eedef73458d1dc2855c579ad906",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/latch-queue-card.html",
+      "source_sha256": "491c8ab064b7f78f8f141f7ccac2312d7671c391a3a0cfd70cf9d1107421a5ee",
+      "migrated_sha256": "491c8ab064b7f78f8f141f7ccac2312d7671c391a3a0cfd70cf9d1107421a5ee",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/lifecycle-order-card.html",
+      "source_sha256": "bd9c99bfb5955bf563a890e16fe77b3320fe44234c99062560491d34e985c22f",
+      "migrated_sha256": "bd9c99bfb5955bf563a890e16fe77b3320fe44234c99062560491d34e985c22f",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/lru-worked-example.html",
+      "source_sha256": "b8ed3b970ffcac734ecab7f688405f72fcf0db18faf3af3d9c70072a936464c7",
+      "migrated_sha256": "b8ed3b970ffcac734ecab7f688405f72fcf0db18faf3af3d9c70072a936464c7",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/object-and-state-map.html",
+      "source_sha256": "9e3a34fbc9c4fae6c371f99b6299e18008d4ed2cbd7b4960a7426372d611c383",
+      "migrated_sha256": "9e3a34fbc9c4fae6c371f99b6299e18008d4ed2cbd7b4960a7426372d611c383",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/ordered-watcher-card.html",
+      "source_sha256": "fcf2d1054a759037a1543770d0e29b427be175a412d982d09b9819339bcc3b3f",
+      "migrated_sha256": "fcf2d1054a759037a1543770d0e29b427be175a412d982d09b9819339bcc3b3f",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/ownership-debt-card.html",
+      "source_sha256": "3ef8bc77f1ff1eb0000707699c9fd2d16bca6d5acebc9fefd25704087609090c",
+      "migrated_sha256": "3ef8bc77f1ff1eb0000707699c9fd2d16bca6d5acebc9fefd25704087609090c",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/presentation-rehearsal-card.html",
+      "source_sha256": "1258b7a03b459170ba080be480ba420a42c530678d6b02e52e8c1991ac8c22be",
+      "migrated_sha256": "1258b7a03b459170ba080be480ba420a42c530678d6b02e52e8c1991ac8c22be",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/presentation-spine.html",
+      "source_sha256": "c05c8618759b630eabd5166ade6b02264c73bb1fa2c51dd66d95ec042197f9ef",
+      "migrated_sha256": "c05c8618759b630eabd5166ade6b02264c73bb1fa2c51dd66d95ec042197f9ef",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/promotion-restart-card.html",
+      "source_sha256": "c2806cd443043fe12b92c62a125c534424397f2367f1f9468018cc27db55710e",
+      "migrated_sha256": "c2806cd443043fe12b92c62a125c534424397f2367f1f9468018cc27db55710e",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/redo-recovery-card.html",
+      "source_sha256": "2223d22917e9c3267662eea2b61762bb965427e4700d6bca4579c996700471dc",
+      "migrated_sha256": "2223d22917e9c3267662eea2b61762bb965427e4700d6bca4579c996700471dc",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/replacement-progress-card.html",
+      "source_sha256": "d5073783d5780c7e8ec24d3c0b17a5cc560635b18912bb7e99485d0bbad201df",
+      "migrated_sha256": "d5073783d5780c7e8ec24d3c0b17a5cc560635b18912bb7e99485d0bbad201df",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/replacement-safety-card.html",
+      "source_sha256": "d6e8cc2ef745a0f5d39c5e7d9fe3f02543d61d870efed9ca9b0b1c236834c24b",
+      "migrated_sha256": "d6e8cc2ef745a0f5d39c5e7d9fe3f02543d61d870efed9ca9b0b1c236834c24b",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/specialized-interface-card.html",
+      "source_sha256": "a36ec5af5a3d04f5f775041695c42d3b0de92e9da58ade48c4c89bd666564359",
+      "migrated_sha256": "a36ec5af5a3d04f5f775041695c42d3b0de92e9da58ade48c4c89bd666564359",
+      "changed": false
+    },
+    {
+      "path": "ko/reference/three-engine-performance-card.html",
+      "source_sha256": "76c5bc2afcec5e049766db082a71f5565ac50957b5669f846a7e02941753a170",
+      "migrated_sha256": "76c5bc2afcec5e049766db082a71f5565ac50957b5669f846a7e02941753a170",
+      "changed": false
+    },
+    {
+      "path": "learning/01-contract-and-objects.md",
+      "source_sha256": "0ce1bc1c5b327a90f07f5aa822bf0607b9f182413b58f39dc33fdf10a80c8f78",
+      "migrated_sha256": "0ce1bc1c5b327a90f07f5aa822bf0607b9f182413b58f39dc33fdf10a80c8f78",
+      "changed": false
+    },
+    {
+      "path": "learning/02-fix-hold-release.md",
+      "source_sha256": "fc4a8c80152524632370f5349a5c68618f6ed3378663c1245efe11434043bf5a",
+      "migrated_sha256": "fc4a8c80152524632370f5349a5c68618f6ed3378663c1245efe11434043bf5a",
+      "changed": false
+    },
+    {
+      "path": "learning/03-caller-completes-correctness.md",
+      "source_sha256": "8b70b847f417519bc64e61962574e10a2921b435cf1965ebde1c0c9a039b76ce",
+      "migrated_sha256": "8b70b847f417519bc64e61962574e10a2921b435cf1965ebde1c0c9a039b76ce",
+      "changed": false
+    },
+    {
+      "path": "learning/04-flush-one-generation.md",
+      "source_sha256": "f108d7dec29779173b750520082cb59453bedc5d90825a5ca15ff3b554d1cea2",
+      "migrated_sha256": "f108d7dec29779173b750520082cb59453bedc5d90825a5ca15ff3b554d1cea2",
+      "changed": false
+    },
+    {
+      "path": "learning/05-replace-one-frame.md",
+      "source_sha256": "23c4f5b3391d6a3439d7527d97bb22df4fc0e92c9fd774c54fb5bc199e68dd7f",
+      "migrated_sha256": "23c4f5b3391d6a3439d7527d97bb22df4fc0e92c9fd774c54fb5bc199e68dd7f",
+      "changed": false
+    },
+    {
+      "path": "learning/06-maintainer-capstone.md",
+      "source_sha256": "d56576122587c4deebb8b0128a73d9995071d4d16d9234531effb5c412df3c8f",
+      "migrated_sha256": "d56576122587c4deebb8b0128a73d9995071d4d16d9234531effb5c412df3c8f",
+      "changed": false
+    },
+    {
+      "path": "lessons/0000-replacement-foundations.html",
+      "source_sha256": "6b4ec741c685d96f6478f81efdac4d14c1cfb470cb7fa94c3eed6885f8405ca7",
+      "migrated_sha256": "6b4ec741c685d96f6478f81efdac4d14c1cfb470cb7fa94c3eed6885f8405ca7",
+      "changed": false
+    },
+    {
+      "path": "lessons/0000a-database-bridge.html",
+      "source_sha256": "77eff94d21fd656f2fd0c5c7ffb5ffc44284ca3a8e6c5639981894fd8589caa7",
+      "migrated_sha256": "77eff94d21fd656f2fd0c5c7ffb5ffc44284ca3a8e6c5639981894fd8589caa7",
+      "changed": false
+    },
+    {
+      "path": "lessons/0001-present-the-page-journey.html",
+      "source_sha256": "53e6c690392bc3f269cc2e68999fb52a29e166e2ec670b2baa7423901d51b787",
+      "migrated_sha256": "53e6c690392bc3f269cc2e68999fb52a29e166e2ec670b2baa7423901d51b787",
+      "changed": false
+    },
+    {
+      "path": "lessons/0002-separate-objects-from-state.html",
+      "source_sha256": "a0cd32c9f9616161f62f7db1a9ae7404ea34cf75896860488777971b30409923",
+      "migrated_sha256": "a0cd32c9f9616161f62f7db1a9ae7404ea34cf75896860488777971b30409923",
+      "changed": false
+    },
+    {
+      "path": "lessons/0003-trace-fix-convergence.html",
+      "source_sha256": "54e35241fac63efb29ed0ce5908cb9d6f7f342ccb994612745f6b08f196ddebc",
+      "migrated_sha256": "54e35241fac63efb29ed0ce5908cb9d6f7f342ccb994612745f6b08f196ddebc",
+      "changed": false
+    },
+    {
+      "path": "lessons/0004-repay-fix-debt.html",
+      "source_sha256": "b5c58aa90f532a5f7cc48b231b1f159311144085026c4dc6add8d8adee9ae545",
+      "migrated_sha256": "b5c58aa90f532a5f7cc48b231b1f159311144085026c4dc6add8d8adee9ae545",
+      "changed": false
+    },
+    {
+      "path": "lessons/0004a-understand-holder-anchor.html",
+      "source_sha256": "eb31ae15cc047ae4364f60c4666935d9acb403b4ca106ac170c22766e755e493",
+      "migrated_sha256": "eb31ae15cc047ae4364f60c4666935d9acb403b4ca106ac170c22766e755e493",
+      "changed": false
+    },
+    {
+      "path": "lessons/0005-audit-a-logged-mutation.html",
+      "source_sha256": "77f2122d3651dcd0e5bd1e7f87566f390bbc026c093c03e8bec31601c738fe38",
+      "migrated_sha256": "77f2122d3651dcd0e5bd1e7f87566f390bbc026c093c03e8bec31601c738fe38",
+      "changed": false
+    },
+    {
+      "path": "lessons/0006-flush-one-generation.html",
+      "source_sha256": "9080f428f35b7a763f34b19ce5d97fc2741530338db2873cf9cb451b75502e75",
+      "migrated_sha256": "9080f428f35b7a763f34b19ce5d97fc2741530338db2873cf9cb451b75502e75",
+      "changed": false
+    },
+    {
+      "path": "lessons/0006a-understand-page-buffer-daemons.html",
+      "source_sha256": "af5b673830785170bd0f93fcbde63736d2bfd857e306affd93f06b834f998c5e",
+      "migrated_sha256": "af5b673830785170bd0f93fcbde63736d2bfd857e306affd93f06b834f998c5e",
+      "changed": false
+    },
+    {
+      "path": "lessons/0006b-follow-page-flush-handoff.html",
+      "source_sha256": "d1d963568eb34c6076d8c051d5a339958837f5e483255d2b01d6be7b7477288b",
+      "migrated_sha256": "d1d963568eb34c6076d8c051d5a339958837f5e483255d2b01d6be7b7477288b",
+      "changed": false
+    },
+    {
+      "path": "lessons/0006c-follow-maintenance-and-pacing.html",
+      "source_sha256": "69c0995283af30ce48dc46043f51bcaf474282b1f439b63c0521384637509eef",
+      "migrated_sha256": "69c0995283af30ce48dc46043f51bcaf474282b1f439b63c0521384637509eef",
+      "changed": false
+    },
+    {
+      "path": "lessons/0007-replace-one-frame.html",
+      "source_sha256": "1f546179908b9372842dd810c9ce512dc3280cae34e29317b45a713d16764cfc",
+      "migrated_sha256": "1f546179908b9372842dd810c9ce512dc3280cae34e29317b45a713d16764cfc",
+      "changed": false
+    },
+    {
+      "path": "lessons/0008-defend-a-safe-change.html",
+      "source_sha256": "fde77b1fd198575a224a70512fb07b70432424ab21c32896198e73e64f4dbe33",
+      "migrated_sha256": "fde77b1fd198575a224a70512fb07b70432424ab21c32896198e73e64f4dbe33",
+      "changed": false
+    },
+    {
+      "path": "lessons/0009-classify-latch-wait.html",
+      "source_sha256": "adf44b50d0512471a61bdacf966f54c9a951810b0c5cd62b7e67db9a638ca3d1",
+      "migrated_sha256": "adf44b50d0512471a61bdacf966f54c9a951810b0c5cd62b7e67db9a638ca3d1",
+      "changed": false
+    },
+    {
+      "path": "lessons/0010-revalidate-after-promotion.html",
+      "source_sha256": "a4bb89ace9cc8393a981ead2dfa2a90adcb102087228827a8403cf083917b66d",
+      "migrated_sha256": "a4bb89ace9cc8393a981ead2dfa2a90adcb102087228827a8403cf083917b66d",
+      "changed": false
+    },
+    {
+      "path": "lessons/0011-rebuild-after-ordered-refix.html",
+      "source_sha256": "4cfe48571d147289b57df218fe7faa9eac85c7352ba9014396ee5dbd5481b86a",
+      "migrated_sha256": "4cfe48571d147289b57df218fe7faa9eac85c7352ba9014396ee5dbd5481b86a",
+      "changed": false
+    },
+    {
+      "path": "lessons/0012-prove-replacement-progress.html",
+      "source_sha256": "ddb13e007373e0c50bc82da829cfa33a02edf4886acea00b9ab73b16b8249525",
+      "migrated_sha256": "ddb13e007373e0c50bc82da829cfa33a02edf4886acea00b9ab73b16b8249525",
+      "changed": false
+    },
+    {
+      "path": "lessons/0012a-understand-aout-ghost-history.html",
+      "source_sha256": "2648e1648733f9599658fd83288906e3aa923d62abcf90d3af2cfa0d3349b477",
+      "migrated_sha256": "2648e1648733f9599658fd83288906e3aa923d62abcf90d3af2cfa0d3349b477",
+      "changed": false
+    },
+    {
+      "path": "lessons/0012b-understand-private-lru-index.html",
+      "source_sha256": "d5d3c66fe18659ddb4f352326a4821c4dbba54d846b3bd41478ecaa0f90dc227",
+      "migrated_sha256": "d5d3c66fe18659ddb4f352326a4821c4dbba54d846b3bd41478ecaa0f90dc227",
+      "changed": false
+    },
+    {
+      "path": "lessons/0013-gate-redo-by-page-lsa.html",
+      "source_sha256": "7133bb95aeaeb27b61fb3a369cbe9ce4f078c88d68abb360d816a100574df512",
+      "migrated_sha256": "7133bb95aeaeb27b61fb3a369cbe9ce4f078c88d68abb360d816a100574df512",
+      "changed": false
+    },
+    {
+      "path": "lessons/0014-preserve-lifecycle-order.html",
+      "source_sha256": "249256dea28801fc5438167c8b3beeb2be1509fc5a397977c64d337e26e98471",
+      "migrated_sha256": "249256dea28801fc5438167c8b3beeb2be1509fc5a397977c64d337e26e98471",
+      "changed": false
+    },
+    {
+      "path": "lessons/0015-route-a-specialized-interface.html",
+      "source_sha256": "eb76a9424b19a8b66950219ea39cc9f80ac883c9f22f1621fc4b084d1ed6adc6",
+      "migrated_sha256": "eb76a9424b19a8b66950219ea39cc9f80ac883c9f22f1621fc4b084d1ed6adc6",
+      "changed": false
+    },
+    {
+      "path": "lessons/0016-close-a-failure-proof.html",
+      "source_sha256": "a22b9e80c7c4d7c03f4ba199512e651321143229f06d628001b00bd501b1f34b",
+      "migrated_sha256": "a22b9e80c7c4d7c03f4ba199512e651321143229f06d628001b00bd501b1f34b",
+      "changed": false
+    },
+    {
+      "path": "lessons/0017-defend-the-module-live.html",
+      "source_sha256": "31bf5f2ea0e9736b9bdf9017c640ace016a038a7730b74618880c194c5fac59e",
+      "migrated_sha256": "31bf5f2ea0e9736b9bdf9017c640ace016a038a7730b74618880c194c5fac59e",
+      "changed": false
+    },
+    {
+      "path": "lessons/0018-compare-three-buffer-pools.html",
+      "source_sha256": "ffc8f15c9de39e8173c8da648e04d9b8704b107a168448224e397bd07d00590a",
+      "migrated_sha256": "ffc8f15c9de39e8173c8da648e04d9b8704b107a168448224e397bd07d00590a",
+      "changed": false
+    },
+    {
+      "path": "lessons/0018a-compare-replacement-policies.html",
+      "source_sha256": "4871878486faf0d68a414b779af05dd2e32b450c3805145747fabb811f040ebf",
+      "migrated_sha256": "4871878486faf0d68a414b779af05dd2e32b450c3805145747fabb811f040ebf",
+      "changed": false
+    },
+    {
+      "path": "maintainer-guide-notes.md",
+      "source_sha256": "604f75bc7078b4133682b55082f0c1c0df2770e3249a99b81de7efacfa0ac8e3",
+      "migrated_sha256": "171a6641aea0d36d943e04d82c366cb9d6531d718342c68ba9433ab4582f8393",
+      "changed": true
+    },
+    {
+      "path": "maintainer-guide-validation.json",
+      "source_sha256": "a56d4984d7a6350a439041127f24c49f27a893d74f5f1e1ef03edbc6560a4c88",
+      "migrated_sha256": "a56d4984d7a6350a439041127f24c49f27a893d74f5f1e1ef03edbc6560a4c88",
+      "changed": false
+    },
+    {
+      "path": "my-points.md",
+      "source_sha256": "b7899257e69698f3118a2aa6ec15d76eb4e8ddbbbe2af9705be5a51457c5b995",
+      "migrated_sha256": "b7899257e69698f3118a2aa6ec15d76eb4e8ddbbbe2af9705be5a51457c5b995",
+      "changed": false
+    },
+    {
+      "path": "my-presentation-script-prompt.md",
+      "source_sha256": "53b0a0dce69008d66d866b75471ddbf21fa0f90681d779f2690bf069af7269ff",
+      "migrated_sha256": "53b0a0dce69008d66d866b75471ddbf21fa0f90681d779f2690bf069af7269ff",
+      "changed": false
+    },
+    {
+      "path": "my-presentation-script.html",
+      "source_sha256": "201681cd28b969c4106a2691ca0364405a1ff14b1f001b6581de26048c8b517d",
+      "migrated_sha256": "201681cd28b969c4106a2691ca0364405a1ff14b1f001b6581de26048c8b517d",
+      "changed": false
+    },
+    {
+      "path": "my-questions-10.md",
+      "source_sha256": "535ece7a8827af22d82f946199ab2e5bd0d7819a7b38309a2b7963f9a198fc42",
+      "migrated_sha256": "535ece7a8827af22d82f946199ab2e5bd0d7819a7b38309a2b7963f9a198fc42",
+      "changed": false
+    },
+    {
+      "path": "my-questions-11.md",
+      "source_sha256": "aa7f2a2ee202d485c849e25c8d3aa62c79dc75efc14546d122e1bbf40f8515b7",
+      "migrated_sha256": "aa7f2a2ee202d485c849e25c8d3aa62c79dc75efc14546d122e1bbf40f8515b7",
+      "changed": false
+    },
+    {
+      "path": "my-questions-12.md",
+      "source_sha256": "18f611a6b91bb38f84545311f0810cfc832e0b98e8136c96d72d2f9e15cbce8d",
+      "migrated_sha256": "18f611a6b91bb38f84545311f0810cfc832e0b98e8136c96d72d2f9e15cbce8d",
+      "changed": false
+    },
+    {
+      "path": "my-questions-13.md",
+      "source_sha256": "35ea58449366fc6f6f53857d47b683df4411ee4beaf73865855c921afad7b05b",
+      "migrated_sha256": "35ea58449366fc6f6f53857d47b683df4411ee4beaf73865855c921afad7b05b",
+      "changed": false
+    },
+    {
+      "path": "my-questions-14.md",
+      "source_sha256": "f5483a42fba40d143a0f56be195c3bb82c85fb199d1abb6737cca8806462d7d8",
+      "migrated_sha256": "f5483a42fba40d143a0f56be195c3bb82c85fb199d1abb6737cca8806462d7d8",
+      "changed": false
+    },
+    {
+      "path": "my-questions-15.md",
+      "source_sha256": "7177ab49577e5c436f65cc17d18f21cb7cfc7ec413e23104fdb4106818a7ddf7",
+      "migrated_sha256": "7177ab49577e5c436f65cc17d18f21cb7cfc7ec413e23104fdb4106818a7ddf7",
+      "changed": false
+    },
+    {
+      "path": "my-questions-2.md",
+      "source_sha256": "3bc733939d2feda5a2b65a39bcfa9b57d724f2970ae30d0cba9aeaba85b88e6f",
+      "migrated_sha256": "3bc733939d2feda5a2b65a39bcfa9b57d724f2970ae30d0cba9aeaba85b88e6f",
+      "changed": false
+    },
+    {
+      "path": "my-questions-3.md",
+      "source_sha256": "c02c2d5215347ee830afb923eb089a0a1ea84a162f83fa3e2c772cbbbe00fcc8",
+      "migrated_sha256": "c02c2d5215347ee830afb923eb089a0a1ea84a162f83fa3e2c772cbbbe00fcc8",
+      "changed": false
+    },
+    {
+      "path": "my-questions-4.md",
+      "source_sha256": "a27f968d8a29fe5121a618ed7f596b3b537294c0ff134e0120a542279037658a",
+      "migrated_sha256": "a27f968d8a29fe5121a618ed7f596b3b537294c0ff134e0120a542279037658a",
+      "changed": false
+    },
+    {
+      "path": "my-questions-5.md",
+      "source_sha256": "1f6be8c9df23280bf90795306879a91a78944176bc5f553986e59696b32030df",
+      "migrated_sha256": "1f6be8c9df23280bf90795306879a91a78944176bc5f553986e59696b32030df",
+      "changed": false
+    },
+    {
+      "path": "my-questions-6.md",
+      "source_sha256": "c797fc09cb13ea178bf33853979ceb3f5d0065b7df8fa7fefa10ab1d21db4752",
+      "migrated_sha256": "c797fc09cb13ea178bf33853979ceb3f5d0065b7df8fa7fefa10ab1d21db4752",
+      "changed": false
+    },
+    {
+      "path": "my-questions-7.md",
+      "source_sha256": "a4e9dead848dddc9f45f3b4194f79d41f53a1e0b4047caba1d3b4c7b1a3d3e8e",
+      "migrated_sha256": "a4e9dead848dddc9f45f3b4194f79d41f53a1e0b4047caba1d3b4c7b1a3d3e8e",
+      "changed": false
+    },
+    {
+      "path": "my-questions-8.md",
+      "source_sha256": "0863c6e9ac246709c486271bfb904245a5973102b57ed06a2992093c3e4098aa",
+      "migrated_sha256": "0863c6e9ac246709c486271bfb904245a5973102b57ed06a2992093c3e4098aa",
+      "changed": false
+    },
+    {
+      "path": "my-questions-9.md",
+      "source_sha256": "13bff7f0a0bf81e8bb7f09b4f829b550d27df097d28487901b627e154673f34e",
+      "migrated_sha256": "13bff7f0a0bf81e8bb7f09b4f829b550d27df097d28487901b627e154673f34e",
+      "changed": false
+    },
+    {
+      "path": "my-questions.md",
+      "source_sha256": "585d366833f3fa27474914cb91ad5041cce3381d341d916e88f49b7787556d53",
+      "migrated_sha256": "585d366833f3fa27474914cb91ad5041cce3381d341d916e88f49b7787556d53",
+      "changed": false
+    },
+    {
+      "path": "page-buffer-mysql-reference.md",
+      "source_sha256": "5cf2c040ee9e66e24dcb806027cb09145b9efb26ec629c42dec6a6c3f6bd7a65",
+      "migrated_sha256": "5cf2c040ee9e66e24dcb806027cb09145b9efb26ec629c42dec6a6c3f6bd7a65",
+      "changed": false
+    },
+    {
+      "path": "page-buffer-teaching-material.md",
+      "source_sha256": "b493c57e582f344621796de9ebdeb99cf2198c283280d4929302e18bddf6378e",
+      "migrated_sha256": "b493c57e582f344621796de9ebdeb99cf2198c283280d4929302e18bddf6378e",
+      "changed": false
+    },
+    {
+      "path": "playbooks/change-safely.md",
+      "source_sha256": "3f2052d765712033f04a3732823746e53fea975690e57e7621313715f8285522",
+      "migrated_sha256": "3f2052d765712033f04a3732823746e53fea975690e57e7621313715f8285522",
+      "changed": false
+    },
+    {
+      "path": "playbooks/debug-by-symptom.md",
+      "source_sha256": "a02cb6de9586700f88be7eaebba6d847f275fd875a35bdc4c555bddedf7ad7f2",
+      "migrated_sha256": "a02cb6de9586700f88be7eaebba6d847f275fd875a35bdc4c555bddedf7ad7f2",
+      "changed": false
+    },
+    {
+      "path": "playbooks/verify-a-change.md",
+      "source_sha256": "cddd938d2638b77deffa7bbcccbe42c37b48e329a7b7840c410395d28a9672b0",
+      "migrated_sha256": "cddd938d2638b77deffa7bbcccbe42c37b48e329a7b7840c410395d28a9672b0",
+      "changed": false
+    },
+    {
+      "path": "presenter-runbook.md",
+      "source_sha256": "36ea7d4f731da04f42d78c1ab8aaeb84b97758dc9969d146738611084f9d652b",
+      "migrated_sha256": "36ea7d4f731da04f42d78c1ab8aaeb84b97758dc9969d146738611084f9d652b",
+      "changed": false
+    },
+    {
+      "path": "questions-4fe4e7e/AGENTS.md",
+      "source_sha256": "25f0d3bc51c8691ed8e0a830ee5f2c033ed6165008ccc39af1798eeaa0d864cb",
+      "migrated_sha256": "25f0d3bc51c8691ed8e0a830ee5f2c033ed6165008ccc39af1798eeaa0d864cb",
+      "changed": false
+    },
+    {
+      "path": "questions-4fe4e7e/questions.md",
+      "source_sha256": "19f1bd986aac5a5c7db6c45e3318c06320c49f4b72219acfcc54f756eb7dda4c",
+      "migrated_sha256": "19f1bd986aac5a5c7db6c45e3318c06320c49f4b72219acfcc54f756eb7dda4c",
+      "changed": false
+    },
+    {
+      "path": "questions-b4179ee/AGENTS.md",
+      "source_sha256": "b8f43ff9f3ddccc463117fca22d8bed1c24e9c3a71b98033c006c9a03dafba37",
+      "migrated_sha256": "b8f43ff9f3ddccc463117fca22d8bed1c24e9c3a71b98033c006c9a03dafba37",
+      "changed": false
+    },
+    {
+      "path": "questions-b4179ee/questions.md",
+      "source_sha256": "b04868a723bfa938aa51ee35d81bc6e7e469c9654817803f5ccac6998375ce15",
+      "migrated_sha256": "b04868a723bfa938aa51ee35d81bc6e7e469c9654817803f5ccac6998375ce15",
+      "changed": false
+    },
+    {
+      "path": "questions/README.md",
+      "source_sha256": "ae0ce88d488cf94ebdec63a04b2f32ed5eba18123e0c5777181658849845586c",
+      "migrated_sha256": "ae0ce88d488cf94ebdec63a04b2f32ed5eba18123e0c5777181658849845586c",
+      "changed": false
+    },
+    {
+      "path": "questions/advanced-answers.md",
+      "source_sha256": "2e080e6babf25428c78c5535e9e1efa58d8987bb24e7c4576fa732fab954dad1",
+      "migrated_sha256": "2e080e6babf25428c78c5535e9e1efa58d8987bb24e7c4576fa732fab954dad1",
+      "changed": false
+    },
+    {
+      "path": "questions/advanced.md",
+      "source_sha256": "bad51d8faf52e10d561e4b045378081bb97d8c615c219c05cad7f7268e2e76eb",
+      "migrated_sha256": "bad51d8faf52e10d561e4b045378081bb97d8c615c219c05cad7f7268e2e76eb",
+      "changed": false
+    },
+    {
+      "path": "questions/applied-exercises-answers.md",
+      "source_sha256": "d97e07f89ec2fec9bad6c884f34cf702417c03784ca5729f79ebc03a434b7218",
+      "migrated_sha256": "71d42e5ed779d6e31bd39fb31fa28e16915735451c526f5064275bf6dd513b35",
+      "changed": true
+    },
+    {
+      "path": "questions/applied-exercises.md",
+      "source_sha256": "3ce87c4c03d612aee5cf396010462b3b70b8386bbe622f4001ff9d78fa5e33c8",
+      "migrated_sha256": "da60752c8ef5936f7a57d9bdc213bb5aab7994080f8369560217a0fd0b9d577c",
+      "changed": true
+    },
+    {
+      "path": "questions/core-answers.md",
+      "source_sha256": "dfb754d9196050178853f3cc0ad6c4510ed5313f62f70aedcf59a071484b5d9c",
+      "migrated_sha256": "dfb754d9196050178853f3cc0ad6c4510ed5313f62f70aedcf59a071484b5d9c",
+      "changed": false
+    },
+    {
+      "path": "questions/core.md",
+      "source_sha256": "ceb621c6ac9d9884d6dc901d0f7f9f908e4e2b63918796f60ce7b6978d995b56",
+      "migrated_sha256": "ceb621c6ac9d9884d6dc901d0f7f9f908e4e2b63918796f60ce7b6978d995b56",
+      "changed": false
+    },
+    {
+      "path": "questions/maintenance-scenarios-answers.md",
+      "source_sha256": "9a64d7eb47d2052f275336ba4d43d04c2a7e294f5a329903b0ee1275b94dcae9",
+      "migrated_sha256": "9a64d7eb47d2052f275336ba4d43d04c2a7e294f5a329903b0ee1275b94dcae9",
+      "changed": false
+    },
+    {
+      "path": "questions/maintenance-scenarios.md",
+      "source_sha256": "764dddc9f99a2118d7456363f0562c3082dd5ed6f67e4552f16a85c90245e6e4",
+      "migrated_sha256": "764dddc9f99a2118d7456363f0562c3082dd5ed6f67e4552f16a85c90245e6e4",
+      "changed": false
+    },
+    {
+      "path": "questions/migration-audit.md",
+      "source_sha256": "e282bc9e98c8699f4cfbc6383dce84cebdc5e2bc851c5ba3bc7a12b4853229d9",
+      "migrated_sha256": "c1dcad79348876616e7450b6d4f57487a659ed9999ef76fc8216d9a3158ecd80",
+      "changed": true
+    },
+    {
+      "path": "reference/alternating-reader-writer-wakeup-cost.md",
+      "source_sha256": "c2b27e1db49f1899cf86c91abe4d6e9a5e146744bcce71f7024be3ba0e1ee4c7",
+      "migrated_sha256": "c2b27e1db49f1899cf86c91abe4d6e9a5e146744bcce71f7024be3ba0e1ee4c7",
+      "changed": false
+    },
+    {
+      "path": "reference/caller-mutation-card.html",
+      "source_sha256": "1f80302dd63255b5d06c1a81cb88cf95fb0c67fae073456a5f2e43e453dad4bc",
+      "migrated_sha256": "1f80302dd63255b5d06c1a81cb88cf95fb0c67fae073456a5f2e43e453dad4bc",
+      "changed": false
+    },
+    {
+      "path": "reference/change-defense-card.html",
+      "source_sha256": "9ce4d166ee1502b95e964ae3dffc48bceacc18a7155a5e63d078f26e31e4c325",
+      "migrated_sha256": "9ce4d166ee1502b95e964ae3dffc48bceacc18a7155a5e63d078f26e31e4c325",
+      "changed": false
+    },
+    {
+      "path": "reference/core-synthesis-studio.html",
+      "source_sha256": "544d68bc831c860b96f8437187810f6728ab82a2d00ca3c4cd2214b5b11bc32c",
+      "migrated_sha256": "544d68bc831c860b96f8437187810f6728ab82a2d00ca3c4cd2214b5b11bc32c",
+      "changed": false
+    },
+    {
+      "path": "reference/course-coverage-matrix.html",
+      "source_sha256": "6c9bce6230e3047cb0d03b25fd6f20004ffa84f2e96ebc53397cc79e31f4bba9",
+      "migrated_sha256": "6c9bce6230e3047cb0d03b25fd6f20004ffa84f2e96ebc53397cc79e31f4bba9",
+      "changed": false
+    },
+    {
+      "path": "reference/course-learning-path.html",
+      "source_sha256": "d148bfbf97b3ac41759eab32dbb7873945017e6921f7913d07d8f3666bb29bc3",
+      "migrated_sha256": "d148bfbf97b3ac41759eab32dbb7873945017e6921f7913d07d8f3666bb29bc3",
+      "changed": false
+    },
+    {
+      "path": "reference/cross-database-replacement-policy-comparison.md",
+      "source_sha256": "1af1f1ab3e2577a3848fedc7a2ca1ca0e544540599dc730b9bf13eaad5dae87c",
+      "migrated_sha256": "1af1f1ab3e2577a3848fedc7a2ca1ca0e544540599dc730b9bf13eaad5dae87c",
+      "changed": false
+    },
+    {
+      "path": "reference/dirty-page-flush-actors.md",
+      "source_sha256": "d0c3c947a6c9a265b31e7e17143a4de8981e89b9cfbd7642f77146d5c42444ee",
+      "migrated_sha256": "d0c3c947a6c9a265b31e7e17143a4de8981e89b9cfbd7642f77146d5c42444ee",
+      "changed": false
+    },
+    {
+      "path": "reference/expected-team-questions.html",
+      "source_sha256": "e4a6e13b406d96f9d07f70e43dfcffdc1954ae51d03e372a5c611b8c4d531982",
+      "migrated_sha256": "e4a6e13b406d96f9d07f70e43dfcffdc1954ae51d03e372a5c611b8c4d531982",
+      "changed": false
+    },
+    {
+      "path": "reference/failure-proof-ledger-card.html",
+      "source_sha256": "2689ffc27cba260fe1029b02541e2ff75c96078199e70de3547e6b32f5f99ef1",
+      "migrated_sha256": "2689ffc27cba260fe1029b02541e2ff75c96078199e70de3547e6b32f5f99ef1",
+      "changed": false
+    },
+    {
+      "path": "reference/fix-convergence-map.html",
+      "source_sha256": "aa73a599a230cca6544d2ca102ac76c2d2e3a1a4fb9c0bbe605df2a06f796d71",
+      "migrated_sha256": "aa73a599a230cca6544d2ca102ac76c2d2e3a1a4fb9c0bbe605df2a06f796d71",
+      "changed": false
+    },
+    {
+      "path": "reference/flush-generation-card.html",
+      "source_sha256": "8555aa0e6e6b37214dcd690513e3e4723a65e89f4b53c0a96c7511620bbec320",
+      "migrated_sha256": "8555aa0e6e6b37214dcd690513e3e4723a65e89f4b53c0a96c7511620bbec320",
+      "changed": false
+    },
+    {
+      "path": "reference/invariant-index.md",
+      "source_sha256": "c73d73508b04ad14e722b7ead7e874c10103622296bc31e7a72884707eb18eac",
+      "migrated_sha256": "c73d73508b04ad14e722b7ead7e874c10103622296bc31e7a72884707eb18eac",
+      "changed": false
+    },
+    {
+      "path": "reference/latch-queue-card.html",
+      "source_sha256": "2e47e5a3e7a1fec687587dac6f3f37fb496fd455736ce84f975226fae2a626bb",
+      "migrated_sha256": "2e47e5a3e7a1fec687587dac6f3f37fb496fd455736ce84f975226fae2a626bb",
+      "changed": false
+    },
+    {
+      "path": "reference/lifecycle-order-card.html",
+      "source_sha256": "14bdf89ff62ee022ed55ea1c68a1e5a5ad94bca5834147cec52661893abf9c61",
+      "migrated_sha256": "14bdf89ff62ee022ed55ea1c68a1e5a5ad94bca5834147cec52661893abf9c61",
+      "changed": false
+    },
+    {
+      "path": "reference/log-page-buffer-first-principles-audit.md",
+      "source_sha256": "8f51c767ce1438e44b0ca9417b406a652356d26e6906e6b78b872a9e751bbae0",
+      "migrated_sha256": "8f51c767ce1438e44b0ca9417b406a652356d26e6906e6b78b872a9e751bbae0",
+      "changed": false
+    },
+    {
+      "path": "reference/lru-worked-example.html",
+      "source_sha256": "e025bee91673ab3914c8bfc34398d24daaf8bf2f277f9d2d093d6140e6c25bb3",
+      "migrated_sha256": "e025bee91673ab3914c8bfc34398d24daaf8bf2f277f9d2d093d6140e6c25bb3",
+      "changed": false
+    },
+    {
+      "path": "reference/new-page-fetch-mode-audit.md",
+      "source_sha256": "76cc5e3f0e4ee67678d23c1a397f2948f905d59a692781903a3cc94cf7e3b651",
+      "migrated_sha256": "76cc5e3f0e4ee67678d23c1a397f2948f905d59a692781903a3cc94cf7e3b651",
+      "changed": false
+    },
+    {
+      "path": "reference/no-latch-semantics-audit.md",
+      "source_sha256": "8b8c9f31ae972ef71df2f249569b98d3a920119442522a1572daee7b19423bdc",
+      "migrated_sha256": "8b8c9f31ae972ef71df2f249569b98d3a920119442522a1572daee7b19423bdc",
+      "changed": false
+    },
+    {
+      "path": "reference/object-and-state-map.html",
+      "source_sha256": "7d3eb8c49a697763ba54e6525f72be747ab4a66b370c0f1b48a8a5aa71fcf4c3",
+      "migrated_sha256": "7d3eb8c49a697763ba54e6525f72be747ab4a66b370c0f1b48a8a5aa71fcf4c3",
+      "changed": false
+    },
+    {
+      "path": "reference/ordered-fix-first-principles-audit.md",
+      "source_sha256": "38c2fdcd5bf4362593af1852110a7ccb232bb3c936349f4552a6323c25207fee",
+      "migrated_sha256": "38c2fdcd5bf4362593af1852110a7ccb232bb3c936349f4552a6323c25207fee",
+      "changed": false
+    },
+    {
+      "path": "reference/ordered-watcher-card.html",
+      "source_sha256": "faeebf99ddd519d1a35cde6e6d0451b20cd589c8bbd52115523f1746243f2772",
+      "migrated_sha256": "faeebf99ddd519d1a35cde6e6d0451b20cd589c8bbd52115523f1746243f2772",
+      "changed": false
+    },
+    {
+      "path": "reference/ownership-debt-card.html",
+      "source_sha256": "69b3bfcd5a8573de2cf1014cd7a27236b879b3c021a3fbcac00e054439b77595",
+      "migrated_sha256": "69b3bfcd5a8573de2cf1014cd7a27236b879b3c021a3fbcac00e054439b77595",
+      "changed": false
+    },
+    {
+      "path": "reference/page-buffer-daemon-lifecycle-audit.md",
+      "source_sha256": "c7a1925251123702b3ee6eea10830396abfda06d5621e7e48701df0c6d820e52",
+      "migrated_sha256": "c7a1925251123702b3ee6eea10830396abfda06d5621e7e48701df0c6d820e52",
+      "changed": false
+    },
+    {
+      "path": "reference/presentation-rehearsal-card.html",
+      "source_sha256": "a41875921790540d318c982045d6821109307bf47bbb6685cbcd5fcd45122819",
+      "migrated_sha256": "a41875921790540d318c982045d6821109307bf47bbb6685cbcd5fcd45122819",
+      "changed": false
+    },
+    {
+      "path": "reference/presentation-script-technical-claims-audit.md",
+      "source_sha256": "d99748b0c771081cf6d955e3990582655b12051bd5079ba98858a7986c329d5d",
+      "migrated_sha256": "d99748b0c771081cf6d955e3990582655b12051bd5079ba98858a7986c329d5d",
+      "changed": false
+    },
+    {
+      "path": "reference/presentation-spine.html",
+      "source_sha256": "5089f6593739e47bcc8d1c2f9bec708d7d2d87d94910114baba7cdfbfaa0f1d9",
+      "migrated_sha256": "5089f6593739e47bcc8d1c2f9bec708d7d2d87d94910114baba7cdfbfaa0f1d9",
+      "changed": false
+    },
+    {
+      "path": "reference/private-lru-domain-hit-age-and-unfix-placement.md",
+      "source_sha256": "2a569cf9a9edcd52b2f3ea9ba82b1d97111226b7bf0fda1ebbbfb6b27bc734a6",
+      "migrated_sha256": "2a569cf9a9edcd52b2f3ea9ba82b1d97111226b7bf0fda1ebbbfb6b27bc734a6",
+      "changed": false
+    },
+    {
+      "path": "reference/promotion-restart-card.html",
+      "source_sha256": "4b5aaec60c5275db2720839fe29aa71fb938eea79798ba6b1181595158d46d69",
+      "migrated_sha256": "4b5aaec60c5275db2720839fe29aa71fb938eea79798ba6b1181595158d46d69",
+      "changed": false
+    },
+    {
+      "path": "reference/read-to-write-promotion-rationale.md",
+      "source_sha256": "6123589b0a34cc3172b97f48f34fb6e9d2740f75c843184b357b813c9d78965d",
+      "migrated_sha256": "6123589b0a34cc3172b97f48f34fb6e9d2740f75c843184b357b813c9d78965d",
+      "changed": false
+    },
+    {
+      "path": "reference/redo-recovery-card.html",
+      "source_sha256": "e299099ef09d309fbb6f0fb9208384b1efb06f22b7beccb8f67e794372cf60a4",
+      "migrated_sha256": "e299099ef09d309fbb6f0fb9208384b1efb06f22b7beccb8f67e794372cf60a4",
+      "changed": false
+    },
+    {
+      "path": "reference/replacement-policy-first-principles-audit.md",
+      "source_sha256": "c467394c215675e3a8b497dd40e6ae3302788afa1b4004f0bab61010bd3ac398",
+      "migrated_sha256": "c467394c215675e3a8b497dd40e6ae3302788afa1b4004f0bab61010bd3ac398",
+      "changed": false
+    },
+    {
+      "path": "reference/replacement-policy-quantities-and-costs.md",
+      "source_sha256": "55ae11873ee5a00537e7ed017acb20d3f3a3599d5249670b9bc09dc49a1eb800",
+      "migrated_sha256": "55ae11873ee5a00537e7ed017acb20d3f3a3599d5249670b9bc09dc49a1eb800",
+      "changed": false
+    },
+    {
+      "path": "reference/replacement-progress-card.html",
+      "source_sha256": "11b497b26a137e122ee77d060b29d57adfc3185d88137fbda3e2c2306783dddd",
+      "migrated_sha256": "11b497b26a137e122ee77d060b29d57adfc3185d88137fbda3e2c2306783dddd",
+      "changed": false
+    },
+    {
+      "path": "reference/replacement-safety-card.html",
+      "source_sha256": "c269d51beacbdaecad5d3166a65dbed24c5c14173c81205b7db3455acd419e31",
+      "migrated_sha256": "c269d51beacbdaecad5d3166a65dbed24c5c14173c81205b7db3455acd419e31",
+      "changed": false
+    },
+    {
+      "path": "reference/source-map.md",
+      "source_sha256": "dbb8fcbe77e859e3641e54d5947ddea637c3f3ca55de5d0a47b780dda97f4524",
+      "migrated_sha256": "dbb8fcbe77e859e3641e54d5947ddea637c3f3ca55de5d0a47b780dda97f4524",
+      "changed": false
+    },
+    {
+      "path": "reference/specialized-interface-card.html",
+      "source_sha256": "611c3a1cb26f54916216a740abac0c8800a82c12fbc136887a9c2a0d8d13dd96",
+      "migrated_sha256": "611c3a1cb26f54916216a740abac0c8800a82c12fbc136887a9c2a0d8d13dd96",
+      "changed": false
+    },
+    {
+      "path": "reference/three-engine-performance-card.html",
+      "source_sha256": "1272fd256cd3020fc049e08406f0b5e7a250c5c8a380428c81af76d3a0ca3453",
+      "migrated_sha256": "1272fd256cd3020fc049e08406f0b5e7a250c5c8a380428c81af76d3a0ca3453",
+      "changed": false
+    },
+    {
+      "path": "reference/victim-scan-cap-and-aout-evidence.md",
+      "source_sha256": "20e7b89426d1c3d1eeecf2a2eb4f537960ee481d5c98ad67e008e4734bfac2c5",
+      "migrated_sha256": "20e7b89426d1c3d1eeecf2a2eb4f537960ee481d5c98ad67e008e4734bfac2c5",
+      "changed": false
+    },
+    {
+      "path": "scripts/canonical-visuals.mjs",
+      "source_sha256": "7bd65a2507f4930a5f65608fe5efc36ae6ca21f716521eb4da459787d87e51ba",
+      "migrated_sha256": "7bd65a2507f4930a5f65608fe5efc36ae6ca21f716521eb4da459787d87e51ba",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-acquisition-concurrency.test.mjs",
+      "source_sha256": "6b061945c78e28ed0183b7b1fd782a3fa5e19157191628baea2a60e236ade97e",
+      "migrated_sha256": "6b061945c78e28ed0183b7b1fd782a3fa5e19157191628baea2a60e236ade97e",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-bilingual-teaching-site.mjs",
+      "source_sha256": "7d257f41e320cb6427d59dcd1baac57d29331ffed2d430af200365761d39bae9",
+      "migrated_sha256": "7d257f41e320cb6427d59dcd1baac57d29331ffed2d430af200365761d39bae9",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-bilingual-teaching-site.test.mjs",
+      "source_sha256": "e71caaa48f941c57228b6cec75337a89b93edcc9e777f22ffa8bb36c1d81e522",
+      "migrated_sha256": "e71caaa48f941c57228b6cec75337a89b93edcc9e777f22ffa8bb36c1d81e522",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-caller-completes-correctness.test.mjs",
+      "source_sha256": "58df71319a662c80f2bffebfdf9df92299d04d391b1590804c2e421233bad395",
+      "migrated_sha256": "bd455d95a24e686379dc2462d3dfa9e5a4fb3d09208aa40da6eca4dc3221fbef",
+      "changed": true
+    },
+    {
+      "path": "scripts/check-canonical-ownership.test.mjs",
+      "source_sha256": "f9aaf4ca6a85d8a5f19ebbc08d430838ab15ea2ad7925aa82bacb4101dc824b7",
+      "migrated_sha256": "f9aaf4ca6a85d8a5f19ebbc08d430838ab15ea2ad7925aa82bacb4101dc824b7",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-change-and-verification-playbooks.test.mjs",
+      "source_sha256": "4bc22906929986f201dc1d9f235501dda89d8faeee04e3f1b0d4d24e1f00f1dc",
+      "migrated_sha256": "4bc22906929986f201dc1d9f235501dda89d8faeee04e3f1b0d4d24e1f00f1dc",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-compact-references.test.mjs",
+      "source_sha256": "7826c45095e3c7cea462357c07e3596e384c24673406558f3f7662755a3f64de",
+      "migrated_sha256": "7826c45095e3c7cea462357c07e3596e384c24673406558f3f7662755a3f64de",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-contract-and-objects.test.mjs",
+      "source_sha256": "d589a8f59db708d80de3441f3c25a66f0693ed7efa0a6599bfff027804f05c1d",
+      "migrated_sha256": "d589a8f59db708d80de3441f3c25a66f0693ed7efa0a6599bfff027804f05c1d",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-debug-by-symptom.test.mjs",
+      "source_sha256": "4f1ecea075d05603e883215b0d6cb4921f14d25d4418e89dac570c23e37943ef",
+      "migrated_sha256": "4f1ecea075d05603e883215b0d6cb4921f14d25d4418e89dac570c23e37943ef",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-document-set-completion.test.mjs",
+      "source_sha256": "502b90338df849579a2ec154ca91b70c90a11ccb272c915a67fe403428deb611",
+      "migrated_sha256": "502b90338df849579a2ec154ca91b70c90a11ccb272c915a67fe403428deb611",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-failure-proof-obligations.test.mjs",
+      "source_sha256": "bf083692be4b3c9b59fcdc6c151a05975e307b447d29ef7fc14c6ed7232d15d1",
+      "migrated_sha256": "bf083692be4b3c9b59fcdc6c151a05975e307b447d29ef7fc14c6ed7232d15d1",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-fix-hold-release.test.mjs",
+      "source_sha256": "712a43229da5c6c2c1d07652eed9f36145f6e463302ccae59faa3de5a0c7aa1c",
+      "migrated_sha256": "712a43229da5c6c2c1d07652eed9f36145f6e463302ccae59faa3de5a0c7aa1c",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-flush-one-generation.test.mjs",
+      "source_sha256": "61c41d0bcd2b1e515f53b3e7ef73886439e6f33e18651f5169dd3cd993e8208b",
+      "migrated_sha256": "61c41d0bcd2b1e515f53b3e7ef73886439e6f33e18651f5169dd3cd993e8208b",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-guide-entry.test.mjs",
+      "source_sha256": "cd6e59840d0b7d56b8ead755d94eafb6e8eaac4640cec691939d3bd47738b9fd",
+      "migrated_sha256": "cd6e59840d0b7d56b8ead755d94eafb6e8eaac4640cec691939d3bd47738b9fd",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-maintainer-capstone.test.mjs",
+      "source_sha256": "d326087d6ce1aa1447f149ac23056411544e62e5c705f49a738dbe7ce9be11b1",
+      "migrated_sha256": "d326087d6ce1aa1447f149ac23056411544e62e5c705f49a738dbe7ce9be11b1",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-maintainer-guide-assets.mjs",
+      "source_sha256": "d80a90678eba40e86622286b4bbe3305c776eda7197906dc5b69ac23a9a0e571",
+      "migrated_sha256": "d80a90678eba40e86622286b4bbe3305c776eda7197906dc5b69ac23a9a0e571",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-maintainer-guide-shell.test.mjs",
+      "source_sha256": "61f76bbf15bc64ab6cad4121981bef1bdc67b5320467925cc303021a9828a600",
+      "migrated_sha256": "02964d9d7f0a5dccfd236e4f1665a1d17d7b118ea386ebf869c039adde2ba32f",
+      "changed": true
+    },
+    {
+      "path": "scripts/check-maintainer-guide.mjs",
+      "source_sha256": "2cd036d0f369e8d99481140c0b035207c0319cd73701566557db58d972dac6e3",
+      "migrated_sha256": "2cd036d0f369e8d99481140c0b035207c0319cd73701566557db58d972dac6e3",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-maintainer-guide.test.mjs",
+      "source_sha256": "46c5112b30a0790b2d0d6fd7fcd4114c9f61c33be89472b4e18ae2c6c3da01a2",
+      "migrated_sha256": "46c5112b30a0790b2d0d6fd7fcd4114c9f61c33be89472b4e18ae2c6c3da01a2",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-page-buffer-daemons.test.mjs",
+      "source_sha256": "43a7dba16ba5ba30798e5ba9781b9d4660c47cdfbd9b404a0174149dc660e7ec",
+      "migrated_sha256": "43a7dba16ba5ba30798e5ba9781b9d4660c47cdfbd9b404a0174149dc660e7ec",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-private-lru-domain-hit-age.test.mjs",
+      "source_sha256": "57b58ac1abecc673346b03ea452d7dcc7507b3ddc78e2854a103821cabec1462",
+      "migrated_sha256": "fe650e65df248cad053cc3f3c542f0e550139a712e6c88be21fb16d67fa87d6e",
+      "changed": true
+    },
+    {
+      "path": "scripts/check-question-bank-content.test.mjs",
+      "source_sha256": "c219d9ff760d1cd0ba0b47af85be74268601d2002ec962c65c9594a8bce98046",
+      "migrated_sha256": "c219d9ff760d1cd0ba0b47af85be74268601d2002ec962c65c9594a8bce98046",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-question-bank.test.mjs",
+      "source_sha256": "56fe3fc874831b56caeb48f5a6fd0126460dea60b1e8085c8b8458bc1464678f",
+      "migrated_sha256": "56fe3fc874831b56caeb48f5a6fd0126460dea60b1e8085c8b8458bc1464678f",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-recovery-lifecycle.test.mjs",
+      "source_sha256": "6cff5c6bb930c92b55611ac8c6d6cd2eca6cad323909c893f652f740201f42ec",
+      "migrated_sha256": "6cff5c6bb930c92b55611ac8c6d6cd2eca6cad323909c893f652f740201f42ec",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-replace-one-frame.test.mjs",
+      "source_sha256": "9a99cc1b848d209d7699186fd9df2467d90deb87854ca64f7d9660047d4ba076",
+      "migrated_sha256": "9a99cc1b848d209d7699186fd9df2467d90deb87854ca64f7d9660047d4ba076",
+      "changed": false
+    },
+    {
+      "path": "scripts/check-replacement-progress.test.mjs",
+      "source_sha256": "86096bbeb42845666c6c969e3dbd0d3bb3b3fc545b98692039e685b4949baa7c",
+      "migrated_sha256": "6bf777db29e4d292cebd0864bdaad5f1756755bc01c6c36b67ee5118ef39441e",
+      "changed": true
+    },
+    {
+      "path": "scripts/check-specialized-interfaces.test.mjs",
+      "source_sha256": "698755f5fd550c0a25e066dd75708a82003a29df9445061b71d8963c2e56de78",
+      "migrated_sha256": "e7f097753fcea4c18bfe0ce4df8bde643f23e5eec73de031a2ce842ee6de54a7",
+      "changed": true
+    },
+    {
+      "path": "scripts/check-victim-scan-aout.test.mjs",
+      "source_sha256": "5f48726e25fdf52f62374b57a2f4c8917de22b1e30a9c299ad9eed54736a5c65",
+      "migrated_sha256": "5f48726e25fdf52f62374b57a2f4c8917de22b1e30a9c299ad9eed54736a5c65",
+      "changed": false
+    },
+    {
+      "path": "scripts/markdown-heading-slug.mjs",
+      "source_sha256": "6790c3984ae369ae3a3fbdf165ae4ca6fd2addfec8e0c6c2b3802fde484f1038",
+      "migrated_sha256": "6790c3984ae369ae3a3fbdf165ae4ca6fd2addfec8e0c6c2b3802fde484f1038",
+      "changed": false
+    },
+    {
+      "path": "scripts/question-bank-contract.mjs",
+      "source_sha256": "6b3805b794251d15a4dbc39b2c2c94711ab1e2c18901b1b94319510de5b57fb0",
+      "migrated_sha256": "6b3805b794251d15a4dbc39b2c2c94711ab1e2c18901b1b94319510de5b57fb0",
+      "changed": false
+    },
+    {
+      "path": "scripts/seminar-browser.test.mjs",
+      "source_sha256": "9236d803d15cbd2f2ce8d8eeed69a9082ede2dd4d40bf9d979d14eca667376f7",
+      "migrated_sha256": "cf81b637d678d223c19bc8f891ef27d17f58720caca6cfda0ba785a74db225a1",
+      "changed": true
+    },
+    {
+      "path": "scripts/seminar-contract.mjs",
+      "source_sha256": "fb360da58c9c0fdee05cfc93356b075dbd84776d5576b4f3bfbfc0c5e24211d2",
+      "migrated_sha256": "fb360da58c9c0fdee05cfc93356b075dbd84776d5576b4f3bfbfc0c5e24211d2",
+      "changed": false
+    },
+    {
+      "path": "scripts/seminar-contract.test.mjs",
+      "source_sha256": "c6a68feebe56969a857efad1a1a4a51261b608a3ef2ed473248b1d2d303537d0",
+      "migrated_sha256": "c6a68feebe56969a857efad1a1a4a51261b608a3ef2ed473248b1d2d303537d0",
+      "changed": false
+    },
+    {
+      "path": "scripts/seminar-regressions.test.mjs",
+      "source_sha256": "4928acfc692662142c221f23a8cca28ffed800d4d3fa0210d3da7a5f50e00b3f",
+      "migrated_sha256": "4928acfc692662142c221f23a8cca28ffed800d4d3fa0210d3da7a5f50e00b3f",
+      "changed": false
+    },
+    {
+      "path": "source-inventory.md",
+      "source_sha256": "75ae1de9f464443fd57a7970bda528cb41675bba310ce652d40916b3715bef4b",
+      "migrated_sha256": "66651b56e6f6d759d553d52d1e5265f4f51b29901b0e55ebe73d03ce9deff725",
+      "changed": true
+    },
+    {
+      "path": "teaching-pages.json",
+      "source_sha256": "3a0cdb445337aa30502c26247842ddc708ed9138fe0ef62e58c00fd546f50f01",
+      "migrated_sha256": "3a0cdb445337aa30502c26247842ddc708ed9138fe0ef62e58c00fd546f50f01",
+      "changed": false
+    },
+    {
+      "path": "unresolved-or-version-sensitive-findings.md",
+      "source_sha256": "bdcd194832bde0322e1a3e422ab6793039aa47455988b0cd83020927ad8adcb4",
+      "migrated_sha256": "9fd049abfebf6112230c998d7b6f5258021d3753d3147d0793915ddffc13efaa",
+      "changed": true
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "bash",
+    "restart-suite.sh"
+  ],
+  "bound_files": [
+    {
+      "after_sha256": "3cd816696eae75f4e4cb49da342a55b1a11b06b04fcb9c88a0998f8c5b897a83",
+      "before_sha256": "3cd816696eae75f4e4cb49da342a55b1a11b06b04fcb9c88a0998f8c5b897a83",
+      "path": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/restart-suite.sh"
+    }
+  ],
+  "cwd": "/home/vimkim/gh/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-08-28T07:45:34.023992+00:00",
+  "id": "runtime-cold-restart",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "a16a6bf59f0551b472ff7d939c96f000e6d221aec92362454f657676dcb63ac5",
+  "runtime_tools_snapshot": "evidence/runtime-tools-baseline.json",
+  "schema_version": 1,
+  "started_at_utc": "2026-08-28T07:45:30.818990+00:00",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "b40c27f30864a50be12aaf3825e80ff442210d93ad39856a305104420cba743f"
+}

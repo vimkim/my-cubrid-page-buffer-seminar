@@ -1,0 +1,4 @@
+_copyparty_web
+.hist/
+__pycache__/
+*.py[cod]

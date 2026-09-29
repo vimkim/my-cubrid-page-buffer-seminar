@@ -1,0 +1,2232 @@
+{
+  "source_repository": "https://github.com/vimkim/my-cubrid-docs",
+  "source_revision": "d84433fded947507f51b01cad99174f29744ba93",
+  "files": [
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/fix-lifecycle.svg",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/fix-lifecycle.svg",
+      "source_sha256": "fcfbdb7812e9be9d341cfc47ecf532094c075c7dfd83e04068dd35ac0a2fcb1b",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "fcfbdb7812e9be9d341cfc47ecf532094c075c7dfd83e04068dd35ac0a2fcb1b"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/latch-state.svg",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/latch-state.svg",
+      "source_sha256": "00af3c033aba46981db4104650c138e1e247ff5299fbc76180098dac3006f80a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "00af3c033aba46981db4104650c138e1e247ff5299fbc76180098dac3006f80a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/report.css",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/report.css",
+      "source_sha256": "4c778c71e901a5dac8959644c8494e8fa31a508b9868f00c71a3a84ef5b5156e",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "4c778c71e901a5dac8959644c8494e8fa31a508b9868f00c71a3a84ef5b5156e"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/three-db.svg",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/three-db.svg",
+      "source_sha256": "c2e1c503cdb1cc95e846e869a7e17cf59e89f6474f8f8dae94b3684b2868328d",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "c2e1c503cdb1cc95e846e869a7e17cf59e89f6474f8f8dae94b3684b2868328d"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/wal-flush.svg",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/assets/wal-flush.svg",
+      "source_sha256": "bb7c6368c0acbe7eba9b05668fac6238d5ba3da81b0aad8cde5b6fb043a44114",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "bb7c6368c0acbe7eba9b05668fac6238d5ba3da81b0aad8cde5b6fb043a44114"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/01-orientation.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/01-orientation.html",
+      "source_sha256": "5260154a8f56e6f190701b00680ce8a598fcf5afcc432acddb1398329f8fde8b",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "5260154a8f56e6f190701b00680ce8a598fcf5afcc432acddb1398329f8fde8b"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/02-boundary-ownership.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/02-boundary-ownership.html",
+      "source_sha256": "9bd4256950cdebd198d773c43649a3bdab872c8a9923a80a41dbe82323fe1b18",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "9bd4256950cdebd198d773c43649a3bdab872c8a9923a80a41dbe82323fe1b18"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/03-state-machines.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/03-state-machines.html",
+      "source_sha256": "b02333626edc80447ff3e8d662a8aef16ec07479639af1a60c917f102f9fc3f4",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b02333626edc80447ff3e8d662a8aef16ec07479639af1a60c917f102f9fc3f4"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/04-fix-lookup-load.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/04-fix-lookup-load.html",
+      "source_sha256": "bf3a617fb6b20c7d278f9e08b63c9613d87c9f3408b2e46eb7beca578c0e832a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "bf3a617fb6b20c7d278f9e08b63c9613d87c9f3408b2e46eb7beca578c0e832a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/05-latch-holder-unfix.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/05-latch-holder-unfix.html",
+      "source_sha256": "5bb53abf33f2c7bd9402cea3364903efa8496b6fcd30e8c27f63dea62daf664c",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "5bb53abf33f2c7bd9402cea3364903efa8496b6fcd30e8c27f63dea62daf664c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/06-caller-contracts.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/06-caller-contracts.html",
+      "source_sha256": "8a5bb79570466383cc25b3d6afd7e669f8e9a0dfb7db2293e0c4198d930d3aea",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "8a5bb79570466383cc25b3d6afd7e669f8e9a0dfb7db2293e0c4198d930d3aea"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/07-dirty-wal-flush-replace.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/07-dirty-wal-flush-replace.html",
+      "source_sha256": "f45aec443eaf0faa93e70a417689b97e0abac2bc580a9da104b56a1b4935699a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "f45aec443eaf0faa93e70a417689b97e0abac2bc580a9da104b56a1b4935699a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/08-experiments.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/08-experiments.html",
+      "source_sha256": "f8846b4c5cafd9c769a0f46baee718446a8eae02e4aaffa36c7447d2603e0c03",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "f8846b4c5cafd9c769a0f46baee718446a8eae02e4aaffa36c7447d2603e0c03"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/09-comparison.html",
+      "source_sha256": "faf8b31e73f65812db6dc3bc483a40ad9b810dd9a7326bbf993f82f0ddb35c7c",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "faf8b31e73f65812db6dc3bc483a40ad9b810dd9a7326bbf993f82f0ddb35c7c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/10-blueprint.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/10-blueprint.html",
+      "source_sha256": "cb0a32a4d73db5981bfcf92ea42ced50ec07ec25c5a4cd5743c8d3aedbe1e6f2",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "cb0a32a4d73db5981bfcf92ea42ced50ec07ec25c5a4cd5743c8d3aedbe1e6f2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/11-contract-evidence.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/11-contract-evidence.html",
+      "source_sha256": "f9e934cddcea525233fa306988726fbd0d88c793ebd9dc0e92b45fbd010e17e0",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "f9e934cddcea525233fa306988726fbd0d88c793ebd9dc0e92b45fbd010e17e0"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/cubrid.index.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/cubrid.index.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/cubrid.status.porcelain-v1.z",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/cubrid.status.porcelain-v1.z",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/cubrid.worktree.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/cubrid.worktree.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/mysql.index.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/mysql.index.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/mysql.status.porcelain-v1.z",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/mysql.status.porcelain-v1.z",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/mysql.worktree.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/mysql.worktree.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/postgresql.index.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/postgresql.index.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/postgresql.status.porcelain-v1.z",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/postgresql.status.porcelain-v1.z",
+      "source_sha256": "6598423bde21de7dd278c14928d14401e35de856b4b2502edbea6b50c4f579c1",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "6598423bde21de7dd278c14928d14401e35de856b4b2502edbea6b50c4f579c1"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/postgresql.worktree.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/baseline/postgresql.worktree.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/claims.jsonl",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/claims.jsonl",
+      "source_sha256": "97935ace92f8140b22f25e9fa6632d6c37663e715a2ff259255da72034968296",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "97935ace92f8140b22f25e9fa6632d6c37663e715a2ff259255da72034968296"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/report-audit.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/report-audit.json",
+      "source_sha256": "167eb3260f79f73cfaa3f27a5d142fbb01eb4d3f51602153a644262ca7ca5558",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "167eb3260f79f73cfaa3f27a5d142fbb01eb4d3f51602153a644262ca7ca5558"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/report-audit.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/report-audit.md",
+      "source_sha256": "fe01086d805667e07460445c10ad0c2f0100405acb25467d874526319aee1bdc",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "fe01086d805667e07460445c10ad0c2f0100405acb25467d874526319aee1bdc"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r1/meta.json",
+      "source_sha256": "ee1daceb1601c4825b8e03ae6c8e61a48ea61e7461df95fefd515d020dbee1e6",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "ee1daceb1601c4825b8e03ae6c8e61a48ea61e7461df95fefd515d020dbee1e6"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r1/stdout.txt",
+      "source_sha256": "784f102ddfa1c7200ba666777c0b9fd7381d789275e4b9cc937c1c4d7f0aaa29",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "784f102ddfa1c7200ba666777c0b9fd7381d789275e4b9cc937c1c4d7f0aaa29"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r2/meta.json",
+      "source_sha256": "018b3f367955d92a0a561c544bf9fcd4c3ca417e810d60498033c5a5ee258d9e",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "018b3f367955d92a0a561c544bf9fcd4c3ca417e810d60498033c5a5ee258d9e"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r2/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp1-observation-r2/stdout.txt",
+      "source_sha256": "a8aa434c07452c12e951b277e326270a58394ff381abc7e4d1015812c884320c",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "a8aa434c07452c12e951b277e326270a58394ff381abc7e4d1015812c884320c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp2-observation-r1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp2-observation-r1/meta.json",
+      "source_sha256": "549845cb1ef8d701af9a8ecf8d254a90324697aee1480374bbba3be2ea5338ba",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "549845cb1ef8d701af9a8ecf8d254a90324697aee1480374bbba3be2ea5338ba"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp2-observation-r1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp2-observation-r1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp2-observation-r1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp2-observation-r1/stdout.txt",
+      "source_sha256": "d87822ff8dab5918aeed61c9ec6b6a1392a19283263c79dd395f240c8a5aaf5b",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "d87822ff8dab5918aeed61c9ec6b6a1392a19283263c79dd395f240c8a5aaf5b"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp3-observation-r1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp3-observation-r1/meta.json",
+      "source_sha256": "4c8dd1e2b930c5bbcb3eea976cfd61c5156cfd97993007ee11bf0cb7095ac797",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "4c8dd1e2b930c5bbcb3eea976cfd61c5156cfd97993007ee11bf0cb7095ac797"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp3-observation-r1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp3-observation-r1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp3-observation-r1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp3-observation-r1/stdout.txt",
+      "source_sha256": "23230df9a4a24b48b625b47d988feeba71e5a731e551435b6789caffc91e60e1",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "23230df9a4a24b48b625b47d988feeba71e5a731e551435b6789caffc91e60e1"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup/meta.json",
+      "source_sha256": "9b77c82158992ab427ade08a480a8c0c4ff2061758c3d02cfef7bf8016fa0e70",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "9b77c82158992ab427ade08a480a8c0c4ff2061758c3d02cfef7bf8016fa0e70"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup/stderr.txt",
+      "source_sha256": "2df29143f3c5d84f1c53a8b16b6f3209519d7b72bfb87c4b8e2b79255e8445f3",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "2df29143f3c5d84f1c53a8b16b6f3209519d7b72bfb87c4b8e2b79255e8445f3"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup/stdout.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup-2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup-2/meta.json",
+      "source_sha256": "95e4ef1b1178f4437dc7c3383b516a207aa09ba788778fda5c5399fd3518fb24",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "95e4ef1b1178f4437dc7c3383b516a207aa09ba788778fda5c5399fd3518fb24"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup-2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup-2/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup-2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-backup-2/stdout.txt",
+      "source_sha256": "85c7777321381d6134e015bd3a00fcdfde815fb0742d47a1fd51e48fb66d522c",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "85c7777321381d6134e015bd3a00fcdfde815fb0742d47a1fd51e48fb66d522c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-observation-r1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-observation-r1/meta.json",
+      "source_sha256": "6156b4a052b35eef61ffab54193ddc920f56d8bddfe890470656bc9a9a34056d",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "6156b4a052b35eef61ffab54193ddc920f56d8bddfe890470656bc9a9a34056d"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-observation-r1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-observation-r1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-observation-r1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-observation-r1/stdout.txt",
+      "source_sha256": "5b51a790419b9fb6b9352a10a819b1ffa3084038829233f86c0523d5aeec00b1",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "5b51a790419b9fb6b9352a10a819b1ffa3084038829233f86c0523d5aeec00b1"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after/meta.json",
+      "source_sha256": "4a710c9705407787a67c0059abacaaa1b857120863262f7c2e58318edd659094",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "4a710c9705407787a67c0059abacaaa1b857120863262f7c2e58318edd659094"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after/stdout.txt",
+      "source_sha256": "77a12b2000b511bbfd096b9722f3e4decdb4baf1769197a8d616356828b59a2c",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "77a12b2000b511bbfd096b9722f3e4decdb4baf1769197a8d616356828b59a2c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after-2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after-2/meta.json",
+      "source_sha256": "4d2f63e12e131b2e0f91b5bf7008666e9a2c9f778374e0fba21df3b5ed8113be",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "4d2f63e12e131b2e0f91b5bf7008666e9a2c9f778374e0fba21df3b5ed8113be"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after-2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after-2/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after-2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-after-2/stdout.txt",
+      "source_sha256": "64dfa880392881e0e93348f09a8cbb1829d9785b1270f01f0bc685ca7a9b1c4b",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "64dfa880392881e0e93348f09a8cbb1829d9785b1270f01f0bc685ca7a9b1c4b"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-before/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-before/meta.json",
+      "source_sha256": "195ffa74f6d98ac9cf81779dd2f8f3dded923a1c31c3aaf75d7c27b4333394c7",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "195ffa74f6d98ac9cf81779dd2f8f3dded923a1c31c3aaf75d7c27b4333394c7"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-before/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-before/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-before/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/exp4-stat-before/stdout.txt",
+      "source_sha256": "ed276ab459259abca7b2ed2550f92e73acd919c9901bce4bdb7055346b44db9a",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "ed276ab459259abca7b2ed2550f92e73acd919c9901bce4bdb7055346b44db9a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-cleanup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-cleanup/meta.json",
+      "source_sha256": "02bd0f84f9d43fbd8263c147c5a6ee4bbba014bb11981c9f6b1951a206579a69",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "02bd0f84f9d43fbd8263c147c5a6ee4bbba014bb11981c9f6b1951a206579a69"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-cleanup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-cleanup/stderr.txt",
+      "source_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-cleanup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-cleanup/stdout.txt",
+      "source_sha256": "8eda8170b0d06c111e0fb8b989af06897a2d77b10e78043982507b1c4748f50c",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "8eda8170b0d06c111e0fb8b989af06897a2d77b10e78043982507b1c4748f50c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-createdb/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-createdb/meta.json",
+      "source_sha256": "04f717a01d18c7f320d6994f1becd69cf97b419b16fcf92d980e8da92682a061",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "04f717a01d18c7f320d6994f1becd69cf97b419b16fcf92d980e8da92682a061"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-createdb/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-createdb/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-createdb/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-createdb/stdout.txt",
+      "source_sha256": "17c0b445300d5b24e6cfc19865a11171801124d1cd269800f803a57b43a961dc",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "17c0b445300d5b24e6cfc19865a11171801124d1cd269800f803a57b43a961dc"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup/meta.json",
+      "source_sha256": "0995fdaa6d8f63ef08e477dafd2c9a9cdd6e916d61f3cf7e3f0b0aad814aeb48",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "0995fdaa6d8f63ef08e477dafd2c9a9cdd6e916d61f3cf7e3f0b0aad814aeb48"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup/stderr.txt",
+      "source_sha256": "373b38e383496fc5896366a9dbcb17974fca39523b09654118b299d9d9a5da73",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "373b38e383496fc5896366a9dbcb17974fca39523b09654118b299d9d9a5da73"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup/stdout.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-2/meta.json",
+      "source_sha256": "e06d81835bcbf1dd7234e40863bce2d46b752a7fdfb4fc37769dcc17e8bed0e1",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e06d81835bcbf1dd7234e40863bce2d46b752a7fdfb4fc37769dcc17e8bed0e1"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-2/stderr.txt",
+      "source_sha256": "373b38e383496fc5896366a9dbcb17974fca39523b09654118b299d9d9a5da73",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "373b38e383496fc5896366a9dbcb17974fca39523b09654118b299d9d9a5da73"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-2/stdout.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-sa/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-sa/meta.json",
+      "source_sha256": "b0a62c3bf320420c70a3b569f12cb6ab7e1c97b5a9b1918dc5695637b3eb65e2",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "b0a62c3bf320420c70a3b569f12cb6ab7e1c97b5a9b1918dc5695637b3eb65e2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-sa/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-sa/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-sa/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-setup-sa/stdout.txt",
+      "source_sha256": "08ab762e288d3f61a6815db6d34480049c5af1302ce3c886125f8585ba63bc08",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "08ab762e288d3f61a6815db6d34480049c5af1302ce3c886125f8585ba63bc08"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start/meta.json",
+      "source_sha256": "87d545640e8e4864f1847450d7001e5d10fe1aabd1295bede06b7baa4cf1c5f2",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "87d545640e8e4864f1847450d7001e5d10fe1aabd1295bede06b7baa4cf1c5f2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start/stderr.txt",
+      "source_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start/stdout.txt",
+      "source_sha256": "dc5da170f0835d475cd24ce0a0800231abdadf30a99bb754192928bbeb69bae2",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "dc5da170f0835d475cd24ce0a0800231abdadf30a99bb754192928bbeb69bae2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start-2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start-2/meta.json",
+      "source_sha256": "b6181fe60e9310e40540f7487c158171005c60d7864a46cac5bf88d660caf031",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "b6181fe60e9310e40540f7487c158171005c60d7864a46cac5bf88d660caf031"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start-2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start-2/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start-2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-start-2/stdout.txt",
+      "source_sha256": "a6528378df87b7d67f62e86b6eff49721b26dde9921726d099504cbade54eaf9",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "a6528378df87b7d67f62e86b6eff49721b26dde9921726d099504cbade54eaf9"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-stop/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-stop/meta.json",
+      "source_sha256": "435172a9551cac3c3ac6142e339ddc21f2641b545f5ea5177569123e3890e262",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "435172a9551cac3c3ac6142e339ddc21f2641b545f5ea5177569123e3890e262"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-stop/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-stop/stderr.txt",
+      "source_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-stop/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-runtime-stop/stdout.txt",
+      "source_sha256": "c2af6436d24062f6816a5fe0428d2c832f2a58e12d4dc4ab9818b826641f65f0",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "c2af6436d24062f6816a5fe0428d2c832f2a58e12d4dc4ab9818b826641f65f0"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-safe-runner-selfcheck-r1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-safe-runner-selfcheck-r1/meta.json",
+      "source_sha256": "c98b59b802ecfe8f302e430b676944149270fe54c9b494f9cff8cdca82142fa1",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "c98b59b802ecfe8f302e430b676944149270fe54c9b494f9cff8cdca82142fa1"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-safe-runner-selfcheck-r1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-safe-runner-selfcheck-r1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-safe-runner-selfcheck-r1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz-safe-runner-selfcheck-r1/stdout.txt",
+      "source_sha256": "5cb81b345e37b31bdf7823be8eea923a9e8be798d9912a032c5cba05d02b96ef",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "5cb81b345e37b31bdf7823be8eea923a9e8be798d9912a032c5cba05d02b96ef"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz1-selfcheck-r1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz1-selfcheck-r1/meta.json",
+      "source_sha256": "5f47e405894660c92374cb77508ad7e9a29ef8ea3a1dbcd0369f3cf63bcff486",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "5f47e405894660c92374cb77508ad7e9a29ef8ea3a1dbcd0369f3cf63bcff486"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz1-selfcheck-r1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz1-selfcheck-r1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz1-selfcheck-r1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz1-selfcheck-r1/stdout.txt",
+      "source_sha256": "d608c54a6623d2262eaae63c2409046f70d883c700b406647181dd9e521aa677",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "d608c54a6623d2262eaae63c2409046f70d883c700b406647181dd9e521aa677"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz2-selfcheck-r1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz2-selfcheck-r1/meta.json",
+      "source_sha256": "b6d331e2d85ce1799ebe2daf5bb25c1434d2539ff08feac567935a1f543a36b2",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "b6d331e2d85ce1799ebe2daf5bb25c1434d2539ff08feac567935a1f543a36b2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz2-selfcheck-r1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz2-selfcheck-r1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz2-selfcheck-r1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz2-selfcheck-r1/stdout.txt",
+      "source_sha256": "c0b451c6c304add97c2fa1ad8859ab2ad2ea7d5e232f403d127e22abbe1ebb16",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "c0b451c6c304add97c2fa1ad8859ab2ad2ea7d5e232f403d127e22abbe1ebb16"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz3-selfcheck-r1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz3-selfcheck-r1/meta.json",
+      "source_sha256": "bfbe4f6670f4218b334134dbaac5f914c9ce7144665dc4b983bcface3b8e1cf5",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "bfbe4f6670f4218b334134dbaac5f914c9ce7144665dc4b983bcface3b8e1cf5"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz3-selfcheck-r1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz3-selfcheck-r1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz3-selfcheck-r1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz3-selfcheck-r1/stdout.txt",
+      "source_sha256": "69d60f42861ba4b638491f6cc62af27874bb991a4c5dbeba9f4e1cf6dc59c9f4",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "69d60f42861ba4b638491f6cc62af27874bb991a4c5dbeba9f4e1cf6dc59c9f4"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz4-selfcheck-r1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz4-selfcheck-r1/meta.json",
+      "source_sha256": "1c9433d7ee23f5f77d96429789bce7515dc2ac3711a7c3c98427d26685834f37",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "1c9433d7ee23f5f77d96429789bce7515dc2ac3711a7c3c98427d26685834f37"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz4-selfcheck-r1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz4-selfcheck-r1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz4-selfcheck-r1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/quiz4-selfcheck-r1/stdout.txt",
+      "source_sha256": "5864881a071048a4fe045c82eed9a0604d62c328c0c7944cf6aab63f6becee74",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "5864881a071048a4fe045c82eed9a0604d62c328c0c7944cf6aab63f6becee74"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-backup-scratch-cleanup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-backup-scratch-cleanup/meta.json",
+      "source_sha256": "52c6b37a1edea95bc9ac6b677601f6cce2744ab33005733706849dc606d08a6d",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "52c6b37a1edea95bc9ac6b677601f6cce2744ab33005733706849dc606d08a6d"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-backup-scratch-cleanup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-backup-scratch-cleanup/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-backup-scratch-cleanup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-backup-scratch-cleanup/stdout.txt",
+      "source_sha256": "d2c06e00ef7e835a7e1c46d7d964c02124636b5c9618736d1516afbe40e53be0",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "d2c06e00ef7e835a7e1c46d7d964c02124636b5c9618736d1516afbe40e53be0"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-cleanup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-cleanup/meta.json",
+      "source_sha256": "c91c72ac0b41c44a9708e0c3f41a05b27a6ca998899a2f67bbf1f5914d48db44",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "c91c72ac0b41c44a9708e0c3f41a05b27a6ca998899a2f67bbf1f5914d48db44"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-cleanup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-cleanup/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-cleanup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-cleanup/stdout.txt",
+      "source_sha256": "85eb443980940ecf53b0a90848d70dae868fbff6eb4c57e0d49a606b148c0775",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "85eb443980940ecf53b0a90848d70dae868fbff6eb4c57e0d49a606b148c0775"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-createdb/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-createdb/meta.json",
+      "source_sha256": "0ba9bb571e30d1bc426d694f73ba3c924c10c254e63ff3ce6285f1ab35bcb51c",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "0ba9bb571e30d1bc426d694f73ba3c924c10c254e63ff3ce6285f1ab35bcb51c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-createdb/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-createdb/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-createdb/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-createdb/stdout.txt",
+      "source_sha256": "17c0b445300d5b24e6cfc19865a11171801124d1cd269800f803a57b43a961dc",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "17c0b445300d5b24e6cfc19865a11171801124d1cd269800f803a57b43a961dc"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp1/meta.json",
+      "source_sha256": "78556f3a08de828ebff8ab9f7faeea06af20b945f973a786fcb01d19ef612a34",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "78556f3a08de828ebff8ab9f7faeea06af20b945f973a786fcb01d19ef612a34"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp1/stdout.txt",
+      "source_sha256": "246131f60f68e15a2e984e2ef6d29d80b4958ff26b07f62330ba748189b18c10",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "246131f60f68e15a2e984e2ef6d29d80b4958ff26b07f62330ba748189b18c10"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp2/meta.json",
+      "source_sha256": "08138444e3775c9c3e49ed81770a5eae29cb0de57d44f28dc975b3eccf03d8f1",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "08138444e3775c9c3e49ed81770a5eae29cb0de57d44f28dc975b3eccf03d8f1"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp2/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp2/stdout.txt",
+      "source_sha256": "3841dbd75d2c0ff52bda2883cfcbcc6c43748daf3fa5f1900cdeab306c6fb67a",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "3841dbd75d2c0ff52bda2883cfcbcc6c43748daf3fa5f1900cdeab306c6fb67a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp3/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp3/meta.json",
+      "source_sha256": "6521299800fc93698d0606ba5e7cdba1c30eebb78bbadada79daed577839be14",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "6521299800fc93698d0606ba5e7cdba1c30eebb78bbadada79daed577839be14"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp3/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp3/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp3/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp3/stdout.txt",
+      "source_sha256": "f92f26514047c074998f926bb09e45d0792abb4346bb6a5ed3e984ae9105b3e6",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "f92f26514047c074998f926bb09e45d0792abb4346bb6a5ed3e984ae9105b3e6"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4/meta.json",
+      "source_sha256": "6b0c33bafd86a45b37140e7f7b9fa94c744dac284a022a9396814faad1611b12",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "6b0c33bafd86a45b37140e7f7b9fa94c744dac284a022a9396814faad1611b12"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4/stdout.txt",
+      "source_sha256": "9cd7b4f048ffbaf527edf9f38a143489a3d2ea4bce064c8ed659a77f693730bc",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "9cd7b4f048ffbaf527edf9f38a143489a3d2ea4bce064c8ed659a77f693730bc"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4-backup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4-backup/meta.json",
+      "source_sha256": "e6276d25d6a32772e5c7efea18ed0829191877f797433a05d5e2c653cbde68fa",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e6276d25d6a32772e5c7efea18ed0829191877f797433a05d5e2c653cbde68fa"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4-backup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4-backup/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4-backup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-exp4-backup/stdout.txt",
+      "source_sha256": "bd318dbf533eb1703ba94fa68eaa49f410aa2717c41f0f3bf0eec2c8dad28b84",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "bd318dbf533eb1703ba94fa68eaa49f410aa2717c41f0f3bf0eec2c8dad28b84"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-cleanup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-cleanup/meta.json",
+      "source_sha256": "53b1f73f44718d530b3fb99a92904ff80c67b56b2637d68871050e678ac5d68f",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "53b1f73f44718d530b3fb99a92904ff80c67b56b2637d68871050e678ac5d68f"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-cleanup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-cleanup/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-cleanup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-cleanup/stdout.txt",
+      "source_sha256": "8eda8170b0d06c111e0fb8b989af06897a2d77b10e78043982507b1c4748f50c",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "8eda8170b0d06c111e0fb8b989af06897a2d77b10e78043982507b1c4748f50c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-createdb/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-createdb/meta.json",
+      "source_sha256": "55b24b8d21cba7a2b9c15cfd66209899348d3ffb10b99ac34246cc3f7b4483a5",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "55b24b8d21cba7a2b9c15cfd66209899348d3ffb10b99ac34246cc3f7b4483a5"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-createdb/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-createdb/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-createdb/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-createdb/stdout.txt",
+      "source_sha256": "17c0b445300d5b24e6cfc19865a11171801124d1cd269800f803a57b43a961dc",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "17c0b445300d5b24e6cfc19865a11171801124d1cd269800f803a57b43a961dc"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-setup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-setup/meta.json",
+      "source_sha256": "a3eed8bc7e7528c56e190b22f1346c8dbf9d2ae60a4e03dd075568bd7be3de51",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "a3eed8bc7e7528c56e190b22f1346c8dbf9d2ae60a4e03dd075568bd7be3de51"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-setup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-setup/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-setup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz-setup/stdout.txt",
+      "source_sha256": "5da0c51f474fa323939a1fa8e2ab32918aef3653eb37a50f7906091b3845b414",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "5da0c51f474fa323939a1fa8e2ab32918aef3653eb37a50f7906091b3845b414"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz1/meta.json",
+      "source_sha256": "5a5601511febad3766590875002ec8444ec287f4c86141979fff1bb3399c96a1",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "5a5601511febad3766590875002ec8444ec287f4c86141979fff1bb3399c96a1"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz1/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz1/stdout.txt",
+      "source_sha256": "fffe098f1658184ebb651cb0ff8d8aa4f5fa36889a58dd4864161cee054651e8",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "fffe098f1658184ebb651cb0ff8d8aa4f5fa36889a58dd4864161cee054651e8"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz2/meta.json",
+      "source_sha256": "437384de8ba2734d1b864916464f9011101fc9bd64d8c2976630f150bd5ac449",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "437384de8ba2734d1b864916464f9011101fc9bd64d8c2976630f150bd5ac449"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz2/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz2/stdout.txt",
+      "source_sha256": "ae0eab956cb4c43399f9c4a16015cffa8cdb078adfe54b7d31ff8d961ac59676",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "ae0eab956cb4c43399f9c4a16015cffa8cdb078adfe54b7d31ff8d961ac59676"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz3/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz3/meta.json",
+      "source_sha256": "55b2b8e41cebd6aa5c314748a9795ca9b068287f330d1d21b2796a824d24f626",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "55b2b8e41cebd6aa5c314748a9795ca9b068287f330d1d21b2796a824d24f626"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz3/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz3/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz3/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz3/stdout.txt",
+      "source_sha256": "22dc83a08e2d9ed38e17a1c81ddc0e9ed0c38f80a6609f51eec0ddee81100dc6",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "22dc83a08e2d9ed38e17a1c81ddc0e9ed0c38f80a6609f51eec0ddee81100dc6"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz4/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz4/meta.json",
+      "source_sha256": "351e956f47e97f2199eace06ccbc0954060cb36ccbdf176b42aaef180e1c0abd",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "351e956f47e97f2199eace06ccbc0954060cb36ccbdf176b42aaef180e1c0abd"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz4/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz4/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz4/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-quiz4/stdout.txt",
+      "source_sha256": "9e5b769fbdf95b60f1b64f46d977f69a407ff26e1a4c5c32539164a1a74e14e8",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "9e5b769fbdf95b60f1b64f46d977f69a407ff26e1a4c5c32539164a1a74e14e8"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-setup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-setup/meta.json",
+      "source_sha256": "a777d17166d92f77e271fa8f7edd02302aeffdfa08ae596a08be126b379a47c2",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "a777d17166d92f77e271fa8f7edd02302aeffdfa08ae596a08be126b379a47c2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-setup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-setup/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-setup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-setup/stdout.txt",
+      "source_sha256": "c9c314c64ed58e2a699ade44044b5b8c883bf2fa57bb968d7e3b4e8a174be8c3",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "c9c314c64ed58e2a699ade44044b5b8c883bf2fa57bb968d7e3b4e8a174be8c3"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-start/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-start/meta.json",
+      "source_sha256": "f9b898785484888e107af94e70cf4a1ea9ba3c1d9612bb476edefebaae5be9b1",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "f9b898785484888e107af94e70cf4a1ea9ba3c1d9612bb476edefebaae5be9b1"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-start/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-start/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-start/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/rebind-start/stdout.txt",
+      "source_sha256": "a6528378df87b7d67f62e86b6eff49721b26dde9921726d099504cbade54eaf9",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "a6528378df87b7d67f62e86b6eff49721b26dde9921726d099504cbade54eaf9"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build/meta.json",
+      "source_sha256": "c4e09629da72eeafd383aa5894c075951edae1e8d579ffd453ba10a1a8f62395",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "c4e09629da72eeafd383aa5894c075951edae1e8d579ffd453ba10a1a8f62395"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build/stderr.txt",
+      "source_sha256": "dc310fe8194772441306b7a6e97a300f945bf1d9929d383c0ccd93aba1de7d79",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "dc310fe8194772441306b7a6e97a300f945bf1d9929d383c0ccd93aba1de7d79"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build/stdout.txt",
+      "source_sha256": "43a63093b2862f624dc0ef73298e4fe0bfd08275461252dc98da3d64d40fb464",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "43a63093b2862f624dc0ef73298e4fe0bfd08275461252dc98da3d64d40fb464"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/CMakeCache.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/CMakeCache.txt",
+      "source_sha256": "23ce2a3e2cb6e2e8086a783330fffa4f09e2a492ba23ea518bc741f1625be6e9",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "23ce2a3e2cb6e2e8086a783330fffa4f09e2a492ba23ea518bc741f1625be6e9"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/meta.json",
+      "source_sha256": "1b4ba79b3faeb1ced911aaf22539a934eba5021cd19c4c34651deac7bbb79eb1",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "1b4ba79b3faeb1ced911aaf22539a934eba5021cd19c4c34651deac7bbb79eb1"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/source-index.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/source-index.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/source-status.porcelain-v1.z",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/source-status.porcelain-v1.z",
+      "source_sha256": "95343c7f9967014240e9f1bb6fd5320a10f834ab09caa4ea52076c5303a0ad6b",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "95343c7f9967014240e9f1bb6fd5320a10f834ab09caa4ea52076c5303a0ad6b"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/source-worktree.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/source-worktree.diff",
+      "source_sha256": "3f3e8df89882050c7e774209111200c1f62adbdb3e25d4ecb6484d3e7ed0f202",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "3f3e8df89882050c7e774209111200c1f62adbdb3e25d4ecb6484d3e7ed0f202"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/stderr.txt",
+      "source_sha256": "f6772848fd1e39913c4dfd92120b0e49311c957bc63ca374ac2e0ba8db09e7b9",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "f6772848fd1e39913c4dfd92120b0e49311c957bc63ca374ac2e0ba8db09e7b9"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-baseline-build-2/stdout.txt",
+      "source_sha256": "2bbf730ef26306b87de48f4ce074d5d44a5194cd2d4ed08c1a848f15b350c332",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "2bbf730ef26306b87de48f4ce074d5d44a5194cd2d4ed08c1a848f15b350c332"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup/meta.json",
+      "source_sha256": "9b41cc942e1562911ea6fe302d14c25fad7c05dfe08a696dc066356c8279c98c",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "9b41cc942e1562911ea6fe302d14c25fad7c05dfe08a696dc066356c8279c98c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup/stderr.txt",
+      "source_sha256": "b2491113df05c1a478f34cc37c5609dc1d4b8f72804f5036e1cea157533a5550",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "b2491113df05c1a478f34cc37c5609dc1d4b8f72804f5036e1cea157533a5550"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup/stdout.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-2/meta.json",
+      "source_sha256": "ac29dad03c62a51801c00dbe5de8f9359f9637b7799d2b18ed7f60dc328e1662",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "ac29dad03c62a51801c00dbe5de8f9359f9637b7799d2b18ed7f60dc328e1662"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-2/stderr.txt",
+      "source_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-2/stdout.txt",
+      "source_sha256": "dc5da170f0835d475cd24ce0a0800231abdadf30a99bb754192928bbeb69bae2",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "dc5da170f0835d475cd24ce0a0800231abdadf30a99bb754192928bbeb69bae2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-3/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-3/meta.json",
+      "source_sha256": "c7172bbacf9507828a88dfbcba2f988341e4b1549e441831cce68e44a64a455d",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "c7172bbacf9507828a88dfbcba2f988341e4b1549e441831cce68e44a64a455d"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-3/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-3/stderr.txt",
+      "source_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-3/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-3/stdout.txt",
+      "source_sha256": "dc5da170f0835d475cd24ce0a0800231abdadf30a99bb754192928bbeb69bae2",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "dc5da170f0835d475cd24ce0a0800231abdadf30a99bb754192928bbeb69bae2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-4/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-4/meta.json",
+      "source_sha256": "67f144aa7db2fd061b2f147df4be658bc4b3af66a7299bd283b58f0655a36608",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "67f144aa7db2fd061b2f147df4be658bc4b3af66a7299bd283b58f0655a36608"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-4/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-4/stderr.txt",
+      "source_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e9e9513c561594be46dddd6978f3288cc13217e9db630ea86fe9ab313556b166"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-4/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cleanup-4/stdout.txt",
+      "source_sha256": "8eda8170b0d06c111e0fb8b989af06897a2d77b10e78043982507b1c4748f50c",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "8eda8170b0d06c111e0fb8b989af06897a2d77b10e78043982507b1c4748f50c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cold-restart/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cold-restart/meta.json",
+      "source_sha256": "c622d2be8c6320f1679f6b162f2c230976f06f24fc66f62ecb0805782902aaaf",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "c622d2be8c6320f1679f6b162f2c230976f06f24fc66f62ecb0805782902aaaf"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cold-restart/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cold-restart/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cold-restart/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-cold-restart/stdout.txt",
+      "source_sha256": "b40c27f30864a50be12aaf3825e80ff442210d93ad39856a305104420cba743f",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "b40c27f30864a50be12aaf3825e80ff442210d93ad39856a305104420cba743f"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-createdb/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-createdb/meta.json",
+      "source_sha256": "ea774c038d341f31be54637d76782470d19ec2ec8aa6a07187a36c732e84f08b",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "ea774c038d341f31be54637d76782470d19ec2ec8aa6a07187a36c732e84f08b"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-createdb/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-createdb/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-createdb/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-createdb/stdout.txt",
+      "source_sha256": "17c0b445300d5b24e6cfc19865a11171801124d1cd269800f803a57b43a961dc",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "17c0b445300d5b24e6cfc19865a11171801124d1cd269800f803a57b43a961dc"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-1/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-1/meta.json",
+      "source_sha256": "9d503996ef0812269a04074e120f5a8c2050c397de74a081e121bed6eb5e1ad2",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "9d503996ef0812269a04074e120f5a8c2050c397de74a081e121bed6eb5e1ad2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-1/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-1/stderr.txt",
+      "source_sha256": "f60d13616f263a63c973e8acc6d26e8186a64f7b13d796c2b05e71f49fcd0247",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "f60d13616f263a63c973e8acc6d26e8186a64f7b13d796c2b05e71f49fcd0247"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-1/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-1/stdout.txt",
+      "source_sha256": "462ddfc9467e0f9a42d739d6f54cb42ec475333dc799dde4adad5b3fd56f7e22",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "462ddfc9467e0f9a42d739d6f54cb42ec475333dc799dde4adad5b3fd56f7e22"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-2/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-2/meta.json",
+      "source_sha256": "78fea03d572e26fc56b2d0b6d8cae55bceffc09c11fe96647982626e6b7925e2",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "78fea03d572e26fc56b2d0b6d8cae55bceffc09c11fe96647982626e6b7925e2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-2/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-2/stderr.txt",
+      "source_sha256": "a2ba05fe5fbcbebaf091efe2e2bbd42d9cce1537a3faa0775d2eb451180b2575",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "a2ba05fe5fbcbebaf091efe2e2bbd42d9cce1537a3faa0775d2eb451180b2575"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-2/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-2/stdout.txt",
+      "source_sha256": "7e16ec3fd5510d04a04578407bd0322412528b853c77499823eb61d0f34fa370",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "7e16ec3fd5510d04a04578407bd0322412528b853c77499823eb61d0f34fa370"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-3/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-3/meta.json",
+      "source_sha256": "2e86ed2cef8f99f1327c300910fd3808a4510a24c2a4369c9ce0a168c2b6591c",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "2e86ed2cef8f99f1327c300910fd3808a4510a24c2a4369c9ce0a168c2b6591c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-3/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-3/stderr.txt",
+      "source_sha256": "a2ba05fe5fbcbebaf091efe2e2bbd42d9cce1537a3faa0775d2eb451180b2575",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "a2ba05fe5fbcbebaf091efe2e2bbd42d9cce1537a3faa0775d2eb451180b2575"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-3/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-3/stdout.txt",
+      "source_sha256": "476613ebfc9ec61e6bbae644825ee00816c680b76780013ad7f6df00fcf202f5",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "476613ebfc9ec61e6bbae644825ee00816c680b76780013ad7f6df00fcf202f5"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/CMakeCache.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/CMakeCache.txt",
+      "source_sha256": "709240bcd8a1d2c6c2d44cb1c35b16cda5c26076febe2018e910227015b4c667",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "709240bcd8a1d2c6c2d44cb1c35b16cda5c26076febe2018e910227015b4c667"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/meta.json",
+      "source_sha256": "1b31196b59e79247aeec490722275a115f69cee45225bf9ef5301a2aa864306b",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "1b31196b59e79247aeec490722275a115f69cee45225bf9ef5301a2aa864306b"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/source-index.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/source-index.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/source-status.porcelain-v1.z",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/source-status.porcelain-v1.z",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/source-worktree.diff",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/source-worktree.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/stderr.txt",
+      "source_sha256": "d6f3f9242fa4f22e5012edee3ea93fec42b7efce5a7304cd9cb173d6ca8f3fbc",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "d6f3f9242fa4f22e5012edee3ea93fec42b7efce5a7304cd9cb173d6ca8f3fbc"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-grill-build-4/stdout.txt",
+      "source_sha256": "8a7166357b80c364c6ecca9f8977192afa121bbbf011f9e4d4c0e38da8d64996",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "8a7166357b80c364c6ecca9f8977192afa121bbbf011f9e4d4c0e38da8d64996"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-setup/meta.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-setup/meta.json",
+      "source_sha256": "af0bfaacd32958cf16bc0d0d16c9893296b1bc0a904478ac998be228a2ae2a61",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "af0bfaacd32958cf16bc0d0d16c9893296b1bc0a904478ac998be228a2ae2a61"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-setup/stderr.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-setup/stderr.txt",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-setup/stdout.txt",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runs/runtime-setup/stdout.txt",
+      "source_sha256": "94e4be6c663228e4b079ca9592730cbcf2a2aa9aab55641b945d43cdb9cad419",
+      "tracked_at_source_revision": false,
+      "imported_sha256": "94e4be6c663228e4b079ca9592730cbcf2a2aa9aab55641b945d43cdb9cad419"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runtime-tools-baseline.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runtime-tools-baseline.json",
+      "source_sha256": "64345835ef7f34cb7c743be9325f249b0dd65a4eed64aa2649177e6b8aa327ca",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "64345835ef7f34cb7c743be9325f249b0dd65a4eed64aa2649177e6b8aa327ca"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runtime-tools-pre-rebind.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/evidence/runtime-tools-pre-rebind.json",
+      "source_sha256": "109878fe3656ff69415e71f9e2c951fffa5730661195d18e24cc9034bbd51782",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "109878fe3656ff69415e71f9e2c951fffa5730661195d18e24cc9034bbd51782"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_bkvinf",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/ca_pgbuf_f799e05_bkvinf",
+      "source_sha256": "2052637f08081fbf381e593833f8bca978a5a9acb71250aeea8be9162bee9b51",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "2052637f08081fbf381e593833f8bca978a5a9acb71250aeea8be9162bee9b51"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/cleanup-suite.sh",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/cleanup-suite.sh",
+      "source_sha256": "65f2053222bead27a26e806c4cf24388e793730a49b038d2f44d64aaae60b1fa",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "65f2053222bead27a26e806c4cf24388e793730a49b038d2f44d64aaae60b1fa"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/csql.access",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/csql.access",
+      "source_sha256": "562ae4df6249dd74dcd9a88a76a2d7d54657301699cbb1bb74a5c613af83fa5a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "562ae4df6249dd74dcd9a88a76a2d7d54657301699cbb1bb74a5c613af83fa5a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/csql.err",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/csql.err",
+      "source_sha256": "00bfc9d7b72cfe78487bef6ff3cee143de2f8f3764d838f3027aaaeb34ab30ea",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "00bfc9d7b72cfe78487bef6ff3cee143de2f8f3764d838f3027aaaeb34ab30ea"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/csql.err",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/csql.err",
+      "source_sha256": "8fb349d41a58828e8a7836fa2b40b198b08008632eb750bfed5592851762b276",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "8fb349d41a58828e8a7836fa2b40b198b08008632eb750bfed5592851762b276"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/expected-oracle.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/expected-oracle.md",
+      "source_sha256": "3e9771b577aa9920f9fdd47269df266099fb8380d91face4a2155b9baf0cba27",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "3e9771b577aa9920f9fdd47269df266099fb8380d91face4a2155b9baf0cba27"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/experiment.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/experiment.md",
+      "source_sha256": "e40eb6133620e7db3849872009bc6532daa1b61217369f64f05ee44881f0e923",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e40eb6133620e7db3849872009bc6532daa1b61217369f64f05ee44881f0e923"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/experiment.sql",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/experiment.sql",
+      "source_sha256": "fe6296928a1f4333475b62aa40d623c73c8301bca25d197a809d82ddd18d2435",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "fe6296928a1f4333475b62aa40d623c73c8301bca25d197a809d82ddd18d2435"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/manifest.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-1/manifest.json",
+      "source_sha256": "34f3ac498a2685f61ab6ad59f1ea682ae01a84efaf8967318c5b76161bcdc87a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "34f3ac498a2685f61ab6ad59f1ea682ae01a84efaf8967318c5b76161bcdc87a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/csql.err",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/csql.err",
+      "source_sha256": "1ceb08c2dcc59c5c6de4cc18de46cda0a6c808970f16b928853b24460894145a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "1ceb08c2dcc59c5c6de4cc18de46cda0a6c808970f16b928853b24460894145a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/expected-oracle.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/expected-oracle.md",
+      "source_sha256": "fb4cb73c3359c02bb1d967e912b98a21bc0969c8697e4a12ed5bd33ba014b056",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "fb4cb73c3359c02bb1d967e912b98a21bc0969c8697e4a12ed5bd33ba014b056"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/experiment.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/experiment.md",
+      "source_sha256": "231a35235dec1f13daf13dfd73ab9263d5411decde882a3c1264dd19cca29d39",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "231a35235dec1f13daf13dfd73ab9263d5411decde882a3c1264dd19cca29d39"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/experiment.sql",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/experiment.sql",
+      "source_sha256": "2d90971c97beca979d9a0bb7aa523707be29e6d098aff8cf8e0fcc2a2619af92",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "2d90971c97beca979d9a0bb7aa523707be29e6d098aff8cf8e0fcc2a2619af92"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/manifest.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-2/manifest.json",
+      "source_sha256": "b7b448b8bbe3c6733819fb2574347211c4b96cde51ca837d78cfec9cf06e6428",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b7b448b8bbe3c6733819fb2574347211c4b96cde51ca837d78cfec9cf06e6428"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/csql.err",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/csql.err",
+      "source_sha256": "160bc8c25421d7a56d82f068e4082648f8629837bda0a630b99383bed8f45a96",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "160bc8c25421d7a56d82f068e4082648f8629837bda0a630b99383bed8f45a96"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/expected-oracle.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/expected-oracle.md",
+      "source_sha256": "235ade4bee00f99a56bc8c5054cb80f5ef3126fe962ed9ec1a06355decdc3208",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "235ade4bee00f99a56bc8c5054cb80f5ef3126fe962ed9ec1a06355decdc3208"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/experiment.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/experiment.md",
+      "source_sha256": "d06b140e4429fce4547484adb833571cbc4357a2119fe699d0432b79f078a349",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "d06b140e4429fce4547484adb833571cbc4357a2119fe699d0432b79f078a349"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/experiment.sql",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/experiment.sql",
+      "source_sha256": "8f15e36b53806af3ee59e4fe83f44481bab5c7925214ad79a2f2da5b9c085c3b",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "8f15e36b53806af3ee59e4fe83f44481bab5c7925214ad79a2f2da5b9c085c3b"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/manifest.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-3/manifest.json",
+      "source_sha256": "efab6f6ca51e63b08a4bd0ea7ed614ca97a27bbcf049f9e2edec5b74d149484e",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "efab6f6ca51e63b08a4bd0ea7ed614ca97a27bbcf049f9e2edec5b74d149484e"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/csql.err",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/csql.err",
+      "source_sha256": "b029ee9c22e5bd48fe9235a1835f6dfc231804d47afee6c12111d05dcf4ff41c",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b029ee9c22e5bd48fe9235a1835f6dfc231804d47afee6c12111d05dcf4ff41c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/expected-oracle.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/expected-oracle.md",
+      "source_sha256": "b3197cb58b93e73ff12dae1a87b5646d962709b586aa6bdc4f90ba5f9a738ac5",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b3197cb58b93e73ff12dae1a87b5646d962709b586aa6bdc4f90ba5f9a738ac5"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/experiment.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/experiment.md",
+      "source_sha256": "8813341a0aabc3ae88870654ac13a35502eb4653b897f0a290b9d8e0eedab8d6",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "8813341a0aabc3ae88870654ac13a35502eb4653b897f0a290b9d8e0eedab8d6"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/experiment.sql",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/experiment.sql",
+      "source_sha256": "122449570c2a2aba64044f98a1bb846ce70e95128f31cb041a19da979b184649",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "122449570c2a2aba64044f98a1bb846ce70e95128f31cb041a19da979b184649"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/manifest.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/experiment-4/manifest.json",
+      "source_sha256": "1a6d53fda35c2f5bcabdbeac6ec48d41663ac76bdee3a427bbf1fbf0d0ffd51a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "1a6d53fda35c2f5bcabdbeac6ec48d41663ac76bdee3a427bbf1fbf0d0ffd51a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/restart-suite.sh",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/restart-suite.sh",
+      "source_sha256": "3cd816696eae75f4e4cb49da342a55b1a11b06b04fcb9c88a0998f8c5b897a83",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "3cd816696eae75f4e4cb49da342a55b1a11b06b04fcb9c88a0998f8c5b897a83"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/setup.sql",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/experiments/setup.sql",
+      "source_sha256": "185a599804a12fd60386cb16039c33069819b23e1535c051f76f5ce77628eec3",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "185a599804a12fd60386cb16039c33069819b23e1535c051f76f5ce77628eec3"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/grill/mastery.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/grill/mastery.json",
+      "source_sha256": "913bfe3462968cc5e283af502496735390418a55b6f67a3e8b55f075107c1af8",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "913bfe3462968cc5e283af502496735390418a55b6f67a3e8b55f075107c1af8"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/grill/session.jsonl",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/grill/session.jsonl",
+      "source_sha256": "a10c5488ef4537a7126b5e304202195ff61b9d963b5b93aae1dcd5e990fec01b",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "a10c5488ef4537a7126b5e304202195ff61b9d963b5b93aae1dcd5e990fec01b"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html",
+      "source_sha256": "3666e71ef2eb81f46e00b40587ccec67607f6b35b0f4b85bb655ce905910617c",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "3666e71ef2eb81f46e00b40587ccec67607f6b35b0f4b85bb655ce905910617c"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/notion/page-buffer-guide.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/notion/page-buffer-guide.md",
+      "source_sha256": "3eaceb52873c561f94f001529951b40d84ab23418378c74283216c2d606680b7",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "3eaceb52873c561f94f001529951b40d84ab23418378c74283216c2d606680b7"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/provenance.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/provenance.json",
+      "source_sha256": "642ebfbf2680919e70b9046b86f0315825fdc6905f031e2d6fd75d16ba618e21",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "642ebfbf2680919e70b9046b86f0315825fdc6905f031e2d6fd75d16ba618e21"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/answer.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/answer.md",
+      "source_sha256": "fcf50b63d20c7738638efaab004b9b024ea1bcb495e18ef70336f7ec8267dc56",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "fcf50b63d20c7738638efaab004b9b024ea1bcb495e18ef70336f7ec8267dc56"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/csql.access",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/csql.access",
+      "source_sha256": "2b2d71720989366793054ef7699c7094f052e43184cfcf8e6a003ee1a3f86334",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "2b2d71720989366793054ef7699c7094f052e43184cfcf8e6a003ee1a3f86334"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/csql.err",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/csql.err",
+      "source_sha256": "bca8da9e1c0ff6cea323d8de180837c26a97a253b5a4547193f7e1ae5bd1fd5e",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "bca8da9e1c0ff6cea323d8de180837c26a97a253b5a4547193f7e1ae5bd1fd5e"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/quiz.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/quiz.json",
+      "source_sha256": "5e6fa848b6a82568624c95eb1938fc95af73f2cb09a5842b3fce599f0649beff",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "5e6fa848b6a82568624c95eb1938fc95af73f2cb09a5842b3fce599f0649beff"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/quiz.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/quiz.md",
+      "source_sha256": "09eb6ce62bdb9c07a4a8ddba5a4b9316bdb731cc59a2fdef18c8187c6510ecc9",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "09eb6ce62bdb9c07a4a8ddba5a4b9316bdb731cc59a2fdef18c8187c6510ecc9"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/quiz.sql",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-1/quiz.sql",
+      "source_sha256": "73a6d453c991a253220908e9b86557c7d1af8b5ff435c6c2756f848444f69f43",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "73a6d453c991a253220908e9b86557c7d1af8b5ff435c6c2756f848444f69f43"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/answer.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/answer.md",
+      "source_sha256": "f6565d763c349d37ce7bd6de94080b21a06fa9cb9e2de5037d7dc931c35e5219",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "f6565d763c349d37ce7bd6de94080b21a06fa9cb9e2de5037d7dc931c35e5219"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/csql.access",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/csql.access",
+      "source_sha256": "fd9a07ca2d6b50137fe1a340f903584c7d5ad9d289cf461778ac7a022450f157",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "fd9a07ca2d6b50137fe1a340f903584c7d5ad9d289cf461778ac7a022450f157"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/csql.err",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/csql.err",
+      "source_sha256": "3d2815daeb3e7ac36e18a1aeac1a040e40bcb1d59d0c19bb73581601982bed78",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "3d2815daeb3e7ac36e18a1aeac1a040e40bcb1d59d0c19bb73581601982bed78"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/quiz.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/quiz.json",
+      "source_sha256": "125c43085b320b1b9f3ea325c86781ced5dd0b3752ab257db7ce40f409123ee9",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "125c43085b320b1b9f3ea325c86781ced5dd0b3752ab257db7ce40f409123ee9"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/quiz.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/quiz.md",
+      "source_sha256": "6e1110147447ee3550a753afaaf8d3cbf144de225302d45cc197c0573ff65da2",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "6e1110147447ee3550a753afaaf8d3cbf144de225302d45cc197c0573ff65da2"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/quiz.sql",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-2/quiz.sql",
+      "source_sha256": "b69cc81755e2b6ca4a100d7662586e83d33849402f5fe1ae9641447de88a6619",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b69cc81755e2b6ca4a100d7662586e83d33849402f5fe1ae9641447de88a6619"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/answer.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/answer.md",
+      "source_sha256": "d7d57cfaf9349abd211eb9977b1df274512b2bc31b356b73e36d94e587e38cb7",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "d7d57cfaf9349abd211eb9977b1df274512b2bc31b356b73e36d94e587e38cb7"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/csql.access",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/csql.access",
+      "source_sha256": "291f5b354b59315a9027cded4eb5ea62f74d6240ee80eb5babbd933d11b4e00a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "291f5b354b59315a9027cded4eb5ea62f74d6240ee80eb5babbd933d11b4e00a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/csql.err",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/csql.err",
+      "source_sha256": "b1d865d4e65149c3a76f5a6a75c2b17be1e2e63959bab154d81e8445dc0d3e4d",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b1d865d4e65149c3a76f5a6a75c2b17be1e2e63959bab154d81e8445dc0d3e4d"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/quiz.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/quiz.json",
+      "source_sha256": "48c9c1bc78beb1f2642128e8df224426856e09d819057fb02c61bdcfe52dada3",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "48c9c1bc78beb1f2642128e8df224426856e09d819057fb02c61bdcfe52dada3"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/quiz.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/quiz.md",
+      "source_sha256": "2d026f8f74e54fbabcca5faca8b82849dbab51fea29904d72580aa4c3bf9a430",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "2d026f8f74e54fbabcca5faca8b82849dbab51fea29904d72580aa4c3bf9a430"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/quiz.sql",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-3/quiz.sql",
+      "source_sha256": "4cba0c7eefe5de87d653cbf4d7fd820dc68663eabee4092b2e366e2e57ffa596",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "4cba0c7eefe5de87d653cbf4d7fd820dc68663eabee4092b2e366e2e57ffa596"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/answer.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/answer.md",
+      "source_sha256": "a5eaf935051d84b947f680484de26a5044a9bc656279b365eb47f3332f7d6496",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "a5eaf935051d84b947f680484de26a5044a9bc656279b365eb47f3332f7d6496"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/csql.access",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/csql.access",
+      "source_sha256": "e75fd0c10690f77ce2f6627e05b5aa9f36712567285b64a652da0bba4e4f4511",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e75fd0c10690f77ce2f6627e05b5aa9f36712567285b64a652da0bba4e4f4511"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/csql.err",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/csql.err",
+      "source_sha256": "4e301c6da893ee3a0efd1b8393bf7446b302ebf7480b69eda90b72e6629cbad9",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "4e301c6da893ee3a0efd1b8393bf7446b302ebf7480b69eda90b72e6629cbad9"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/quiz.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/quiz.json",
+      "source_sha256": "08272fa495ee64eddaa770b5d60c82eaf9726f15ba7dbe9e96d95adede309538",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "08272fa495ee64eddaa770b5d60c82eaf9726f15ba7dbe9e96d95adede309538"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/quiz.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/quiz.md",
+      "source_sha256": "b0dd0ecb97ad1936cb5323c2bcc2f73dfd808970d3fa96538e2d20d52a2c1459",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b0dd0ecb97ad1936cb5323c2bcc2f73dfd808970d3fa96538e2d20d52a2c1459"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/quiz.sql",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/quiz-4/quiz.sql",
+      "source_sha256": "f5c2c3ae85ce7674a5345313e57eedfa5bc4fa0b7b338436c80b1aee349dad7e",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "f5c2c3ae85ce7674a5345313e57eedfa5bc4fa0b7b338436c80b1aee349dad7e"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/run-one.sh",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/run-one.sh",
+      "source_sha256": "3b93289a9a654edf79d7312efeda257d65cf24e0734c97c2b56dbf5648f4b5d3",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "3b93289a9a654edf79d7312efeda257d65cf24e0734c97c2b56dbf5648f4b5d3"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/start-suite.sh",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/start-suite.sh",
+      "source_sha256": "3fb01e04c4e5bcfa4ae02e2dac6d4c68565a229688f8ea74361b91f5a17b4c60",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "3fb01e04c4e5bcfa4ae02e2dac6d4c68565a229688f8ea74361b91f5a17b4c60"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/stop-suite.sh",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/quiz/stop-suite.sh",
+      "source_sha256": "15081490e68ae26ef7118d64344c8a7dbaafd6091472a9268ff3d24082fdf06a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "15081490e68ae26ef7118d64344c8a7dbaafd6091472a9268ff3d24082fdf06a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/report.json",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/report.json",
+      "source_sha256": "3eeac2a24cfc3b38e5289039f5e79ff4f3105d20e6f80982f42b58e097670e86",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "3eeac2a24cfc3b38e5289039f5e79ff4f3105d20e6f80982f42b58e097670e86"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/cubrid.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/cubrid.md",
+      "source_sha256": "60a28a1297acce1f72ee5379e65daa5322e640be73864fe5a2ec148cd78b1d9e",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "60a28a1297acce1f72ee5379e65daa5322e640be73864fe5a2ec148cd78b1d9e"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/experiments-and-quizzes.md",
+      "source_sha256": "30240e658955d8f990804787fa560024d165d093063ef89ad574e209ab1ff75a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "30240e658955d8f990804787fa560024d165d093063ef89ad574e209ab1ff75a"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/mysql.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/mysql.md",
+      "source_sha256": "1470c0f645820a5b2858bbb6e4e4be7afc3a18927f6428ab1b7b4601b1db1188",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "1470c0f645820a5b2858bbb6e4e4be7afc3a18927f6428ab1b7b4601b1db1188"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/pedagogy.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/pedagogy.md",
+      "source_sha256": "cb9494f6f849244ff303fcc3a3bb500f4ce8453d965a64d63cd5edfadf010294",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "cb9494f6f849244ff303fcc3a3bb500f4ce8453d965a64d63cd5edfadf010294"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/postgresql.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/packets/postgresql.md",
+      "source_sha256": "576234e24658a9bf757c26e174126faf6424dabf50e883ac6f73abd9fcda1604",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "576234e24658a9bf757c26e174126faf6424dabf50e883ac6f73abd9fcda1604"
+    },
+    {
+      "source": "code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/scope.md",
+      "destination": "evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/research/scope.md",
+      "source_sha256": "77a1a4741a884d8946d86ce645469a71a3b322bd86d2ee0f3bdf64d99e486ca3",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "77a1a4741a884d8946d86ce645469a71a3b322bd86d2ee0f3bdf64d99e486ca3"
+    },
+    {
+      "source": "pgbuf-analysis/cubrid-page-buffer-report_5cd4f860e_claude.html",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/cubrid-page-buffer-report_5cd4f860e_claude.html",
+      "source_sha256": "ae5e52b3629451707ceaa3d05894a5743956084a18a9ddfa92dbc07da757a085",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "ae5e52b3629451707ceaa3d05894a5743956084a18a9ddfa92dbc07da757a085"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/00-overview.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/00-overview.md",
+      "source_sha256": "e6a4c669d735adedd1780c41b1f7d942b4eead054bc020ebd049643e452d742f",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e6a4c669d735adedd1780c41b1f7d942b4eead054bc020ebd049643e452d742f"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/01-structures.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/01-structures.md",
+      "source_sha256": "8b9acde3c6e44aa76da03c96bfb9d80a5aa09f0f0f1db741c5e55454a2870273",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "8b9acde3c6e44aa76da03c96bfb9d80a5aa09f0f0f1db741c5e55454a2870273"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/02-fix-unfix-latch.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/02-fix-unfix-latch.md",
+      "source_sha256": "e2dc1816f815c0ffd47fa0164a59e7d82bcbcc8147f3c4d1a1c3526017e92165",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e2dc1816f815c0ffd47fa0164a59e7d82bcbcc8147f3c4d1a1c3526017e92165"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/03-lru-victim-quota.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/03-lru-victim-quota.md",
+      "source_sha256": "21d30a5c899419e72947212ad7064b0c2519991983715b0ec6f7bd5d8380ce5a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "21d30a5c899419e72947212ad7064b0c2519991983715b0ec6f7bd5d8380ce5a"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/04-flush-wal-daemons.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/04-flush-wal-daemons.md",
+      "source_sha256": "f15c19066937a113147b7398f57d553a399cf0c80ebb639be96cbd8c0271cb5d",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "f15c19066937a113147b7398f57d553a399cf0c80ebb639be96cbd8c0271cb5d"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/05-ordered-fix-dealloc.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/05-ordered-fix-dealloc.md",
+      "source_sha256": "aff5bb7f21090cac8a90dcab5cf93e64b565ca092ad0249b1d62cac87637e110",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "aff5bb7f21090cac8a90dcab5cf93e64b565ca092ad0249b1d62cac87637e110"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/06-misc-observability.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/06-misc-observability.md",
+      "source_sha256": "118d414265b94cc86dfd66ac38ed178762a02bb2bbafa78ef3cad402b66a6b3c",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "118d414265b94cc86dfd66ac38ed178762a02bb2bbafa78ef3cad402b66a6b3c"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/07-qa-workbook.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/07-qa-workbook.md",
+      "source_sha256": "a21bbc1f486a6a6047be5cac3a514d59a94c6ea032f4300def659d94431e6023",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "a21bbc1f486a6a6047be5cac3a514d59a94c6ea032f4300def659d94431e6023"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/08-page-buffer-new-plan.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/08-page-buffer-new-plan.md",
+      "source_sha256": "0f0d51d3eae4faeb0e547b17a4fc06db74400f7ff7db8d6c4e860038707b0c95",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "0f0d51d3eae4faeb0e547b17a4fc06db74400f7ff7db8d6c4e860038707b0c95"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/09-issue-proposals.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/09-issue-proposals.md",
+      "source_sha256": "72579718e492afa928dbb80e7c4dc83fe80c788c04b8a3eff8d313874e1f3b0b",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "72579718e492afa928dbb80e7c4dc83fe80c788c04b8a3eff8d313874e1f3b0b"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/10-CBRD-27263-repro-proof-and-solutions.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/10-CBRD-27263-repro-proof-and-solutions.md",
+      "source_sha256": "659fa1eec4b5248b134f56ab90a07007a82127f0fc4f5c68da77e628b47848ee",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "659fa1eec4b5248b134f56ab90a07007a82127f0fc4f5c68da77e628b47848ee"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/research/lockfree-fix-origin.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/research/lockfree-fix-origin.md",
+      "source_sha256": "14d5579392086435c1146d2733568829f3c82c4ebc33ceb195f06b40e1fb6359",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "14d5579392086435c1146d2733568829f3c82c4ebc33ceb195f06b40e1fb6359"
+    },
+    {
+      "source": "pgbuf-analysis/e6ed61e_claude/research/prevent-dealloc-necessity.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/e6ed61e_claude/research/prevent-dealloc-necessity.md",
+      "source_sha256": "b84030d7f3edc3c87e23463f429c4a2e22fd358425625be1e5f2bbc72a5f8aa2",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b84030d7f3edc3c87e23463f429c4a2e22fd358425625be1e5f2bbc72a5f8aa2"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/CUBRID_PAGE_BUFFER_PRESENTATION_KO.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/CUBRID_PAGE_BUFFER_PRESENTATION_KO.md",
+      "source_sha256": "db6051c22032d08eaeca42a4dd7df75076fb7ded757446d88f443d91ab8ab210",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "db6051c22032d08eaeca42a4dd7df75076fb7ded757446d88f443d91ab8ab210"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/README.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/README.md",
+      "source_sha256": "b5039eb28443e5e2829d375d86a2c4888985cf62cbe4b1092144e7bdb958307c",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b5039eb28443e5e2829d375d86a2c4888985cf62cbe4b1092144e7bdb958307c"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/README.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/README.md",
+      "source_sha256": "be4fb26daca7cd9856c81459fe39d59998cc6e575cc083ea262ba421673c23ad",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "be4fb26daca7cd9856c81459fe39d59998cc6e575cc083ea262ba421673c23ad"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/monitoring/run-monitor.sh",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/monitoring/run-monitor.sh",
+      "source_sha256": "4f59dbd07a1294d290f8f789061e71e9c7999cfe9f5d10db916003571f3927f0",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "4f59dbd07a1294d290f8f789061e71e9c7999cfe9f5d10db916003571f3927f0"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/monitoring/runtime-path-monitoring.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/monitoring/runtime-path-monitoring.md",
+      "source_sha256": "373e161cf516ee87a82568c1a289c25a20401b7d867a9950f19b8d0f0784cf71",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "373e161cf516ee87a82568c1a289c25a20401b7d867a9950f19b8d0f0784cf71"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/monitoring/trace-all.log",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/monitoring/trace-all.log",
+      "source_sha256": "b7c0589bdcccc7e59a843fc594fc21e892aae0dce2151082d179f9982c5033fc",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b7c0589bdcccc7e59a843fc594fc21e892aae0dce2151082d179f9982c5033fc"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/api-inventory.md",
+      "source_sha256": "32376e75c5494fb33813cf8704809e6d2b985ca5d13d1443a919029f374760f6",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "32376e75c5494fb33813cf8704809e6d2b985ca5d13d1443a919029f374760f6"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/research/caller-use-cases.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/caller-use-cases.md",
+      "source_sha256": "b1183008a6809e7208a4b13f4aa8804f07a90281bd8256a6006da3e8df6e2890",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b1183008a6809e7208a4b13f4aa8804f07a90281bd8256a6006da3e8df6e2890"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/research/evidence-reuse.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/evidence-reuse.md",
+      "source_sha256": "5cdbb34c3d2428ceea1473bb8fae6b9dd364d3613ea6ac048018484902a36b80",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "5cdbb34c3d2428ceea1473bb8fae6b9dd364d3613ea6ac048018484902a36b80"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/research/internal-mechanisms.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/internal-mechanisms.md",
+      "source_sha256": "08033486beb9a4a0375fe71e9141b02065c0751cffbdfa4dccdbaedd5044e4d8",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "08033486beb9a4a0375fe71e9141b02065c0751cffbdfa4dccdbaedd5044e4d8"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/research/pedagogy-plan.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/pedagogy-plan.md",
+      "source_sha256": "91ca53ddff180e38e89990adf3fbab13c240f6bd49f651d9a1827f522f2d23ac",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "91ca53ddff180e38e89990adf3fbab13c240f6bd49f651d9a1827f522f2d23ac"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/research/qa-answers.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/qa-answers.md",
+      "source_sha256": "cdca9a4532415d2149bcac73bf187ab70e7de4769e65f730b0b2d5756d0e802e",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "cdca9a4532415d2149bcac73bf187ab70e7de4769e65f730b0b2d5756d0e802e"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/research/qa-questions.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/qa-questions.md",
+      "source_sha256": "1c3fe18851e9719772e38b7ab40f9a5f88628c93a536fad575f8018cba814fd6",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "1c3fe18851e9719772e38b7ab40f9a5f88628c93a536fad575f8018cba814fd6"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/analysis/research/scope.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/analysis/research/scope.md",
+      "source_sha256": "f622bdf199ab17b7ef98ccc05193399cf646b0e14f543c29d2606407f0843d20",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "f622bdf199ab17b7ef98ccc05193399cf646b0e14f543c29d2606407f0843d20"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/presentation-assets/page-buffer-state-axes.svg",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/presentation-assets/page-buffer-state-axes.svg",
+      "source_sha256": "97a666cbf11fabcdf4679be43fb0d6b01f7d4bd5ce4b7532ed304f3dd3918aff",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "97a666cbf11fabcdf4679be43fb0d6b01f7d4bd5ce4b7532ed304f3dd3918aff"
+    },
+    {
+      "source": "pgbuf-analysis/f799e05_claude/presentation-assets/pgbuf-contract.svg",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/f799e05_claude/presentation-assets/pgbuf-contract.svg",
+      "source_sha256": "345988c79e4cbbea7e00e89c4f481ab578308a91c015f1f8a33bc57a4ce5b780",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "345988c79e4cbbea7e00e89c4f481ab578308a91c015f1f8a33bc57a4ce5b780"
+    },
+    {
+      "source": "pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/pgbuf-defects-report_5cd4f860e_claude.md",
+      "source_sha256": "c367b69b6da66ba1113fb804c9d7196c9a6cd8c05e6ee5096a297f192e862627",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "c367b69b6da66ba1113fb804c9d7196c9a6cd8c05e6ee5096a297f192e862627"
+    },
+    {
+      "source": "pgbuf-analysis/research/cubrid-flush-wal-dwb.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/research/cubrid-flush-wal-dwb.md",
+      "source_sha256": "eb4eee51f9ddd097a119abf9658af0be94daa796890d08da223c19823e0cd1c7",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "eb4eee51f9ddd097a119abf9658af0be94daa796890d08da223c19823e0cd1c7"
+    },
+    {
+      "source": "pgbuf-analysis/research/cubrid-lru-victim.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/research/cubrid-lru-victim.md",
+      "source_sha256": "cc32b9c6470e71e0025a3fb21e02be8e243a1f3d75acef31d5ad2921a5d9c37b",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "cc32b9c6470e71e0025a3fb21e02be8e243a1f3d75acef31d5ad2921a5d9c37b"
+    },
+    {
+      "source": "pgbuf-analysis/research/cubrid-structs-fix.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/research/cubrid-structs-fix.md",
+      "source_sha256": "3f5920107049214028fd893919e169d2d08dd8120ee8ef2a99cd5c5feaf5e1b4",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "3f5920107049214028fd893919e169d2d08dd8120ee8ef2a99cd5c5feaf5e1b4"
+    },
+    {
+      "source": "pgbuf-analysis/research/innodb-bufpool.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/research/innodb-bufpool.md",
+      "source_sha256": "d8dba1f3288fa07dbf6ea493bb219ad80c6ad092e8336db93d90dddbeb202268",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "d8dba1f3288fa07dbf6ea493bb219ad80c6ad092e8336db93d90dddbeb202268"
+    },
+    {
+      "source": "pgbuf-analysis/research/postgres-bufmgr.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/research/postgres-bufmgr.md",
+      "source_sha256": "fdfd8b9be3703d2a858f902f678be4446ee25a3a2d20e4c6db12cce97fa84c4a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "fdfd8b9be3703d2a858f902f678be4446ee25a3a2d20e4c6db12cce97fa84c4a"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/MISSION.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/MISSION.md",
+      "source_sha256": "6bfe171faf508f2df19bb358c59486fc19695a815e9c54843ed823f909670b2f",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "6bfe171faf508f2df19bb358c59486fc19695a815e9c54843ed823f909670b2f"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/NOTES.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/NOTES.md",
+      "source_sha256": "f46029f57ce94aa60a0cb1e436372511b32dcd30d8dabb0fd71e2383b69aac08",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "f46029f57ce94aa60a0cb1e436372511b32dcd30d8dabb0fd71e2383b69aac08"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/RESOURCES.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/RESOURCES.md",
+      "source_sha256": "6268eb0765f462e2c0d7d30ae376642b9f226214838b6b1da6aedd026cbfb1b2",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "6268eb0765f462e2c0d7d30ae376642b9f226214838b6b1da6aedd026cbfb1b2"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/assets/course.css",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/assets/course.css",
+      "source_sha256": "c012111e68407bf6de091748f44ea36a795d04592827cacfb9db92bea6c9ed3c",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "c012111e68407bf6de091748f44ea36a795d04592827cacfb9db92bea6c9ed3c"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/assets/durability-chain.svg",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/assets/durability-chain.svg",
+      "source_sha256": "ca087b2df36fc0fad6eb492d712c2265af61ab8d6df03c9c06977608db69f9a1",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "ca087b2df36fc0fad6eb492d712c2265af61ab8d6df03c9c06977608db69f9a1"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/assets/pgbuf-contract.svg",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/assets/pgbuf-contract.svg",
+      "source_sha256": "345988c79e4cbbea7e00e89c4f481ab578308a91c015f1f8a33bc57a4ce5b780",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "345988c79e4cbbea7e00e89c4f481ab578308a91c015f1f8a33bc57a4ce5b780"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/assets/pgbuf-pool-map.svg",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/assets/pgbuf-pool-map.svg",
+      "source_sha256": "e146f504124514fa2a5387514127caed1841030980999f67d3fe0898a55a7d21",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "e146f504124514fa2a5387514127caed1841030980999f67d3fe0898a55a7d21"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/assets/question-bank-template.html",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/assets/question-bank-template.html",
+      "source_sha256": "6e0cac92abbcd3b107fe031ee64c3467e622a4adf84a0e11d5f00a1b3397cf3d",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "6e0cac92abbcd3b107fe031ee64c3467e622a4adf84a0e11d5f00a1b3397cf3d"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/assets/retrieval.js",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/assets/retrieval.js",
+      "source_sha256": "24d7f406fa1ed4317f88cfdebdcc6bd62c1055919fd1a51a13ca133c5f0ebcc0",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "24d7f406fa1ed4317f88cfdebdcc6bd62c1055919fd1a51a13ca133c5f0ebcc0"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/learning-records/0001-fix-ownership-lifetime.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/learning-records/0001-fix-ownership-lifetime.md",
+      "source_sha256": "cf9120c898c1a30bec2b472e8b3d6aabb504b676c42f1d7ad55b22779b23aed3",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "cf9120c898c1a30bec2b472e8b3d6aabb504b676c42f1d7ad55b22779b23aed3"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/learning-records/0002-pool-structures-and-load-serialization.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/learning-records/0002-pool-structures-and-load-serialization.md",
+      "source_sha256": "d18dbc4ebb367a3dbcd40001955bbf6bbe8b1d58bc7b2b92da45553e384ab312",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "d18dbc4ebb367a3dbcd40001955bbf6bbe8b1d58bc7b2b92da45553e384ab312"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/learning-records/0003-durability-chain-and-redo-gates.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/learning-records/0003-durability-chain-and-redo-gates.md",
+      "source_sha256": "00b48399018bef883eaebfe8cc2a715908e07b4e5696e4a67d7492c0bfcd188f",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "00b48399018bef883eaebfe8cc2a715908e07b4e5696e4a67d7492c0bfcd188f"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/lessons/0001-pgbuf-fix-is-an-ownership-protocol.html",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/lessons/0001-pgbuf-fix-is-an-ownership-protocol.html",
+      "source_sha256": "b85039a1c02dd21c1028968fe45b3c301b79c32c42bc3d415f84f16f2a6eade4",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "b85039a1c02dd21c1028968fe45b3c301b79c32c42bc3d415f84f16f2a6eade4"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/lessons/0002-write-latch-is-not-durability.html",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/lessons/0002-write-latch-is-not-durability.html",
+      "source_sha256": "06f1b51457722f76a77e38b9546d9fda3b61dc3cd4f0031fbef55e0a41446e75",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "06f1b51457722f76a77e38b9546d9fda3b61dc3cd4f0031fbef55e0a41446e75"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/lessons/0003-one-bcb-many-lists.html",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/lessons/0003-one-bcb-many-lists.html",
+      "source_sha256": "1c4f19a936b448d300e3f012be00eedd8ee768a1d3f3c1ee5733573782132a2a",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "1c4f19a936b448d300e3f012be00eedd8ee768a1d3f3c1ee5733573782132a2a"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/reference/pgbuf-durability-contract.html",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/reference/pgbuf-durability-contract.html",
+      "source_sha256": "cba787b7076999281b173ee3e484a42300318b172753e1d5e44384a02ce3a070",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "cba787b7076999281b173ee3e484a42300318b172753e1d5e44384a02ce3a070"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/reference/pgbuf-fix-contract.html",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/reference/pgbuf-fix-contract.html",
+      "source_sha256": "c886ba46f7a9b09db65efb5d3ba23692ff030a4f77a3779bb51bdd67fa223cd5",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "c886ba46f7a9b09db65efb5d3ba23692ff030a4f77a3779bb51bdd67fa223cd5"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/reference/pgbuf-question-bank.html",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/reference/pgbuf-question-bank.html",
+      "source_sha256": "73d355fac189ae80621845c515c21ed8f9076adc4eb098c595b3bdb8266731f6",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "73d355fac189ae80621845c515c21ed8f9076adc4eb098c595b3bdb8266731f6"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/reference/pgbuf-question-bank.md",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/reference/pgbuf-question-bank.md",
+      "source_sha256": "5d27bf2407b5354eeb93d8e602026a84e528ff3f71b4299da5c7885f107e21ec",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "5d27bf2407b5354eeb93d8e602026a84e528ff3f71b4299da5c7885f107e21ec"
+    },
+    {
+      "source": "pgbuf-analysis/teach-course/reference/pgbuf-structure-map.html",
+      "destination": "evidence/my-cubrid-docs/pgbuf-analysis/teach-course/reference/pgbuf-structure-map.html",
+      "source_sha256": "eb08d9f56c84039d000a605b8e1f24e71c4674b2976dddf58ff8d8b0ffdc556c",
+      "tracked_at_source_revision": true,
+      "imported_sha256": "eb08d9f56c84039d000a605b8e1f24e71c4674b2976dddf58ff8d8b0ffdc556c"
+    }
+  ]
+}

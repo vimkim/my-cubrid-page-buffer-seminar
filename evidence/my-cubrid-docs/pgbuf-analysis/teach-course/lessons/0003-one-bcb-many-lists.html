@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0003 — One BCB, many lists</title>
+  <link rel="stylesheet" href="../assets/course.css">
+  <script defer src="../assets/retrieval.js"></script>
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID PAGE BUFFER · LESSON 0003</span><span>10–14 min · name every structure</span></div>
+  <header class="hero">
+    <div class="eyebrow">The data-structure map</div>
+    <h1>One BCB, many lists</h1>
+    <p>이 수업이 끝나면 buffer pool의 내부 자료구조를 하나씩 이름으로 부르고, 각 구조가 <em>어떤 질문에 답하기 위해 존재하는지</em> 설명할 수 있다. Lesson 0001–0002에서 말로만 쓰던 "BCB", "holder", "DIRTY flag"의 실체가 여기 있다.</p>
+    <div class="meta-row"><span class="pill">BCB</span><span class="pill">iopage</span><span class="pill">hash chain</span><span class="pill">LRU + AOUT</span><span class="pill">holder</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+
+      <section class="section" id="split">
+        <div class="eyebrow">01 · Metadata / data split</div>
+        <h2>BCB는 page의 관리 카드, frame은 실제 bytes</h2>
+        <p class="lede">Pool은 시작할 때 같은 크기의 배열 두 개를 만든다: <code>BCB_table</code>(관리 카드)과 <code>iopage_table</code>(실제 page bytes). 카드와 frame은 1:1로 짝지어져 서로를 가리킨다.</p>
+        <p class="big-claim"><strong>BCB(<code>PGBUF_BCB</code>)</strong> = "이 frame에 지금 어떤 page가 살고 있고(<code>vpid</code>), 누가 쓰고 있으며(<code>atomic_latch</code>, fix count), 어떤 상태인가(<code>flags</code>: DIRTY/FLUSHING, <code>oldest_unflush_lsa</code>)"를 담는 per-frame 관리 레코드.</p>
+        <p><strong><code>PGBUF_IOPAGE_BUFFER</code></strong>는 disk에 그대로 기록되는 <code>FILEIO_PAGE iopage</code>(page LSA인 <code>prv.lsa</code> 포함)와 BCB 역포인터만 담는다. Lesson 0002에서 flusher가 <code>memcpy</code>한 대상이 바로 이 <code>iopage</code>이고, DIRTY/FLUSHING flag 연산의 대상은 BCB의 <code>flags</code>다. <code>PAGE_PTR</code>는 이 iopage 내부를 가리키므로, <code>CAST_PGPTR_TO_BFPTR</code> 같은 macro가 pointer 산술로 카드↔bytes를 오간다.</p>
+        <p class="source-note">Evidence: <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>page_buffer.c:513–545</code></a> (BCB), <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>548–557</code></a> (iopage buffer), <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>764–767</code></a> (두 table). 라인은 lab tracer branch(<code>1daa9d2</code>) 기준이며 구조체 자체는 pinned <code>f799e05</code>와 동일하다.</p>
+      </section>
+
+      <section class="section" id="map">
+        <div class="eyebrow">02 · The picture</div>
+        <h2>같은 BCB가 세 색인에 동시에 꿰여 있다</h2>
+        <img class="diagram" src="../assets/pgbuf-pool-map.svg" alt="pgbuf_Pool: hash chain, LRU list, and thread holder list all threading through the same BCB">
+        <p class="caption">BCB 안의 링크 field들(<code>hash_next</code>, <code>prev_BCB</code>/<code>next_BCB</code>)이 곧 색인이다. 별도의 node를 만들지 않는다 — intrusive linked list.</p>
+        <div class="callout"><strong>핵심 문장:</strong> BCB 하나는 (a) hash chain — "이 <code>VPID</code>가 어디 있나", (b) LRU list — "무엇을 쫓아낼까", (c) 어떤 thread의 holder list — "내가 지금 뭘 쥐고 있나"에 <em>동시에</em> 속할 수 있다. 세 질문은 서로 다른 lock(각 bucket의 <code>hash_mutex</code>, 각 LRU의 <code>mutex</code>, BCB 자신의 <code>mutex</code>)으로 보호된다.</div>
+      </section>
+
+      <section class="section" id="directory">
+        <div class="eyebrow">03 · The directory</div>
+        <h2>hash table: VPID → resident BCB</h2>
+        <p><code>buf_hash_table</code>은 bucket 배열이고, 각 bucket(<code>PGBUF_BUFFER_HASH</code>)은 <code>hash_mutex</code> 하나와 두 chain 앵커를 가진다:</p>
+        <ul>
+          <li><strong><code>hash_next</code> chain</strong> — 이 bucket에 사는 resident page들의 BCB chain. <code>pgbuf_fix()</code>의 lookup이 걷는 곳.</li>
+          <li><strong><code>lock_next</code> chain (<code>PGBUF_BUFFER_LOCK</code>)</strong> — "지금 이 <code>VPID</code>를 disk에서 적재하는 중"이라는 자리표. miss가 나면 loader가 lock을 걸어 두고, 같은 page를 원하는 다른 thread는 중복 disk read를 하는 대신 여기서 기다린다. lock table 크기가 thread 수로 고정된 이유: thread당 동시에 한 page만 적재할 수 있기 때문.</li>
+        </ul>
+        <p class="source-note">Evidence: <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>page_buffer.c:577–584</code></a> (hash entry), <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>559–571</code></a> (buffer lock, "# of buffer lock records is fixed as the total # of threads").</p>
+      </section>
+
+      <section class="section" id="clock">
+        <div class="eyebrow">04 · The clock</div>
+        <h2>LRU lists + AOUT: 무엇을 쫓아낼 것인가</h2>
+        <p>Replacement는 source 주석이 직접 명명한다: <em>"The page replacement algorithm is LRU + Aout of 2Q"</em>. 전역 LRU 하나가 아니라 <strong>여러 개의 <code>PGBUF_LRU_LIST</code></strong>(shared + private)를 두어 mutex 경합을 나눈다. 각 list는:</p>
+        <ul>
+          <li><strong>zone 1|2|3</strong> — top이 가장 뜨겁고, zone 3(<code>bottom</code> 쪽)이 victim 후보 구역. <code>bottom_1</code>/<code>bottom_2</code>가 경계.</li>
+          <li><strong><code>victim_hint</code></strong> — victim 탐색 시작점 캐시. 주석에 개발자의 솔직한 TODO("there must be a logic error somewhere")까지 남아 있다.</li>
+          <li><strong><code>tick_list</code>/<code>tick_lru3</code></strong> — BCB의 <code>tick_lru_list</code>/<code>tick_lru3</code>와 비교해 "충분히 오래됐으니 top으로 승격"을 판단하는 나이 계산기.</li>
+        </ul>
+        <p><strong><code>buf_AOUT_list</code></strong>는 2Q의 두 번째 축: victim으로 쫓겨난 page의 <code>VPID</code>만 FIFO로 기억하는 이력이다(frame 없음). 다시 fix되는 page가 AOUT에 있으면 "최근에 쫓아냈던 놈"이므로 더 뜨거운 위치로 넣는다. <strong><code>buf_invalid_list</code></strong>는 deallocate된 page의 BCB들이 쉬는 free list다.</p>
+        <p class="source-note">Evidence: <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>page_buffer.c:587–625</code></a> (LRU list), <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>637–668</code></a> (2Q comment + AOUT), <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>628–635</code></a> (invalid list).</p>
+      </section>
+
+      <section class="section" id="ledger">
+        <div class="eyebrow">05 · The ledger</div>
+        <h2>holder: "이 thread가 지금 쥔 것" 장부</h2>
+        <p>Lesson 0001의 "holder accounting"의 실체: <code>pgbuf_Pool.thrd_holder_info[]</code>는 <strong>thread당 하나</strong>의 <code>PGBUF_HOLDER_ANCHOR</code>이고, 그 안의 <code>thrd_hold_list</code>가 이 thread가 현재 fix 중인 BCB들의 <code>PGBUF_HOLDER</code>(BCB pointer + <code>fix_count</code>) 목록이다. fix/unfix마다 갱신되므로 cache line 하나(64B)에 padding까지 맞춰 놓았다 — false sharing 방지.</p>
+        <p>이 장부 덕분에: 재귀적 fix(<code>fix_count</code> 증가)가 가능하고, debug build는 "unfix 없이 끝난 thread"를 적발하며, Lesson 0002에서 본 flush의 안전장치 assert("I must be the owner")도 바로 이 <code>thrd_hold_list</code>를 걷는다.</p>
+        <p class="source-note">Evidence: <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>page_buffer.c:463–492</code></a> (holder + anchor + cache-line static_assert), flush assert <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>10870–10888</code></a>.</p>
+      </section>
+
+      <section class="section" id="table">
+        <div class="eyebrow">06 · Master table</div>
+        <h2>구조 → 존재 이유 → 보호 장치</h2>
+        <p>전부 하나의 static 전역 <code>pgbuf_Pool</code>(<code>PGBUF_BUFFER_POOL</code>, line 847)에 매달려 있다.</p>
+        <table>
+          <thead><tr><th>구조 (field)</th><th>답하는 질문</th><th>보호 lock</th></tr></thead>
+          <tbody>
+            <tr><td><code>BCB_table</code> (<code>PGBUF_BCB</code>)</td><td>이 frame의 identity·latch·상태는?</td><td>BCB별 <code>mutex</code> + <code>atomic_latch</code></td></tr>
+            <tr><td><code>iopage_table</code> (<code>PGBUF_IOPAGE_BUFFER</code>)</td><td>실제 page bytes (disk에 갈 이미지)</td><td>BCB의 latch 계약</td></tr>
+            <tr><td><code>buf_hash_table</code></td><td><code>VPID</code>가 어느 BCB에 사는가?</td><td>bucket별 <code>hash_mutex</code></td></tr>
+            <tr><td><code>buf_lock_table</code></td><td>이 <code>VPID</code>를 지금 누가 적재 중인가?</td><td>같은 bucket <code>hash_mutex</code></td></tr>
+            <tr><td><code>buf_LRU_list[]</code></td><td>다음 victim은 누구인가?</td><td>LRU list별 <code>mutex</code></td></tr>
+            <tr><td><code>buf_AOUT_list</code></td><td>최근에 쫓아낸 적 있는 page인가? (2Q)</td><td><code>Aout_mutex</code></td></tr>
+            <tr><td><code>buf_invalid_list</code></td><td>당장 재사용 가능한 빈 BCB는?</td><td><code>invalid_mutex</code></td></tr>
+            <tr><td><code>thrd_holder_info[]</code></td><td>이 thread가 지금 무엇을 쥐고 있나?</td><td>thread 소유 (per-thread)</td></tr>
+            <tr><td><code>victim_cand_list</code> / <code>flushed_bcbs</code></td><td>flush daemon의 작업 목록/후처리 큐</td><td>lock-free queue 등</td></tr>
+          </tbody>
+        </table>
+        <p class="source-note">Evidence: <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>page_buffer.c:757–847</code></a>.</p>
+        <div class="callout warn"><strong>발표 함정:</strong> "DIRTY page 목록이 따로 있다"고 말하지 마라. CUBRID에는 dirty page 전용 list가 없다 — DIRTY는 BCB <code>flags</code>의 bit이고, flusher는 LRU list들을 훑어 victim 후보 중 dirty를 골라낸다(<code>count_vict_cand</code>, <code>victim_cand_list</code>). PostgreSQL의 clock-sweep이나 InnoDB의 flush_list와 다른 지점.</div>
+      </section>
+
+      <section class="section" id="retrieval">
+        <div class="eyebrow">07 · Retrieval practice</div>
+        <h2>소스를 닫고 지도를 다시 그려라</h2>
+        <div class="quiz" data-retrieval data-concepts='[{"label":"BCB = metadata vs iopage = bytes 분리","terms":["bcb","iopage","frame","metadata","카드"]},{"label":"hash chain: VPID → BCB directory","terms":["hash","해시","vpid","directory","색인"]},{"label":"buffer lock: 적재 중 자리표","terms":["lock","적재","loading","miss","자리"]},{"label":"LRU zones + AOUT (2Q) victim 선택","terms":["lru","aout","2q","victim","zone"]},{"label":"per-thread holder 장부","terms":["holder","장부","thread","fix_count","anchor"]}]'>
+          <h3>Question</h3>
+          <p>"Buffer pool 내부 자료구조를 지도처럼 설명해 보세요. 각 구조가 없으면 어떤 질문에 답할 수 없게 됩니까?"</p>
+          <p><strong>Model / recommended answer:</strong> pool은 <code>BCB_table</code>(관리 카드)과 <code>iopage_table</code>(실제 bytes)의 1:1 쌍이 본체다. <code>buf_hash_table</code>의 bucket chain이 <code>VPID</code>→BCB directory를 제공하고, 같은 bucket의 buffer lock chain이 "적재 중" 자리표로 중복 disk read를 막는다. 여러 <code>PGBUF_LRU_LIST</code>(zone 1|2|3 + <code>victim_hint</code>)와 <code>buf_AOUT_list</code>(쫓겨난 VPID 이력, 2Q)가 victim 선택에 답하고, <code>thrd_holder_info[]</code>의 per-thread holder list가 "내가 지금 뭘 쥐었나"에 답한다. 이 색인들은 별도 node가 아니라 BCB 안의 링크 field(<code>hash_next</code>, <code>prev_BCB</code>/<code>next_BCB</code>)로 꿰인다.</p>
+          <p><strong>Your task:</strong> model을 반복하지 말고, 구조 하나를 골라 <em>그것이 사라진 세계</em>를 서술하세요 (예: buffer lock table이 없다면 miss 두 개가 동시에 오면 무슨 일이 생기는가?).</p>
+          <textarea aria-label="Your map explanation" placeholder="Memory only — draw the map in words."></textarea>
+          <button type="button" data-check>Check map coverage</button>
+          <button type="button" class="secondary" data-reveal>Reveal model spine</button>
+          <div class="feedback" aria-live="polite"></div>
+        </div>
+        <p>자동 점검은 단어 포함만 본다. 진짜 검사는 답을 채팅에 붙여 넣는 것 — 그러면 잘못된 소유권 서술이나 빠진 lock 경계를 공격적으로 짚는다.</p>
+      </section>
+
+      <section class="section" id="next">
+        <div class="eyebrow">Continue</div>
+        <div class="next">
+          <div><h2>다음: 미뤄 둔 row-7 변형 문제로 복귀</h2><p>이제 <code>flags</code>가 BCB의 bit field라는 것을 알았으니, flush 실패 경로(<code>was_dirty</code> → <code>pgbuf_bcb_mark_was_not_flushed()</code> → <code>oldest_unflush_lsa</code> 복원)를 자신의 말로 설명한다.</p></div>
+          <a href="0002-write-latch-is-not-durability.html">Lesson 0002 다시 보기 ←</a>
+        </div>
+        <div class="callout"><strong>Primary reading:</strong> 구조체 정의 구간만 읽어라 — <a href="https://github.com/vimkim/cubrid/blob/1daa9d2f4f9803806af4bd9bd639495dd3736b57/src/storage/page_buffer.c"><code>page_buffer.c:463–847</code></a>. 함수 없이 struct와 주석만으로도 pool의 설계 의도가 읽힌다. 더 넓은 맥락은 <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html">offline book</a>의 구조 장을 참고.</div>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#split">1. BCB vs iopage</a>
+      <a href="#map">2. One BCB, many lists</a>
+      <a href="#directory">3. Hash + buffer lock</a>
+      <a href="#clock">4. LRU + AOUT</a>
+      <a href="#ledger">5. Holder ledger</a>
+      <a href="#table">6. Master table</a>
+      <a href="#retrieval">7. Retrieval practice</a>
+      <hr>
+      <a href="../reference/pgbuf-structure-map.html">Structure map reference card</a>
+      <a href="../reference/pgbuf-question-bank.html">38-question model-answer bank</a>
+      <a href="0001-pgbuf-fix-is-an-ownership-protocol.html">Lesson 0001</a>
+      <a href="0002-write-latch-is-not-durability.html">Lesson 0002</a>
+    </nav>
+  </div>
+  <footer class="footer">Questions are part of the lesson. Ask the teaching agent about any structure or lock boundary you cannot defend from source.</footer>
+</main>
+</body>
+</html>

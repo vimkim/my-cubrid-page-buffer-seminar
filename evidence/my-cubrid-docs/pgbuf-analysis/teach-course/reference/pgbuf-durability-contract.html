@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pgbuf Durability Contract Card</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID PAGE BUFFER · QUICK REFERENCE</span><a href="../lessons/0002-write-latch-is-not-durability.html">Lesson 0002</a></div>
+  <header class="hero">
+    <div class="eyebrow">Print this one</div>
+    <h1>Concurrency, recoverability, propagation</h1>
+    <p>WRITE fix, durable WAL, data-page flush를 한 단어 “durability”로 뭉개지 않기 위한 발표용 contract card.</p>
+    <div class="meta-row"><span class="pill">Pinned: f799e05</span><span class="pill">CUBRID-C004</span><span class="pill">Offline</span></div>
+  </header>
+
+  <section class="reference-grid">
+    <article class="reference-card full">
+      <h2>Three clocks</h2>
+      <img class="diagram" src="../assets/durability-chain.svg" alt="WRITE latch, durable WAL, and page propagation are separate timelines">
+    </article>
+
+    <article class="reference-card">
+      <h2>Safe sentence</h2>
+      <p>WRITE fix는 memory access 권한이다. 필요한 WAL과 commit record가 durable하면 data page가 아직 old여도 redo로 복구할 수 있다. Page flush는 나중에 WAL-before-data를 지키며 image를 전파한다.</p>
+    </article>
+    <article class="reference-card">
+      <h2>Dangerous sentence</h2>
+      <p>“WRITE latch를 얻었으니 durable하다”와 “commit 전에 dirty page를 반드시 flush한다”는 둘 다 틀리다. 전자는 WAL을 생략하고, 후자는 WAL이 제공하는 deferred writeback을 없앤다.</p>
+    </article>
+
+    <article class="reference-card full">
+      <h2>Crash matrix</h2>
+      <table>
+        <thead><tr><th>Crash point</th><th>Durable material</th><th>Correct interpretation</th></tr></thead>
+        <tbody>
+          <tr><td>Before commit WAL durable</td><td>Old data; incomplete/uncommitted log possible</td><td>Committed durability를 주장할 수 없다. Recovery가 invalid log를 무시하거나 undo한다.</td></tr>
+          <tr><td>After commit WAL durable, before data write</td><td>Redo sufficient; data page may be old</td><td>허용되는 정상 상태. Page LSA gate로 필요한 redo를 적용한다.</td></tr>
+          <tr><td>DWB copy durable, home page torn</td><td>Log + protected page copy</td><td>DWB recovery가 home image를 복원한 뒤 log redo가 진행된다.</td></tr>
+          <tr><td>Snapshot write complete, resident re-dirty</td><td>Old snapshot on storage; newer memory generation</td><td>Flush success와 BCB DIRTY가 동시에 참일 수 있다. New DIRTY를 보존한다.</td></tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article class="reference-card">
+      <h2>Writer contract</h2>
+      <ol>
+        <li>WRITE ownership 아래에서 page bytes를 수정한다.</li>
+        <li>Recovery log와 page LSA 관계를 만든다.</li>
+        <li>Resident generation을 DIRTY로 추적한다.</li>
+        <li>Fix ownership을 정확히 release한다.</li>
+      </ol>
+    </article>
+    <article class="reference-card">
+      <h2>Flusher contract</h2>
+      <ol>
+        <li>한 dirty generation을 snapshot한다.</li>
+        <li>Snapshot page LSA까지 WAL을 force한다.</li>
+        <li>DWB 또는 data volume에 image를 쓴다.</li>
+        <li>Concurrent re-dirty를 clear하지 않는다.</li>
+        <li>일반 I/O error면 old DIRTY/LSA를 복원한다.</li>
+      </ol>
+    </article>
+
+    <article class="reference-card full">
+      <h2>Source anchors</h2>
+      <table>
+        <thead><tr><th>Mechanism</th><th>Pinned source</th></tr></thead>
+        <tbody>
+          <tr><td>Representative caller log → dirty ordering</td><td><a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/heap_file.c"><code>heap_file.c:2867–2868</code></a>; <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/btree.c"><code>btree.c:4071–4073</code></a></td></tr>
+          <tr><td>Page LSA and oldest-unflush-LSA</td><td><a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:4983–5081</code></a></td></tr>
+          <tr><td>Snapshot, WAL gate, DWB/data write, rollback</td><td><a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:10723–10961</code></a></td></tr>
+          <tr><td>Force log through requested LSA</td><td><a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c"><code>log_page_buffer.c:4150–4189</code></a></td></tr>
+          <tr><td>Crash matrix and evidence limits</td><td><a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/11-contract-evidence.html#durability-contract">Verified book chapter 11</a></td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+  <footer class="footer">When challenged, name which clock you mean: memory permission, WAL recoverability, or page-image propagation.</footer>
+</main>
+</body>
+</html>

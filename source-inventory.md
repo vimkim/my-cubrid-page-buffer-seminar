@@ -3,8 +3,8 @@
 This inventory consolidates the two requested local trees without treating every
 file as equally authoritative:
 
-- **`FIELD/`** = [`../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/`](../page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/)
-- **`PGBUF/`** = [`../../pgbuf-analysis/`](../../pgbuf-analysis/)
+- **`FIELD/`** = [`./evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/`](./evidence/my-cubrid-docs/code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/)
+- **`PGBUF/`** = [`./evidence/my-cubrid-docs/pgbuf-analysis/`](./evidence/my-cubrid-docs/pgbuf-analysis/)
 
 It was prepared for a teaching document aimed at senior engineers who know
 systems and database concepts but do not yet know CUBRID. It inventories the

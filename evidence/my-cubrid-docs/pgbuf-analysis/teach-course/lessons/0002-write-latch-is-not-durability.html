@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0002 — WRITE latch is not durability</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="course-shell">
+  <div class="topline"><span>CUBRID PAGE BUFFER · LESSON 0002</span><span>10–14 min · distinguish three moments</span></div>
+  <header class="hero">
+    <div class="eyebrow">Concurrency ≠ recoverability ≠ propagation</div>
+    <h1>WRITE latch is not durability</h1>
+    <p>이 수업이 끝나면 “WRITE fix를 얻었으니 안전하다”를 반박하고, durable WAL과 data-page flush를 서로 다른 시점으로 설명할 수 있다.</p>
+    <div class="meta-row"><span class="pill">WRITE fix</span><span class="pill">page LSA</span><span class="pill">DIRTY generation</span><span class="pill">WAL force</span><span class="pill">data write</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="correction">
+        <div class="eyebrow">00 · Important correction</div>
+        <h2>Commit은 dirty data page를 기다리지 않는다</h2>
+        <div class="callout warn"><strong>정정:</strong> “data page가 storage에 기록되어야 transaction이 crash-durable하다”는 표현은 너무 강하다. 필요한 WAL과 commit record가 durable하면, data page가 아직 dirty인 상태에서 crash가 나도 redo가 page를 재구성할 수 있다.</div>
+        <p class="big-claim">WRITE latch는 지금 memory를 바꿀 권리다. Durable WAL은 crash 뒤 변화를 재현할 능력이다. Data-page flush는 그 변화를 page image에 나중에 전파하는 일이다.</p>
+      </section>
+
+      <section class="section" id="three-moments">
+        <div class="eyebrow">01 · Three separate moments</div>
+        <h2>한 번의 update에는 세 개의 clock이 있다</h2>
+        <img class="diagram" src="../assets/durability-chain.svg" alt="WRITE latch, durable WAL, and data-page propagation shown as separate timelines">
+        <p class="caption">Data page는 commit 시점보다 늦게 기록될 수 있다. 이것이 WAL이 random page writes를 commit latency에서 분리하는 이유다.</p>
+        <table>
+          <thead><tr><th>Moment</th><th>무엇이 보장되는가</th><th>아직 보장되지 않는 것</th></tr></thead>
+          <tbody>
+            <tr><td>WRITE fix</td><td>해당 page frame의 exclusive in-memory access</td><td>logging, commit, crash recovery</td></tr>
+            <tr><td>Required WAL durable</td><td>commit된 logical change를 crash 뒤 redo할 수 있음</td><td>data file의 page image가 최신이라는 보장</td></tr>
+            <tr><td>Page generation written</td><td>그 snapshot이 DWB/data-volume path에 전파됨</td><td>I/O 중 만들어진 newer dirty generation까지 clean이라는 보장</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="caller-contract">
+        <div class="eyebrow">02 · Caller completes the mutation contract</div>
+        <h2>Heap과 B-tree는 log와 DIRTY를 연결한다</h2>
+        <pre><code>/* representative heap pattern */
+log_append_undoredo_data (..., addr.pgptr, ...);
+pgbuf_set_dirty (thread_p, addr.pgptr, DONT_FREE);
+
+/* representative B-tree pattern */
+log_append_redo_data (..., new_page_ptr, ...);
+pgbuf_set_dirty (thread_p, *new_page_ptr, DONT_FREE);</code></pre>
+        <p>Logging API는 page address를 받아 log position과 page recovery state를 연결한다. Caller는 수정된 resident image를 DIRTY로 표시한다. Exact call ordering에는 page type과 temporary/unlogged 예외가 있으므로 이 두 줄을 모든 caller의 문자 그대로인 template으로 일반화하면 안 된다.</p>
+        <div class="callout"><strong>Release-build safeguard:</strong> <code>pgbuf_set_lsa()</code>는 page LSA를 설정하고, release build에서는 dirty도 설정한다. Source comment는 missing dirty call을 방어하면서도 그런 caller bug를 찾아 고쳐야 한다고 명시한다.</div>
+        <p class="source-note">Evidence: heap <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/heap_file.c"><code>heap_file.c:2867–2868</code></a>; B-tree <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/btree.c"><code>btree.c:4071–4073</code></a>; LSA/dirty safeguard <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:5038–5079</code></a>.</p>
+      </section>
+
+      <section class="section" id="flush-generation">
+        <div class="eyebrow">03 · Flush one generation safely</div>
+        <h2>Flusher가 하는 일은 commit과 다르다</h2>
+        <ol>
+          <li>BCB protection 아래에서 FLUSHING을 set하고 기존 DIRTY를 clear한다.</li>
+          <li>Page image, page LSA, <code>oldest_unflush_lsa</code>를 snapshot한다.</li>
+          <li>BCB를 놓은 뒤 snapshot의 page LSA까지 <code>logpb_flush_log_for_wal()</code>로 WAL을 force한다.</li>
+          <li>DWB 또는 data-volume write path로 snapshot을 제출한다.</li>
+          <li>성공하면 FLUSHING만 clear한다. 그 사이 writer가 다시 set한 DIRTY는 남는다.</li>
+          <li>일반 write 실패면 이전 DIRTY와 <code>oldest_unflush_lsa</code>를 복원한다.</li>
+        </ol>
+        <p>Flush 시작 때 old DIRTY를 clear하는 이유는 “clean이라고 선언”하기 위해서가 아니다. I/O 중 새 수정이 생기면 그것을 별도 generation으로 다시 set할 수 있게 하기 위해서다.</p>
+        <p class="source-note">Evidence: snapshot/WAL/write/error restore <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:10723–10961</code></a>; generation flags <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c"><code>page_buffer.c:16077–16125</code></a>; WAL force <a href="https://github.com/vimkim/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c"><code>log_page_buffer.c:4150–4189</code></a>. Claim CUBRID-C004.</p>
+      </section>
+
+      <section class="section" id="failure-matrix">
+        <div class="eyebrow">04 · Defend every link</div>
+        <h2>한 단계가 빠지면 무엇이 깨지는가?</h2>
+        <table>
+          <thead><tr><th>Missing or reordered step</th><th>Possible failure</th><th>Boundary violated</th></tr></thead>
+          <tbody>
+            <tr><td>No WRITE latch</td><td>동시 writer/reader가 partial structure를 관찰하거나 bytes를 덮어쓴다.</td><td>Memory concurrency</td></tr>
+            <tr><td>No recovery log for a logged permanent-page change</td><td>Crash 뒤 redo/undo할 정보가 없어 transaction semantics를 복원할 수 없다.</td><td>Recoverability</td></tr>
+            <tr><td>No page LSA relationship</td><td>Flusher가 어느 WAL boundary를 먼저 durable하게 해야 하는지 판단할 수 없다.</td><td>WAL ordering</td></tr>
+            <tr><td>No DIRTY tracking</td><td>수정된 resident generation이 writeback 대상에서 누락될 수 있다.</td><td>Propagation</td></tr>
+            <tr><td>Data write before required WAL</td><td>Crash 시 data file이 recovery log보다 앞서 recovery가 설명하지 못하는 상태가 된다.</td><td>WAL-before-data</td></tr>
+            <tr><td>Crash after durable commit WAL but before page flush</td><td>정상 허용: restart redo가 dirty page 변화를 재구성한다.</td><td>No violation</td></tr>
+            <tr><td>Flush completion clears concurrent re-dirty</td><td>새 generation이 clean으로 오인되어 update propagation이 사라진다.</td><td>Generation accounting</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="mastery-check">
+        <div class="eyebrow">05 · Model-visible mastery check</div>
+        <h2>현재 질문</h2>
+        <div class="quiz">
+          <h3>Question</h3>
+          <p>성공적으로 WRITE latch를 얻은 것만으로 수정된 page가 durable해집니까? Data page를 commit 전에 flush하지 않아도 되는 이유까지 설명하세요.</p>
+          <p><strong>Model/recommended answer:</strong> 아니다. WRITE fix는 exclusive in-memory access만 부여한다. Caller는 recovery log와 page LSA 관계를 만들고 page를 DIRTY로 표시한다. 필요한 WAL과 commit record가 durable하면 data page가 아직 dirty여도 redo로 복구할 수 있다. 이후 flusher는 page LSA까지 WAL을 먼저 force하고 page image를 기록하여 해당 generation을 storage에 전파한다.</p>
+          <p><strong>Why correct:</strong> latch는 memory concurrency, durable WAL은 crash recoverability, page flush는 page-image propagation을 담당한다. WAL이 commit과 random data-page write를 분리한다.</p>
+          <p><strong>Your task:</strong> Model을 반복하지 말고 failure matrix에서 두 행을 골라, 왜 그 결과가 생기는지 causal chain으로 설명하세요.</p>
+        </div>
+      </section>
+
+      <section class="section" id="next">
+        <div class="eyebrow">Continue</div>
+        <div class="next">
+          <div><h2>다음: dirty snapshot과 concurrent re-dirty</h2><p>현재 질문을 통과하면 두 writer/flusher interleaving을 상태 전이로 계산한다.</p></div>
+          <a href="../reference/pgbuf-question-bank.html">Open Q25–Q31 →</a>
+        </div>
+        <div class="callout"><strong>Primary reading:</strong> <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/chapters/07-dirty-wal-flush-replace.html#dirty-wal-flush-replace">offline book chapter 7</a>. Source의 TDE/DWB early-error 후보는 검증 전 guarantee로 승격하지 않는다.</div>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Lesson contents">
+      <strong>Lesson map</strong>
+      <a href="#correction">0. Correct the model</a>
+      <a href="#three-moments">1. Three moments</a>
+      <a href="#caller-contract">2. Caller contract</a>
+      <a href="#flush-generation">3. Flush generation</a>
+      <a href="#failure-matrix">4. Failure matrix</a>
+      <a href="#mastery-check">5. Mastery check</a>
+      <hr>
+      <a href="0001-pgbuf-fix-is-an-ownership-protocol.html">← Lesson 0001</a>
+      <a href="../reference/pgbuf-durability-contract.html">Durability contract card</a>
+      <a href="../reference/pgbuf-question-bank.html">Question bank</a>
+      <a href="../../../code-analysis/page-buffer-subsystem-centered-on-the-complete-lifecycle-and-cal/f799e05_codex/index.html">Full offline book</a>
+    </nav>
+  </div>
+  <footer class="footer">Ask the teaching agent about any ordering edge you cannot defend from source.</footer>
+</main>
+</body>
+</html>

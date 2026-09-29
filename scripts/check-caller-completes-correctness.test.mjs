@@ -75,7 +75,7 @@ test("NEW_PAGE and the B-tree contrast stay on the core-page boundary", async ()
   assert.match(markdown, /## `NEW_PAGE` means materialize after allocation/);
   assert.match(markdown, /allocation.*before.*`pgbuf_fix\(.*NEW_PAGE/is);
   assert.doesNotMatch(markdown, /`NEW_PAGE` allocates/i);
-  assert.match(markdown, /`src\/storage\/file_manager\.c:5420-5590`/);
+  assert.match(markdown, /`src\/storage\/file_manager\.c:5360-5590`/);
 
   assert.match(markdown, /## B-tree contrast: failed promotion can mean restart/);
   assert.match(markdown, /conditional acquisition/i);

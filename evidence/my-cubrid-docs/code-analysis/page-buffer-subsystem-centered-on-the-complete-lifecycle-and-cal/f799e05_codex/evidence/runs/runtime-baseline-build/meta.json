@@ -1,0 +1,21 @@
+{
+  "actual_exit": 0,
+  "argv": [
+    "just",
+    "build"
+  ],
+  "bound_files": [],
+  "cwd": "/home/vimkim/gh/cb/pgbuf-analysis",
+  "execution_error": "",
+  "expected_exit": 0,
+  "finished_at_utc": "2026-08-28T07:27:33.406369+00:00",
+  "id": "runtime-baseline-build",
+  "kind": "command",
+  "matched_expectation": true,
+  "runtime_environment_sha256": "",
+  "runtime_tools_snapshot": "",
+  "schema_version": 1,
+  "started_at_utc": "2026-08-28T07:27:25.678478+00:00",
+  "stderr_sha256": "dc310fe8194772441306b7a6e97a300f945bf1d9929d383c0ccd93aba1de7d79",
+  "stdout_sha256": "43a63093b2862f624dc0ef73298e4fe0bfd08275461252dc98da3d64d40fb464"
+}
