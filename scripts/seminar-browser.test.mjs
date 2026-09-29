@@ -54,6 +54,7 @@ test('database bridge resets remain readable without scripts at mobile width', {
       assert.match(await page.locator('#progress > details').innerText(), /P \/ R \/ S/);
       assert.equal(await page.locator('#cubrid').isVisible(), true);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.locator('#cubrid > details > summary').click();
       await page.locator('#cubrid a[href="../reference/lru-worked-example.html#snapshot"]').first().click();
       assert.equal(await page.locator('#snapshot').isVisible(), true);
     }
