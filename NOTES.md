@@ -19,3 +19,15 @@ The teaching-pages.json manifest remains the pairing and human language-review r
 ## Curriculum maintenance
 
 All Core and Advanced content is required. Lectures can expand over multiple meetings with no total time limit. Teach cache and replacement basics before the existing CUBRID entry, assuming only basic programming knowledge. Early conceptual cross-system comparisons motivate the problem; detailed source-level cross-engine comparisons remain late, responsibility-based lenses. Performance ideas remain hypotheses until supported by controlled evidence. The [coverage audit](docs/curriculum-coverage.md) belongs to authors, not the participant topic library.
+
+## Causal replacement explanation
+
+The [accepted replacement design](docs/replacement-socratic-design.md) supersedes
+fixed timing for the first-principles route. Lecture 0007 owns the self-contained
+seminar explanation of private/shared organization, zones, quota, candidate
+selection and safe reuse. Build each mechanism from a concrete question and the
+consequence of its absence. Keep the scenario visible and use native disclosures
+for the outcome and explanation. Treat simplified alternatives as teaching
+models; distinguish policy trade-offs from correctness failures. Existing deeper
+lectures remain supporting references, and the Markdown guide keeps technical
+authority. Update English and Korean together.

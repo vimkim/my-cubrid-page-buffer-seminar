@@ -20,7 +20,7 @@
     <article class="lesson-main">
 <section class="section" id="first-principles">
 <h2>Why keep pages in memory?</h2>
-<p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><p>A database reads and writes data in <strong>pages</strong>. A <strong>frame</strong> is a memory slot for one page. The <strong>page buffer</strong> manages these slots so that later requests can reuse pages already in memory.</p><p>Read page P, do some other work, then request P again. If P is still in memory, this is a <strong>hit</strong>; otherwise it is a <strong>miss</strong>. A miss needs a frame. If there is no unused slot, another page must be safely removed.</p><div class="callout">A hit may still wait for another thread’s latch. A miss may be served by a lower cache, so it does not necessarily cause physical disk I/O.</div>
+<p><a href="../reference/first-principles-route.html">First-principles route ↑</a></p><p>A database reads and writes data in <strong>pages</strong>. A <strong>frame</strong> is a memory slot for one page. The <strong>page buffer</strong> manages these slots so that later requests can reuse pages already in memory.</p><p>Read page P, do some other work, then request P again. If P is still in memory, this is a <strong>hit</strong>; otherwise it is a <strong>miss</strong>. A miss needs a frame. If there is no unused slot, another page must be safely removed.</p><div class="callout">A hit may still wait for another thread’s latch. A miss may be served by a lower cache, so it does not necessarily cause physical disk I/O.</div>
 </section>
 
 

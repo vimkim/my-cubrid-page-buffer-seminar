@@ -1,6 +1,6 @@
 # Mission: Understand and maintain the page-buffer module
 
-The bilingual HTML is direct seminar material for teammates: senior C/C++ systems engineers familiar with buffer pools and WAL, without assumed CUBRID-internal knowledge. Participants should be able to trace a page's lifetime, reason about concurrent state and ownership, investigate failures, and defend a safe change with evidence.
+The bilingual HTML is direct seminar material for teammates with basic programming and array/linked-list knowledge, without assumed buffer-pool, WAL or CUBRID-internal knowledge. Participants should be able to trace a page's lifetime, reason about concurrent state and ownership, investigate failures, and defend a safe change with evidence.
 
 The curriculum has no fixed total duration. Its 25 provisional lectures cover every Core and Advanced topic, with cross-engine comparison after the CUBRID mechanisms. A lecture may span multiple meetings; completion depends on deep understanding, not elapsed time or page visits.
 

@@ -1,0 +1,39 @@
+/* Lecture 7: native HTML diagrams remain readable and selectable without scripts. */
+.replacement-map {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  background: #f0f4ee;
+}
+.replacement-map .map-label {
+  margin: 0 0 16px;
+  color: var(--teal);
+  font-size: .95em;
+  font-weight: 700;
+}
+.map-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.map-card {
+  min-width: 0;
+  padding: 18px;
+  border-top: 4px solid var(--teal);
+  background: var(--paper);
+  overflow-wrap: anywhere;
+}
+.map-card strong { display: block; font-size: 1.08em; }
+.map-card p { margin: 12px 0 0; line-height: 1.6; }
+.replacement-map + .answer-disclosure { margin-top: 18px; }
+@media (max-width: 650px) {
+  .map-cards { grid-template-columns: 1fr; }
+  .replacement-map { padding: 14px; }
+  .map-card { padding: 14px; }
+}
+@media print {
+  .replacement-map { break-inside: avoid; }
+}
+.lesson-main p { word-break: keep-all; }
+.replacement-call-path { padding-left: 2em; }
+.replacement-call-path li { padding: 8px 0; }

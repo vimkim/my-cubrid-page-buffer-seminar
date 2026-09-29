@@ -20,7 +20,7 @@
     <article class="lesson-main">
 <section class="section" id="first-principles">
 <h2>페이지를 메모리에 남겨 두는 이유</h2>
-<p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><p>데이터베이스는 데이터를 <strong>페이지(page)</strong> 단위로 읽고 씁니다. <strong>Frame</strong>은 페이지 하나를 담는 메모리 자리이고, <strong>page buffer</strong>는 이 자리들을 관리합니다. 한 번 읽은 페이지를 메모리에 남겨 두면 다음 요청에서 다시 사용할 수 있습니다.</p><p>예를 들어 페이지 P를 읽고, 다른 일을 한 뒤 P를 다시 읽습니다. P가 메모리에 남아 있으면 <strong>hit</strong>, 없으면 <strong>miss</strong>입니다. Miss에서는 P를 담을 frame을 확보해야 합니다. 빈 자리가 없다면 다른 페이지를 안전하게 내보내야 합니다.</p><div class="callout">Hit여도 다른 스레드의 latch를 기다릴 수 있습니다. Miss여도 OS cache 등 하위 계층이 읽기를 처리할 수 있어, 반드시 물리 디스크 I/O가 발생하는 것은 아닙니다.</div>
+<p><a href="../reference/first-principles-route.html">기초부터 이해하는 경로 ↑</a></p><p>데이터베이스는 데이터를 <strong>페이지(page)</strong> 단위로 읽고 씁니다. <strong>Frame</strong>은 페이지 하나를 담는 메모리 자리이고, <strong>page buffer</strong>는 이 자리들을 관리합니다. 한 번 읽은 페이지를 메모리에 남겨 두면 다음 요청에서 다시 사용할 수 있습니다.</p><p>예를 들어 페이지 P를 읽고, 다른 일을 한 뒤 P를 다시 읽습니다. P가 메모리에 남아 있으면 <strong>hit</strong>, 없으면 <strong>miss</strong>입니다. Miss에서는 P를 담을 frame을 확보해야 합니다. 빈 자리가 없다면 다른 페이지를 안전하게 내보내야 합니다.</p><div class="callout">Hit여도 다른 스레드의 latch를 기다릴 수 있습니다. Miss여도 OS cache 등 하위 계층이 읽기를 처리할 수 있어, 반드시 물리 디스크 I/O가 발생하는 것은 아닙니다.</div>
 </section>
 
 

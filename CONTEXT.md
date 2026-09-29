@@ -28,9 +28,9 @@ _Avoid_: Teaching course, learner site, presentation notes
 The capability-gated, multi-session route through the Audience-facing seminar site. It has no predetermined total duration: the route continues through Core, Advanced, and applied maintainer work until Seminar participants demonstrate deep Module understanding.
 _Avoid_: Live seminar route, fixed-duration course, presentation deck
 
-**Three-hour lecture**:
-The bounded live presentation following the first-principles route: 150 minutes of mechanism explanations, examples, and representative source paths, ten minutes of breaks, and twenty minutes for questions and time buffer. It uses selected existing seminar pages and does not imply completion of the full Seminar curriculum.
-_Avoid_: Curriculum completion, full maintainer training
+**First-principles route**:
+The audience-facing topic sequence that builds the page-buffer model from basic programming concepts through CUBRID replacement, background progress and cross-engine comparison. It has no fixed delivery duration and does not imply completion of the full Seminar curriculum.
+_Avoid_: Three-hour route, fixed-duration course, full maintainer training
 
 **Seminar lecture**:
 An audience-facing unit in the Seminar curriculum combining explanation, a bounded source trace, participant reasoning, and questions around one coherent mechanism.

@@ -1,4 +1,8 @@
-# Presentation-friendly three-hour lecture
+# Presentation-friendly lecture
+
+The [replacement revision](replacement-socratic-design.md) supersedes the fixed
+180-minute agenda below. These earlier delivery decisions are retained as
+history; the current first-principles route is an uncapped topic sequence.
 
 ## Confirmed scope
 

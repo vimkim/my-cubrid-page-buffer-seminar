@@ -1,0 +1,554 @@
+{
+  "kind": "automated browser observations, not human translation acceptance",
+  "viewport": {
+    "projection": [
+      1440,
+      1000
+    ],
+    "mobile": [
+      390,
+      844
+    ]
+  },
+  "sha256": {
+    "en/lessons/0007-replace-one-frame.html": "a9096f337b26d8247459b27f58f43128f2928feb06de90774bcf587719263dbe",
+    "ko/lessons/0007-replace-one-frame.html": "2e75eef0cbae38fc077dc0931716e8a9241b29d0128899d9515e87ac48b23f48",
+    "en/reference/first-principles-route.html": "b0da53ec838cf9682a9f865427a21098f103673a8ff5bb061b75da4be643b630",
+    "ko/reference/first-principles-route.html": "87746effa1aea270f6b9e59ade3bef41bcb1641a565ec3b192c4eb49e26592b9",
+    "assets/replacement-socratic.css": "ee195229bed84c893fcf02005bcf56217f0fe35ecaf29d924e5978e994815084"
+  },
+  "observations": [
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "first-principles",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "story",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "one-list",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "pool-map",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "private-shared",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "zones",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "admission",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "aging",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "reuse",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "migration",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "quota",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "list-choice",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "gate",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "handoff-details",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "slot",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "no-victim",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "verbs",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "costs",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "replacement-lab-route",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "source-route",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "retrieval",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "structures-cost",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "aout",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "presentation",
+      "id": "primary-reading",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "en",
+      "mode": "controls",
+      "next": "story",
+      "previous": "first-principles",
+      "readingVisible": 24,
+      "total": 24,
+      "errors": []
+    },
+    {
+      "lang": "en",
+      "mode": "mobile-no-js",
+      "visible": 24,
+      "total": 24,
+      "openAnswers": 20,
+      "answers": 20,
+      "width": 390,
+      "scroll": 390
+    },
+    {
+      "lang": "en",
+      "mode": "route",
+      "links": 7,
+      "width": 390,
+      "scroll": 390
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "first-principles",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "story",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "one-list",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "pool-map",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "private-shared",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "zones",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "admission",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "aging",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "reuse",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "migration",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "quota",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "list-choice",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "gate",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "handoff-details",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "slot",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "no-victim",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "verbs",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "costs",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "replacement-lab-route",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "source-route",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "retrieval",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "structures-cost",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "aout",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "presentation",
+      "id": "primary-reading",
+      "visible": 1,
+      "collapsed": true,
+      "answerOpened": true,
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "lang": "ko",
+      "mode": "controls",
+      "next": "story",
+      "previous": "first-principles",
+      "readingVisible": 24,
+      "total": 24,
+      "errors": []
+    },
+    {
+      "lang": "ko",
+      "mode": "mobile-no-js",
+      "visible": 24,
+      "total": 24,
+      "openAnswers": 20,
+      "answers": 20,
+      "width": 390,
+      "scroll": 390
+    },
+    {
+      "lang": "ko",
+      "mode": "route",
+      "links": 7,
+      "width": 390,
+      "scroll": 390
+    }
+  ]
+}

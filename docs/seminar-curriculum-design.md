@@ -93,7 +93,18 @@ Record Korean naturalness and EN/KO semantic reviews honestly against the applic
 The interview's product choices are settled through Q40. The user accepted layout A on 2026-09-08; the [prototype review](seminar-prototype-review.md) records the decision and archive. The bilingual migration is implemented, with page dispositions and automated verification recorded in the [coverage audit](curriculum-coverage.md). Final acceptance remains open for human Korean-language and semantic review against the current EN/KO fingerprints. Prototype approval and automated checks do not satisfy that separate review requirement.
 
 
-## Three-hour foundations-first delivery route (2026-09-30)
+## Current first-principles route (2026-09-30)
+
+The [accepted causal replacement design](replacement-socratic-design.md)
+supersedes the fixed 180-minute delivery and 35-minute replacement allocation in
+the historical records below. The existing first-principles URL now owns an
+ordered topic route with no fixed duration. Replacement is the central topic:
+participants reason about why each mechanism exists and what happens without it
+before revealing its operation. Lecture 0007 is self-contained, assuming only
+page/frame/BCB distinctions and textbook LRU. The overall curriculum and its
+completion criteria remain separate.
+
+## Three-hour foundations-first delivery route (2026-09-30) — historical
 
 The user accepted a bounded presentation within the existing multi-session curriculum. This does not replace the full Core/Advanced route or its completion criteria. The paired `reference/first-principles-route.html` pages connect relevant canonical lectures using definition, purpose, consequences of absence, constructed example, and a pinned-source call path. Existing lecture URLs and deeper material remain available.
 
