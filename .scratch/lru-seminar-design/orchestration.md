@@ -18,9 +18,9 @@ Before 03/04 start, use the verified ticket02 state as an integration baseline a
 | F01 | implement_f01 | Implemented and verified | 74bec21, f8ace01; F01-handoff.md |
 | F02 | implement_f02 | Implemented and verified | fb78b76, b9bf97d; F02-handoff.md |
 | 02 | implement_02 | Implemented and verified | 3347d0b, 42c9ea7; ticket02-handoff.md |
-| 03 | implement_03 | Ready for isolated parallel work | Baseline 42c9ea7 plus integration contract |
-| 04 | implement_04 | Ready for isolated parallel work | Baseline 42c9ea7 plus integration contract |
-| 05 | Not spawned | Blocked by 03 and 04 | |
+| 03 | implement_03 | Integrated and verified | bc2b540 through 6703c60; 3ddf06a, b87c7d5; ticket03-handoff.md |
+| 04 | implement_04 | Integrated and verified | 6bf473d, ca3132b; ticket04-handoff.md |
+| 05 | implement_05 | Released for implementation | Verified combined baseline b87c7d5; integration-handoff.md |
 
 ## Acceptance limits
 
