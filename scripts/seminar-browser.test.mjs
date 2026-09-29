@@ -13,6 +13,50 @@ let browser;
 before(async () => { if (chromium) browser = await chromium.launch({ headless: true }); });
 after(async () => { await browser?.close(); });
 
+test('reuse schedules reset answers across branch switches and forward/backward navigation', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      await page.goto(base + language + '/reference/lru-worked-example.html?present=1#reuse-reject');
+      await page.locator('#reuse-reject > details > summary').click();
+      assert.match(await page.locator('#reuse-reject > details').innerText(), /C50\/Q/);
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#reuse-safe');
+      await page.locator('[data-section-previous]').click();
+      assert.equal(await page.locator('#reuse-reject > details').getAttribute('open'), null);
+      await page.locator('#reuse-reject a[href="#reuse-direct"]').click();
+      await page.locator('#reuse-direct > details > summary').focus();
+      await page.keyboard.press('Enter');
+      assert.match(await page.locator('#reuse-direct > details').innerText(), /INVALIDATE_DIRECT_VICTIM/);
+      await page.locator('#reuse-direct a[href="#selection-baseline"]').click();
+      assert.equal(new URL(page.url()).hash, '#selection-baseline');
+      await page.goBack();
+      assert.equal(new URL(page.url()).hash, '#reuse-direct');
+      assert.equal(await page.locator('#reuse-direct > details').getAttribute('open'), null);
+    } finally { await page.close(); }
+  }
+});
+
+test('reuse alternatives retain all histories and native answers without JavaScript', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/reference/lru-worked-example.html#reuse-flush');
+      for (const id of ['reuse-reject', 'reuse-safe', 'reuse-flush', 'reuse-direct']) {
+        assert.equal(await page.locator('#' + id).isVisible(), true);
+        await page.locator('#' + id + ' > details > summary').click();
+        assert.equal(await page.locator('#' + id + ' > details').getAttribute('open'), '');
+      }
+      assert.match(await page.locator('#reuse-flush > details').innerText(), /F-redirty:[\s\S]*DIRTY=1/);
+      assert.match(await page.locator('#reuse-safe > details').innerText(), /C50\/T/);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.locator('#reuse-direct a[href="#selection-baseline"]').click();
+      assert.equal(new URL(page.url()).hash, '#selection-baseline');
+    }
+  } finally { await context.close(); }
+});
+
 test('LRU continuation reveals cooling and preserves the route into migration', { skip: unavailable }, async () => {
   for (const language of ['en', 'ko']) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });

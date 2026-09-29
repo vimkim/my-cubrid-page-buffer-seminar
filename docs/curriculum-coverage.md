@@ -24,6 +24,10 @@ The pair explains capacity before policy, distinguishes page identity from frame
 
 Six-axis review covers novice voice, causal sequence, independently checked constructed arithmetic, disclosure of detailed tables, equivalent paired claims with human review pending, and served keyboard/mobile/projection/no-JavaScript delivery. No engine implementation claim is added. The [F01 handoff](../.scratch/lru-seminar-design/F01-handoff.md) records actual checks and remaining acceptance gates. F02 owns the database-constraints bridge and subsequent route adjustment. Human Korean-naturalness and semantic-parity review remains pending for all new or edited pairs; earlier review records are not acceptance evidence for this addition.
 
+## Ticket 03 safe reuse and progress (2026-09-29)
+
+The existing EN/KO worked-example pair adds four independent source-pinned schedules: rejected candidates (`reuse-reject`), protected detach/old-hash retirement/rebind (`reuse-safe`), G/G+1 flush alternatives (`reuse-flush`), and post-flush reservation/refix/revocation/retry (`reuse-direct`). Each starts from the ticket02 selection baseline or an explicitly named dirty checkpoint. C50/Q is the victim candidate; F42/P remains shared1 LRU2. Native disclosures and opt-in answer resets preserve independent reading and branch navigation without a simulator. Lecture12 links to the exact checkpoints. Existing pairing entries remain pending human review; new fingerprints are not receipts. See the ticket03 handoff for source checks, independent reviews, and actual validation gates.
+
 ## LRU worked-example addition (2026-09-29)
 
 The new [English](../en/reference/lru-worked-example.html) and [Korean](../ko/reference/lru-worked-example.html) pair implements admission and repeated-access prediction from a source-derived larger-pool snapshot. Lecture 12 links to its starting checkpoint in both languages. The page reuses the existing presentation controls and native disclosures; its unprefixed URL redirects to English under the site's compatibility convention.

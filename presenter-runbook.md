@@ -22,6 +22,12 @@ Use the independent counterexample P R S P T R to challenge “LRU always wins�
 
 The unseen exercise P R S R T P R uses a fresh empty cache. Instructor totals: FIFO/Clock 1 hit/6 misses, LRU 2 hits/5 misses, OPT 3 hits/4 misses. Request 6 distinguishes FIFO's eviction of R from LRU's eviction of S, explaining the final R miss versus hit. Use the full answer ledgers in native disclosures only after prediction. Ask for reasoning and state transitions, not an automated score. These checks do not establish participant mastery or replace human language review.
 
+## Ticket 03 safe reuse and progress
+
+Use the four `reuse-*` checkpoints in the LRU worked example. Ask participants to name the starting history before any prediction: R and S reset to selection-baseline; F adds a logged vacuum-worker modification; D restarts F's dirty pre-copy state and explicitly adds allocation contention/waiting. Do not concatenate mutually exclusive outcomes. A stable frame name survives identity retirement; VOID, INVALID latch, and INVALID free-list membership are distinct.
+
+Instructor explanation: a successful scan retains the BCB mutex across list detach and old-hash retirement, then the claim path binds T. Flush clears the old dirty obligation before I/O, so G completion clears flushing while a G+1 dirty obligation survives. The vacuum unfix exception is deliberate: ordinary LRU3 final unfix would boost Q. Direct reservation leaves Q reachable; B's refix revokes the offer and A retries at high priority. Temporary per-visit mutex contention supplies a legal bounded-search failure, not a runtime observation or evidence of fairness. Preserve VS-19/20/21. In no-JavaScript reading, close the native disclosure manually before a fresh prediction; all event histories remain visible and no dynamic state is carried.
+
 ## Ticket 02 cooling, migration, and selection
 
 Use Lecture 12B's exact trace links after the admission sequence. Ask for S46–S49 boundaries before opening the answer: at S49 combined-zone overflow demotes Z48 first, then zone1 overflow demotes P. P's age is 51 list events against a threshold of 25, so its later final unfix boosts it while preserving saved tick1000. B's index33 mismatch then moves the same frame through protected VOID into shared1 LRU2; it does not create a private copy or add a second epoch10 hit.

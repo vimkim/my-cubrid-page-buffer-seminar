@@ -14,7 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
   sections.forEach((e, i) => { if (!e.id) e.id = `seminar-section-${i + 1}`; });
   let active = new URLSearchParams(location.search).get('present') === '1';
   let index = 0;
+  function resetBranchAnswers() {
+    scope.querySelectorAll('[data-reset-answers] details[open]').forEach(answer => { answer.open = false; });
+  }
   function locateHash() {
+    resetBranchAnswers();
     let target;
     try { target = document.getElementById(decodeURIComponent(location.hash.slice(1))); } catch { return; }
     const found = sections.findIndex(e => e === target || e.contains(target));
@@ -40,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   function move(delta) {
+    resetBranchAnswers();
     index = Math.max(0, Math.min(sections.length - 1, index + delta));
     history.replaceState(null, '', '#' + sections[index].id);
     render();
@@ -59,6 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   previous.addEventListener('click', () => move(-1));
   next.addEventListener('click', () => move(1));
+  scope.addEventListener('click', event => {
+    if (event.target.closest('[data-reset-answers] a[href^="#"]')) resetBranchAnswers();
+  });
   window.addEventListener('hashchange', () => { locateHash(); render(); });
   document.addEventListener('keydown', e => {
     if (!active || e.altKey || e.ctrlKey || e.metaKey) return;

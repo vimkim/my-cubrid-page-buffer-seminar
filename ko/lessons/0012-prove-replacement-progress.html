@@ -60,6 +60,7 @@
       </section>
 
       <section class="section" id="decision">
+        <p><a href="../reference/lru-worked-example.html#reuse-reject">후보 거절 예측</a> · <a href="../reference/lru-worked-example.html#reuse-safe">보호된 C50/Q → C50/T 재사용 추적</a></p>
         <div class="eyebrow">04 · BCB A가 victim이 될까요?</div>
         <h2>LRU3에 있는 것 외에도 모든 현재 상태가 안전해야 합니다</h2>
         <img class="diagram" src="../../assets/one-bcb-victim-decision.svg" alt="LRU3 BCB 하나를 건너뛰거나 victim으로 detach하는 판단 과정">
@@ -86,6 +87,7 @@
       </section>
 
       <section class="section" id="progress">
+        <p><a href="../reference/lru-worked-example.html#reuse-flush">G와 G+1 완료 비교</a> · <a href="../reference/lru-worked-example.html#reuse-direct">reservation, 취소, retry 예측</a></p>
         <div class="eyebrow">06 · 안전한 victim이 없을 때</div>
         <h2>CUBRID는 BCB가 안전해질 때까지 기다립니다</h2>
         <img class="diagram" src="../../assets/allocation-progress.svg" alt="INVALID list부터 victim search, direct-victim wait, retry, timeout과 error까지의 allocation 흐름">
