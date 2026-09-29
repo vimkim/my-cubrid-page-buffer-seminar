@@ -86,12 +86,28 @@ Trade-off: A reaches the central replacement topic sooner and gives each deeper 
 
 The user clarified “No, proceed to Q3.” Only Q2 is deferred; the interview continues. Q1 remains accepted and neither Q2 option is selected. Questions that require a chosen teaching order remain pending, while independent scenario decisions may proceed. No presentation implementation has begun.
 
-## Q3 — Outcome of the recurring workload (pending)
+## Q3 — Outcome of the recurring workload (accepted A)
 
 Question: should the H1/H2-plus-scan story demonstrate both conditional retention success and a contrasting loss of a hot page, or one successful main outcome with limitations covered by separate exercises?
 
-Recommendation A: use one explicitly stated checkpoint and two branches differing in a clearly named workload condition (for example, the interval before A reuses its hot pages while B continues scanning). Show the final residency and causal transitions in both branches. Exact initial state and schedules must be verified before selecting a pair that actually yields the contrasting outcomes; this is not an assertion that any chosen delay guarantees eviction.
+The user selected A. Decision: use one explicitly stated checkpoint and two branches differing in a clearly named workload condition (for example, the interval before A reuses its hot pages while B continues scanning). Show the final residency and causal transitions in both branches. Exact initial state and schedules must be verified before selecting a pair that actually yields the contrasting outcomes; this is not an assertion that any chosen delay guarantees eviction.
 
 Alternative B: complete one source-consistent successful main trace and use existing separate counterexamples to explain limitations. This is easier to follow, but less directly tests which assumptions are responsible for the main outcome.
 
 This decision is independent of Q2: it determines what the example must demonstrate, not where concurrency or WAL is introduced. Preserve the existing distinction between constructed CUBRID scenarios, textbook models and runtime observations.
+
+
+Observable Q3 criteria:
+
+- Both branches start from the same explicitly stated pool, domain, zone and page-state checkpoint.
+- One named workload condition differs; resulting state transitions are derived rather than independently assumed.
+- Show the final residency of H1/H2 in both branches and identify the events responsible for retention or loss.
+- Verify the chosen schedules against the pinned mechanism before claiming either outcome. Label constructed scenarios separately from runtime observations.
+
+## Q4 — Final diagnostic exercise format (pending)
+
+Recommendation A: progressively disclose evidence for a slow page request. Participants first identify plausible causes, choose the next observation and explain what would distinguish their hypotheses. Reveal prepared evidence, ask them to revise the diagnosis, then expose model reasoning and remaining uncertainty. Cases should exercise retention misses, fixed-candidate pressure and dirty-page progress without assuming every symptom has a unique cause.
+
+Alternative B: provide all relevant observations at once and ask participants to classify the cause and explain the mechanism. This is easier to facilitate and checks conceptual application, but gives less evidence that participants can choose what to inspect.
+
+This question is independent of Q2. Exact counters, evidence cards and any source routes are factual implementation work after the exercise objective is agreed; no new runtime experiment or interactive scoring system is implied.
