@@ -481,6 +481,42 @@ assignment and revocation at `src/storage/page_buffer.c:15420-15652`; flush and
 post-flush at `10925-10952,15489-15556`; daemon tasks at
 `src/storage/page_buffer.c:16972-17255`. Daemon timing is version-sensitive.
 
+## Who supplies a waiter after a clean unfix?
+
+**Verified mechanism (pinned SERVER_MODE):** becoming clean and unfixed is not
+itself a notification to an allocator. An ordinary final unfix of an LRU3 BCB
+usually boosts it or moves it from private to shared; it does not invariably
+reserve that BCB for a sleeping allocator. A WRITE holder that made no change
+also needs the page to have been clean already: omitting a new dirty mark does
+not clear an existing DIRTY state.
+
+| Producer | Conditional assignment path |
+| --- | --- |
+| Final-unfix thread | In LRU3, `PGBUF_SHOULD_IGNORE_UNFIX` (vacuum worker or temporary volume) permits an assignment attempt when avoid-victim flags are absent. A VOID vacuum path can also attempt assignment. These paths require final release and no page-latch waiter. |
+| Thread adjusting LRU zones | `pgbuf_lru_fall_bcb_to_zone_3` can assign a demoted BCB when a direct waiter exists, eligibility holds, TO_VACUUM is absent, and BCB trylock plus protected recheck succeed. An unfix-triggered adjustment can therefore supply a different BCB. |
+| Page-flush daemon | During candidate collection, an already-clean eligible BCB can be assigned without writing it first. |
+| Post-flush daemon | Consumes only pointers supplied through `flushed_bcbs`; it does not scan all clean BCBs newly exposed by read unfix. Queue admission remains conditional. |
+
+Sources: [unfix predicate and branches](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6817-L6935)
+(predicate at line 290), [zone demotion](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10063-L10097),
+[clean candidate collection](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3797-L3843),
+and [post-flush consumer](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15504-L15545).
+
+**Constructed schedule:** all frames are fixed; an allocator fails its search
+and sleeps; readers then release clean pages. Release alone does not prove
+immediate assignment, nor that all released pages remain in LRU3. A running
+allocator can search candidates, whereas a sleeping allocator needs a producer
+handoff. The maintenance backup is not a verified rescue at this pin; see
+[VS-20](../unresolved-or-version-sensitive-findings.md). This schedule has not
+been reproduced and does not establish starvation.
+
+`pgbuf_assign_direct_victim` wakes a live allocation waiter and records the BCB
+pointer and direct flag while holding the waiter's thread mutex. Assignment is
+revocable: the receiver takes the BCB mutex and checks invalidation and current
+victim eligibility before reuse. The same VPID does not prove a reservation is
+still valid after re-fix. See [assignment](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15452-L15473)
+and [receiver checks](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15606-L15652).
+
 ## Structural cost map
 
 Let H be one resident hash-bucket chain length, R the distinct BCBs held by one

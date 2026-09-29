@@ -76,3 +76,24 @@ and existing browser regression suites pass together (73 tests); the receipt
 analyzer rejects four deliberately corrupted traces.
 Final served checks pass for 272 resources and 109 pages. Source whitespace and
 presenter links/anchors, fences, and contiguous schedules pass.
+
+## Clean-unfix handoff clarification (2026-09-30)
+
+Inclusion audit found post-flush queue conditions and maintenance VS-20 already
+covered. Lecture 6B lacked an explicit bridge from clean final unfix to the
+conditional assignment producers. Added paired explanation and canonical source
+routes in `advanced/replacement-progress.md`, distinguishing ordinary movement,
+special unfix paths, zone-demotion assignment, page-flush candidate collection,
+and post-flush queue consumption. Receiver invalidation/recheck and constructed
+schedule limits remain visible. No engine changes or new runtime claims.
+
+Seven bilingual source gates pass for 54 pairs. The guide aggregate passes
+Markdown/links/SVG checks (43 pages, 63 displayed SVGs) and served HTTP/live DOM
+(106 resources, 43 pages). Bilingual served checks pass for 272 resources and
+109 pages at temporary read-only loopback Copyparty port 3941. Focused headless
+Chromium checks pass in EN/KO reading and 1440×1000 presentation modes and 390px
+no-JavaScript mode, with no page errors or horizontal overflow. The Korean
+projection screenshot was inspected; edited presenter notes/cue card render in
+Copyparty. Source whitespace and presenter links/HTML anchors pass. Existing
+human review receipts remain missing/stale; the full bilingual aggregate fails
+only that existing review gate. No human acceptance or mastery is claimed.
