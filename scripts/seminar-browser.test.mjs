@@ -45,7 +45,8 @@ test('reuse alternatives retain all histories and native answers without JavaScr
       await page.goto(base + language + '/reference/lru-worked-example.html#reuse-flush');
       for (const id of ['reuse-reject', 'reuse-safe', 'reuse-flush', 'reuse-direct']) {
         assert.equal(await page.locator('#' + id).isVisible(), true);
-        await page.locator('#' + id + ' > details > summary').click();
+        await page.locator('#' + id + ' > details > summary').focus();
+        await page.keyboard.press('Enter');
         assert.equal(await page.locator('#' + id + ' > details').getAttribute('open'), '');
       }
       assert.match(await page.locator('#reuse-flush > details').innerText(), /F-redirty:[\s\S]*DIRTY=1/);
