@@ -9,7 +9,7 @@ This directory owns the English internal documentation set for senior engineers 
 - Read `CONTEXT.md` for canonical reader, document, and evidence vocabulary; read relevant decisions under `docs/adr/` before changing the document-set shape or language.
 - Read `source-inventory.md` before adding or strengthening implementation-specific claims.
 - Read `unresolved-or-version-sensitive-findings.md` when a claim concerns a possible defect, an older revision, or incomplete runtime evidence.
-- Treat CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912` as the pinned baseline. Verify symbols and control flow before carrying an assertion to another revision.
+- Treat CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912` as the pinned baseline; its local detached worktree is `/home/vimkim/gh/cb/pgbuf-grill`. Verify symbols and control flow before carrying an assertion to another revision.
 
 ## Document contract
 
