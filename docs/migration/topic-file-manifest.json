@@ -262,8 +262,8 @@
     {
       "path": ".scratch/seminar-repository-migration/spec.md",
       "source_sha256": "4a8bbb6b6182406d0fc218fd15ae3c1a88efe530cddd11636064ab50a55a52ac",
-      "migrated_sha256": "4a8bbb6b6182406d0fc218fd15ae3c1a88efe530cddd11636064ab50a55a52ac",
-      "changed": false
+      "migrated_sha256": "6fa0e859ab6bb14188f63c01fdfd6bdacb2bedaf01fa3c3f1da31d4a425211fe",
+      "changed": true
     },
     {
       "path": "AGENTS.md",

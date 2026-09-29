@@ -1,6 +1,6 @@
 # Page-buffer seminar repository migration
 
-Status: confirmed; execution in progress
+Status: complete
 
 Work item: 223. The user confirmed the complete contract on 2026-09-29, including both repository pushes.
 
@@ -43,6 +43,8 @@ The authenticated GitHub account is `vimkim`; GitHub did not resolve an existing
 4. Create and push the public topic repository. Retire the original content only after verification, leaving the relocation README and preserving external evidence still owned by the documentation repository.
 5. Commit and push the scoped source retirement to `my-cubrid-docs`, record final repository URLs and verification evidence, and leave parent/submodule setup to the user.
 
-## Remaining confirmation
+## Confirmation and completion
 
 The user confirmed the complete contract on 2026-09-29, including publication of both the new topic repository and the source retirement.
+
+Migration completed on 2026-09-29. The public topic repository is `vimkim/my-cubrid-page-buffer-seminar`; the verified content import was published at `08dc195a1991debe6d92833d820e223d19a4b101`. Source retirement was published to `vimkim/my-cubrid-docs` at `3486b8ca85e681696d02feb3022e44cc47292be2`. See the [verification record](../../docs/migration/verification.md). Parent collection and submodule setup remain user-managed; human language review remains work item 55.
