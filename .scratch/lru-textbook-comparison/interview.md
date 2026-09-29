@@ -1,6 +1,6 @@
 # Explicit textbook-versus-CUBRID LRU explanation
 
-Status: design interview in progress; no HTML implementation authorized by design confirmation yet. Work item 222.
+Status: design confirmed and implementation delivered; verification evidence is in handoff.md. Work item 222. The first-round frontier below records the interview history, not current unresolved choices.
 
 ## Request and preserved decisions
 

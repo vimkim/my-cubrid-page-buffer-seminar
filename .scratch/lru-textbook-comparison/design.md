@@ -1,6 +1,6 @@
 # Main-lecture textbook LRU comparison
 
-Status: confirmed by the user; implementation in progress. Work item222. See interview.md for decisions and source audit.
+Status: confirmed by the user and implemented. Work item222. See interview.md for decisions/source audit and handoff.md for verification and remaining acceptance gates.
 
 ## Delivery
 
