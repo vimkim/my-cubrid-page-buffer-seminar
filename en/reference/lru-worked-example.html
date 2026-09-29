@@ -1,18 +1,18 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LRU worked example: admission and reuse</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LRU worked example: admission, cooling, and selection</title>
 <link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
 <body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a>
 <header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum"><a data-curriculum-link href="course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span> | <a href="../../ko/reference/lru-worked-example.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">LRU / F42 / P</div><h1>LRU worked example: admission and reuse</h1><p>Follow the same frame through a miss, first placement, and another access. Predict each transition before opening its explanation. This first sequence ends with a resident LRU1 page that has been read again but has not moved.</p></header>
+<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">LRU / F42 / P</div><h1>LRU worked example: admission, cooling, and selection</h1><p>Follow the same frame through a miss, first placement, and another access. Predict each transition before opening its explanation. The first sequence ends with an unchanged LRU1 position; continue through scan-driven cooling, cross-context migration, and a fully occupied pool's first victim-list choice.</p></header>
 <div class="lesson-grid"><article class="lesson-main">
 <section class="section" id="snapshot"><h2>0 · A window into a larger pool</h2>
 <p><strong>Constructed trace, not a runtime observation.</strong> Rules are pinned to CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>. Textbook exact LRU puts each accessed item at the most-recent end. Here, inspect the actual fix and final-unfix branches before predicting movement.</p>
-<p>Server mode, <code>num_buffers = 32768; shared_lists = 32; private_lists = 4</code> (explicit private-chain count). Context A carries private-local <code>p = 0</code>, full list <code>32</code>; context B carries <code>p = 1</code>, full list <code>33</code>. B is idle during these steps. Pages P and R form A's small working set; a later sequential scan and B's access will put pressure on it. P and R are existing valid disk pages, initially absent from the resident hash. F42 and F43 are permanent frame/BCB pairs, not page IDs.</p>
+<p>Server mode, <code>num_buffers = 32768; shared_lists = 32; private_lists = 4</code> (explicit private-chain count). Context A carries private-local <code>p = 0</code>, full list <code>32</code>; context B carries <code>p = 1</code>, full list <code>33</code>. B is idle through checkpoint 8. Pages P and R form A's small working set; a later sequential scan and B's access will put pressure on it. P and R are existing valid disk pages, initially absent from the resident hash. F42 and F43 are permanent frame/BCB pairs, not page IDs.</p>
 <p>Initially 2,000 pages are resident: 100 in private list 32 and 1,900 in shared list 0. All other lists are empty. INVALID has 30,768 nodes, headed by F42 then F43. Shared list 0 has all its nodes in LRU3. Private list 32 has 2/48/50 nodes in LRU1/2/3; its LRU1 order is H1 → H2. H2 is <code>bottom_1</code>; the last of the 48 LRU2 nodes is <code>bottom_2</code>. The 50 LRU3 nodes follow it.</p>
-<p>List 32 has quota 1,000 and LRU1/LRU2 thresholds 50/50. These snapshot values stay fixed through this sequence.</p><details><summary>Derive the quota and shared thresholds</summary><p>A prior accepted quota pass has <code>private_pages_ratio = 0.5</code> and all smoothed private activity assigned to list 32. Thus <code>all_private_quota = 2000 * 0.5 = 1000</code>, list 32 has <code>quota = 1000</code>, and each private protected-zone threshold is <code>1000 * 0.05 = 50</code>. Other private quotas are zero. Shared thresholds are <code>floor((32768 - 1000) / 32) = 992</code>, then <code>floor(992 * 0.4) = 396</code> and <code>floor(992 * 0.05) = 49</code>. These are snapshot inputs and derived policy values, not miniature-pool substitutions.</p></details>
-<p>All unmentioned pages remain idle. No daemon/quota pass, new context access, error, waiter, dirtying, flush, reservation, or vacuum hint intervenes. Each event completes before the next. P and R remain clean, non-hot, with no avoid-victim or move-to-bottom flag. AOUT is disabled. List 32 starts at <code>tick_list = 1000</code>; the accepted quota epoch stays <code>adjust_age = 10</code>. Fresh F42/F43 have <code>hit_age = 0</code>; list 32's current <code>lru_hits = 0</code>. List ticks and quota epochs are different clocks.</p>
+<p>List 32 has quota 1,000 and LRU1/LRU2 thresholds 50/50. These snapshot values stay fixed through checkpoints 0–10; checkpoint 11 explicitly changes them.</p><details><summary>Derive the quota and shared thresholds</summary><p>A prior accepted quota pass has <code>private_pages_ratio = 0.5</code> and all smoothed private activity assigned to list 32. Thus <code>all_private_quota = 2000 * 0.5 = 1000</code>, list 32 has <code>quota = 1000</code>, and each private protected-zone threshold is <code>1000 * 0.05 = 50</code>. Other private quotas are zero. Shared thresholds are <code>floor((32768 - 1000) / 32) = 992</code>, then <code>floor(992 * 0.4) = 396</code> and <code>floor(992 * 0.05) = 49</code>. These are snapshot inputs and derived policy values, not miniature-pool substitutions.</p></details>
+<p>Through checkpoint 5, all unmentioned pages remain idle. No daemon/quota pass, new context access, error, waiter, dirtying, flush, reservation, or vacuum hint intervenes. Each event completes before the next. P and R remain clean, non-hot, with no avoid-victim or move-to-bottom flag. AOUT is disabled. List 32 starts at <code>tick_list = 1000</code>; the accepted quota epoch stays <code>adjust_age = 10</code>. Fresh F42/F43 have <code>hit_age = 0</code>; list 32's current <code>lru_hits = 0</code>. List ticks and quota epochs are different clocks.</p>
 <p class="source-note">Implementation policy: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5744-L5800">list topology</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14359-L14496">quota/threshold derivation</a>. See the <a href="../../reference/replacement-policy-quantities-and-costs.md">quantity derivation</a> and <a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md">unfix/epoch evidence</a>.</p>
 </section>
 <section class="section" id="load-p" data-audience-checkpoint><h2>1 · Miss: load P into F42</h2><p>Before: P is absent; F42 heads INVALID; 30,768 frames are invalid. A requests OLD_PAGE with a READ latch. Which identity, fix count, and list state are visible when the successful fix returns?</p>
@@ -87,8 +87,135 @@ break;</code></pre><p class="source-note">Verified mechanism: <a href="https://g
 		}
 	      pgbuf_bcb_register_hit_for_lru (bufptr);
 	      break;</code></pre></details></details></section>
-<section class="section" id="carry-forward"><h2>Carry this state into the next mechanism</h2><p>The same F42/P and F43/R are now idle in list 32. This sequence establishes admission and a repeated-access keep case. For cooling, cross-context movement, and victim selection, use the existing private-LRU lecture and canonical replacement explanation. LRU1 membership and a zero fix count alone are not permission to overwrite a page.</p><p><a href="../../advanced/replacement-progress.md">Canonical replacement explanation</a> · <a href="../../unresolved-or-version-sensitive-findings.md">Evidence limits and open findings</a></p></section>
-</article><nav class="lesson-nav" aria-label="Trace checkpoints"><a href="#snapshot">0 · A window into a larger pool</a><a href="#load-p">1 · Miss: load P into F42</a><a href="#admit-p">2 · Final unfix: place F42</a><a href="#admit-r">3 · Load and release R: give P a newer neighbor</a><a href="#hit-p">4 · Hit P: does it become most recent?</a><a href="#unfix-p">5 · Final unfix again: still below R?</a><a href="#carry-forward">Carry this state into the next mechanism</a></nav></div>
+<section class="section" id="carry-forward"><h2>6 · Continue from the same pool</h2>
+<p>Carry forward INVALID 30,766, resident 2,002, list 32 counts 4/48/50, tick 1002, epoch 10, and F43 → F42 → H1 → H2. The following names refine previously unnamed state; they insert no pages. Name the original 48 LRU2 frames Z1 → … → Z48 and the 50 LRU3 frames C1 → … → C50. C50 represents page Q. These are permanent frame aliases, distinct from page identities.</p>
+<p>Name the remaining INVALID chain G1 → … → G30766. A scans distinct, initially absent valid disk pages S1 through S30766 into these frames in order, each with a successful OLD_PAGE/READ fix and final unfix. Pause at the stated checkpoints. All G frames start with hit_age 0. Every original and newly admitted page is clean, not flushing or reserved, with no avoid-victim flag, waiter, or special unfix hint; between events fcnt is 0 and latch is NO_LATCH. No direct-victim waiter exists. AOUT remains dormant.</p>
+<details><summary>Additional state needed for deterministic arithmetic</summary><p>List 32 starts this continuation with tick_lru3 = 100; C1…C50 have tick_lru3 = 99…50, so C50 is oldest and victim_hint = C50. Shared list 0 has 1,900 advertised candidates; private 32 has 50. The ordinary private advertisement queue starts empty, shared queue contains [0], and big-private queue is empty; successful queue publication is assumed. Other lists and activity samples are zero. For the one shared insertion, add_shared_lru_idx = 0 and avoid_shared_lru_idx = -1; empty shared list 1 has tick_list = 0. These are constructed starting values, not measurements.</p></details>
+<p>Until the explicitly scheduled quota pass, thresholds stay 50/50 and quota stays 1,000. Scheduling no accepted pass during the scan is an authored interleaving, not a claim that a real scan finishes before a daemon wakes. Larger list residence is allowed: quota influences replacement; it is not an admission capacity limit while INVALID supplies frames.</p>
+<p><a href="../lessons/0012b-understand-private-lru-index.html#movement">Lecture 12B · movement</a> · <a href="../../advanced/replacement-progress.md">Canonical replacement explanation</a></p></section>
+<section class="section" id="cooling" data-audience-checkpoint><h2>7 · Scan S1…S49: derive the boundaries</h2>
+<p>Before: list 32 has 4/48/50. A completes each scan page's load and final unfix, with no P/R access yet. At which insertion does P leave LRU1? Predict the counts and both boundary frames after S49.</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary>
+<div class="table-scroll"><table><thead><tr><th>After scan page</th><th>LRU1 / LRU2 / LRU3</th><th>Boundary change</th></tr></thead><tbody><tr><td>S46</td><td>50 / 48 / 50</td><td>bottom_1 = H2; bottom_2 = Z48</td></tr><tr><td>S47</td><td>50 / 49 / 50</td><td>H2 → LRU2; bottom_1 = H1</td></tr><tr><td>S48</td><td>50 / 50 / 50</td><td>H1 → LRU2; bottom_1 = F42</td></tr><tr><td>S49</td><td>50 / 50 / 51</td><td>Z48 → LRU3 first; F42 → LRU2 next</td></tr></tbody></table></div>
+<pre>LRU1: G49 → … → G1 → F43/R       bottom_1 = F43
+LRU2: F42/P → H1 → H2 → Z1 → … → Z47    bottom_2 = Z47
+LRU3: Z48 → C1 → … → C50
+tick_list = 1051; tick_lru3 = 101; Z48.tick_lru3 = 100
+INVALID = 30717; resident = 2051; lru_hits[32] = 51</pre>
+<p>Each new top increments the list tick once. The helper first limits LRU1+LRU2 to 100, then limits LRU1 to 50. At S49 the temporary protected total is 101: the old bottom_2 Z48 falls before P is reclassified. No node is physically removed by these demotions, and the no-waiter assumption excludes direct assignment. The BCB mutex protects the admitted frame; the list mutex protects links, counters, and boundary adjustment.</p>
+<pre><code>for (bcb_bottom = lru_list-&gt;bottom_2 != NULL ? lru_list-&gt;bottom_2 : lru_list-&gt;bottom_1;
+     threshold &lt; PGBUF_LRU_ZONE_ONE_TWO_COUNT (lru_list); bcb_bottom = bcb_prev)
+  {
+    /* save prev BCB in case this is removed from list */
+    bcb_prev = bcb_bottom-&gt;prev_BCB;
+
+    assert (bcb_bottom != NULL &amp;&amp; pgbuf_bcb_get_zone (bcb_bottom) != PGBUF_LRU_3_ZONE);
+
+    pgbuf_lru_fall_bcb_to_zone_3 (thread_p, bcb_bottom, lru_list);
+  }</code></pre>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9985-L10116">combined adjustment and fall</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10207-L10232">insertion under the list mutex</a>.</p></details></section>
+<section class="section" id="cooled-reuse" data-audience-checkpoint><h2>8 · Reuse P after cooling</h2>
+<p>Before: P is the first LRU2 frame, with saved tick 1000; list tick is 1051 and LRU2 count is 50. A READ-fixes P and final-unfixes it. Is the elapsed list-event age sufficient for promotion? Wall-clock time and quota epoch have not supplied that answer.</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary>
+<pre>age = 1051 − 1000 = 51 ≥ floor(50 / 2) = 25
+LRU1: F42/P → G49 → … → G1        bottom_1 = G1
+LRU2: F43/R → H1 → H2 → Z1 → … → Z47
+counts = 50 / 50 / 51; tick_list = 1052
+F42.tick_lru_list = 1000; hit_age = 10; lru_hits[32] = 51</pre>
+<p>The ordinary fix grants ownership without moving P. On final unfix, A matches list 32 and P remains non-hot; the LRU2 old-enough test succeeds. With the BCB protected, boost locks list 32, unlinks P, inserts it at the top, and adjusts only zone 1: R falls into LRU2. Boost increments tick_list but does not rewrite P's saved tick. INVALID and the resident count are unchanged. A further same-context LRU1 access would keep the position under these assumptions, as at <a href="#unfix-p">checkpoint 5</a>.</p>
+<pre><code>if (PGBUF_IS_BCB_OLD_ENOUGH (bufptr, pgbuf_lru_list_from_bcb (bufptr)))
+  {
+    /* boost */
+    pgbuf_lru_boost_bcb (thread_p, bufptr);
+  }</code></pre>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1053-L1061">age predicate</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6785-L6818">LRU2 branch</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10118-L10195">protected boost</a>.</p></details></section>
+<section class="section" id="cross-context" data-audience-checkpoint><h2>9 · B accesses the same P</h2>
+<p>Before: A has released P; B carries private-local p = 1, full list 33. B successfully READ-fixes P, then final-unfixes it. Does this grant B a private copy, move P to list 33, or change its existing list association?</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary>
+<pre>private 32: 49 / 50 / 51; tick_list = 1052; top = G49
+shared 1:   0 / 1 / 0; tick_list = 1
+F42/P: shared 1, LRU2; saved tick = 0; hit_age = 10
+shared 1 top = bottom_2 = bottom = F42; bottom_1 = NULL
+list 33 remains empty; INVALID = 30717; resident = 2051</pre>
+<p>The private-domain mismatch 33 != 32 is enough; P need not become hot. While B holds the fix, P stays in private 32. Its zero-count unfix keeps the BCB mutex, unlinks under the private-list mutex, passes through VOID, releases that list mutex, then links under the destination shared-list mutex. The selector increments add_shared_lru_idx from 0 to 1; 1 % 32 = 1 and neither balance refresh nor avoidance intervenes. New middle insertion saves target tick 0, increments it to 1, and needs no demotion because 1 ≤ 49.</p>
+<p>P remains one resident identity in one frame and one list at a time. A private domain never granted exclusive page ownership. Migration registers a hit but P already has hit_age 10, so neither list gains another epoch-10 sample. Already-shared pages do not migrate back merely because A accesses them.</p>
+<pre><code>if (thread_private_lru_index != bcb_lru_idx)
+  {
+    return true;
+  }</code></pre>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7005-L7038">migration predicate</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8988-L9063">destination selector</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10303-L10417">sequential list locks and VOID</a>.</p></details></section>
+<section class="section" id="exhaust-invalid" data-audience-checkpoint><h2>10 · Finish the scan before invoking replacement</h2>
+<p>Continue A's scan with S50…S30766, with no further P/R accesses or quota pass. Every miss still takes the next INVALID frame. Derive the state after the last final unfix: has any page been evicted, and can the next miss still use INVALID?</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary>
+<p>For every completed n from 50 through 30766: resident = 2002 + n, INVALID = 30766 − n, private size = 101 + n. S50 restores LRU1 to 50 without a fall. For all these n, the counts are 50 / 50 / (n + 1), tick_list = 1003 + n, and tick_lru3 = n + 51. Each S51 onward demotes exactly one old protected node. This bounded sequence specifies every insertion; the ellipsis omits repetitive display, not state-changing events.</p>
+<pre>INVALID = 0; resident = 32768
+private 32 = 30867 = 50 / 50 / 30767; tick_list = 31769; tick_lru3 = 30817
+LRU1: G30766 → … → G30717       bottom_1 = G30717
+LRU2: G30716 → … → G30667       bottom_2 = G30667
+LRU3: G30666 → … → G1 → F43/R → H1 → H2 → Z1 → … → Z48 → C1 → … → C50/Q
+shared 0 = 1900; shared 1 = F42/P; all other lists empty
+30867 + 1900 + 1 = 32768; lru_hits[32] = 30768</pre>
+<p>No eviction has happened. Quota does not override INVALID-first allocation. G1…G49 retain saved list ticks 1002…1050; G50…G30766 save n + 1002, accounting for P's extra boost tick. F43 retains saved tick 1001. C50 remains bottom and victim_hint; all 30,767 private LRU3 nodes have candidate-compatible flags. Their advertised count is not a protected eligibility decision: it does not include fix-count revalidation. Private queue [32] was first populated when S900 made list size 1001 exceed quota 1000; no consumer has run.</p>
+<pre><code>bufptr = pgbuf_get_bcb_from_invalid_list (thread_p);
+if (bufptr != NULL)
+  {
+    return bufptr;
+  }</code></pre>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8227-L8243">INVALID before victim search</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15674-L15728">candidate advertisement</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15889-L16001">zone counters and candidate flags</a>.</p></details></section>
+<section class="section" id="quota-epoch" data-audience-checkpoint><h2>11 · One accepted quota epoch</h2>
+<p>Now schedule one quota pass with private quota enabled, is_adjusting = 0, and measured diff_usec = 10000000 since the prior accepted pass. No page event overlaps. The prior pass reset the unfix shards; the trace has performed 30,771 ordinary final unfixes (3 original, 30,766 scan, one P boost, one B access). All sampled hits are the 30,768 in private 32. Predict activity, quota, thresholds, and list movement.</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary>
+<pre>adjust_age: 10 → 11; all lru_hits reset to 0
+lru_activity[32] = floor(1000000 × 30768 / 10000000) = 3076
+other private activity = 0; shared rate is floored to 1 for the ratio
+private_pages_ratio = clamp(3076 / 3077, 0.01, 0.998) = 0.998
+all_private_quota = floor(32768 × 0.998) = 32702
+quota[32] = min(32702, 5000, 16384) = 5000
+private thresholds = 250 / 250; other private quotas = 0
+shared target = max(floor((32768 − 32702) / 32), 50) = 50
+shared thresholds = 20 / 2</pre>
+<p>The 1 ms gate passes; the 500 ms gate cannot reject this interval. Unfix activity 30,771 exceeds the low-activity threshold floor(8192/100) = 81. At ten seconds the implementation replaces activity and ratio rather than blending old values. The shared calculation uses all_private_quota before the per-list hard cap; the unused quota is not redistributed. No existing node is promoted when thresholds grow: private protected count 100 is not over quota 5000, and shared 1's sole LRU2 node is below its new threshold. Counts, positions, list ticks, P/R hit_age 10, and INVALID remain unchanged. Candidate total 32667 ≥ floor(0.1 × 32768) makes victim_rich true.</p>
+<pre><code>lru_hits = ATOMIC_TAS_32 (&amp;monitor-&gt;lru_hits[i], 0);
+/* compute hits per second */
+lru_hits = (int) (onesec_usec * lru_hits / diff_usec);</code></pre>
+<details><summary>Expand quota caps and the adjustment gate</summary><pre><code>new_quota = (int) (new_lru_ratio * all_private_quota);
+new_quota = MIN (new_quota, PGBUF_PRIVATE_LRU_MAX_HARD_QUOTA);
+new_quota = MIN (new_quota, pgbuf_Pool.num_buffers / 2);
+
+lru_list = PGBUF_GET_LRU_LIST (i);
+lru_list-&gt;quota = new_quota;
+lru_list-&gt;threshold_lru1 = (int) (new_quota * PGBUF_LRU_ZONE_MIN_RATIO);
+lru_list-&gt;threshold_lru2 = (int) (new_quota * PGBUF_LRU_ZONE_MIN_RATIO);
+
+if (PGBUF_LRU_LIST_IS_ONE_TWO_OVER_QUOTA (lru_list))
+  {
+    pthread_mutex_lock (&amp;lru_list-&gt;mutex);
+    pgbuf_lru_adjust_zones (thread_p, lru_list, false);
+    pthread_mutex_unlock (&amp;lru_list-&gt;mutex);
+
+    PGBUF_BCB_CHECK_MUTEX_LEAKS ();
+  }</code></pre></details>
+<p>These are three different histories: list-event age measures insertions into LRU1/2; hit_age samples once per BCB per accepted quota epoch; the saturating hot-fix heuristic has threshold 64. P has only four ordinary fixes here, R one, each scan page one. An accepted quota pass does not make P hot or refresh its saved list tick.</p>
+<p class="source-note">Implementation policy: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14251-L14511">gates, smoothing, caps, shared thresholds</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16336-L16367">hot-fix history</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16594-L16610">epoch sample</a>.</p></details>
+<p><strong>Evidence limit:</strong> VS-21 tracks approximate sampling, reuse/wrap questions, and the mismatch between timing comments and executable gates. This serial arithmetic neither repairs those anomalies nor promises exact concurrent statistics. <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">Read the uncertainty registry</a>.</p></section>
+<section class="section" id="select-list" data-audience-checkpoint><h2>12 · Which list will A search?</h2>
+<p>Before: INVALID is empty; A's full private index is 32, quota 5000, size 30867, protected count 100, advertised candidates 30767. Queues are ordinary private [32], big-private [], shared [0]. Page-flush daemon is available but does not execute during this prediction. A requests a new absent valid page T. Predict the first selected list; stop before scanning or locking a candidate.</p>
+<details class="answer-disclosure"><summary>Reveal the state and source reasoning</summary>
+<pre>own protected-over-quota: 100 > 5000 → false
+own total-over-quota and candidates: 30867 > 5000 and 30767 > 0 → true
+next call: pgbuf_get_victim_from_lru_list(thread_p, 32)
+no queue consumed; no BCB detached; no permission to overwrite Q</pre>
+<p>INVALID-first has now legitimately failed, so allocation enters victim search. The own-private condition chooses 32 directly, without consuming an advertisement. That helper will lock the selected list, check LRU3, and scan at most 1,000 positions from its hint; because bottom C50 is clean, the helper resets a stale hint to C50 before the walk. Protected count 100 does not trigger pre-scan quota demotion.</p>
+<pre><code>if (PGBUF_LRU_LIST_IS_ONE_TWO_OVER_QUOTA (lru_list)
+    || (PGBUF_LRU_LIST_IS_OVER_QUOTA (lru_list) &amp;&amp; lru_list-&gt;count_vict_cand &gt; 0))</code></pre>
+<p>If this own search fails, 30867 &gt; 5000 + max(10, 50) restricts other-private discovery to the big-private queue. That queue is empty, so this route proceeds to shared advertisement 0 rather than consuming ordinary [32]. This is a conditional route, not another event already performed. A successful protected candidate would return earlier; failure does not grant permission to reuse an unsafe frame.</p>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9067-L9253">list-selection control flow</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9330-L9538">selected-list scan and protected recheck</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16424-L16471">restricted queue</a>.</p></details>
+<p><strong>Selection is not safe reuse.</strong> VS-19 leaves the big-private queue's initial producer unresolved; VS-20 records maintenance backup loops skipped as written. Neither supports a starvation or performance conclusion. AOUT stays dormant, and no runtime victim experiment is claimed. <a href="../../unresolved-or-version-sensitive-findings.md">Evidence qualifications</a>.</p></section>
+<section class="section" id="selection-baseline"><h2>Continue into protected reuse and policy defense</h2>
+<p>This terminal checkpoint is after the quota pass and before A's T allocation. The prediction above has not executed the selected-list helper. No BCB or list mutex is held, no fix remains, and no page is detached or reserved. C50/Q is clean LRU3 at private 32's bottom and hint, with fcnt 0, NO_LATCH, no waiters and no invalid-candidate flags. Its previous node is C49. F42/P remains shared 1 LRU2 with saved tick 0; F43/R remains private 32 LRU3 with saved tick 1001. Epoch is 11, their hit ages remain 10, and all lru_hits samples are zero (smoothed lru_activity[32] remains 3076).</p>
+<p>Use <a href="#exhaust-invalid">the complete terminal chain</a> and <a href="#quota-epoch">quota inputs</a> when starting a new schedule. A later schedule must name any dirtying, fix, reservation, or hint change it adds. The private BCB chain still has 50/50/30767 nodes despite thresholds 250/250. Selecting list 32 grants no permission to detach C50 or replace Q with T; that requires the protected candidate protocol.</p>
+<p><a href="../lessons/0012b-understand-private-lru-index.html#victim-search">Return to Lecture 12B · victim search</a> · <a href="../lessons/0012-prove-replacement-progress.html#trip">Lecture 12 · page journey</a> · <a href="../../advanced/replacement-progress.md">Canonical safety and progress explanation</a></p></section>
+</article><nav class="lesson-nav" aria-label="Trace checkpoints"><a href="#snapshot">0 · Pool snapshot</a><a href="#load-p">1 · Load P</a><a href="#admit-p">2 · Place P</a><a href="#admit-r">3 · Place R</a><a href="#hit-p">4 · Hit P</a><a href="#unfix-p">5 · Keep P</a><a href="#carry-forward">6 · Continue the pool</a><a href="#cooling">7 · Scan and cooling</a><a href="#cooled-reuse">8 · Reuse P</a><a href="#cross-context">9 · B accesses P</a><a href="#exhaust-invalid">10 · Exhaust INVALID</a><a href="#quota-epoch">11 · Quota epoch</a><a href="#select-list">12 · Select a list</a><a href="#selection-baseline">Terminal checkpoint</a></nav></div>
 <nav class="lecture-navigation" data-lecture-nav aria-label="Related lectures"><a rel="prev" href="../lessons/0012-prove-replacement-progress.html">Lecture 12 · Replacement state and progress</a><a rel="next" href="../lessons/0012b-understand-private-lru-index.html">Lecture 12B · Private LRU indexes and selection</a></nav></main>
 <nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
 </body></html>

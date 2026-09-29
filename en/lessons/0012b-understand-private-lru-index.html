@@ -109,6 +109,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       </section>
 
       <section class="section" id="movement">
+        <p><a href="../reference/lru-worked-example.html#cooling">Predict scan-driven cooling and reuse</a>, then <a href="../reference/lru-worked-example.html#cross-context">follow B's access to the same P</a> in the continuous constructed trace.</p>
         <div class="eyebrow">07 · Later BCB movement</div>
         <h2>First placement does not pin pages to that domain</h2>
         <p>This is a later rule for a BCB that is already on an LRU, not another description of first placement. Ordinary movement occurs only when an unfix changes global <code>fcnt</code> to zero. <code>pgbuf_should_move_private_to_shared()</code> requests migration when the final-unfixing thread's full private index differs from the BCB's private list—including when the context has no enabled assignment—or when a same-domain BCB is both hot and old enough.</p>
@@ -119,6 +120,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       </section>
 
       <section class="section" id="victim-search" data-search-order="own-over-quota,other-private,shared,own-fallback" data-list-scan-zone="LRU3" data-list-scan-max="1000" data-direct-victim-stage="after-search-failure">
+        <p><a href="../reference/lru-worked-example.html#quota-epoch">Calculate the accepted quota pass</a>, then <a href="../reference/lru-worked-example.html#select-list">choose A's first victim list</a> after explicitly exhausting INVALID.</p>
         <div class="eyebrow">08 · Which list is searched?</div>
         <h2>Choose a list first; inspect eligible BCBs second</h2>
         <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private and shared LRU domains, three zones per list, and the victim search order">

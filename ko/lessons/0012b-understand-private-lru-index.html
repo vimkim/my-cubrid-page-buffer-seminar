@@ -109,6 +109,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       </section>
 
       <section class="section" id="movement">
+        <p>연속된 구성 예제에서 <a href="../reference/lru-worked-example.html#cooling">스캔에 따른 냉각과 재사용을 예측</a>한 뒤 <a href="../reference/lru-worked-example.html#cross-context">B가 같은 P에 접근하는 과정</a>을 따라가세요.</p>
         <div class="eyebrow">07 · 이후 BCB 이동</div>
         <h2>첫 배치는 page를 그 domain에 고정하지 않습니다</h2>
         <p>이 규칙은 이미 LRU에 있는 BCB의 이후 이동이며 첫 배치를 다시 설명하는 것이 아닙니다. Ordinary movement는 unfix가 global <code>fcnt</code>를 0으로 바꿀 때만 일어납니다. <code>pgbuf_should_move_private_to_shared()</code>는 final-unfix한 thread의 full private index와 BCB의 private list가 다를 때—enabled assignment가 없는 context도 포함합니다—또는 같은 domain의 BCB가 hot이면서 충분히 old일 때 migration을 요청합니다.</p>
@@ -119,6 +120,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       </section>
 
       <section class="section" id="victim-search" data-search-order="own-over-quota,other-private,shared,own-fallback" data-list-scan-zone="LRU3" data-list-scan-max="1000" data-direct-victim-stage="after-search-failure">
+        <p><a href="../reference/lru-worked-example.html#quota-epoch">승인된 quota 조정을 계산</a>하고, INVALID를 명시적으로 소진한 뒤 <a href="../reference/lru-worked-example.html#select-list">A가 처음 탐색할 victim 리스트를 선택</a>해 보세요.</p>
         <div class="eyebrow">08 · 어느 list를 search하는가?</div>
         <h2>먼저 list를 고르고 그다음 eligible BCB를 살핍니다</h2>
         <img class="diagram" src="../../assets/lru-domains-zones.svg" alt="Private 및 shared LRU domain, list마다 세 zone, victim search 순서">

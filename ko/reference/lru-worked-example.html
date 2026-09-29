@@ -1,18 +1,18 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LRU 동작 예제: 최초 배치와 재접근</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LRU 동작 예제: 최초 배치, 냉각, 리스트 선택</title>
 <link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
 <body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a>
 <header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="교육과정"><a data-curriculum-link href="course-learning-path.html">교육과정</a><a data-library-link href="../index.html#library">주제별 자료</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><span aria-current="page">KO</span> | <a href="../../en/reference/lru-worked-example.html" hreflang="en" lang="en">EN</a></nav>
-<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">LRU / F42 / P</div><h1>LRU 동작 예제: 최초 배치와 재접근</h1><p>동일한 프레임이 miss, 최초 배치, 재접근을 거치는 과정을 따라갑니다. 설명을 펼치기 전에 다음 상태를 예측해 보세요. 첫 시퀀스의 끝에서는 LRU1 페이지를 다시 읽었는데도 위치가 그대로인 이유를 설명할 수 있습니다.</p></header>
+<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">LRU / F42 / P</div><h1>LRU 동작 예제: 최초 배치, 냉각, 리스트 선택</h1><p>동일한 프레임이 miss, 최초 배치, 재접근을 거치는 과정을 따라갑니다. 설명을 펼치기 전에 다음 상태를 예측해 보세요. 첫 시퀀스는 LRU1 위치 유지로 끝납니다. 이후 스캔에 따른 냉각, 다른 문맥에 의한 이동, 꽉 찬 풀의 첫 victim 리스트 선택까지 이어갑니다.</p></header>
 <div class="lesson-grid"><article class="lesson-main">
 <section class="section" id="snapshot"><h2>0 · 큰 풀의 일부를 살펴보기</h2>
 <p><strong>소스에 따라 구성한 예제이며 실행에서 관찰한 기록이 아닙니다.</strong> 기준 리비전은 CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>입니다. 교과서적인 exact LRU는 접근한 항목을 매번 가장 최근 위치로 옮깁니다. 여기서는 실제 fix와 final-unfix 분기를 확인한 뒤 이동 여부를 예측합니다.</p>
-<p>서버 모드이며 <code>num_buffers = 32768; shared_lists = 32; private_lists = 4</code>입니다. private chain 수는 명시적으로 설정했습니다. 실행 문맥 A의 private-local 인덱스는 <code>p = 0</code>, 전체 리스트 인덱스는 <code>32</code>입니다. 실행 문맥 B는 <code>p = 1</code>, 전체 인덱스 <code>33</code>을 사용하며 이번 시퀀스에서는 활동하지 않습니다. 페이지 P와 R은 A의 작은 working set입니다. 이후의 순차 스캔과 B의 접근이 이 집합에 영향을 줍니다. P와 R은 디스크에 존재하는 유효한 페이지이며, 시작 시 resident hash에는 없습니다. F42와 F43은 고정된 프레임/BCB 쌍의 이름이지 페이지 ID가 아닙니다.</p>
+<p>서버 모드이며 <code>num_buffers = 32768; shared_lists = 32; private_lists = 4</code>입니다. private chain 수는 명시적으로 설정했습니다. 실행 문맥 A의 private-local 인덱스는 <code>p = 0</code>, 전체 리스트 인덱스는 <code>32</code>입니다. 실행 문맥 B는 <code>p = 1</code>, 전체 인덱스 <code>33</code>을 사용하며 확인 지점 8까지는 활동하지 않습니다. 페이지 P와 R은 A의 작은 working set입니다. 이후의 순차 스캔과 B의 접근이 이 집합에 영향을 줍니다. P와 R은 디스크에 존재하는 유효한 페이지이며, 시작 시 resident hash에는 없습니다. F42와 F43은 고정된 프레임/BCB 쌍의 이름이지 페이지 ID가 아닙니다.</p>
 <p>시작 시 상주 페이지는 2,000개입니다. private 리스트 32에 100개, shared 리스트 0에 1,900개가 있고 나머지 리스트는 비어 있습니다. INVALID에는 30,768개가 있으며 F42, F43 순서로 시작합니다. shared 리스트 0의 노드는 모두 LRU3에 있습니다. 리스트 32의 LRU1/2/3 노드 수는 2/48/50이고, LRU1 순서는 H1 → H2입니다. H2가 <code>bottom_1</code>이며, LRU2의 48번째 노드가 <code>bottom_2</code>입니다. 그 뒤에 LRU3 노드 50개가 이어집니다.</p>
-<p>리스트 32의 quota는 1,000이고 LRU1/LRU2 임계치는 50/50입니다. 이번 시퀀스 동안 이 값은 바뀌지 않습니다.</p><details><summary>quota와 shared 임계치 계산 펼치기</summary><p>앞선 유효 quota 조정 결과에서 <code>private_pages_ratio = 0.5</code>이고 평활화한 private activity가 모두 리스트 32에 속한다고 정했습니다. 따라서 <code>all_private_quota = 2000 * 0.5 = 1000</code>이고 리스트 32의 <code>quota = 1000</code>, private 보호 구간별 임계치는 <code>1000 * 0.05 = 50</code>입니다. 다른 private quota는 0입니다. shared 임계치는 <code>floor((32768 - 1000) / 32) = 992</code>를 기준으로 <code>floor(992 * 0.4) = 396</code>, <code>floor(992 * 0.05) = 49</code>입니다. 작은 가상 풀의 규칙으로 바꾼 것이 아니라, 지정한 스냅샷 입력에 실제 정책 계산을 적용한 값입니다.</p></details>
-<p>언급하지 않은 페이지는 모두 그대로 둡니다. 중간에 daemon/quota 조정, 다른 문맥의 접근, 오류, waiter, dirty 전환, flush, 예약, vacuum hint는 없습니다. 각 이벤트가 끝난 뒤 다음 이벤트가 시작합니다. P와 R은 clean, non-hot 상태이며 avoid-victim과 move-to-bottom 플래그가 없습니다. AOUT은 비활성입니다. 리스트 32는 <code>tick_list = 1000</code>에서 시작하고 quota epoch는 <code>adjust_age = 10</code>으로 유지됩니다. 새 F42/F43의 <code>hit_age = 0</code>이며 리스트 32의 현재 <code>lru_hits = 0</code>입니다. 리스트 tick과 quota epoch는 서로 다른 기준입니다.</p>
+<p>리스트 32의 quota는 1,000이고 LRU1/LRU2 임계치는 50/50입니다. 확인 지점 0–10까지 이 값을 유지하며, 지점 11에서 명시적으로 변경합니다.</p><details><summary>quota와 shared 임계치 계산 펼치기</summary><p>앞선 유효 quota 조정 결과에서 <code>private_pages_ratio = 0.5</code>이고 평활화한 private activity가 모두 리스트 32에 속한다고 정했습니다. 따라서 <code>all_private_quota = 2000 * 0.5 = 1000</code>이고 리스트 32의 <code>quota = 1000</code>, private 보호 구간별 임계치는 <code>1000 * 0.05 = 50</code>입니다. 다른 private quota는 0입니다. shared 임계치는 <code>floor((32768 - 1000) / 32) = 992</code>를 기준으로 <code>floor(992 * 0.4) = 396</code>, <code>floor(992 * 0.05) = 49</code>입니다. 작은 가상 풀의 규칙으로 바꾼 것이 아니라, 지정한 스냅샷 입력에 실제 정책 계산을 적용한 값입니다.</p></details>
+<p>확인 지점 5까지는 언급하지 않은 페이지를 모두 그대로 둡니다. 중간에 daemon/quota 조정, 다른 문맥의 접근, 오류, waiter, dirty 전환, flush, 예약, vacuum hint는 없습니다. 각 이벤트가 끝난 뒤 다음 이벤트가 시작합니다. P와 R은 clean, non-hot 상태이며 avoid-victim과 move-to-bottom 플래그가 없습니다. AOUT은 비활성입니다. 리스트 32는 <code>tick_list = 1000</code>에서 시작하고 quota epoch는 <code>adjust_age = 10</code>으로 유지됩니다. 새 F42/F43의 <code>hit_age = 0</code>이며 리스트 32의 현재 <code>lru_hits = 0</code>입니다. 리스트 tick과 quota epoch는 서로 다른 기준입니다.</p>
 <p class="source-note">Implementation policy: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5744-L5800">리스트 구성</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14359-L14496">quota와 임계치 계산</a>. <a href="../../reference/replacement-policy-quantities-and-costs.md">수량 계산 근거</a>와 <a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md">unfix/epoch 근거</a>를 함께 참고하세요.</p>
 </section>
 <section class="section" id="load-p" data-audience-checkpoint><h2>1 · Miss: F42에 P 적재</h2><p>이전 상태: P는 비상주이고 F42는 INVALID의 첫 노드입니다. invalid 프레임은 30,768개입니다. A가 OLD_PAGE와 READ latch로 요청합니다. fix가 성공해 반환했을 때 페이지 식별자, fix count, 리스트 상태는 무엇일까요?</p>
@@ -87,8 +87,135 @@ break;</code></pre><p class="source-note">Verified mechanism: <a href="https://g
 		}
 	      pgbuf_bcb_register_hit_for_lru (bufptr);
 	      break;</code></pre></details></details></section>
-<section class="section" id="carry-forward"><h2>이 상태에서 다음 메커니즘으로</h2><p>동일한 F42/P와 F43/R이 이제 리스트 32에서 idle 상태입니다. 여기까지는 최초 배치와 재접근 시 위치 유지 사례입니다. 냉각, 다른 문맥에 의한 이동, victim 선택은 기존 private-LRU 강의와 정본 설명에서 이어서 살펴보세요. LRU1 소속이고 fix count가 0이라는 사실만으로 페이지를 덮어쓸 수는 없습니다.</p><p><a href="../../advanced/replacement-progress.md">교체 정책 정본 설명</a> · <a href="../../unresolved-or-version-sensitive-findings.md">근거의 한계와 미해결 항목</a></p></section>
-</article><nav class="lesson-nav" aria-label="추적 확인 지점"><a href="#snapshot">0 · 큰 풀의 일부를 살펴보기</a><a href="#load-p">1 · Miss: F42에 P 적재</a><a href="#admit-p">2 · Final unfix: F42 배치</a><a href="#admit-r">3 · R 적재와 해제: P 위에 새 이웃 추가</a><a href="#hit-p">4 · P hit: 가장 최근 위치로 이동할까?</a><a href="#unfix-p">5 · 다시 final unfix: 여전히 R 아래일까?</a><a href="#carry-forward">이 상태에서 다음 메커니즘으로</a></nav></div>
+<section class="section" id="carry-forward"><h2>6 · 같은 풀에서 이어가기</h2>
+<p>INVALID 30,766개, 상주 2,002개, 리스트 32의 개수 4/48/50, tick 1002, epoch 10, F43 → F42 → H1 → H2 순서를 그대로 이어갑니다. 다음 이름은 기존에 이름을 붙이지 않은 상태를 구체화할 뿐 페이지를 추가하지 않습니다. 기존 LRU2 프레임 48개를 Z1 → … → Z48, LRU3 프레임 50개를 C1 → … → C50이라고 부릅니다. C50이 나타내는 페이지는 Q입니다. 이들은 페이지 식별자와 구별되는 영구 프레임의 별칭입니다.</p>
+<p>남은 INVALID 연결을 G1 → … → G30766이라고 부릅니다. A는 아직 상주하지 않는 서로 다른 유효한 디스크 페이지 S1부터 S30766까지 순서대로 이 프레임에 읽습니다. 각 페이지마다 OLD_PAGE/READ fix와 final unfix를 성공적으로 마친 뒤 다음으로 넘어가며, 지정된 지점에서 멈춥니다. G 프레임의 초기 hit_age는 0입니다. 기존 페이지와 새 페이지 모두 clean이며 flushing, 예약, avoid-victim 플래그, waiter, 특별한 unfix hint가 없습니다. 이벤트 사이에는 fcnt 0, NO_LATCH입니다. Direct-victim 대기자는 없으며 AOUT은 계속 비활성입니다.</p>
+<details><summary>계산을 확정하는 추가 상태</summary><p>이어서 시작할 때 리스트 32의 tick_lru3 = 100이고 C1…C50의 tick_lru3는 99…50입니다. 따라서 C50이 가장 오래되었고 victim_hint = C50입니다. Shared 리스트 0의 후보 수는 1,900개, private 32는 50개입니다. 일반 private 광고 큐는 비어 있고 shared 큐는 [0], big-private 큐는 빈 상태이며 큐 등록은 성공한다고 가정합니다. 나머지 리스트와 activity 표본은 0입니다. 한 번의 shared 삽입에 사용할 add_shared_lru_idx = 0, avoid_shared_lru_idx = -1이고, 비어 있는 shared 리스트 1의 tick_list = 0입니다. 이는 측정값이 아닌 구성한 초기값입니다.</p></details>
+<p>명시적으로 예약한 quota 조정 전까지 임계값 50/50과 quota 1,000을 유지합니다. 스캔 도중 승인된 조정이 없다는 것은 예제의 실행 순서 가정이며, 실제 스캔이 daemon 기상 전에 끝난다는 주장이 아닙니다. 리스트 상주 수가 quota를 넘어도 됩니다. Quota는 교체 선택에 영향을 주지만 INVALID가 프레임을 공급하는 동안의 수용 한도는 아닙니다.</p>
+<p><a href="../lessons/0012b-understand-private-lru-index.html#movement">강의 12B · 이동</a> · <a href="../../advanced/replacement-progress.md">교체 정책 정본 설명</a></p></section>
+<section class="section" id="cooling" data-audience-checkpoint><h2>7 · S1…S49 스캔: 경계 계산</h2>
+<p>이전 상태: 리스트 32는 4/48/50입니다. A가 각 스캔 페이지의 적재와 final unfix를 마치며 아직 P/R에 재접근하지 않습니다. 몇 번째 삽입에서 P가 LRU1을 벗어날까요? S49 이후 개수와 두 경계 프레임을 예측해 보세요.</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary>
+<div class="table-scroll"><table><thead><tr><th>완료한 스캔 페이지</th><th>LRU1 / LRU2 / LRU3</th><th>경계 변화</th></tr></thead><tbody><tr><td>S46</td><td>50 / 48 / 50</td><td>bottom_1 = H2; bottom_2 = Z48</td></tr><tr><td>S47</td><td>50 / 49 / 50</td><td>H2 → LRU2; bottom_1 = H1</td></tr><tr><td>S48</td><td>50 / 50 / 50</td><td>H1 → LRU2; bottom_1 = F42</td></tr><tr><td>S49</td><td>50 / 50 / 51</td><td>먼저 Z48 → LRU3, 다음 F42 → LRU2</td></tr></tbody></table></div>
+<pre>LRU1: G49 → … → G1 → F43/R       bottom_1 = F43
+LRU2: F42/P → H1 → H2 → Z1 → … → Z47    bottom_2 = Z47
+LRU3: Z48 → C1 → … → C50
+tick_list = 1051; tick_lru3 = 101; Z48.tick_lru3 = 100
+INVALID = 30717; resident = 2051; lru_hits[32] = 51</pre>
+<p>새 top 삽입마다 리스트 tick이 한 번 증가합니다. Helper는 먼저 LRU1+LRU2를 100 이하로 맞추고, 그다음 LRU1을 50 이하로 맞춥니다. S49에서는 보호 구간의 임시 합계가 101이므로 기존 bottom_2인 Z48이 먼저 내려가고 이어 P의 구간이 바뀝니다. 이 강등으로 노드를 물리적으로 제거하지는 않으며, 대기자가 없다는 가정으로 직접 할당도 배제됩니다. BCB mutex는 새 프레임을, 리스트 mutex는 연결·개수·경계 조정을 보호합니다.</p>
+<pre><code>for (bcb_bottom = lru_list-&gt;bottom_2 != NULL ? lru_list-&gt;bottom_2 : lru_list-&gt;bottom_1;
+     threshold &lt; PGBUF_LRU_ZONE_ONE_TWO_COUNT (lru_list); bcb_bottom = bcb_prev)
+  {
+    /* save prev BCB in case this is removed from list */
+    bcb_prev = bcb_bottom-&gt;prev_BCB;
+
+    assert (bcb_bottom != NULL &amp;&amp; pgbuf_bcb_get_zone (bcb_bottom) != PGBUF_LRU_3_ZONE);
+
+    pgbuf_lru_fall_bcb_to_zone_3 (thread_p, bcb_bottom, lru_list);
+  }</code></pre>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9985-L10116">합산 구간 조정과 강등</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10207-L10232">리스트 mutex 안의 삽입</a>.</p></details></section>
+<section class="section" id="cooled-reuse" data-audience-checkpoint><h2>8 · 냉각된 P 재사용</h2>
+<p>이전 상태: P는 LRU2의 첫 프레임이고 저장 tick은 1000입니다. 리스트 tick은 1051, LRU2 개수는 50입니다. A가 P를 READ-fix하고 final-unfix합니다. 리스트 이벤트로 잰 나이가 승격하기에 충분할까요? 벽시계 시간이나 quota epoch로 판단하는 조건이 아닙니다.</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary>
+<pre>age = 1051 − 1000 = 51 ≥ floor(50 / 2) = 25
+LRU1: F42/P → G49 → … → G1        bottom_1 = G1
+LRU2: F43/R → H1 → H2 → Z1 → … → Z47
+counts = 50 / 50 / 51; tick_list = 1052
+F42.tick_lru_list = 1000; hit_age = 10; lru_hits[32] = 51</pre>
+<p>일반 fix는 P를 이동시키지 않고 소유권을 부여합니다. Final unfix에서 A의 인덱스는 리스트 32와 같고 P는 여전히 non-hot이므로 LRU2의 old-enough 조건을 확인하고 통과합니다. BCB를 보호한 채 boost가 리스트 32를 잠그고 P를 분리해 top에 삽입한 뒤 zone 1만 조정합니다. 이때 R이 LRU2로 내려갑니다. Boost는 tick_list를 증가시키지만 P의 저장 tick은 다시 쓰지 않습니다. INVALID와 상주 수는 그대로입니다. 이후 같은 문맥에서 LRU1에 재접근하면 이 가정 아래에서는 <a href="#unfix-p">확인 지점 5</a>처럼 위치를 유지합니다.</p>
+<pre><code>if (PGBUF_IS_BCB_OLD_ENOUGH (bufptr, pgbuf_lru_list_from_bcb (bufptr)))
+  {
+    /* boost */
+    pgbuf_lru_boost_bcb (thread_p, bufptr);
+  }</code></pre>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1053-L1061">나이 조건</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6785-L6818">LRU2 분기</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10118-L10195">보호된 boost</a>.</p></details></section>
+<section class="section" id="cross-context" data-audience-checkpoint><h2>9 · B가 같은 P에 접근</h2>
+<p>이전 상태: A가 P를 해제했고 B는 private-local p = 1, 전체 리스트 인덱스 33을 가집니다. B가 P를 READ-fix한 뒤 final-unfix합니다. B 전용 사본이 생길까요, P가 리스트 33으로 갈까요, 아니면 기존 소속이 바뀔까요?</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary>
+<pre>private 32: 49 / 50 / 51; tick_list = 1052; top = G49
+shared 1:   0 / 1 / 0; tick_list = 1
+F42/P: shared 1, LRU2; saved tick = 0; hit_age = 10
+shared 1 top = bottom_2 = bottom = F42; bottom_1 = NULL
+list 33 remains empty; INVALID = 30717; resident = 2051</pre>
+<p>Private 문맥 불일치 33 != 32만으로 충분하며 P가 hot일 필요는 없습니다. B가 fix를 보유하는 동안 P는 private 32에 남습니다. Fix count가 0이 되는 unfix가 BCB mutex를 계속 보유한 채 private-list mutex 아래에서 분리해 VOID를 거칩니다. 그 리스트 mutex를 해제한 다음 목적지 shared-list mutex 아래에서 연결합니다. 선택기는 add_shared_lru_idx를 0에서 1로 증가시켜 1 % 32 = 1을 선택합니다. 균형 통계 갱신이나 회피 분기는 개입하지 않습니다. 새 middle 삽입은 목적지 tick 0을 저장하고 1로 증가시키며, 1 ≤ 49이므로 강등하지 않습니다.</p>
+<p>P는 여전히 하나의 프레임에 있는 하나의 상주 식별자이며 동시에 한 리스트에만 속합니다. Private 문맥은 페이지 독점 소유권을 뜻하지 않습니다. 이동 후 hit 등록을 시도하지만 P의 hit_age가 이미 10이므로 어느 리스트에도 epoch 10 표본을 추가하지 않습니다. 이미 shared인 페이지는 A가 접근한다는 이유만으로 private으로 돌아가지 않습니다.</p>
+<pre><code>if (thread_private_lru_index != bcb_lru_idx)
+  {
+    return true;
+  }</code></pre>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7005-L7038">이동 조건</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8988-L9063">목적지 선택기</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10303-L10417">순차 리스트 잠금과 VOID</a>.</p></details></section>
+<section class="section" id="exhaust-invalid" data-audience-checkpoint><h2>10 · 교체를 호출하기 전에 스캔 완료하기</h2>
+<p>A의 S50…S30766 스캔을 이어갑니다. P/R에 더 접근하지 않으며 quota 조정도 없습니다. 각 miss는 여전히 다음 INVALID 프레임을 사용합니다. 마지막 final unfix 이후 상태를 계산해 보세요. 축출된 페이지가 있을까요? 다음 miss도 INVALID를 사용할 수 있을까요?</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary>
+<p>완료한 n이 50부터 30766일 때마다 resident = 2002 + n, INVALID = 30766 − n, private 크기 = 101 + n입니다. S50은 강등 없이 LRU1을 50개로 복원합니다. 이 범위의 모든 n에서 개수는 50 / 50 / (n + 1), tick_list = 1003 + n, tick_lru3 = n + 51입니다. S51부터는 삽입마다 보호 구간의 오래된 노드 하나가 내려갑니다. 이 유한한 수열은 모든 삽입을 명시합니다. 말줄임표는 반복 표시만 생략하며 상태를 바꾸는 이벤트를 생략하지 않습니다.</p>
+<pre>INVALID = 0; resident = 32768
+private 32 = 30867 = 50 / 50 / 30767; tick_list = 31769; tick_lru3 = 30817
+LRU1: G30766 → … → G30717       bottom_1 = G30717
+LRU2: G30716 → … → G30667       bottom_2 = G30667
+LRU3: G30666 → … → G1 → F43/R → H1 → H2 → Z1 → … → Z48 → C1 → … → C50/Q
+shared 0 = 1900; shared 1 = F42/P; all other lists empty
+30867 + 1900 + 1 = 32768; lru_hits[32] = 30768</pre>
+<p>아직 축출은 일어나지 않았습니다. Quota가 INVALID 우선 할당을 뒤집지는 않습니다. G1…G49의 저장 리스트 tick은 1002…1050이고, G50…G30766은 P의 추가 boost tick을 반영해 n + 1002를 저장합니다. F43의 저장 tick은 1001 그대로입니다. C50은 계속 bottom이자 victim_hint이며 private LRU3 노드 30,767개 모두 후보에 맞는 플래그를 가집니다. 이 광고 개수는 보호된 적격성 판정이 아니며 fix count 재검증을 포함하지 않습니다. S900에서 리스트 크기가 1001이 되어 quota 1000을 처음 넘을 때 private 큐 [32]가 등록되었고, 아직 소비자는 실행되지 않았습니다.</p>
+<pre><code>bufptr = pgbuf_get_bcb_from_invalid_list (thread_p);
+if (bufptr != NULL)
+  {
+    return bufptr;
+  }</code></pre>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8227-L8243">victim 탐색보다 앞선 INVALID</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15674-L15728">후보 광고</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15889-L16001">구간 개수와 후보 플래그</a>.</p></details></section>
+<section class="section" id="quota-epoch" data-audience-checkpoint><h2>11 · 승인된 quota epoch 한 번</h2>
+<p>이제 private quota가 활성화되고 is_adjusting = 0이며 이전 승인된 조정 이후 측정한 diff_usec = 10000000인 시점에 quota 조정을 한 번 실행합니다. 페이지 이벤트는 겹치지 않습니다. 이전 조정에서 unfix shard를 초기화했고, 이 추적은 일반 final unfix를 30,771번 수행했습니다(기존 3번, 스캔 30,766번, P boost 1번, B 접근 1번). 수집된 hit는 모두 private 32의 30,768개입니다. Activity, quota, 임계값과 리스트 이동을 예측해 보세요.</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary>
+<pre>adjust_age: 10 → 11; all lru_hits reset to 0
+lru_activity[32] = floor(1000000 × 30768 / 10000000) = 3076
+other private activity = 0; shared rate is floored to 1 for the ratio
+private_pages_ratio = clamp(3076 / 3077, 0.01, 0.998) = 0.998
+all_private_quota = floor(32768 × 0.998) = 32702
+quota[32] = min(32702, 5000, 16384) = 5000
+private thresholds = 250 / 250; other private quotas = 0
+shared target = max(floor((32768 − 32702) / 32), 50) = 50
+shared thresholds = 20 / 2</pre>
+<p>1 ms 조건을 통과하며 이 간격에서는 500 ms 조건으로 반환하지 않습니다. Unfix 활동량 30,771은 낮은 활동량 기준 floor(8192/100) = 81보다 큽니다. 10초가 되었으므로 기존 값과 혼합하지 않고 activity와 비율을 새 값으로 대체합니다. Shared 계산에는 개별 리스트의 hard cap 적용 전 all_private_quota를 사용하며 남은 quota를 재분배하지 않습니다. 임계값이 커졌다고 기존 노드를 승격하지는 않습니다. Private 보호 구간 100은 quota 5000 이하이며 shared 1의 유일한 LRU2 노드도 새 임계값 이하입니다. 개수, 위치, 리스트 tick, P/R의 hit_age 10, INVALID는 그대로입니다. 후보 합계 32667 ≥ floor(0.1 × 32768)이므로 victim_rich는 true가 됩니다.</p>
+<pre><code>lru_hits = ATOMIC_TAS_32 (&amp;monitor-&gt;lru_hits[i], 0);
+/* compute hits per second */
+lru_hits = (int) (onesec_usec * lru_hits / diff_usec);</code></pre>
+<details><summary>quota cap과 조정 조건 펼치기</summary><pre><code>new_quota = (int) (new_lru_ratio * all_private_quota);
+new_quota = MIN (new_quota, PGBUF_PRIVATE_LRU_MAX_HARD_QUOTA);
+new_quota = MIN (new_quota, pgbuf_Pool.num_buffers / 2);
+
+lru_list = PGBUF_GET_LRU_LIST (i);
+lru_list-&gt;quota = new_quota;
+lru_list-&gt;threshold_lru1 = (int) (new_quota * PGBUF_LRU_ZONE_MIN_RATIO);
+lru_list-&gt;threshold_lru2 = (int) (new_quota * PGBUF_LRU_ZONE_MIN_RATIO);
+
+if (PGBUF_LRU_LIST_IS_ONE_TWO_OVER_QUOTA (lru_list))
+  {
+    pthread_mutex_lock (&amp;lru_list-&gt;mutex);
+    pgbuf_lru_adjust_zones (thread_p, lru_list, false);
+    pthread_mutex_unlock (&amp;lru_list-&gt;mutex);
+
+    PGBUF_BCB_CHECK_MUTEX_LEAKS ();
+  }</code></pre></details>
+<p>서로 다른 세 이력입니다. 리스트 이벤트 나이는 LRU1/2 삽입으로 증가합니다. Hit_age는 승인된 quota epoch마다 BCB당 한 번 표본을 남깁니다. 포화되는 hot-fix 휴리스틱의 임계값은 64입니다. 여기서 P의 일반 fix는 네 번, R은 한 번, 각 스캔 페이지는 한 번뿐입니다. Quota 조정이 승인되어도 P가 hot이 되거나 저장 리스트 tick이 갱신되지는 않습니다.</p>
+<p class="source-note">Implementation policy: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14251-L14511">조건, 평활화, cap, shared 임계값</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16336-L16367">hot-fix 이력</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16594-L16610">epoch 표본</a>.</p></details>
+<p><strong>근거의 한계:</strong> VS-21은 근사 표본 수집, 재사용·wrap 문제, 시간 관련 주석과 실행 조건의 불일치를 기록합니다. 이 직렬 계산은 해당 문제를 고치지도, 동시 실행에서 통계가 정확하다고 보장하지도 않습니다. <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">불확실성 레지스트리 확인</a>.</p></section>
+<section class="section" id="select-list" data-audience-checkpoint><h2>12 · A는 어느 리스트를 탐색할까?</h2>
+<p>이전 상태: INVALID는 비어 있습니다. A의 전체 private 인덱스는 32, quota는 5000, 크기는 30867, 보호 구간은 100, 광고된 후보는 30767개입니다. 큐는 일반 private [32], big-private [], shared [0]입니다. Page-flush daemon은 사용 가능하지만 이 예측 도중 실행하지 않습니다. A가 상주하지 않는 새 유효 페이지 T를 요청합니다. 처음 선택할 리스트를 예측하고 후보를 탐색하거나 잠그기 전에 멈추세요.</p>
+<details class="answer-disclosure"><summary>상태와 소스 근거 확인</summary>
+<pre>own protected-over-quota: 100 > 5000 → false
+own total-over-quota and candidates: 30867 > 5000 and 30767 > 0 → true
+next call: pgbuf_get_victim_from_lru_list(thread_p, 32)
+no queue consumed; no BCB detached; no permission to overwrite Q</pre>
+<p>이제 실제로 INVALID 우선 할당이 실패하므로 victim 탐색에 들어갑니다. Own-private 조건이 광고를 소비하지 않고 32를 직접 선택합니다. 이 helper는 선택한 리스트를 잠그고 LRU3를 확인한 뒤 hint에서 최대 1,000개 위치를 살펴봅니다. Bottom C50이 clean이므로 탐색 전에 오래된 hint를 C50으로 맞춥니다. 보호 구간 100은 탐색 전 quota 강등을 유발하지 않습니다.</p>
+<pre><code>if (PGBUF_LRU_LIST_IS_ONE_TWO_OVER_QUOTA (lru_list)
+    || (PGBUF_LRU_LIST_IS_OVER_QUOTA (lru_list) &amp;&amp; lru_list-&gt;count_vict_cand &gt; 0))</code></pre>
+<p>이 own 탐색이 실패한다면 30867 &gt; 5000 + max(10, 50)이므로 다른 private 탐색을 big-private 큐로 제한합니다. 그 큐는 비어 있으므로 일반 [32]를 소비하지 않고 shared 광고 0으로 넘어갑니다. 이는 조건부 경로이며 이미 실행한 추가 이벤트가 아닙니다. 보호된 후보 확보에 성공하면 그 전에 반환합니다. 탐색 실패가 안전하지 않은 프레임 재사용을 허용하지는 않습니다.</p>
+<p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9067-L9253">리스트 선택 제어 흐름</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9330-L9538">선택한 리스트 탐색과 보호된 재검증</a> · <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16424-L16471">제한된 큐 탐색</a>.</p></details>
+<p><strong>선택은 안전한 재사용이 아닙니다.</strong> VS-19는 big-private 큐의 최초 생산 경로가 미해결임을, VS-20은 maintenance 보조 루프가 작성된 그대로는 실행되지 않음을 기록합니다. 둘 다 기아나 성능에 대한 결론을 뒷받침하지 않습니다. AOUT은 계속 비활성이며 runtime victim 실험을 했다고 주장하지 않습니다. <a href="../../unresolved-or-version-sensitive-findings.md">근거의 한계 확인</a>.</p></section>
+<section class="section" id="selection-baseline"><h2>보호된 재사용과 정책 검토로 이어가기</h2>
+<p>이 종료 지점은 quota 조정 후, A의 T 할당 전입니다. 앞의 예측은 선택한 리스트 helper를 실제 실행하지 않았습니다. BCB·리스트 mutex를 보유하지 않고 남은 fix도 없으며, 분리되거나 예약된 페이지도 없습니다. C50/Q는 private 32의 bottom이자 hint에 있는 clean LRU3이며 fcnt 0, NO_LATCH, waiter 없음, 부적격 후보 플래그 없음입니다. 이전 노드는 C49입니다. F42/P는 저장 tick 0인 shared 1 LRU2, F43/R은 저장 tick 1001인 private 32 LRU3에 남습니다. Epoch는 11, 두 페이지의 hit_age는 10이며 모든 lru_hits 표본은 0입니다(평활화된 lru_activity[32]는 3076 유지).</p>
+<p>새 실행 순서를 시작할 때 <a href="#exhaust-invalid">완전한 종료 연결 상태</a>와 <a href="#quota-epoch">quota 입력</a>을 사용하세요. 이후 시나리오에서 dirtying, fix, 예약, hint 변경을 추가하면 이를 명시해야 합니다. 임계값은 250/250이지만 private BCB 연결은 여전히 50/50/30767개입니다. 리스트 32를 선택했다고 C50을 분리하거나 Q를 T로 바꿀 권한이 생기지 않습니다. 보호된 후보 프로토콜이 필요합니다.</p>
+<p><a href="../lessons/0012b-understand-private-lru-index.html#victim-search">강의 12B · victim 탐색으로 돌아가기</a> · <a href="../lessons/0012-prove-replacement-progress.html#trip">강의 12 · 페이지 여정</a> · <a href="../../advanced/replacement-progress.md">안전성과 진행 정본 설명</a></p></section>
+</article><nav class="lesson-nav" aria-label="추적 확인 지점"><a href="#snapshot">0 · 풀 스냅샷</a><a href="#load-p">1 · P 적재</a><a href="#admit-p">2 · P 배치</a><a href="#admit-r">3 · R 배치</a><a href="#hit-p">4 · P hit</a><a href="#unfix-p">5 · P 유지</a><a href="#carry-forward">6 · 같은 풀에서 이어가기</a><a href="#cooling">7 · 스캔과 냉각</a><a href="#cooled-reuse">8 · P 재사용</a><a href="#cross-context">9 · B의 P 접근</a><a href="#exhaust-invalid">10 · INVALID 소진</a><a href="#quota-epoch">11 · Quota epoch</a><a href="#select-list">12 · 리스트 선택</a><a href="#selection-baseline">종료 지점</a></nav></div>
 <nav class="lecture-navigation" data-lecture-nav aria-label="관련 강의"><a rel="prev" href="../lessons/0012-prove-replacement-progress.html">강의 12 · 교체 상태와 진행</a><a rel="next" href="../lessons/0012b-understand-private-lru-index.html">강의 12B · Private LRU 인덱스와 선택</a></nav></main>
 <nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body></html>

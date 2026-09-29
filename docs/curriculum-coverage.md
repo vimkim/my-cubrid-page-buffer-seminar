@@ -6,6 +6,10 @@ This author-only audit accompanies the [accepted design](seminar-curriculum-desi
 
 The manifest now contains 51 paths per language: 27 lectures, one landing page, 22 curriculum/reference pages, and one compatibility redirect. The original 48-path migration is recorded below; later additions are recorded separately. All Core and Advanced mechanisms remain required, with detailed source-level cross-engine comparison in the final phase and no fixed total duration.
 
+## Cooling, migration, and selection extension (2026-09-29)
+
+Ticket 02 extends the existing worked-example pair through explicit scan batches, threshold-driven cooling, P's source-derived boost, B's sequential private-to-shared migration, full INVALID exhaustion, an accepted quota epoch, and the first victim-list decision. Lecture 12B links to exact checkpoints and the trace links back. The terminal state stops before candidate locking/detach and is the shared input for later safety/progress and policy-defense work. Source arithmetic is independently checked; fixed-trace disclosures and browser regressions cover direct projection entry, keyboard answers, next/back, language transfer, and complete mobile no-JavaScript reading. No new page pair or UI framework is added. Current human Korean-naturalness and semantic review remains pending for the worked-example and Lecture 12B pairs; see the ticket 02 handoff for executed validation and exact continuity state.
+
 ## Database bridge addition (2026-09-29)
 
 F02 inserts the paired `0000a-database-bridge.html` lecture between F01 and Lecture 1. Both landings, syllabi, sequence links, manifest, and dependency validator expose the same required route. It compares system units and management, introduces pin/latch, dirty/writeback/eviction and durability/WAL, then separates preference, safe reuse, and progress through independently reset DB-A/B/C checkpoints. PostgreSQL/InnoDB orientation uses the existing pinned comparator revisions and links to the later detailed lecture and canonical evidence note.
@@ -24,7 +28,7 @@ Six-axis review covers novice voice, causal sequence, independently checked cons
 
 The new [English](../en/reference/lru-worked-example.html) and [Korean](../ko/reference/lru-worked-example.html) pair implements admission and repeated-access prediction from a source-derived larger-pool snapshot. Lecture 12 links to its starting checkpoint in both languages. The page reuses the existing presentation controls and native disclosures; its unprefixed URL redirects to English under the site's compatibility convention.
 
-This is ticket 01 of the approved enhancement: cooling/migration, progress branches, and policy defense remain subsequent work. Evidence and validation are recorded in the [ticket 01 handoff](../.scratch/lru-seminar-design/ticket01-handoff.md). Human Korean/semantic review remains pending for the new pair and modified Lecture 12 pair. Historical 48-pair results below do not validate this addition.
+This paragraph records ticket 01's original slice; ticket 02 extends it as recorded above. Progress branches and policy defense remain subsequent work. Admission evidence and validation are recorded in the [ticket 01 handoff](../.scratch/lru-seminar-design/ticket01-handoff.md). Human Korean/semantic review remains pending. Historical 48-pair results below do not validate these additions.
 
 | Axis | Check performed and boundary |
 | --- | --- |

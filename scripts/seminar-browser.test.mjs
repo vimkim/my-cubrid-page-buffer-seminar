@@ -13,6 +13,54 @@ let browser;
 before(async () => { if (chromium) browser = await chromium.launch({ headless: true }); });
 after(async () => { await browser?.close(); });
 
+test('LRU continuation reveals cooling and preserves the route into migration', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      await page.goto(base + language + '/reference/lru-worked-example.html?present=1#cooling');
+      assert.equal(await page.locator('#cooling').isVisible(), true);
+      const answer = page.locator('#cooling > details');
+      assert.equal(await answer.getAttribute('open'), null);
+      await answer.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.match(await answer.innerText(), /50 \/ 50 \/ 51/);
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#cooled-reuse');
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#cross-context');
+      await page.locator('[data-section-previous]').click();
+      assert.equal(new URL(page.url()).hash, '#cooled-reuse');
+      await page.keyboard.press('Escape');
+      await page.locator('[data-language-switcher] a').click();
+      assert.match(page.url(), new RegExp('/' + (language === 'en' ? 'ko' : 'en') + '/reference/lru-worked-example.html'));
+    } finally { await page.close(); }
+  }
+});
+
+test('LRU pressure baseline and selection answers remain readable without scripts', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/reference/lru-worked-example.html#exhaust-invalid');
+      for (const id of ['exhaust-invalid', 'quota-epoch', 'select-list']) {
+        assert.equal(await page.locator('#' + id).isVisible(), true);
+        await page.locator('#' + id + ' > details > summary').focus();
+        await page.keyboard.press('Enter');
+        assert.equal(await page.locator('#' + id + ' > details').getAttribute('open'), '');
+      }
+      assert.match(await page.locator('#exhaust-invalid > details').innerText(), /INVALID = 0/);
+      assert.match(await page.locator('#select-list > details').innerText(), /30867 > 5000/);
+      assert.equal(await page.locator('#selection-baseline').isVisible(), true);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.locator('#selection-baseline a[href="../lessons/0012b-understand-private-lru-index.html#victim-search"]').focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/0012b-understand-private-lru-index.html#victim-search');
+      assert.equal(new URL(page.url()).hash, '#victim-search');
+    }
+  } finally { await context.close(); }
+});
+
 test('database bridge preserves branch starts, reveals safety reasoning, and connects the required route', { skip: unavailable }, async () => {
   for (const language of ['en', 'ko']) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });

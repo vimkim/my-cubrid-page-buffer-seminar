@@ -22,7 +22,15 @@ Use the independent counterexample P R S P T R to challenge “LRU always wins�
 
 The unseen exercise P R S R T P R uses a fresh empty cache. Instructor totals: FIFO/Clock 1 hit/6 misses, LRU 2 hits/5 misses, OPT 3 hits/4 misses. Request 6 distinguishes FIFO's eviction of R from LRU's eviction of S, explaining the final R miss versus hit. Use the full answer ledgers in native disclosures only after prediction. Ask for reasoning and state transitions, not an automated score. These checks do not establish participant mastery or replace human language review.
 
-## F02 database bridge
+## Ticket 02 cooling, migration, and selection
+
+Use Lecture 12B's exact trace links after the admission sequence. Ask for S46–S49 boundaries before opening the answer: at S49 combined-zone overflow demotes Z48 first, then zone1 overflow demotes P. P's age is 51 list events against a threshold of 25, so its later final unfix boosts it while preserving saved tick1000. B's index33 mismatch then moves the same frame through protected VOID into shared1 LRU2; it does not create a private copy or add a second epoch10 hit.
+
+Require conservation across the full explicit scan: private30867 + shared1900 + sharedP1 =32768, INVALID0. A quota of1000 did not prohibit invalid-frame admission. Ask participants to explain why the one accepted quota pass can raise private thresholds to250/250 without promoting nodes: it only adjusts an over-quota protected region. The complete chain still has50/50/30767. The shared target uses uncapped all_private_quota32702, producing20/2 despite private32's cap5000.
+
+The selection answer ends before the selected-list helper and before ownership of any candidate. C50/Q is the named clean bottom for later safe-reuse work; F42/P remains sharedLRU2. If a participant treats a positive candidate counter as overwrite authorization, return to the database bridge's safety/progress distinction. Conditional failed-search routing is not a second history already executed. Keep VS-19/20/21 and dormant AOUT visible; human-reviewed reasoning, not visiting the page, establishes learning evidence.
+
+## F02 database bridge facilitation
 
 Use the systems table to ask what the cached unit is, who controls placement, and which candidates are legal. A CPU line is not a database page; a set restricts candidates. An application may discard a recomputable value but cannot infer the same contract for pending writes. Introduce pin versus latch, dirty versus clean, durability and WAL before the dirty checkpoint. A page flush is neither eviction nor transaction commit.
 
