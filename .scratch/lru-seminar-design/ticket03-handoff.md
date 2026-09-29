@@ -2,7 +2,7 @@
 
 Status: scoped implementation and independent content reviews complete; final validation results below. Actual human Korean-naturalness and semantic-parity review remains pending. No final curriculum acceptance is claimed.
 
-Work item216 remains with the main coordinator. Isolated branch `codex/lru-ticket03`, baseline `ebdb2dd`. Implementation commits: `1aaf04f`, `63488ee`, `b116874`, `e94a0d8`; the final follow-up records the browser wait and this handoff. No engine edits, pushes, native experiments, or ticket04 implementation were performed.
+Work item216 remains with the main coordinator. Isolated branch `codex/lru-ticket03`, baseline `ebdb2dd`. Implementation commits: `1aaf04f`, `63488ee`, `b116874`, `e94a0d8`, `03a3f71`, `151c334`; the final documentation-only follow-up records the completed review. No engine edits, pushes, native experiments, or ticket04 implementation were performed.
 
 ## Acceptance and exact states
 
@@ -29,6 +29,8 @@ All source authority was read using `git -C /home/vimkim/gh/cb/develop show f799
 Standards review initially found hidden safety qualifications. INVALID/free-list, DWB durability, and fairness/bounded-completion warnings now appear outside disclosures in both languages. Follow-up atb116874 cleared the finding and checked test edits: **0 remaining Standards findings**.
 
 Spec review independently verified source conditions, vacuum/redirty placement, bounded-search waiting, post-flush/revocation/retry, and frame/identity conservation. Its two findings were missing post-prefilter ordering for the waiter row and missing collection-before-A-queues ordering preventing earlier clean-frame assignment. Both were corrected and independently cleared atb116874: **0 remaining Spec findings**. The later explicit single-page/WAL-ready assumptions narrow the verified pre-write route. Agent review does not supply a human language receipt.
+
+Final Spec review at03a3f71 also checked the completed handoff and single-page/WAL-ready assumptions against pinned4043–4093, with zero findings. A final source-line audit corrected three excerpt URLs in151c334: detach9454, assignment15469–15471, and retry8319–8325. Executable excerpts and behavior did not change; link and technical gates passed again.
 
 ## Interaction and verification
 
