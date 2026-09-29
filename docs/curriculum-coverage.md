@@ -4,7 +4,15 @@ This author-only audit accompanies the [accepted design](seminar-curriculum-desi
 
 ## Scope and six-axis review
 
-The manifest now contains 49 paths per language: 25 lectures, one landing page, 22 curriculum/reference pages, and one compatibility redirect. The original 48-path migration is recorded below; the LRU addition is recorded separately. All Core and Advanced mechanisms remain required, with cross-engine comparison in the final phase and no fixed total duration.
+The manifest now contains 50 paths per language: 26 lectures, one landing page, 22 curriculum/reference pages, and one compatibility redirect. The original 48-path migration is recorded below; later additions are recorded separately. All Core and Advanced mechanisms remain required, with detailed source-level cross-engine comparison in the final phase and no fixed total duration.
+
+## Replacement foundations addition (2026-09-29)
+
+F01 adds [English](../en/lessons/0000-replacement-foundations.html) and [Korean](../ko/lessons/0000-replacement-foundations.html) required entry lectures. The ninth curriculum phase precedes the existing eight, and Lecture 1 links back to it. Both landing pages, both syllabi, the pairing manifest, and the dependency-order validator now include the entry. Existing lecture identifiers and ticket 01 remain intact.
+
+The pair explains capacity before policy, distinguishes page identity from frame storage, and gives original FIFO/OPT/LRU/Clock traces with explicit metadata, an LRU counterexample, and an unseen exercise. Separate instructor reasoning is in the author-only runbook. The pages reuse native disclosures and shared presentation controls; their unprefixed URL follows the existing English redirect convention.
+
+Six-axis review covers novice voice, causal sequence, independently checked constructed arithmetic, disclosure of detailed tables, equivalent paired claims with human review pending, and served keyboard/mobile/projection/no-JavaScript delivery. No engine implementation claim is added. The [F01 handoff](../.scratch/lru-seminar-design/F01-handoff.md) records actual checks and remaining acceptance gates. F02 owns the database-constraints bridge and subsequent route adjustment. Human Korean-naturalness and semantic-parity review remains pending for all new or edited pairs; earlier review records are not acceptance evidence for this addition.
 
 ## LRU worked-example addition (2026-09-29)
 

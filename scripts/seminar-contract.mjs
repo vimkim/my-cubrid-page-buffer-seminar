@@ -3,6 +3,7 @@ import path from 'node:path';
 
 // Stable filenames, ordered by conceptual dependency rather than numeric ID.
 export const lectureOrder = [
+  '0000-replacement-foundations',
   '0001-present-the-page-journey', '0002-separate-objects-from-state',
   '0003-trace-fix-convergence', '0004-repay-fix-debt', '0004a-understand-holder-anchor',
   '0005-audit-a-logged-mutation', '0006-flush-one-generation',
@@ -93,8 +94,8 @@ export async function validateAudience(root) {
     if (/^(en|ko)\/(index.html|reference\/course-learning-path.html)$/.test(filename)) {
       const phases = [...html.matchAll(/<section\b[^>]*class="curriculum-phase"[^>]*>([\s\S]*?)<\/section>/g)];
       const links = phases.flatMap(match => [...match[1].matchAll(/href="[^"#]*\/([^"/]+\.html)"/g)].map(m => m[1]));
-      if (phases.length !== 8 || JSON.stringify(links) !== JSON.stringify(lectureOrder))
-        failures.push(`${filename}: syllabus must expose all 25 lectures in the eight-phase dependency order`);
+      if (phases.length !== 9 || JSON.stringify(links) !== JSON.stringify(lectureOrder))
+        failures.push(`${filename}: syllabus must expose all ${lectureOrder.length} lectures in the nine-phase dependency order`);
     }
   }
   return { count: manifest.pages.length, failures };

@@ -9,6 +9,10 @@ const page = await readFile(new URL('../' + filename, import.meta.url), 'utf8');
 test('all paired audience pages satisfy the source contract', async () => {
   assert.deepEqual((await validateAudience(new URL('..', import.meta.url).pathname)).failures, []);
 });
+test('required replacement foundations precedes the existing CUBRID entry', () => {
+  assert.equal(lectureOrder[0], '0000-replacement-foundations.html');
+  assert.equal(lectureOrder[1], '0001-present-the-page-journey.html');
+});
 test('retired answer entry and coaching are rejected', () => {
   const failures = checkAudiencePage(page + '<textarea></textarea><p>Ask the teaching agent.</p>', filename);
   assert.ok(failures.some(x => x.includes('coaching')));

@@ -13,6 +13,53 @@ let browser;
 before(async () => { if (chromium) browser = await chromium.launch({ headless: true }); });
 after(async () => { await browser?.close(); });
 
+test('replacement foundations supports prediction, deliberate steps, and language transfer', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage();
+    try {
+      const response = await page.goto(base + language + '/lessons/0000-replacement-foundations.html?present=1#fifo');
+      assert.equal(response.status(), 200);
+      const answer = page.locator('#fifo > details');
+      assert.equal(await answer.getAttribute('open'), null);
+      await answer.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.equal(await answer.getAttribute('open'), '');
+      assert.match(await answer.innerText(), /R \/ U \/ P/);
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#opt');
+      await page.locator('[data-section-previous]').click();
+      assert.equal(new URL(page.url()).hash, '#fifo');
+      await page.keyboard.press('Escape');
+      await page.locator('[data-language-switcher] a').click();
+      assert.match(page.url(), new RegExp('/' + (language === 'en' ? 'ko' : 'en') + '/lessons/0000-replacement-foundations.html'));
+    } finally { await page.close(); }
+  }
+});
+
+test('replacement foundations retains every trace and exercise without scripts at mobile width', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/lessons/0000-replacement-foundations.html');
+      assert.equal(await page.locator('[data-presentation-controls]').isVisible(), false);
+      assert.equal(await page.locator('#memory').isVisible(), true);
+      assert.equal(await page.locator('#handoff').isVisible(), true);
+      for (const policy of ['fifo', 'opt', 'lru', 'clock']) {
+        await page.locator('#' + policy + ' > details > summary').click();
+        assert.equal(await page.locator('#' + policy + ' tbody tr').count(), 10);
+      }
+      await page.locator('#exercise > details > summary').click();
+      assert.equal(await page.locator('#exercise pre').count(), 4);
+      assert.match(await page.locator('#exercise pre').nth(2).innerText(), /7 R H — T\/R\/P/);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.locator('[data-lecture-nav] a[rel="next"]').click();
+      await page.locator('[data-lecture-nav] a[rel="prev"]').click();
+      assert.match(page.url(), /0000-replacement-foundations\.html$/);
+    }
+  } finally { await context.close(); }
+});
+
 test('LRU trace lets participants predict admission and revisit an unchanged resident position', { skip: unavailable }, async () => {
   for (const language of ['en', 'ko']) {
     const page = await browser.newPage();
