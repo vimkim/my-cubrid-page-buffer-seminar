@@ -4,7 +4,7 @@ This document consolidates the decisions accepted during the grill-with-docs int
 
 ## Purpose and audience
 
-Teammates use the HTML directly during live lectures and independently afterward. Participants match the existing Target-maintainer baseline: senior C/C++ systems engineers who understand buffer pools and WAL but need to learn CUBRID's page-buffer implementation. The material explains the Module directly to them.
+Teammates use the HTML directly during live lectures and independently afterward. Participants enter with basic programming and array/linked-list knowledge; buffer pools, paging, and WAL are not prerequisites. The seminar builds from college-sophomore-accessible replacement foundations toward maintainer-level CUBRID reasoning. The separate English Maintainer Guide retains its Target-maintainer baseline. The [confirmed textbook-first extension](../.scratch/lru-foundations-design/design.md) records this scoped revision accepted on 2026-09-29.
 
 The curriculum has no fixed total duration. Begin with the 25 existing lesson pages as provisional lecture units, merging or splitting only where conceptual cohesion requires it. A lecture normally uses 90 minutes: approximately 60 for explanation and source tracing, 20 for scenarios or exercises, and 10 for questions. Repeat or extend work where participant evidence reveals gaps. The earlier single 90-minute seminar plus 30-minute Q&A proposal is superseded.
 
@@ -24,6 +24,7 @@ The syllabus groups lectures by conceptual dependencies. Existing numeric filena
 
 | Phase | Coverage |
 | --- | --- |
+| Replacement fundamentals | Capacity, locality, page/frame, FIFO/OPT/LRU/Clock traces, cross-system transfer, database constraints |
 | Foundations | Module boundary, page journey, objects, independent state axes |
 | Acquisition and ownership | Fix convergence, fix debt, holder structure and lifetime |
 | Mutation and durability | Caller correctness, flush generations, daemons, pacing |
@@ -33,7 +34,7 @@ The syllabus groups lectures by conceptual dependencies. Existing numeric filena
 | Maintainer integration | Safe changes, diagnosis and verification reasoning, technical defense |
 | Cross-engine perspective | PostgreSQL/InnoDB responsibility and replacement comparisons |
 
-All existing Core and Advanced mechanism lessons belong in the curriculum. Cross-engine comparisons receive dedicated late lectures after the CUBRID model is established. Detailed evidence catalogs remain reference material. The Topic library remains available from the syllabus and relevant lectures.
+All existing Core and Advanced mechanism lessons belong in the curriculum. A required foundations block precedes current Lecture 1, with a recurring working-set-plus-scan example and a database-constraints bridge. Early conceptual comparisons orient participants across OS, CPU, application caches, PostgreSQL, and InnoDB; detailed source-level cross-engine comparisons retain dedicated late lectures after the CUBRID model is established. The abstract three-frame policy trace is explicitly distinct from the faithful larger-pool CUBRID snapshot. Detailed evidence catalogs remain reference material. The Topic library remains available from the syllabus and relevant lectures.
 
 ## Lecture experience
 

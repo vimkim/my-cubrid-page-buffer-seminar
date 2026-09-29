@@ -2,7 +2,7 @@
 
 **What to build:** A Seminar participant continues the same bilingual trace through scan pressure, cooling, reuse, second-context access, private/shared migration, and victim-list selection, calculating each result from explicit state.
 
-**Blocked by:** 01 — Predict admission and reuse in one bilingual trace.
+**Blocked by:** 01 — Predict admission and reuse in one bilingual trace (implemented); [F02 — Database bridge](F02-database-bridge.md).
 
 **Status:** ready-for-agent
 

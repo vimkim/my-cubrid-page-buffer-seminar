@@ -9,7 +9,7 @@ A senior C/C++ systems engineer who understands basic database storage, buffer p
 _Avoid_: Page-buffer newcomer, senior engineer
 
 **Seminar participant**:
-A Target maintainer who follows the page-buffer seminar live and may return to its audience-facing material afterward for independent reading.
+A teammate with basic programming and array/linked-list knowledge who follows the page-buffer seminar toward maintainer-level Module reasoning, without assumed prior buffer-pool or WAL knowledge. They may return to its audience-facing material afterward for independent reading.
 _Avoid_: Listener, learner, student
 
 **Audience-facing seminar site**:

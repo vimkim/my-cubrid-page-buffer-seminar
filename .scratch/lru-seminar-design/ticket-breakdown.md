@@ -1,12 +1,26 @@
 # Approved implementation slices
 
-Status: approved by the user on 2026-09-29; individual implementation tickets published locally.
+Status: original five slices approved and textbook-first design extension confirmed on 2026-09-29. Revised execution order below implements that extension; ticket 01 is already implemented.
 
-Published tickets: [01](issues/01-admission-and-reuse.md), [02](issues/02-cooling-migration-and-selection.md), [03](issues/03-safe-reuse-and-progress.md), [04](issues/04-policy-defense.md), [05](issues/05-integrated-delivery.md).
+Published tickets: [F01](issues/F01-replacement-foundations.md), [F02](issues/F02-database-bridge.md), [01](issues/01-admission-and-reuse.md), [02](issues/02-cooling-migration-and-selection.md), [03](issues/03-safe-reuse-and-progress.md), [04](issues/04-policy-defense.md), [05](issues/05-integrated-delivery.md).
 
 The [specification](spec.md) is based on the [confirmed design](design.md). All slices include source checking, English/Korean content, complete reading access, relevant navigation/manifest updates, and proportionate verification. No separate translation-only or testing-only implementation phase is needed.
 
+## F01 — Explain and hand-trace replacement from first principles
+
+Blocked by: None. Next implementation task.
+
+Deliver the required bilingual entry before current Lecture 1: memory hierarchy, locality, pages/frames, hits/misses, full-cache alternatives, and one common three-frame trace for FIFO, OPT/MIN, exact LRU, and Clock. Include metadata conventions, independent arithmetic checks, short Random/LFU contrasts, counterexamples where needed, predict/reveal, and an unseen transfer exercise. Preserve source attribution, reading/no-JavaScript access, and existing URLs. Update entry routes, pairing, and coverage with the slice.
+
+## F02 — Transfer the model into database constraints and CUBRID
+
+Blocked by: F01.
+
+Continue the recurring workload through concise OS/CPU/application-cache comparisons, a deeper conceptual PostgreSQL/InnoDB orientation, and in-use/dirty-page constraints. Explain safety versus progress and necessary durability concepts before entering CUBRID. Explicitly bridge the toy model to the existing source-derived larger snapshot without equating their arithmetic. Update prerequisites and routes through existing lectures and presenter guidance; verify claims and paired accessible delivery.
+
 ## 01 — Predict admission and reuse in one bilingual trace
+
+Implemented: commit 45435a9; preserve the [handoff](ticket01-handoff.md), including pending human review and disclosed validation limits. Do not repeat this implementation as a prerequisite of F01.
 
 Blocked by: None.
 
@@ -14,7 +28,7 @@ Deliver a navigable worked-example pair with a valid initial larger-pool snapsho
 
 ## 02 — Predict cooling, migration, and victim-list selection
 
-Blocked by: 01.
+Blocked by: 01 (implemented), F02.
 
 Extend the same example through competing scan activity, threshold-driven zone movement, reuse, and second-context access. Explain private/shared migration and quota/activity effects on list selection using explicit state. Keep list-event age, quota epoch, and hot-fix history distinct. Add source-linked predictions and affected lecture routes. Check boundaries, counts, continuity, and backward/forward navigation through the longer trace.
 
@@ -38,4 +52,4 @@ Deliver the uninterrupted replacement teaching route and final defense with cohe
 
 ## Approval and execution
 
-The user approved the five slices, blocking edges, and testing boundary: the existing served-page browser suite plus existing aggregate validators, supported by source/trace consistency review. Ticket 01 is ready to start. After 01, complete 02; then 03 and 04 have satisfied prerequisites; 05 requires both. Ready-for-agent status does not waive blocking edges. Implementation has not begun.
+The user approved the original five slices and confirmed the textbook-first extension. Execution now proceeds F01 → F02 → 02 → {03, 04} → 05, reusing implemented 01. The existing served-page browser suite and aggregate validators remain the testing boundary, supported by independent textbook arithmetic and source/trace consistency review. Ticket 05 integrates both the new foundations and the deeper CUBRID route, not just the latter. Ready-for-agent status does not waive blocking edges; human review remains an explicit acceptance gate.

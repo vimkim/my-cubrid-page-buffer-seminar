@@ -1,8 +1,8 @@
-# Continuous LRU worked example
+# Textbook-first replacement foundations and continuous LRU worked example
 
 Status: ready-for-agent
 
-The product design was confirmed on 2026-09-29. Implementation ticket granularity awaits review. This label records specification readiness, not implementation completion or authorization to modify the engine.
+The original product design and its textbook-first extension were confirmed on 2026-09-29. The [extension](../lru-foundations-design/design.md) governs beginner prerequisites and early conceptual comparisons; all other original decisions remain. Ticket 01 is implemented in commit 45435a9. This label records specification readiness, not implementation completion or authorization to modify the engine.
 
 ## Problem Statement
 
@@ -10,13 +10,15 @@ Seminar participants can read substantial explanations of CUBRID replacement saf
 
 ## Solution
 
+First provide a required bilingual foundations block before current Lecture 1. Assume basic programming and arrays/linked lists, not buffer-pool or WAL knowledge. Teach capacity, locality, page/frame identity, hits/misses, and full-cache alternatives before comparing FIFO, OPT/MIN, exact LRU, and Clock/second chance by hand. Briefly contrast Random and LFU. Continue through cross-system transfer and database safety/progress constraints into the existing CUBRID route. Retain the maintainer-level destination and separate English Maintainer Guide audience.
+
 Provide one bilingual worked-example page that carries stable frame and page identities through a fully specified constructed trace. Participants predict transitions, reveal the result and source explanation, branch into concurrent schedules, and finish by defending or rejecting a concrete policy change. Existing replacement lectures route into the same trace at relevant checkpoints.
 
 ## User Stories
 
 1. As a Seminar participant, I want to see the initial state and assumptions, so that I can predict rather than guess the next transition.
 2. As a Seminar participant, I want stable BCB/frame names distinct from VPIDs, so that reuse does not look like allocating another frame.
-3. As a Seminar participant, I want a brief textbook-LRU comparison, so that I can identify where CUBRID's policy differs.
+3. As a Seminar participant, I want a textbook-first introduction and common hand trace for FIFO, OPT/MIN, exact LRU, and Clock, so that I can explain the capacity problem and identify where CUBRID's policy differs.
 4. As a Seminar participant, I want to follow admission and final unfix, so that I understand when ordinary list placement occurs.
 5. As a Seminar participant, I want access events that leave list position unchanged, so that I do not assume every hit immediately moves a node.
 6. As a Seminar participant, I want explicit thresholds and boundary counts, so that I can derive cooling and subsequent promotion.
@@ -38,6 +40,9 @@ Provide one bilingual worked-example page that carries stable frame and page ide
 
 ## Implementation Decisions
 
+- Use one recurring hot-working-set-plus-scan story. The abstract three-frame trace has explicit initialization, metadata, tie rules, and Clock hand/bit conventions. Carry its workload shape into the faithful CUBRID snapshot, not its toy arithmetic. Permit short labeled counterexamples and an unseen transfer exercise.
+- Explain fixed-capacity full-cache misses before discussing absence of replacement; bypass, growth, waiting/refusal depend on the system contract. Never imply inevitable crashing or data loss. Distinguish OS pages, CPU lines, application objects, and database pages.
+- Add a conceptual PostgreSQL/InnoDB bridge and pinned/dirty-page constraints before CUBRID. Define durability/WAL before relying on it. Preserve detailed source comparisons late. Use original examples supported by the textbook and primary references selected in the confirmed extension; verify version-specific engine claims separately.
 - Preserve the accepted audience-facing curriculum and existing URLs. Add one English/Korean worked-example pair with stable checkpoint anchors and return routes from the replacement lectures and final defense.
 - English remains the canonical seminar content; Korean expresses the same meaning naturally. The Maintainer Guide retains ownership of technical explanations; the new example applies and links those explanations.
 - Pin all implementation claims to CUBRID f799e05d77d5300c6ea5753b4a6cc7caee6d8912.
@@ -53,6 +58,7 @@ Provide one bilingual worked-example page that carries stable frame and page ide
 
 ## Testing Decisions
 
+- Independently verify all four textbook traces, metadata, victims, and hit/miss totals. Provide predict/reveal checkpoints, separate instructor explanations, and an unseen-sequence exercise. Assess explanations of preference versus safe reuse, safety versus progress, and costs beyond hit rate; do not introduce graded certification or navigation locks.
 - The primary behavioral test boundary is the served bilingual page in the existing browser suite. Exercise prediction/reveal, forward/backward steps, branch return, language pairing, direct checkpoint navigation, presentation mode, keyboard access, and no-JavaScript reading.
 - Reuse the existing bilingual-site and maintainer-guide aggregate validation entry points. Existing seminar browser and regression suites provide prior art for navigation, keyboard shortcuts, disclosures, and unavailable-browser reporting.
 - Validate the trace independently of its visual rendering: review pinned source predicates and numerical arithmetic; check consecutive snapshots, conservation of represented counts, one-list membership, and branch-entry consistency. Do not accept a renderer's own output as the correctness oracle.
@@ -66,7 +72,7 @@ Provide one bilingual worked-example page that carries stable frame and page ide
 
 - General-purpose simulation, arbitrary workload input, or dependence on the separately tracked simulator project.
 - Engine policy changes, new engine instrumentation, or new runtime performance/fairness claims.
-- Changing the pinned baseline, accepted audience, overall curriculum scope, or canonical language ownership.
+- Changing the pinned baseline, separate Maintainer Guide audience, maintainer-level destination, or canonical language ownership. Only the seminar entry prerequisites and early conceptual comparison placement change as explicitly accepted.
 - Enabling AOUT or resolving source anomalies as part of the teaching enhancement.
 - Storing participant answers, automated mastery scores, or site-enforced curriculum completion.
 

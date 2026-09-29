@@ -10,7 +10,7 @@ The [accepted design](docs/seminar-curriculum-design.md) and [ADR 0005](docs/adr
 
 1. Update English and Korean together. Korean sentences should read naturally while retaining established database terminology, evidence labels, and exact source identifiers. Preserve qualifications beside their claims.
 2. Keep mechanism depth and source routes. Define documentation-only notation before use: G/G+1 are reasoning labels, not stored counters; VS-* identifies an uncertainty-registry entry. Distinguish stable BCB storage from current VPID, compatible holders from identities, and sequential LRU movement from simultaneous membership.
-3. Retain established URLs and anchors. The curriculum's dependency order, rather than filename order, owns previous/next lecture navigation. Landing and syllabus pages expose the same eight phases; topic references remain reachable independently.
+3. Retain established URLs and anchors. The curriculum's dependency order, rather than filename order, owns previous/next lecture navigation. Landing and syllabus pages expose the same phases, including the required replacement-fundamentals entry block; topic references remain reachable independently.
 4. Use shared layout A styles and presentation controls. Reading and no-JavaScript modes expose the complete explanation; presentation mode focuses one section without auto-advance. Native details work without application scripts. Preserve safety qualifications in the visible explanation.
 5. Review both pages against all six axes in the design. Run both aggregate validators and their tests when changing validation. Browser checks cover reading, projection, mobile width, answer disclosure, and no-JavaScript access. A missing browser gate is unavailable, not passed.
 
@@ -18,4 +18,4 @@ The teaching-pages.json manifest remains the pairing and human language-review r
 
 ## Curriculum maintenance
 
-All Core and Advanced content is required. Lectures can expand over multiple meetings with no total time limit. Cross-engine comparisons are late, responsibility-based lenses; performance ideas remain hypotheses until supported by controlled evidence. The [coverage audit](docs/curriculum-coverage.md) belongs to authors, not the participant topic library.
+All Core and Advanced content is required. Lectures can expand over multiple meetings with no total time limit. Teach cache and replacement basics before the existing CUBRID entry, assuming only basic programming knowledge. Early conceptual cross-system comparisons motivate the problem; detailed source-level cross-engine comparisons remain late, responsibility-based lenses. Performance ideas remain hypotheses until supported by controlled evidence. The [coverage audit](docs/curriculum-coverage.md) belongs to authors, not the participant topic library.
