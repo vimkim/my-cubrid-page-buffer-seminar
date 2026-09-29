@@ -1,0 +1,68 @@
+# First-time participant revision interview
+
+## Status and provenance
+
+Design interview in progress; implementation is not yet authorized by a confirmed shared design. Work item: 241. Current review baseline: `fd44ccf` on `main`, inspected on 2026-09-30.
+
+Input: `critics.md` at commit `c421d40` on `docs/seminar-critique`, available in `/home/vimkim/gh/my-cubrid-page-buffer-seminar-critique/critics.md`. The critique describes baseline `c793ee6`; current main additionally clarifies private/shared zone placement and the always-promote alternative. The critique remains a set of proposals, not accepted requirements or observed participant feedback.
+
+## Confirmed constraints
+
+The user explicitly established these constraints for this interview:
+
+- Participants know basic programming and arrays/linked lists, with no assumed database, buffer-pool, WAL or CUBRID knowledge.
+- Korean is the primary live language; preserve English/Korean semantic parity, technical depth and pinned-source accuracy.
+- There is no fixed total duration.
+- Ask one consequential question at a time, recommend an answer and explain its trade-offs. Resolve factual questions from the material.
+- Preserve settled design decisions unless a specific critique warrants revisiting them. Use the 84 questions as an editorial bank.
+- Record agreed decisions and observable acceptance criteria. Recommend direct implementation or specification/ticket work after the interview.
+- Use a sibling topic worktree. Do not merge or publish.
+
+## Existing decisions retained pending any explicit revision
+
+The [curriculum design](seminar-curriculum-design.md), [ADR 0005](adr/0005-make-html-an-audience-facing-seminar-curriculum.md), [replacement design](replacement-socratic-design.md), and [comparison design](comparison-clarity-design.md) already establish:
+
+- The first-principles route is distinct from completion of the full Core/Advanced curriculum; replacement is its central topic.
+- Existing bilingual HTML is the audience-facing product. Established URLs, anchors, native disclosures and presentation controls remain valuable.
+- Constructed examples, source-derived mechanisms and runtime receipts have different evidence scopes. A small teaching cache does not become a faithful tiny CUBRID configuration.
+- The Maintainer Guide owns technical evidence; seminar revisions do not automatically require changing its structure.
+- Human language acceptance remains separate from automated checks.
+
+No new glossary term has been settled. `CONTEXT.md` remains the canonical glossary; editorial planning belongs here. No ADR is warranted before a consequential new trade-off is accepted.
+
+## Initial factual revalidation
+
+- The current [first-principles route](../ko/reference/first-principles-route.html) still goes from page buffer and structures through replacement to daemons and comparison. The database bridge and flush-generation lecture are not explicit numbered route steps.
+- The [database bridge](../en/lessons/0000a-database-bridge.html) already explains WAL, commit versus data-page propagation, and constrained victim scenarios. This is a routing/scaffolding gap, not absence of the information from the repository.
+- The [flush-generation lecture](../en/lessons/0006-flush-one-generation.html) already explains copied G, concurrent G+1, DIRTY/FLUSHING combinations, WAL boundaries and failure restoration. Any revised route should reuse that substance rather than commission a duplicate tutorial.
+- The current [introduction](../ko/lessons/0001-present-the-page-journey.html) starts from a page request. It defines page/frame and fix/unfix, but does not first work through a concrete record-level operation into that request.
+- Main's change since the critique concerns zone/admission explanation and supporting evidence. It does not itself change the route's prerequisite order.
+
+- Critique 3 requires qualification: the [worked example](../ko/reference/lru-worked-example.html#load-p) already carries a detailed trace forward and labels alternative resets. The live H1/H2 narrative needs integration; a new tracing framework is not automatically required.
+- Critique 5 persists: Lecture 7 introduces its zone comparison before the later admission/final-unfix and age explanations.
+- Critique 7 is local: [the recheck diagram](../ko/lessons/0007-replace-one-frame.html#handoff-details) visibly reveals rejection, while the preceding candidate-selection question legitimately keeps its explanation hidden. Do not classify all checkpoints as answer leakage.
+- Critique 9 persists: the admission section retains an author-specific volmap receipt and local path; the separate presenter script assumes prior transaction-lock teaching.
+- Critique 12 needs a narrow repair: the comparison already opens with a common H1/H2-plus-scan story and shared questions. Strengthen transfer exercises rather than replacing an absent framework.
+- Critique 13 can reuse [the lab results](../ko/reference/replacement-lab.html#results): the three-frame, four-page cyclic teaching example compares LRU with MRU/OPT and demonstrates that capacity overflow does not require every request to miss. New engine experiments are not necessary to illustrate that distinction.
+
+These observations establish candidate problems. They do not settle the revised teaching order, breadth, or exercise design.
+
+## Decision tree
+
+1. Revision boundary and completion target — Q1 pending.
+2. Given that boundary: prerequisite order and conceptual stopping points.
+3. Given the route: continuous workload, page identity and explicit example resets.
+4. Given that story: concurrency and crash/flush timelines with bounded assumptions.
+5. Given the concepts: prediction/reveal behavior, Korean prose and source-detail placement.
+6. Given the target capability: final diagnostic task and observable acceptance criteria.
+7. Confirm shared understanding; choose direct implementation or specification/tickets.
+
+The interview advances one consequential question at a time. Decisions depending on an unanswered question remain pending.
+
+## Q1 — Proposed revision boundary
+
+Pending user answer. Recommendation: make the existing first-principles route self-contained for the stated novice audience, revising linked lectures and adding the minimum prerequisite explanations needed for its replacement, progress and comparison story. Preserve the full curriculum's maintainer scope and deep references.
+
+Alternative: redesign the entire Core/Advanced curriculum in this effort, extending prerequisite and exercise review through recovery, ordered access, specialized interfaces and technical defense. This is a materially wider objective.
+
+Trade-off: the route-focused option targets the critique's principal reading experience and supports a bounded end-to-end diagnosis exercise; it does not claim to complete the broader maintainer curriculum redesign.
