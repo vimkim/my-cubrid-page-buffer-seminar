@@ -104,7 +104,7 @@
         <p>R/P 예제는 정확한 recency 순서를 유지할 때 필요한 재연결을 생략합니다. 동시 접근에서는 공유 metadata의 재연결을 조율하는 비용도 고려해야 합니다. 고정 소스의 주석은 LRU1 항목을 제자리에 두는 이유로 성능상의 의도를 명시합니다. 하지만 그 주석은 benchmark 결과가 아닙니다.</p>
         <p>CUBRID도 BCB 동기화, 조건부 리스트 갱신, 경계 관리, activity/quota 집계, 후보 검색 비용을 지불합니다. 여러 리스트가 일부 metadata 작업을 분산할 수는 있지만 경합을 없애지는 않습니다. Exact LRU와 CUBRID가 다른 victim을 선택할 수 있으므로 순서 관리 작업을 줄이는 대신 miss 양상이 달라질 수 있습니다. 전체 효과는 workload에 따라 측정해야 합니다.</p>
         <p><strong>CUBRID가 항상 더 빠르거나, scan의 영향을 받지 않거나, 최적이거나, starvation이 없다고 결론 내리면 안 됩니다.</strong> 이 baseline의 AOUT은 비활성이므로 “CUBRID는 2Q다”도 충분한 설명이 아닙니다. 기존 quota·검색·진행의 불확실성은 근거 레지스트리에 남아 있으며, 이 설명이 해결한 것은 아닙니다.</p>
-        <p class="source-note"><a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6717-L6719">LRU1 유지의 성능 의도를 설명한 주석</a> · <a href="../../reference/replacement-policy-quantities-and-costs.md">비용과 수량의 정본 설명</a> · <a href="../../unresolved-or-version-sensitive-findings.md">버전별 불확실성</a> · <a href="../reference/lru-worked-example.html#policy-proposal">즉시 승격 제안을 검토하는 정책 방어 연습</a>.</p>
+        <p class="source-note"><a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6719-L6720">LRU1 유지의 성능 의도를 설명한 주석</a> · <a href="../../reference/replacement-policy-quantities-and-costs.md">비용과 수량의 정본 설명</a> · <a href="../../unresolved-or-version-sensitive-findings.md">버전별 불확실성</a> · <a href="../reference/lru-worked-example.html#policy-proposal">즉시 승격 제안을 검토하는 정책 방어 연습</a>.</p>
       </section>
 
       <section class="section" id="trip">
