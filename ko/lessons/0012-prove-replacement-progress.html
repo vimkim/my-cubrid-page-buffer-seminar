@@ -172,6 +172,28 @@
         <details class="technical-detail"><summary>고정 소스 경로 확인</summary><p><strong>f799e05에서 확인한 동작:</strong> <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8250-L8325">대기열 등록과 high-priority 재시도</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15565-L15651">대기열 선택과 잠금 아래 수령 검사</a>. 더 넓은 정책 분석은 <a href="../../reference/replacement-policy-first-principles-audit.md">first-principles audit</a>에 있다. 이는 소스로 확인한 규칙이며 starvation 재현이나 성능 측정 결과가 아니다.</p></details>
       </section>
 
+      <section class="section" id="reservation-cost" data-audience-checkpoint>
+        <h2>A의 재사용을 보호하면 B의 resident hit가 지연될 수 있다</h2>
+        <p>단순화한 별도 일정을 생각해 보자. A는 이미 버퍼에 없는 Q를 요청하여 프레임이 필요하고, 프레임 F에는 기존 페이지 P가 있다. F를 A에게 배정했다고 곧바로 P가 퇴출되는 것은 아니다. 현재 동작에서는 A가 배정을 수령하기 전에 B가 P를 fix하여 A의 배정을 무효화할 수 있다. low 우선 회차에 선택된 A도 이렇게 배정을 잃을 수 있다. 선택 기회와 수령 성공은 다르다.</p>
+        <p>가상의 정책으로 P에 대한 새 fix를 막아 A를 보호하면 무엇이 달라질까? 먼저 B가 resident 페이지에 바로 접근하지 못한다. 이후 A가 안전하게 P를 제거하고 F를 Q에 재사용하면, P가 그사이 다시 적재되지 않은 한 P를 찾는 후속 요청은 miss가 나서 read 경로로 P가 적재되기를 기다려야 한다. F의 배정이나 fix 차단만으로 miss가 확정되지는 않는다. 또한 page-buffer miss가 물리 장치 I/O를 뜻하지는 않는다.</p>
+        <details class="answer-disclosure"><summary>모든 배정을 독점 예약으로 만들지 않는 이유는?</summary><p>프레임을 기다리는 요청의 진행을 보호하는 대신, 이미 resident인 페이지의 접근이 지연되고 퇴출 후에는 다시 읽는 비용이 생길 수 있다. 현재의 취소 가능한 배정은 B의 hit를 허용하는 대신 A가 다시 시도하게 한다. 어느 쪽이든 안전한 재사용 검사는 필요하다. 여기서 독점 예약은 설계 대안이며, 고정 CUBRID 소스에서 확인한 현행 장치가 아니다.</p></details>
+      </section>
+
+      <section class="section" id="cumulative-wait" data-audience-checkpoint>
+        <h2>대기 시간 임계값은 재시도 전의 기다림도 기억해야 한다</h2>
+        <p><strong>가상의 설계:</strong> A의 대기 시간이 임계값을 넘으면 다음 적격 프레임 배정을 새 fix로부터 보호한다. 반복 무효화를 줄이려는 대안이며 현재의 high/low 대기열 정책과는 다르다. 적절한 임계값이나 성능 개선은 확인되지 않았다.</p>
+        <p>이 설계에서는 처음 프레임이 부족해진 시점부터 보호된 수령에 성공할 때까지의 할당 지연을 측정하고, 배정 무효화로 재시도해도 시작 시점을 유지한다. 깨운 시점에 측정을 끝내면 A가 실제로 실행되고 BCB mutex를 얻고 무효화를 확인하여 재시도하는 시간이 빠진다. 이후 요청한 Q를 읽는 시간은 별도로 측정해야 저장장치 읽기 지연을 프레임 할당 starvation과 혼동하지 않는다.</p>
+        <p>경합이 계속되는 상황에서 재시도할 때마다 임계값을 판단하는 시계를 0으로 되돌리면 어떻게 될까?</p>
+        <details class="answer-disclosure"><summary>반복 초기화의 결과 살펴보기</summary><p>매번 임계값에 도달하기 전에 배정이 무효화되면, 총 지연은 계속 늘어나는데 시계는 처음부터 다시 갈 수 있다. A는 끝내 보호받지 못할 수도 있다. 누적 시간은 이 측정의 허점을 막지만, 그 자체로 완료를 보장하지는 않는다. 현재 구현의 개별 대기 deadline은 재시도마다 다시 만들어진다. 이를 제안한 누적 임계값이나 전체 요청의 완료 상한으로 설명하면 안 된다.</p></details>
+      </section>
+
+      <section class="section" id="no-eligible-frame" data-audience-checkpoint>
+        <h2>우선순위가 안전하게 재사용할 프레임을 만들어 주지는 않는다</h2>
+        <p>모든 프레임이 계속 fixed라면 지금 안전하게 재사용할 프레임은 없다. 새 fix를 막아도 기존 fix가 해제되지는 않으며, 오래 기다린 요청도 다른 소유자의 유효한 fix를 무시할 수 없다. 소유자가 fix를 해제하여 후보가 될 여지가 생겨야 하고, 그 뒤에도 dirty 상태, flushing과 나머지 안전 조건이 재사용을 막을 수 있다. 진행 보장을 제안하려면 예약 정책뿐 아니라 후보 공급과 스레드 실행 기회에 대한 전제도 필요하다.</p>
+        <p>가상의 순환 의존을 생각해 보자. A는 B의 unfix를 기다리지만 B는 새 프레임을 얻어야 기존 프레임을 놓을 수 있고, 가능한 다른 공급자도 같은 식으로 막혀 있다. 이는 한 요청이 반복해서 배정을 잃는 상황과 어떻게 다를까?</p>
+        <details class="answer-disclosure"><summary>Starvation과 자원 deadlock 구분하기</summary><p>Starvation에서는 다른 작업이 진행하는 동안 특정 요청만 계속 진행 기회를 잃을 수 있다. 위의 순환에서는 모두가 누구도 실행할 수 없는 해제를 기다린다. 외부의 해제나 의존을 끊는 복구 동작이 없다면 자원 deadlock이다. 어느 한순간 모든 프레임이 fixed라는 사실만으로 deadlock이라고 할 수는 없다. 이는 추론용 예제이며 재현된 CUBRID 장애나 timeout 처리가 복구를 보장한다는 주장이 아니다.</p></details>
+      </section>
+
       <section class="section" id="practice" data-audience-checkpoint>
 
         <h2>지금 BCB A를 재사용할 수 있을까요?</h2>
@@ -191,7 +213,7 @@
       <a href="#purpose">Page miss에 frame이 필요할 때 어디서 가져올까요?</a><a href="#states">VOID BCB는 모든 management list 밖에 있습니다</a>
       <a href="#textbook-vs-cubrid">왜 CUBRID의 LRU는 교과서의 exact LRU와 다를까?</a><a href="#lru-hit-comparison">P에 다시 접근하면 R 앞으로 갈까?</a><a href="#lru-conditional-movement">Final unfix는 무조건 이동이 아니라 판단 시점이다</a><a href="#lru-policy-layers">배치, 검색, 안전한 재사용은 서로 다른 결정이다</a><a href="#lru-tradeoffs">순서 갱신을 줄이는 이유와 남는 비용</a><a href="#trip">List pressure가 BCB A를 점진적으로 차갑게 만듭니다</a>
       <a href="#decision">LRU3에 있는 것 외에도 모든 현재 상태가 안전해야 합니다</a><a href="#private">List membership은 transaction ownership이 아닙니다</a><a href="#progress">CUBRID는 BCB가 안전해질 때까지 기다립니다</a>
-      <a href="#waiter-priority">대기자 우선순위의 두 정책</a><a href="#practice">지금 BCB A를 재사용할 수 있을까요?</a><a href="#primary-reading">참고 자료</a>
+      <a href="#waiter-priority">대기자 우선순위의 두 정책</a><a href="#reservation-cost">재사용 보호의 비용</a><a href="#cumulative-wait">누적 대기 시간</a><a href="#no-eligible-frame">적격 프레임이 없을 때</a><a href="#practice">지금 BCB A를 재사용할 수 있을까요?</a><a href="#primary-reading">참고 자료</a>
       <hr>
       <a href="0012b-understand-private-lru-index.html">Private-LRU lecture →</a>
       <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a><a href="../index.html">과정 홈</a>

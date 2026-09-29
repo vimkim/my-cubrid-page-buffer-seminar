@@ -172,6 +172,28 @@
         <details class="technical-detail"><summary>Follow the pinned source</summary><p><strong>Verified mechanism at f799e05:</strong> <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8250-L8325">queue registration and high-priority retry</a>; <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15565-L15651">queue selection and protected receipt</a>. See the <a href="../../reference/replacement-policy-first-principles-audit.md">first-principles audit</a> for the wider policy analysis. These are source-derived rules, not measured starvation or performance results.</p></details>
       </section>
 
+      <section class="section" id="reservation-cost" data-audience-checkpoint>
+        <h2>Protecting A's reuse can delay a resident hit for B</h2>
+        <p>Consider a fresh, simplified schedule: A has already requested absent page Q and needs a frame; frame F still contains resident page P. Assigning F to A does not yet evict P. In the current mechanism, B can fix P before A consumes the assignment, revoking A's reservation. Even an A selected on a low-first call can lose its assignment this way: a selection opportunity is not successful receipt.</p>
+        <p>What would change if a hypothetical policy blocked new fixes of P to protect A? B would first lose immediate access to a resident page. If A then safely removes P and reuses F for Q, a later request for P misses unless P has meanwhile been loaded again, and must wait for P to be materialized through the read path. Merely assigning F, or merely blocking a fix, does not itself establish that miss. A page-buffer miss also does not prove physical-device I/O.</p>
+        <details class="answer-disclosure"><summary>Why not make every reservation exclusive?</summary><p>Protecting allocation progress trades against access to an already resident page and can cause another read after eviction. The current revocable assignment permits B's hit at the cost of another attempt for A. Neither choice removes the need to recheck safe reuse. Exclusive reservation here is a design alternative, not a mechanism verified in pinned CUBRID.</p></details>
+      </section>
+
+      <section class="section" id="cumulative-wait" data-audience-checkpoint>
+        <h2>A waiting-time threshold must remember retries</h2>
+        <p><strong>Hypothetical design:</strong> after A has waited beyond a threshold, protect its next eligible assignment against new fixes. This targets repeated revocation; it is not the current high/low queue policy and no threshold value or performance benefit has been established.</p>
+        <p>For this design, measure elapsed allocation delay from the original frame shortage through successful protected receipt, retaining the same start time across revoked assignments. Stopping at wakeup misses the time until A runs, acquires the BCB mutex, discovers revocation and retries. Keep the subsequent read of requested page Q separate so storage-read latency is not mistaken for allocation starvation.</p>
+        <p>Under sustained contention, what happens if each retry resets the threshold's clock?</p>
+        <details class="answer-disclosure"><summary>Follow the repeated-reset case</summary><p>If each assignment is revoked before the threshold is reached, the clock can repeatedly restart while A's total delay keeps growing. A may never receive protection. A cumulative clock avoids that particular blind spot; it does not by itself guarantee completion. The current per-wait deadline is rebuilt on retry and must not be presented as this proposed cumulative threshold or as a total-request completion bound.</p></details>
+      </section>
+
+      <section class="section" id="no-eligible-frame" data-audience-checkpoint>
+        <h2>Priority cannot create a safely reusable frame</h2>
+        <p>If every frame remains fixed, there is currently no safe frame to reuse. Blocking new fixes does not release existing fixes, and even a very old request cannot override another owner's live fix. A holder must release enough ownership for a candidate to become eligible; dirty state, flushing and the other safety checks may still prevent reuse afterward. Any proposed progress guarantee needs assumptions about candidate supply and thread execution as well as reservation policy.</p>
+        <p>In a constructed dependency cycle, A waits for B to unfix a frame, but B needs a new frame before it can release its existing one; every possible supplier is similarly blocked. How is this different from one request repeatedly losing an assignment?</p>
+        <details class="answer-disclosure"><summary>Distinguish starvation from a resource deadlock</summary><p>Starvation allows other work to progress while one request is repeatedly denied progress. In the constructed cycle, all participants depend on a release that no participant can reach: without an external release or a recovery action that breaks the dependency, this is a resource deadlock. All frames being fixed at one instant alone does not prove deadlock. This scenario is a reasoning exercise, not a reproduced CUBRID failure or a claim that its timeout handling guarantees recovery.</p></details>
+      </section>
+
       <section class="section" id="practice" data-audience-checkpoint>
 
         <h2>Can BCB A be reused now?</h2>
@@ -191,7 +213,7 @@
       <a href="#purpose">A page miss needs a frame; where does that frame come from?</a><a href="#states">VOID means the BCB is outside every management list</a>
       <a href="#textbook-vs-cubrid">Why CUBRID's LRU is not textbook exact LRU</a><a href="#lru-hit-comparison">Access P again: does it pass R?</a><a href="#lru-conditional-movement">Final unfix is a decision point, not an automatic move</a><a href="#lru-policy-layers">Three decisions: placement, search, safe reuse</a><a href="#lru-tradeoffs">Why reduce ordering updates, and what costs remain?</a><a href="#trip">BCB A can age without a clock ticking it down</a>
       <a href="#decision">LRU3 is only the first eligibility checkpoint</a><a href="#private">List membership is not transaction ownership</a><a href="#progress">CUBRID waits until a BCB becomes safe to reuse</a>
-      <a href="#waiter-priority">Two waiter-priority policies</a><a href="#practice">Can BCB A be reused now?</a><a href="#primary-reading">References</a>
+      <a href="#waiter-priority">Two waiter-priority policies</a><a href="#reservation-cost">Cost of protecting reuse</a><a href="#cumulative-wait">Cumulative waiting time</a><a href="#no-eligible-frame">When no frame is eligible</a><a href="#practice">Can BCB A be reused now?</a><a href="#primary-reading">References</a>
       <hr>
       <a href="0012b-understand-private-lru-index.html">Private-LRU lecture →</a>
       <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a><a href="../index.html">Curriculum</a>
