@@ -164,6 +164,14 @@
         <p class="source-note"><strong>Source:</strong> <code>page_buffer.c:8181–8403,9067–9253,10925–10952,15420–15652,16972–17255</code>.</p>
       </section>
 
+      <section class="section" id="waiter-priority">
+        <h2>Two policies give different waiters another chance</h2>
+        <p>In the <a href="../reference/lru-worked-example.html#reuse-direct">revoked-reservation example</a>, A still needs a frame for its requested page. On the first invalidated assignment, <code>pgbuf_get_direct_victim()</code> returns NULL and the allocator sets <code>high_priority = true</code> before rejoining the queue. Later retries retain that priority. This favors another attempt for A; it does not stop another thread from fixing the resident page again.</p>
+        <p>Always checking high first could keep ordinary low-priority waiters behind a continuing supply of high-priority work. <code>pgbuf_get_thread_waiting_for_direct_victim()</code> therefore increments a shared call counter and tries low first whenever the count is divisible by four. If that attempt fails, or on other calls, it tries high and then low.</p>
+        <p><strong>The counter measures selection-function calls across waiters, not successful assignments or A's retry count.</strong> Queue selection only chooses a waiter to consider. Assignment still requires a live suspended waiter and an eligible BCB; successful receipt requires the allocator to run and pass the protected recheck. Neither priority rule prevents repeated revocation or bounds one request's completion time. The wait deadline is rebuilt on retry, so it is not a total-request deadline.</p>
+        <details class="technical-detail"><summary>Follow the pinned source</summary><p><strong>Verified mechanism at f799e05:</strong> <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8250-L8325">queue registration and high-priority retry</a>; <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15565-L15651">queue selection and protected receipt</a>. See the <a href="../../reference/replacement-policy-first-principles-audit.md">first-principles audit</a> for the wider policy analysis. These are source-derived rules, not measured starvation or performance results.</p></details>
+      </section>
+
       <section class="section" id="practice" data-audience-checkpoint>
 
         <h2>Can BCB A be reused now?</h2>
@@ -183,7 +191,7 @@
       <a href="#purpose">A page miss needs a frame; where does that frame come from?</a><a href="#states">VOID means the BCB is outside every management list</a>
       <a href="#textbook-vs-cubrid">Why CUBRID's LRU is not textbook exact LRU</a><a href="#lru-hit-comparison">Access P again: does it pass R?</a><a href="#lru-conditional-movement">Final unfix is a decision point, not an automatic move</a><a href="#lru-policy-layers">Three decisions: placement, search, safe reuse</a><a href="#lru-tradeoffs">Why reduce ordering updates, and what costs remain?</a><a href="#trip">BCB A can age without a clock ticking it down</a>
       <a href="#decision">LRU3 is only the first eligibility checkpoint</a><a href="#private">List membership is not transaction ownership</a><a href="#progress">CUBRID waits until a BCB becomes safe to reuse</a>
-      <a href="#practice">Can BCB A be reused now?</a><a href="#primary-reading">References</a>
+      <a href="#waiter-priority">Two waiter-priority policies</a><a href="#practice">Can BCB A be reused now?</a><a href="#primary-reading">References</a>
       <hr>
       <a href="0012b-understand-private-lru-index.html">Private-LRU lecture →</a>
       <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a><a href="../index.html">Curriculum</a>

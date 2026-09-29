@@ -164,6 +164,14 @@
         <p class="source-note"><strong>소스:</strong> <code>page_buffer.c:8181–8403,9067–9253,10925–10952,15420–15652,16972–17255</code>.</p>
       </section>
 
+      <section class="section" id="waiter-priority">
+        <h2>두 정책은 서로 다른 대기자에게 다음 기회를 준다</h2>
+        <p><a href="../reference/lru-worked-example.html#reuse-direct">배정 무효화 예제</a>의 A는 원래 요청한 페이지를 담을 프레임이 여전히 필요하다. 첫 배정 무효화에서 <code>pgbuf_get_direct_victim()</code>이 NULL을 반환하면 allocator는 <code>high_priority = true</code>로 설정하고 대기열에 다시 들어간다. 이후 재시도에서도 높은 우선순위를 유지한다. A의 다음 시도를 우대하지만, 다른 스레드가 기존 페이지를 다시 fix하는 것을 막지는 않는다.</p>
+        <p>항상 high부터 확인하면 높은 우선순위 작업이 계속 들어오는 동안 low에서 기다리는 일반 요청이 계속 밀릴 수 있다. 따라서 <code>pgbuf_get_thread_waiting_for_direct_victim()</code>은 공유 호출 카운터를 증가시키고, 그 값이 4의 배수일 때 low부터 꺼내기를 시도한다. 이 시도가 실패하거나 다른 회차이면 high, low 순서로 시도한다.</p>
+        <p><strong>카운터는 모든 대기자가 공유하는 선택 함수의 호출 수다. 성공한 배정 횟수나 A 개인의 재시도 횟수가 아니다.</strong> 대기열에서 선택하는 것은 배정을 검토할 대기자를 고르는 단계다. 실제 배정에는 여전히 유효하게 대기 중인 스레드와 적격 BCB가 필요하고, 수령 성공에는 allocator의 실행 기회와 잠금 아래 재검사 통과가 필요하다. 두 우선순위 규칙 모두 반복 무효화를 막거나 개별 요청의 완료 시간 상한을 보장하지 않는다. 재시도마다 대기 deadline을 새로 만들므로 이 deadline도 전체 요청의 완료 기한은 아니다.</p>
+        <details class="technical-detail"><summary>고정 소스 경로 확인</summary><p><strong>f799e05에서 확인한 동작:</strong> <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8250-L8325">대기열 등록과 high-priority 재시도</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15565-L15651">대기열 선택과 잠금 아래 수령 검사</a>. 더 넓은 정책 분석은 <a href="../../reference/replacement-policy-first-principles-audit.md">first-principles audit</a>에 있다. 이는 소스로 확인한 규칙이며 starvation 재현이나 성능 측정 결과가 아니다.</p></details>
+      </section>
+
       <section class="section" id="practice" data-audience-checkpoint>
 
         <h2>지금 BCB A를 재사용할 수 있을까요?</h2>
@@ -183,7 +191,7 @@
       <a href="#purpose">Page miss에 frame이 필요할 때 어디서 가져올까요?</a><a href="#states">VOID BCB는 모든 management list 밖에 있습니다</a>
       <a href="#textbook-vs-cubrid">왜 CUBRID의 LRU는 교과서의 exact LRU와 다를까?</a><a href="#lru-hit-comparison">P에 다시 접근하면 R 앞으로 갈까?</a><a href="#lru-conditional-movement">Final unfix는 무조건 이동이 아니라 판단 시점이다</a><a href="#lru-policy-layers">배치, 검색, 안전한 재사용은 서로 다른 결정이다</a><a href="#lru-tradeoffs">순서 갱신을 줄이는 이유와 남는 비용</a><a href="#trip">List pressure가 BCB A를 점진적으로 차갑게 만듭니다</a>
       <a href="#decision">LRU3에 있는 것 외에도 모든 현재 상태가 안전해야 합니다</a><a href="#private">List membership은 transaction ownership이 아닙니다</a><a href="#progress">CUBRID는 BCB가 안전해질 때까지 기다립니다</a>
-      <a href="#practice">지금 BCB A를 재사용할 수 있을까요?</a><a href="#primary-reading">참고 자료</a>
+      <a href="#waiter-priority">대기자 우선순위의 두 정책</a><a href="#practice">지금 BCB A를 재사용할 수 있을까요?</a><a href="#primary-reading">참고 자료</a>
       <hr>
       <a href="0012b-understand-private-lru-index.html">Private-LRU lecture →</a>
       <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a><a href="../index.html">과정 홈</a>
