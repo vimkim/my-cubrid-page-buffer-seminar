@@ -10,6 +10,23 @@ Ask participants to distinguish what the source establishes from what requires a
 
 Before presenting, open the exact served URL and check the intended viewport, diagrams, disclosure controls, source links, and language switch. Keep reading mode available if a projected section needs more context. Consult the coverage audit for remaining editorial or human language-review work.
 
+## Integrated replacement itinerary
+
+Use the [Korean syllabus resume routes](ko/reference/course-learning-path.html#replacement-route) or the [English counterpart](en/reference/course-learning-path.html#replacement-route). The Topic library also exposes the complete worked example. These checkpoints supplement the full Core/Advanced curriculum; they do not bypass acquisition, ownership, or durability prerequisites.
+
+| Teaching stop | Prediction pause and source task | Reset or return |
+| --- | --- | --- |
+| F1 → F2 → Lecture 1 | Predict an unseen victim and metadata, then explain why a preferred database victim can be unavailable. | Each policy and DB-A/B/C starts independently. Transfer workload shape only into CUBRID. |
+| Lecture 12 → snapshot through unfix-p | Draw F42/P separately from F43/R; locate admission and the LRU1 keep branch before revealing placement. | Preserve the 32,768-frame starting snapshot and first six checkpoints. |
+| Lecture 12B → cooling through selection-baseline | Derive S49 boundaries, P's saved tick, sequential migration, and quota inputs. Ask which helper executes next, not which frame is already owned. | End before A allocates T. Revisit the canonical evidence for disputed fields. |
+| Lecture 12 → reuse-reject / reuse-safe | Name prefilter versus protected recheck, then count linked and hashed frames through C50/Q → C50/T. | Each begins at selection-baseline; successful reuse stops with T fixed in VOID. |
+| reuse-flush / reuse-direct | State the added vacuum/LSA schedule, distinguish G from G+1, and predict direct reservation consumption or revocation. | F starts from selection-baseline plus its dirtying events; D restarts F's dirty pre-copy state. Neither inherits successful T reuse. |
+| Lecture 17 → policy-proposal / policy-defense | State the proposed trigger and locks, calculate the two comparisons, then defend or reject it with a counterexample and verification plan. | Reset A to checkpoint 3 and B to S49. Never carry alternative ticks into baseline selection. |
+
+At every pause, ask for before state, one event, after state, controlling predicate, owner/guard, and an unsupported conclusion. Reveal only after the prediction; a wrong answer is a reason to revisit a prerequisite, not to lock navigation. Branch choice selects an authored schedule rather than running a simulator. With scripts disabled, all histories remain readable; close answers manually for another prediction.
+
+Use the participant rubric in the policy-defense disclosure and technical-defense card for human discussion. Keep participant Completion records outside the site. The [integrated acceptance record](.scratch/lru-seminar-design/ticket05-handoff.md) separates delivery checks from pending human language acceptance; its technical checks are not evidence that participants have mastered the Module.
+
 ## F01 replacement foundations
 
 Begin with basic programming and array/linked-list knowledge only. Follow F01 with the required F02 database bridge before Lecture 1. No fixed total meeting duration is imposed.

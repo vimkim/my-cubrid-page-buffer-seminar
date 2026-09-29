@@ -12,7 +12,7 @@ The manifest now contains 51 paths per language: 27 lectures, one landing page, 
 
 ## Cooling, migration, and selection extension (2026-09-29)
 
-Ticket 02 extends the existing worked-example pair through explicit scan batches, threshold-driven cooling, P's source-derived boost, B's sequential private-to-shared migration, full INVALID exhaustion, an accepted quota epoch, and the first victim-list decision. Lecture 12B links to exact checkpoints and the trace links back. The terminal state stops before candidate locking/detach and is the shared input for later safety/progress and policy-defense work. Source arithmetic is independently checked; fixed-trace disclosures and browser regressions cover direct projection entry, keyboard answers, next/back, language transfer, and complete mobile no-JavaScript reading. No new page pair or UI framework is added. Current human Korean-naturalness and semantic review remains pending for the worked-example and Lecture 12B pairs; see the ticket 02 handoff for executed validation and exact continuity state.
+Ticket 02 extends the existing worked-example pair through explicit scan batches, threshold-driven cooling, P's source-derived boost, B's sequential private-to-shared migration, full INVALID exhaustion, an accepted quota epoch, and the first victim-list decision. Lecture 12B links to exact checkpoints and the trace links back. The terminal state stops before candidate locking/detach and supplies the safety/progress schedules; policy comparisons independently reset to checkpoint 3 and S49. Source arithmetic is independently checked; fixed-trace disclosures and browser regressions cover direct projection entry, keyboard answers, next/back, language transfer, and complete mobile no-JavaScript reading. No new page pair or UI framework is added. Current human Korean-naturalness and semantic review remains pending for the worked-example and Lecture 12B pairs; see the ticket 02 handoff for executed validation and exact continuity state.
 
 ## Database bridge addition (2026-09-29)
 
@@ -143,7 +143,15 @@ The useful routing and capability evidence from the former coverage page are ret
 
 Lecture 6A introduces daemon lifecycle; 6B covers page-flush/post-flush handoff; 6C covers maintenance and pacing. Lecture 12B makes private-LRU index ownership explicit; 12A separates dormant AOUT from active policy. Lectures 18 and 18A are required late comparisons, not optional mastery extensions. Each lecture retains its linked canonical explanation and evidence boundaries.
 
-## Verification receipt
+## Integrated replacement delivery (2026-09-29)
+
+The current inventory is 51 EN/KO pairs and 27 required lectures. F1 and F2 precede the original 25 lectures; no Core or Advanced mechanism was removed. Both Topic libraries now expose the complete LRU worked example, and both syllabi link its admission, cooling/migration, selection/progress, and policy-defense checkpoints. Lecture 12, Lecture 12B, Lecture 17 and the technical-defense card retain their exact checkpoint routes. The [Presenter runbook](../presenter-runbook.md#integrated-replacement-itinerary) joins these routes with prediction pauses and explicit independent resets.
+
+The admission-only and earlier ticket receipts below/above describe their historical scope. Safety/progress and policy-defense content is now delivered. `selection-baseline` is the input to the safety/progress schedules; policy comparisons independently restart at checkpoint 3 and S49, never at the completed reuse state. The first-generation 48-pair receipt below remains historical, not current acceptance evidence.
+
+All changed pairs retain pending review entries in `teaching-pages.json`; no human receipt or fingerprint approval was invented. Current technical results, participant rubric, source/trace audit and outstanding acceptance gates are recorded in the [ticket 05 handoff](../.scratch/lru-seminar-design/ticket05-handoff.md). The narrow canonical InnoDB citation correction now points to actual midpoint insertion and its disk-read caller and states the short-list head-insertion exception, consistent with F2.
+
+## Historical verification receipt (2026-09-08)
 
 Checks run on 2026-09-08 against the local Copyparty site:
 

@@ -65,12 +65,12 @@
         <h2>Admit disk reads into the old region before granting young status</h2>
         <ol>
           <li><strong>Topology:</strong> each buffer-pool instance owns an LRU, free list, and flush list. Once the LRU has at least 512 entries, <code>LRU_old</code> splits one physical list into young and old regions.</li>
-          <li><strong>Admission:</strong> a disk-read page enters at the head of the old region. The old target defaults to 37%. A page created directly in memory enters at the young head.</li>
+          <li><strong>Admission:</strong> once the old region is established, a disk-read page enters immediately after its boundary. Short lists admit at the LRU head. The old target defaults to 37%. A page created directly in memory enters at the young head.</li>
           <li><strong>Reuse:</strong> an old page normally needs another access at least <code>innodb_old_blocks_time</code> after first access before promotion to the young head; the default delay is 1,000ms.</li>
           <li><strong>Victim:</strong> allocation takes a free block or scans from the old tail for a clean relocatable page. The first common foreground scan is capped at 100 entries; a later pressure iteration may scan the whole LRU.</li>
         </ol>
         <div class="callout"><strong>Scan resistance:</strong> a one-pass scan fills the old region but rapid first touches do not promote every page into young. Old/new are resident regions, not a 2Q ghost list of evicted identities.</div>
-        <p class="source-note"><strong>Pinned MySQL/InnoDB:</strong> <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L642-L907">old boundary and midpoint insertion</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/handler/ha_innodb.cc#L23090-L23100">37% and 1,000ms defaults</a>, and <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L493-L640">free-block pressure loop</a>.</p>
+        <p class="source-note"><strong>Pinned MySQL/InnoDB:</strong> <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L855-L927">midpoint insertion</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0buf.cc#L4960-L4975">disk-read caller</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/handler/ha_innodb.cc#L23090-L23100">37% and 1,000ms defaults</a>, and <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L493-L640">free-block pressure loop</a>.</p>
       </section>
 
       <section class="section" id="dirty">

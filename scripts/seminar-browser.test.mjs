@@ -13,6 +13,32 @@ let browser;
 before(async () => { if (chromium) browser = await chromium.launch({ headless: true }); });
 after(async () => { await browser?.close(); });
 
+test('integrated replacement route is reachable from library and syllabus without JavaScript', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/index.html#library');
+      const entry = page.locator('#library a[href="reference/lru-worked-example.html#snapshot"]');
+      assert.equal(await entry.count(), 1, 'topic library exposes the complete worked example');
+      await entry.focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/lru-worked-example.html#snapshot');
+      assert.equal(await page.locator('#policy-defense').isVisible(), true);
+      await page.locator('#policy-defense > details > summary').focus();
+      await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#policy-defense > details[open]').count(), 1);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.goto(base + language + '/reference/course-learning-path.html#replacement-route');
+      const resume = page.locator('#replacement-route a[href="lru-worked-example.html#selection-baseline"]');
+      await resume.focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/lru-worked-example.html#selection-baseline');
+      assert.equal(await page.locator('#reuse-safe').isVisible(), true);
+    }
+  } finally { await context.close(); }
+});
+
 test('reuse schedules reset answers across branch switches and forward/backward navigation', { skip: unavailable }, async () => {
   for (const language of ['en', 'ko']) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -34,6 +60,8 @@ test('reuse schedules reset answers across branch switches and forward/backward 
       await page.waitForURL('**#selection-baseline');
       assert.equal(new URL(page.url()).hash, '#selection-baseline');
       await page.goBack();
+      await page.waitForURL('**#reuse-direct');
+      await page.locator('#reuse-direct').waitFor({ state: 'visible' });
       assert.equal(new URL(page.url()).hash, '#reuse-direct');
       assert.equal(await page.locator('#reuse-direct > details').getAttribute('open'), null);
     } finally { await page.close(); }

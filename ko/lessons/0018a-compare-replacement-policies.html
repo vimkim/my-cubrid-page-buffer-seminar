@@ -65,12 +65,12 @@
         <h2>Disk read에 young 자격을 주기 전에 old region으로 admit한다</h2>
         <ol>
           <li><strong>Topology:</strong> buffer-pool instance마다 LRU, free list, flush list를 소유한다. LRU가 512 entry 이상이 되면 <code>LRU_old</code>가 하나의 physical list를 young/old region으로 나눈다.</li>
-          <li><strong>Admission:</strong> disk-read page는 old region head에 들어간다. Old target default는 37%다. Memory에서 직접 만든 page는 young head에 들어간다.</li>
+          <li><strong>Admission:</strong> old region이 형성된 뒤에는 disk-read page가 그 경계 바로 뒤에 들어간다. 짧은 리스트에서는 LRU head에 들어간다. Old target default는 37%다. Memory에서 직접 만든 page는 young head에 들어간다.</li>
           <li><strong>Reuse:</strong> old page는 보통 first access에서 <code>innodb_old_blocks_time</code> 이상 지난 뒤 다시 access되어야 young head로 promote된다. Default delay는 1,000ms다.</li>
           <li><strong>Victim:</strong> allocation은 free block을 얻거나 old tail부터 clean relocatable page를 scan한다. 첫 common foreground scan은 100 entry로 제한되며 이후 pressure iteration은 LRU 전체를 scan할 수 있다.</li>
         </ol>
         <div class="callout"><strong>Scan resistance:</strong> one-pass scan은 old region을 채우지만 빠른 first touch만으로 모든 page가 young으로 promote되지는 않는다. Old/new는 resident region이며 evicted identity를 기억하는 2Q ghost list가 아니다.</div>
-        <p class="source-note"><strong>Pinned MySQL/InnoDB:</strong> <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L642-L907">old boundary와 midpoint insertion</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/handler/ha_innodb.cc#L23090-L23100">37%와 1,000ms default</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L493-L640">free-block pressure loop</a>.</p>
+        <p class="source-note"><strong>Pinned MySQL/InnoDB:</strong> <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L855-L927">midpoint insertion</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0buf.cc#L4960-L4975">disk-read 호출 경로</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/handler/ha_innodb.cc#L23090-L23100">37%와 1,000ms default</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L493-L640">free-block pressure loop</a>.</p>
       </section>
 
       <section class="section" id="dirty">

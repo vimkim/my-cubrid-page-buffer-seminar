@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LRU worked example: admission, cooling, and selection</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LRU worked example: admission through policy defense</title>
 <link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
 <body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a>
 <header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum"><a data-curriculum-link href="course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span> | <a href="../../ko/reference/lru-worked-example.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">LRU / F42 / P</div><h1>LRU worked example: admission, cooling, and selection</h1><p>Follow the same frame through a miss, first placement, and another access. Predict each transition before opening its explanation. The first sequence ends with an unchanged LRU1 position; continue through scan-driven cooling, cross-context migration, and a fully occupied pool's first victim-list choice.</p></header>
+<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">LRU / F42 / P</div><h1>LRU worked example: admission through policy defense</h1><p>Follow the same frame through a miss, first placement, and another access. Predict each transition before opening its explanation. Continue through scan-driven cooling, cross-context migration, list selection, protected frame reuse, and concurrent progress. Finish by defending a hypothetical immediate-promotion policy. Each alternative restarts from its named snapshot; do not carry state between branches.</p></header>
 <div class="lesson-grid"><article class="lesson-main">
 <section class="section" id="snapshot"><h2>0 · A window into a larger pool</h2>
 <p><strong>Constructed trace, not a runtime observation.</strong> Rules are pinned to CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>. Textbook exact LRU puts each accessed item at the most-recent end. Here, inspect the actual fix and final-unfix branches before predicting movement.</p>

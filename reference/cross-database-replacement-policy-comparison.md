@@ -223,15 +223,15 @@ derivation](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea
 Once an LRU reaches 512 entries, the `LRU_old` pointer divides one physical
 list into young and old regions. The old target defaults to integer 37% (the
 source initializer `100 * 3 / 8`) and is configurable from 5% to 95%, with a
-20-entry adjustment tolerance. A disk-read page is inserted immediately after
+20-entry adjustment tolerance. Once the old region is established, a disk-read page is inserted immediately after
 `LRU_old`, so it begins near the young edge of the old region instead of at the
-MRU head. A page created directly in memory is admitted at the young head.
+MRU head. Short lists admit at the LRU head. A page created directly in memory is admitted at the young head.
 [Old-region constants and
 boundary maintenance](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L61-L79),
 [midpoint
-insertion](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L642-L733),
+insertion](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L855-L927),
 [disk-read
-admission](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0buf.cc#L4876-L4975),
+admission](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0buf.cc#L4960-L4975),
 and [sysvar defaults and
 bounds](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/handler/ha_innodb.cc#L23090-L23100).
 
