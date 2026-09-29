@@ -4,7 +4,13 @@ This author-only audit accompanies the [accepted design](seminar-curriculum-desi
 
 ## Scope and six-axis review
 
-The manifest now contains 50 paths per language: 26 lectures, one landing page, 22 curriculum/reference pages, and one compatibility redirect. The original 48-path migration is recorded below; later additions are recorded separately. All Core and Advanced mechanisms remain required, with detailed source-level cross-engine comparison in the final phase and no fixed total duration.
+The manifest now contains 51 paths per language: 27 lectures, one landing page, 22 curriculum/reference pages, and one compatibility redirect. The original 48-path migration is recorded below; later additions are recorded separately. All Core and Advanced mechanisms remain required, with detailed source-level cross-engine comparison in the final phase and no fixed total duration.
+
+## Database bridge addition (2026-09-29)
+
+F02 inserts the paired `0000a-database-bridge.html` lecture between F01 and Lecture 1. Both landings, syllabi, sequence links, manifest, and dependency validator expose the same required route. It compares system units and management, introduces pin/latch, dirty/writeback/eviction and durability/WAL, then separates preference, safe reuse, and progress through independently reset DB-A/B/C checkpoints. PostgreSQL/InnoDB orientation uses the existing pinned comparator revisions and links to the later detailed lecture and canonical evidence note.
+
+The workload shape transfers explicitly to ticket 01's constructed 32,768-frame snapshot; neither toy arithmetic nor runtime evidence transfers. The existing snapshot and source trace remain intact. Six-axis review covers novice explanations, causal prerequisites, explicit branch assumptions and source checks, native disclosures, paired wording with actual human review pending, and served reading/projection/mobile/keyboard/no-JavaScript behavior. The [F02 handoff](../.scratch/lru-seminar-design/F02-handoff.md) records exact results and open gates. No engine changes or automated mastery claims are introduced.
 
 ## Replacement foundations addition (2026-09-29)
 

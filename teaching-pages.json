@@ -1,9 +1,10 @@
 {
   "version": 1,
-  "expectedPageCount": 50,
+  "expectedPageCount": 51,
   "canonicalLanguage": "en",
   "legacyRedirectMinimumDays": 90,
   "pages": [
+    { "path": "lessons/0000a-database-bridge.html", "en": "en/lessons/0000a-database-bridge.html", "ko": "ko/lessons/0000a-database-bridge.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0000-replacement-foundations.html", "en": "en/lessons/0000-replacement-foundations.html", "ko": "ko/lessons/0000-replacement-foundations.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "reference/lru-worked-example.html", "en": "en/reference/lru-worked-example.html", "ko": "ko/reference/lru-worked-example.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "index.html", "en": "en/index.html", "ko": "ko/index.html", "review": { "state": "pending" }, "fingerprints": {} },

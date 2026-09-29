@@ -4,6 +4,7 @@ import path from 'node:path';
 // Stable filenames, ordered by conceptual dependency rather than numeric ID.
 export const lectureOrder = [
   '0000-replacement-foundations',
+  '0000a-database-bridge',
   '0001-present-the-page-journey', '0002-separate-objects-from-state',
   '0003-trace-fix-convergence', '0004-repay-fix-debt', '0004a-understand-holder-anchor',
   '0005-audit-a-logged-mutation', '0006-flush-one-generation',

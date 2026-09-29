@@ -12,7 +12,7 @@ Before presenting, open the exact served URL and check the intended viewport, di
 
 ## F01 replacement foundations
 
-Begin with basic programming and array/linked-list knowledge only. Use the new required entry before Lecture 1. The separate F02 slice adds the database bridge; until it lands, do not imply the three-frame trace supplies database durability or ownership prerequisites. No fixed total meeting duration is imposed.
+Begin with basic programming and array/linked-list knowledge only. Follow F01 with the required F02 database bridge before Lecture 1. No fixed total meeting duration is imposed.
 
 Ask why a full cache cannot simultaneously retain P/R/S and load T under fixed capacity. The instructor explanation is conditional: replacement creates a reusable slot; bypass, waiting/refusal, or growth require a different permitted outcome. A clean cached copy can leave while its backing copy survives. Neither crash nor data loss follows just from being full.
 
@@ -21,3 +21,13 @@ For the common P R P S P R T U P R trace, ask for physical frames and metadata s
 Use the independent counterexample P R S P T R to challenge “LRU always wins”: FIFO has 2 hits/4 misses; LRU has 1 hit/5 misses. Have participants explain the recent-use assumption and metadata cost rather than infer throughput from hit counts.
 
 The unseen exercise P R S R T P R uses a fresh empty cache. Instructor totals: FIFO/Clock 1 hit/6 misses, LRU 2 hits/5 misses, OPT 3 hits/4 misses. Request 6 distinguishes FIFO's eviction of R from LRU's eviction of S, explaining the final R miss versus hit. Use the full answer ledgers in native disclosures only after prediction. Ask for reasoning and state transitions, not an automated score. These checks do not establish participant mastery or replace human language review.
+
+## F02 database bridge
+
+Use the systems table to ask what the cached unit is, who controls placement, and which candidates are legal. A CPU line is not a database page; a set restricts candidates. An application may discard a recomputable value but cannot infer the same contract for pending writes. Introduce pin versus latch, dirty versus clean, durability and WAL before the dirty checkpoint. A page flush is neither eviction nor transaction commit.
+
+DB-A, DB-B, and DB-C each restart at P/R/S; they are not successive rows or F01 terminal states. Ask participants to name the reset and explain the assumptions before opening each disclosure. Instructor explanation for DB-A: FIFO prefers pinned P, but R is oldest eligible, so T replaces R in F1, giving P/T/S and FIFO P→S→T. The atomic eligibility/reuse step is an explicit teaching-model premise.
+
+DB-B has dirty unpinned P and clean pinned R/S. Successful WAL-ordered writeback with no concurrent change leaves P/R/S and clean P; only subsequent protected reuse gives T/R/S. Its alternative re-dirty schedule restarts at DB-B and does not inherit that successful ending. DB-C has all three pinned: no recency improvement frees a frame. Progress needs another event, such as release; waiting is not itself a guarantee. Ask for permitted next actions and unsupported fairness claims separately.
+
+PostgreSQL's ring and InnoDB's delayed promotion motivate scan handling without predicting a winner. Keep detailed comparator control flow in Lecture 18A. Before entering Lecture 1, state that ticket 01 starts a different 32,768-frame constructed model, first uses INVALID frames, and keeps F42/F43 distinct from toy F0/F1. Repeating P can leave its LRU1 position unchanged under the preserved example's assumptions. Later ticket 02 extends that source-derived state; do not improvise three-frame cooling thresholds. Use human-reviewed reasoning as learning evidence, with language review still pending.

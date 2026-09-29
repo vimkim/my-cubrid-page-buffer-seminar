@@ -13,6 +13,53 @@ let browser;
 before(async () => { if (chromium) browser = await chromium.launch({ headless: true }); });
 after(async () => { await browser?.close(); });
 
+test('database bridge preserves branch starts, reveals safety reasoning, and connects the required route', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      const response = await page.goto(base + language + '/lessons/0000a-database-bridge.html?present=1#pinned');
+      assert.equal(response.status(), 200);
+      const answer = page.locator('#pinned > details');
+      assert.equal(await answer.getAttribute('open'), null);
+      await answer.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.match(await answer.innerText(), /P \/ T \/ S/);
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#dirty');
+      await page.locator('[data-section-previous]').click();
+      assert.equal(new URL(page.url()).hash, '#pinned');
+      await page.keyboard.press('Escape');
+      await page.locator('[data-lecture-nav] a[rel="next"]').click();
+      assert.match(page.url(), /0001-present-the-page-journey.html$/);
+      await page.locator('[data-lecture-nav] a[rel="prev"]').click();
+      assert.match(page.url(), /0000a-database-bridge.html$/);
+      await page.locator('[data-language-switcher] a').click();
+      assert.match(page.url(), new RegExp('/' + (language === 'en' ? 'ko' : 'en') + '/lessons/0000a-database-bridge.html'));
+    } finally { await page.close(); }
+  }
+});
+
+test('database bridge resets remain readable without scripts at mobile width', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/lessons/0000a-database-bridge.html');
+      for (const id of ['pinned', 'dirty', 'progress']) {
+        assert.equal(await page.locator('#' + id).isVisible(), true);
+        await page.locator('#' + id + ' > details > summary').click();
+        assert.equal(await page.locator('#' + id + ' > details').getAttribute('open'), '');
+      }
+      assert.match(await page.locator('#dirty > details').innerText(), /T \/ R \/ S/);
+      assert.match(await page.locator('#progress > details').innerText(), /P \/ R \/ S/);
+      assert.equal(await page.locator('#cubrid').isVisible(), true);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.locator('#cubrid a[href="../reference/lru-worked-example.html#snapshot"]').first().click();
+      assert.equal(await page.locator('#snapshot').isVisible(), true);
+    }
+  } finally { await context.close(); }
+});
+
 test('replacement foundations supports prediction, deliberate steps, and language transfer', { skip: unavailable }, async () => {
   for (const language of ['en', 'ko']) {
     const page = await browser.newPage();
