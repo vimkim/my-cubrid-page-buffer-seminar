@@ -30,6 +30,7 @@ test('reuse schedules reset answers across branch switches and forward/backward 
       assert.match(await page.locator('#reuse-direct > details').innerText(), /INVALIDATE_DIRECT_VICTIM/);
       await page.locator('#reuse-direct a[href="#selection-baseline"]').focus();
       await page.keyboard.press('Enter');
+      await page.waitForURL('**#selection-baseline');
       assert.equal(new URL(page.url()).hash, '#selection-baseline');
       await page.goBack();
       assert.equal(new URL(page.url()).hash, '#reuse-direct');
@@ -55,6 +56,7 @@ test('reuse alternatives retain all histories and native answers without JavaScr
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.locator('#reuse-direct a[href="#selection-baseline"]').focus();
       await page.keyboard.press('Enter');
+      await page.waitForURL('**#selection-baseline');
       assert.equal(new URL(page.url()).hash, '#selection-baseline');
     }
   } finally { await context.close(); }
