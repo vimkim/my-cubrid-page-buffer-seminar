@@ -447,6 +447,43 @@ case excluding mutex wait.
 
 Source: `src/storage/page_buffer.c:6713-7040,9695-10417`.
 
+## Why retain LRU2 instead of moving every reused page to the front?
+
+**Implementation policy:** merging LRU1 and LRU2 and moving a reused BCB to the
+front on every eligible final unfix is a possible alternative. It preserves combined protected
+capacity but changes the update rule and region boundaries. Enlarging LRU1 while retaining
+its current keep-position rule is a different proposal.
+
+The current rule separates a region where reuse skips reordering (LRU1) from a
+region where old-enough reuse renews protection (LRU2). Shared LRU2 additionally
+accepts ordinary new admissions without a private assignment and private-to-shared
+migrations, below LRU1. Private admission starts at LRU1 with AOUT disabled.
+A merged-region policy must choose the replacement entry point for shared arrivals;
+front insertion changes admission policy, while retaining an intermediate age or
+entry boundary preserves part of the current distinction.
+
+Known-node doubly linked removal/insertion is O(1). However, moving every reused
+node introduces list synchronization and link writes on paths that currently
+keep position. The source explicitly explains avoiding the list mutex for LRU1
+and suppressing short-gap repeats such as reading then writing the same page.
+This does not eliminate BCB synchronization or all unfix work. LRU2 is not a
+correctness requirement, nor does this cost argument prove better throughput or
+hit rate. Compare misses, list updates, mutex wait and throughput under the same
+capacity and workload before choosing between these policies.
+
+**Verified mechanism:** private and shared use the same conditional same-list
+boosting and zone-adjustment helpers, but different admission and threshold
+rules. Private thresholds are each `int(quota * 0.05)`; shared thresholds use
+the shared target size times `ratio_lru1` and `ratio_lru2`. Thus the shared ratio
+settings do not set private zone sizes. The preceding quota section owns the
+calculation and its zero-activity case. Demotion first trims the combined LRU1 +
+LRU2 population, then LRU1; it need not stop in LRU2 before reaching LRU3.
+
+Sources: [ordinary unfix decisions](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6742-L6844),
+[boost rationale and locking](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10140-L10197),
+[zone adjustment](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9993-L10052),
+and [threshold calculation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14400-L14501).
+
 ## What happens when every scan fails
 
 ![Allocation progress loop when no free BCB is immediately available](../assets/allocation-progress.svg)
