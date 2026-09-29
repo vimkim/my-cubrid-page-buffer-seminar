@@ -124,6 +124,16 @@ _Avoid_: Page initialization, when only resident storage and metadata are prepar
 A caller-visible contract among CUBRID engine modules. It is internal to the server and distinct from an installed SQL, CCI, or application API.
 _Avoid_: Public API, unless the exact boundary is named
 
+## Replacement language
+
+**Private replacement domain**:
+A session-associated policy domain for accounting for resident pages and replacement pressure. It does not confer exclusive page access or transaction ownership.
+_Avoid_: Transaction-owned cache, private buffer pool
+
+**Shared replacement domain**:
+A common policy domain for resident pages outside private-domain accounting. Membership does not certify a particular number of users or exemption from replacement.
+_Avoid_: Multi-transaction ownership, eviction immunity
+
 ## Evidence language
 
 **Interface contract**:

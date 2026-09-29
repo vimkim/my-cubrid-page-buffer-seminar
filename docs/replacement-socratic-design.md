@@ -64,3 +64,28 @@ and the route glossary. Human translation-review receipts remain pending.
 Counterfactual designs are teaching models, not claims about CUBRID's historical
 design intent. Validate actual transitions and policy conditions against the
 repository's pinned source before authoring implementation explanations.
+
+## Accepted private/shared rationale extension (2026-09-30)
+
+The user approved rebuilding the paired Lecture 0007 explanation around why
+multiple shared LRUs alone do not provide private-domain accounting. Follow one
+page through session-associated admission, same-domain reuse, cross-domain reuse,
+and reclamation. Connect list sharding, quota and victim preference before
+introducing migration. Preserve the existing anchors and native disclosures.
+
+Use exact pinned-source traces and explicitly constructed scenarios, without a
+new native experiment. Include different sessions sharing one private domain,
+one domain migrating a hot-and-old page, and the final-unfix context boundary.
+Distinguish policy intent from the index predicate; show that migration changes
+the current full LRU index and enters shared LRU2 without eviction immunity.
+The existing focused Evidence reference retains technical provenance ownership.
+
+This is a reversible explanation revision within the accepted curriculum;
+no new architectural decision record is needed. The replacement glossary records
+domain meanings; executable conditions remain in the explanation and evidence.
+
+The user additionally required explicit design assumptions and consequences of
+omitting each mechanism. Show domain-local reuse, sampled-activity prediction,
+cross-domain/hot reuse signals and maintenance-cost trade-offs alongside their
+failure boundaries. Contrast shared-only, private-without-quota and
+private-without-migration models; separate policy losses from safety failures.
