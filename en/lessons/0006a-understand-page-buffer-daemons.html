@@ -19,6 +19,8 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><h2>Why move work into background threads?</h2><p>A daemon here is a managed background thread that repeats a task and waits. It lets shared maintenance or cleaning proceed independently of one request. This is not a separate database server process, and the four page-buffer daemons do not all write pages.</p><p>Without background execution, necessary work has to move to foreground callers or another scheduler. That can increase request latency or reduce prepared clean-frame supply; it does not by itself prove corruption. Removing a thread while leaving its queues or wait protocol dependent on it is a different, unsafe change. Stand-alone mode is evidence that synchronous alternatives exist, not a recipe for disabling a live server daemon.</p><p>Keep four jobs separate: page-flush submits dirty page images; post-flush completes queued BCB work; maintenance adjusts quotas and zones; flush-control updates soft I/O pacing credits. The next lectures trace each job and its absence consequences.</p></section>
+
       <section class="section" id="daemon">
         <div class="eyebrow">01 · Define daemon</div>
         <h2>One daemon is one thread that executes one task and pauses</h2>
@@ -89,7 +91,7 @@
         <p><a href="0006-flush-one-generation.html">← Lecture 0006</a> · <a href="0006b-follow-page-flush-handoff.html">Continue to Lecture 0006B →</a></p>
       </section>
     </article>
-    <nav class="lesson-nav" aria-label="Lesson contents"><strong>Lecture map</strong><a href="#daemon">1. One daemon</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#plain-language-bridge">4. Two phrases</a><a href="#routes">5. Focused routes</a><a href="#retrieval">6. Explain it</a><a href="#primary-reading">Primary reading</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">Curriculum</a></nav>
+    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Why move work into background threads?</a><strong>Lecture map</strong><a href="#daemon">1. One daemon</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#plain-language-bridge">4. Two phrases</a><a href="#routes">5. Focused routes</a><a href="#retrieval">6. Explain it</a><a href="#primary-reading">Primary reading</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">Curriculum</a></nav>
   </div>
 
 <nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0006-flush-one-generation.html">← Lecture 6 · Flush generations and WAL ordering</a><a rel="next" href="0006b-follow-page-flush-handoff.html">Lecture 6B · Page-flush and post-flush handoff →</a></nav></main>

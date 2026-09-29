@@ -19,7 +19,15 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
-      <section class="section" id="answer">
+<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><h2>Private and shared organize competition for one pool</h2><p>A private LRU is a residency and quota domain associated with execution contexts. A shared LRU is a common residency domain. Both link BCBs from the same pool. Private does not grant exclusive page access, and shared does not imply every page is simultaneously on every list.</p><p>The design supplies separate placement and pressure accounting rather than one global exact-recency list. Without private domains, a different policy would need to handle competition between a repeated working set and scan traffic. Correctness would not inherently disappear: a shared-only design can still protect identities, owners, and dirty pages. Whether isolation improves performance is workload-dependent.</p><p><strong>Example:</strong> a new page reaches its first eligible final unfix. With a private assignment it enters private LRU1; without one it enters shared LRU2. A later access from another domain can cause a private member to move to shared LRU2. Its BCB and frame addresses stay the same. The detailed movement rules below include the other guards.</p></section>
+
+      <section class="section" id="first-code-path"><h2>Final unfix chooses ordinary admission</h2><p>This release-build path requires a zero global fix count, ordinary VOID placement, and no blocked reader/writer or special bottom-placement request. At the pinned AOUT-disabled policy, the top branch chooses private LRU1 when the final-unfix context has an enabled private assignment; the middle branch chooses shared LRU2 otherwise. Vacuum and direct-victim cases have other paths. In debug builds the entry is named pgbuf_unfix_debug.</p><figure class="source-call-path"><pre>pgbuf_unfix
+  → pgbuf_unlatch_bcb_upon_unfix
+    → pgbuf_unlatch_void_zone_bcb
+      ├→ pgbuf_lru_add_new_bcb_to_top
+      └→ pgbuf_lru_add_new_bcb_to_middle</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><p class="source-note">Pinned source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3200">page_buffer.c:3200</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6679-L6749">page_buffer.c:6679–6749</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6896-L6994">page_buffer.c:6896–6994</a></p></section>
+
+<section class="section" id="answer">
         <div class="eyebrow">01 · Short answer</div>
         <h2>The pool creates lists; a session borrows one list ID</h2>
         <p class="big-claim">The default 152 is a count of empty private-LRU descriptors created once during page-buffer startup. Starting a transaction does not create 152 lists.</p>
@@ -156,7 +164,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       </section>
     </article>
 
-    <nav class="lesson-nav" aria-label="Lesson contents">
+    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Private and shared organize competition for one pool</a><a href="#first-code-path">Final unfix chooses ordinary admission</a>
       <strong>Lecture map</strong>
       <a href="#answer">1. Short answer</a>
       <a href="#index-space">2. Three index meanings</a>

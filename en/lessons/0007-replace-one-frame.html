@@ -19,6 +19,8 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><h2>Preference chooses a candidate; protection authorizes reuse</h2><p>Replacement has two questions: which resident page would be economical to lose, and which frame may be reused safely now? CUBRID separates placement, domain selection, LRU3 scanning, and protected eligibility checks. Without a preference policy, reuse can still be safe but may discard useful pages. Without the safety checks, a favorable candidate can still be dangerous.</p><p><strong>Constructed example:</strong> the invalid list is empty. A selected LRU3 scan encounters A then B; A is dirty, B is clean with zero fix count and no waiters or avoid-victim state. A is skipped. B is reusable only if its try-lock succeeds and the protected recheck still passes. If another thread fixes B first, skip B too. This is a bounded example of one selected-list scan, not a claim about a three-frame CUBRID configuration.</p><p>A successful victim leaves its old resident mapping before the slot is bound to the requested page. Removing an in-memory mapping does not delete the disk page. If no safe candidate is found, allocator progress needs another path: release, cleaning, retry, or a supported direct-victim handoff.</p></section>
+
       <section class="section" id="story">
         <div class="eyebrow">01 · Start with the need</div>
         <h2>A page miss needs a slot to hold the incoming bytes</h2>
@@ -175,7 +177,7 @@
       </section>
     </article>
 
-    <nav class="lesson-nav" aria-label="Lesson contents">
+    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Preference chooses a candidate; protection authorizes reuse</a>
       <strong>Lecture map</strong>
       <a href="#story">1. Why a slot is needed</a>
       <a href="#structures-cost">1A. Structures and cost</a>

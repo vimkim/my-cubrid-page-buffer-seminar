@@ -19,6 +19,8 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><h2>왜 일부 일을 background thread가 맡는가?</h2><p>여기서 daemon은 작업을 반복하고 기다리는, 관리되는 background thread다. 공통 유지보수나 cleaning을 개별 요청과 독립적으로 진행하게 한다. 별도의 DB 서버 process라는 뜻은 아니며, 네 page-buffer daemon이 모두 page를 쓰는 것도 아니다.</p><p>Background 실행이 없다면 필요한 일을 foreground 호출자나 다른 scheduler가 맡아야 한다. 요청 지연이 늘거나 미리 준비된 clean frame이 줄 수 있지만, 이것만으로 손상을 단정할 수는 없다. Queue나 대기 절차가 그대로 의존하는데 thread만 없애는 변경은 별개의 위험한 변경이다. Stand-alone mode는 동기 대안이 존재한다는 근거이지 실행 중인 서버 daemon을 끄는 방법이 아니다.</p><p>네 역할을 구분한다. Page-flush는 dirty page image를 제출한다. Post-flush는 queue에 넘긴 BCB 처리를 마친다. Maintenance는 quota와 zone을 조정한다. Flush-control은 soft I/O pacing credit을 갱신한다. 다음 강의에서 각 역할의 호출 경로와 없을 때의 영향을 확인한다.</p></section>
+
       <section class="section" id="daemon">
         <div class="eyebrow">01 · daemon 정의하기</div>
         <h2>daemon 하나는 task 하나를 실행하고 pause하는 thread 하나입니다</h2>
@@ -89,7 +91,7 @@
         <p><a href="0006-flush-one-generation.html">← Lecture 0006</a> · <a href="0006b-follow-page-flush-handoff.html">Lecture 0006B로 계속 →</a></p>
       </section>
     </article>
-    <nav class="lesson-nav" aria-label="Lesson 목차"><strong>Lecture map</strong><a href="#daemon">1. Daemon 하나</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#plain-language-bridge">4. 표현 두 개</a><a href="#routes">5. 집중 경로</a><a href="#retrieval">6. 직접 설명</a><a href="#primary-reading">핵심 읽을거리</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">과정 홈</a></nav>
+    <nav class="lesson-nav" aria-label="Lesson 목차"><a href="#first-principles">왜 일부 일을 background thread가 맡는가?</a><strong>Lecture map</strong><a href="#daemon">1. Daemon 하나</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#plain-language-bridge">4. 표현 두 개</a><a href="#routes">5. 집중 경로</a><a href="#retrieval">6. 직접 설명</a><a href="#primary-reading">핵심 읽을거리</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">과정 홈</a></nav>
   </div>
 
 <nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0006-flush-one-generation.html">← Lecture 6 · Flush generation과 WAL 순서</a><a rel="next" href="0006b-follow-page-flush-handoff.html">Lecture 6B · Page-flush와 post-flush handoff →</a></nav></main>

@@ -19,6 +19,13 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><h2>Page buffer는 무엇이며 왜 필요한가?</h2><p>데이터베이스 page는 저장된 데이터를 다루는 일정한 크기의 단위다. Frame은 page 하나의 내용을 담을 수 있는 재사용 가능한 메모리 자리다. Page buffer는 이 자리와 page의 이름을 관리하여, 같은 page에 접근할 때마다 저장 계층에 다시 요청하지 않고 메모리의 내용을 재사용하게 한다.</p><p>DB가 직접 관리하는 buffer가 없어도 직접 I/O나 OS cache를 이용하는 다른 설계는 가능하다. 다만 여러 실행 흐름이 공유하는 page의 식별, 동시 접근, 변경 기록을 책임질 다른 설계가 필요하다. Cache 기능만 없애면 주로 재사용의 이점을 잃지만, 접근 보호와 변경 전파 절차까지 대안 없이 없애면 내용 불일치나 변경 유실이 생길 수 있다. OS cache가 DB의 page latch와 WAL 규칙까지 대신하지는 않는다.</p><p><strong>예:</strong> page P를 읽고 사용을 마친 뒤 P를 다시 요청한다. P가 아직 resident라면 같은 frame을 이용할 수 있다. 이미 나갔다면 다시 준비해야 한다. Buffer miss가 물리 장치 읽기를 증명하지는 않는다. 아래 저장 계층의 cache가 읽기를 처리할 수도 있다.</p><p>다음 그림은 miss 분기다. Resident hit에서는 다른 frame을 할당하지 않는다. Fix 성공은 임시 사용 권한을 얻는 것이고, unfix는 그 사용 의무를 갚는 것이다. Flush, commit, eviction까지 뜻하지 않는다.</p></section>
+<section class="section" id="first-code-path"><h2>Miss에서 frame 확보까지: 실제 helper를 따라가기</h2><figure class="source-call-path"><pre>pgbuf_fix_release
+  → pgbuf_claim_bcb_for_fix
+    → pgbuf_allocate_bcb
+      → pgbuf_get_victim
+        → pgbuf_get_victim_from_lru_list</pre><figcaption>소스에서 확인한 호출 관계. 실행 중 수집한 스택이 아니다. 화살표는 조건이 맞을 때의 직접 호출이며, 들여쓴 가지는 같은 호출자의 분기다.</figcaption></figure><p class="source-note">고정 소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2416">page_buffer.c:2416</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8500">page_buffer.c:8392–8500</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403">page_buffer.c:8181–8403</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9067-L9253">page_buffer.c:9067–9253</a></p><p>마지막 두 호출은 invalid list에서 자리를 얻지 못하고 선택된 victim 검색 분기가 LRU에 도달하는 경우다. 할당은 재시도하거나 기다릴 수 있다. 모든 실행이 이 그림대로 진행되지는 않는다.</p></section>
+
       <section class="section" id="boundary">
         <div class="eyebrow">01 · seam에서 시작하기</div>
         <h2>Module이 caller에게 무엇을 제공하는지 먼저 말합니다</h2>
@@ -97,7 +104,7 @@
       </section>
     </article>
 
-    <nav class="lesson-nav" aria-label="강의 목차">
+    <nav class="lesson-nav" aria-label="강의 목차"><a href="#first-principles">Page buffer는 무엇이며 왜 필요한가?</a><a href="#first-code-path">Miss에서 frame 확보까지: 실제 helper를 따라가기</a>
       <strong>강의 지도</strong>
       <a href="#boundary">1. seam에서 시작하기</a>
       <a href="#objects">2. 명사 분리하기</a>

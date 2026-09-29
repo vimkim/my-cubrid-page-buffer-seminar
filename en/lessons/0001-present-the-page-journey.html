@@ -19,6 +19,13 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><h2>What is a page buffer, and why keep one?</h2><p>A database page is a fixed-size unit of stored data. A frame is a reusable memory slot that can hold one page image. The page buffer manages these slots and their identities so database code can reuse resident bytes instead of requesting the same page from the storage layer for every access.</p><p>Without a database-managed buffer, a database could still use direct I/O or rely on an OS cache, but it would need another design for shared page identity, concurrent access, and writeback. Removing only caching mainly loses reuse; removing the ownership and writeback protocols without replacements risks inconsistent bytes or lost changes. An OS cache does not automatically implement the database’s page latch and WAL rules.</p><p><strong>Example:</strong> read page P, release it, then request P again. If P remains resident, the second request can reuse its frame. If it has left, the request must materialize it again. A buffer miss is not proof of physical device I/O: another storage layer may satisfy the read.</p><p>The next diagram follows the miss branch. A resident hit does not allocate another frame. A successful fix grants temporary use; unfix repays that use, without implying flush, commit, or eviction.</p></section>
+<section class="section" id="first-code-path"><h2>A miss reaches frame acquisition through a real helper</h2><figure class="source-call-path"><pre>pgbuf_fix_release
+  → pgbuf_claim_bcb_for_fix
+    → pgbuf_allocate_bcb
+      → pgbuf_get_victim
+        → pgbuf_get_victim_from_lru_list</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><p class="source-note">Pinned source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2416">page_buffer.c:2416</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8500">page_buffer.c:8392–8500</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403">page_buffer.c:8181–8403</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9067-L9253">page_buffer.c:9067–9253</a></p><p>The last two calls apply when the invalid list supplies no slot and the selected victim-search branch reaches an LRU. Allocation can retry or wait; this graph is not every execution.</p></section>
+
       <section class="section" id="boundary">
         <div class="eyebrow">01 · Begin at the seam</div>
         <h2>The Module’s contract with the caller</h2>
@@ -97,7 +104,7 @@
       </section>
     </article>
 
-    <nav class="lesson-nav" aria-label="Lesson contents">
+    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">What is a page buffer, and why keep one?</a><a href="#first-code-path">A miss reaches frame acquisition through a real helper</a>
       <strong>Lecture map</strong>
       <a href="#boundary">1. Begin at the seam</a>
       <a href="#objects">2. Keep the nouns separate</a>

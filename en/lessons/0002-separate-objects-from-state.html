@@ -19,7 +19,15 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
-      <section class="section" id="six-objects">
+<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><h2>Start with the jobs, then name the structures</h2><p>Imagine a library with a limited number of reading desks. The page identity names a book; the frame is a desk; the BCB is the desk’s status record. This analogy explains identity versus storage, not locking or durability.</p><div class="table-scroll"><table><thead><tr><th>Component</th><th>What and why</th><th>What would need replacing without it</th></tr></thead><tbody><tr><td>Page identity / VPID</td><td>The logical page name.</td><td>Without an identity check, a slot reused for Q could be mistaken for P.</td></tr><tr><td>Frame array</td><td>The storage for resident page bytes.</td><td>Without bounded reusable storage, pages need another home or allocation strategy.</td></tr><tr><td>BCB array</td><td>One control descriptor per reusable frame: identity, fix count, latch and dirty/flush state.</td><td>Bytes alone cannot tell whether reuse is safe. Equivalent metadata must exist somewhere.</td></tr><tr><td>Resident hash</td><td>A lookup from page identity to a candidate BCB, followed by exact identity checks.</td><td>Without this index, another lookup method is needed; scanning every BCB raises lookup work.</td></tr><tr><td>Invalid list</td><td>BCBs with no resident identity, ready for controlled acquisition.</td><td>Without a free-slot index, even finding an unused slot needs another search.</td></tr><tr><td>LRU array</td><td>An array of list descriptors; each list links many BCBs and has zone boundaries.</td><td>Without replacement metadata, choosing candidates needs another policy or repeated search.</td></tr><tr><td>Holder / fix count / latch</td><td>Per-thread ownership record, global ownership count, and content-access coordination.</td><td>Without equivalent protection, a caller could keep using a frame while another reuses or changes it.</td></tr></tbody></table></div><p>The BCB array and LRU array are different arrays. BCB storage owns the descriptors for frames; LRU descriptors own list organization. A BCB does not live in a second physical buffer pool when its membership moves from private to shared.</p></section>
+
+      <section class="section" id="first-code-path"><h2>Startup creates the arrays; a miss reuses their slots</h2><p>On the boot path that does not reuse existing managers, two sibling helpers create paired BCB/frame storage and the shared/private LRU descriptor array. The first does not call the second. LRUs start empty; initially unused BCBs are linked on the invalid list. BCB[42] can later represent P and then Q without becoming another BCB object.</p><figure class="source-call-path"><pre>logtb_define_trantable
+  → logtb_define_trantable_log_latch
+    → pgbuf_initialize
+      ├→ pgbuf_initialize_bcb_table
+      └→ pgbuf_initialize_lru_list</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><p class="source-note">Pinned source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_tran_table.c#L383-L495">log_tran_table.c:383–495</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1748-L1763">page_buffer.c:1748–1763</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5785">page_buffer.c:5559–5785</a></p></section>
+
+<section class="section" id="six-objects">
         <div class="eyebrow">01 · Name before tracing</div>
         <h2>“Page” names several distinct objects</h2>
         <img class="diagram" src="../../assets/object-ownership-map.svg" alt="Six page-buffer objects and their ownership relationships">
@@ -136,7 +144,7 @@
       </section>
     </article>
 
-    <nav class="lesson-nav" aria-label="Lesson contents">
+    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Start with the jobs, then name the structures</a><a href="#first-code-path">Startup creates the arrays; a miss reuses their slots</a>
       <strong>Lecture map</strong>
       <a href="#six-objects">1. Six objects</a>
       <a href="#runtime-shapes">1A. Runtime shapes and defaults</a>

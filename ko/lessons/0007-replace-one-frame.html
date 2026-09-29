@@ -19,6 +19,8 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><h2>정책은 후보를 고르고, 보호 절차는 재사용을 허용한다</h2><p>교체에는 두 질문이 있다. 어느 resident page를 내보내는 편이 유리한가? 어느 frame을 지금 안전하게 재사용할 수 있는가? CUBRID에서는 배치, domain 선택, LRU3 탐색, 보호 아래의 적격성 검사가 나뉜다. 선호 정책이 없으면 안전하게 교체하더라도 유용한 page를 버릴 수 있다. 안전 검사가 없으면 정책상 좋은 후보도 위험하다.</p><p><strong>구성 예제:</strong> invalid list가 비어 있다. 선택한 LRU3를 탐색하다 A, B를 차례로 만난다. A는 dirty이고, B는 clean이며 fix count가 0이고 waiter나 avoid-victim 상태가 없다. A는 건너뛴다. B도 try-lock에 성공하고 보호 아래 재검사를 통과해야 재사용할 수 있다. 다른 thread가 먼저 B를 fix했다면 B 역시 건너뛴다. 이것은 선택된 list 하나의 탐색 예시이며, CUBRID를 frame 세 개로 구성했다는 뜻이 아니다.</p><p>Victim 확보에 성공하면 기존 resident mapping을 제거한 뒤 요청한 page를 그 자리에 연결한다. 메모리 mapping 제거가 disk page 삭제는 아니다. 안전한 후보가 없으면 사용 반납, cleaning, 재시도, 지원되는 direct-victim 전달 등 다른 진행 경로가 필요하다.</p></section>
+
       <section class="section" id="story">
         <div class="eyebrow">01 · 필요한 이유부터 시작</div>
         <h2>Page miss가 나면 incoming bytes를 담을 slot이 필요합니다</h2>
@@ -175,7 +177,7 @@
       </section>
     </article>
 
-    <nav class="lesson-nav" aria-label="강의 목차">
+    <nav class="lesson-nav" aria-label="강의 목차"><a href="#first-principles">정책은 후보를 고르고, 보호 절차는 재사용을 허용한다</a>
       <strong>강의 지도</strong>
       <a href="#story">1. Slot이 필요한 이유</a>
       <a href="#structures-cost">1A. 자료구조와 비용</a>

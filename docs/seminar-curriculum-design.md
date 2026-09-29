@@ -91,3 +91,14 @@ Record Korean naturalness and EN/KO semantic reviews honestly against the applic
 ## Design status
 
 The interview's product choices are settled through Q40. The user accepted layout A on 2026-09-08; the [prototype review](seminar-prototype-review.md) records the decision and archive. The bilingual migration is implemented, with page dispositions and automated verification recorded in the [coverage audit](curriculum-coverage.md). Final acceptance remains open for human Korean-language and semantic review against the current EN/KO fingerprints. Prototype approval and automated checks do not satisfy that separate review requirement.
+
+
+## Three-hour foundations-first delivery route (2026-09-30)
+
+The user accepted a bounded presentation within the existing multi-session curriculum. This does not replace the full Core/Advanced route or its completion criteria. The paired `reference/first-principles-route.html` pages connect relevant canonical lectures using definition, purpose, consequences of absence, constructed example, and a pinned-source call path. Existing lecture URLs and deeper material remain available.
+
+The delivery assumes basic programming only and allocates 150 teaching minutes: page buffer 20, structures/private-shared 25, textbook replacement 20, CUBRID replacement 35, daemons 25, PostgreSQL/InnoDB comparison 15, and misconception synthesis 10. Add two five-minute breaks and 20 minutes of questions/buffer for 180 minutes. Korean presenter notes and cue cards live in `/home/vimkim/tmp/seminar-helper`; they are separate from audience navigation.
+
+Representative diagrams use 3–5 verified real function names. Sibling branches remain branches, and asynchronous BCB queue handoffs are explained separately from synchronous call stacks. No new runtime captures or performance comparisons are claimed. Comparison sources retain the existing PostgreSQL and MySQL pins. Abstract textbook traces are distinct from the larger-pool constructed database examples.
+
+The new pair enters the existing human-review registry as pending. Automated source, bilingual technical-parity, and browser checks do not constitute a human Korean-language review or demonstrate participant mastery.

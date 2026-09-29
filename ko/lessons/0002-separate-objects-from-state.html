@@ -19,7 +19,15 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
-      <section class="section" id="six-objects">
+<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><h2>필요한 역할부터 보고 자료구조의 이름 붙이기</h2><p>열람 책상이 한정된 도서관을 생각해 보자. Page identity는 책의 이름, frame은 책상, BCB는 그 책상의 상태 기록에 비유할 수 있다. 이 비유는 이름과 공간을 구분하기 위한 것이며, locking이나 durability까지 설명하지는 않는다.</p><div class="table-scroll"><table><thead><tr><th>구성 요소</th><th>무엇이며 왜 필요한가</th><th>없으면 무엇을 대신 마련해야 하는가</th></tr></thead><tbody><tr><td>Page identity / VPID</td><td>논리 page의 이름이다.</td><td>식별 검사가 없으면 Q로 재사용된 자리를 P로 착각할 수 있다.</td></tr><tr><td>Frame array</td><td>Resident page의 실제 bytes를 담는 메모리다.</td><td>크기가 정해진 재사용 공간이 없다면 다른 저장 위치나 할당 전략이 필요하다.</td></tr><tr><td>BCB array</td><td>Frame마다 하나씩 있는 제어 정보다. 식별자, fix count, latch, dirty/flush 상태를 관리한다.</td><td>Bytes만 보고는 재사용이 안전한지 알 수 없다. 동등한 제어 정보가 다른 곳에라도 필요하다.</td></tr><tr><td>Resident hash</td><td>Page의 이름으로 후보 BCB를 찾는 색인이다. 이후 정확한 이름을 확인한다.</td><td>이 색인이 없으면 다른 조회 방법이 필요하다. BCB 전체 순회는 조회 작업을 늘린다.</td></tr><tr><td>Invalid list</td><td>Resident 식별자가 없는 BCB를 모아 확보할 수 있게 한다.</td><td>빈 자리 색인이 없으면 사용하지 않는 자리를 찾는 데도 다른 검색이 필요하다.</td></tr><tr><td>LRU array</td><td>여러 list descriptor를 담은 배열이다. 각 list는 여러 BCB를 연결하고 zone 경계를 가진다.</td><td>교체 메타데이터가 없으면 다른 정책이나 반복 검색으로 후보를 정해야 한다.</td></tr><tr><td>Holder / fix count / latch</td><td>Thread별 사용 의무, 전체 사용 수, 내용 접근의 동시성 제어다.</td><td>동등한 보호가 없으면 사용 중인 frame을 다른 실행 흐름이 재사용하거나 변경할 수 있다.</td></tr></tbody></table></div><p>BCB array와 LRU array는 서로 다른 배열이다. BCB 배열은 frame의 제어 정보를 보관하고, LRU descriptor는 list 구성을 관리한다. BCB의 소속이 private에서 shared로 바뀌어도 별도의 물리 buffer pool로 옮겨 가는 것은 아니다.</p></section>
+
+      <section class="section" id="first-code-path"><h2>초기화는 배열을 만들고, miss는 그 자리를 재사용한다</h2><p>기존 manager를 재사용하지 않는 boot 경로에서 두 형제 helper가 BCB/frame 저장 공간과 shared/private LRU descriptor 배열을 만든다. 첫 helper가 두 번째 helper를 호출하는 것은 아니다. LRU는 비어 있고, 처음 사용하지 않는 BCB는 invalid list로 연결된다. 이후 BCB[42]가 P, 다음에는 Q를 나타내더라도 BCB 객체 자체는 그대로다.</p><figure class="source-call-path"><pre>logtb_define_trantable
+  → logtb_define_trantable_log_latch
+    → pgbuf_initialize
+      ├→ pgbuf_initialize_bcb_table
+      └→ pgbuf_initialize_lru_list</pre><figcaption>소스에서 확인한 호출 관계. 실행 중 수집한 스택이 아니다. 화살표는 조건이 맞을 때의 직접 호출이며, 들여쓴 가지는 같은 호출자의 분기다.</figcaption></figure><p class="source-note">고정 소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_tran_table.c#L383-L495">log_tran_table.c:383–495</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1748-L1763">page_buffer.c:1748–1763</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5785">page_buffer.c:5559–5785</a></p></section>
+
+<section class="section" id="six-objects">
         <div class="eyebrow">01 · 추적하기 전에 이름 붙이기</div>
         <h2>“Page”는 객체 하나가 아닙니다</h2>
         <img class="diagram" src="../../assets/object-ownership-map.svg" alt="여섯 page-buffer 객체와 ownership 관계">
@@ -136,7 +144,7 @@
       </section>
     </article>
 
-    <nav class="lesson-nav" aria-label="강의 목차">
+    <nav class="lesson-nav" aria-label="강의 목차"><a href="#first-principles">필요한 역할부터 보고 자료구조의 이름 붙이기</a><a href="#first-code-path">초기화는 배열을 만들고, miss는 그 자리를 재사용한다</a>
       <strong>강의 지도</strong>
       <a href="#six-objects">1. 여섯 객체</a>
       <a href="#runtime-shapes">1A. 실제 구조와 기본값</a>

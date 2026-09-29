@@ -174,3 +174,12 @@ The independent Standards and Spec reviews against baseline `09843fd4924bad01776
 Run the five regression files together with `node --test scripts/check-maintainer-guide.test.mjs scripts/check-bilingual-teaching-site.test.mjs scripts/seminar-contract.test.mjs scripts/seminar-regressions.test.mjs scripts/seminar-browser.test.mjs`. For browser checks, provide an installed Playwright module through `PLAYWRIGHT_MODULE` when it is not locally resolvable, and serve the site through Copyparty; `SEMINAR_URL` can override the browser test's local site URL. Browser unavailability is a disclosed skip, not a pass.
 
 To review the current content, use the EN/KO links in the disposition table. Run `node scripts/check-bilingual-teaching-site.mjs --print-fingerprints` at review time, then record the actual reviewer, date and matching fingerprints in the pairing manifest only after that review. Prototype approval is not a substitute for these receipts.
+
+
+## Foundations-first presentation route (2026-09-30)
+
+The collection now contains 52 registered page pairs. Added `reference/first-principles-route.html` in English/Korean with a stable root redirect, landing/library/syllabus entry links, an elapsed-time route, evidence-reading guidance, and linked misconception recap.
+
+Added concept/purpose/absence/example introductions to lectures 0000, 0001, 0002, 0006A, 0006B, 0006C, 0007, 0012B, and 0018A. Added compact verified paths for acquisition, array initialization, ordinary final-unfix admission, all four daemon roles, PostgreSQL Clock selection, and InnoDB common-LRU eviction. Existing canonical detail, lecture order, anchors, and presentation controls are retained.
+
+All affected wording remains pending genuine human Korean-naturalness and semantic-parity review. This change does not manufacture or renew a human receipt. See `docs/first-principles-delivery-checks.md` for the implementation verification record.
