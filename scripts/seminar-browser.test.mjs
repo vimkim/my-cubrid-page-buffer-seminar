@@ -25,6 +25,7 @@ test('reuse schedules reset answers across branch switches and forward/backward 
       await page.locator('[data-section-previous]').click();
       assert.equal(await page.locator('#reuse-reject > details').getAttribute('open'), null);
       await page.locator('#reuse-reject a[href="#reuse-direct"]').click();
+      await page.locator('#reuse-direct').waitFor({ state: 'visible' });
       await page.locator('#reuse-direct > details > summary').focus();
       await page.keyboard.press('Enter');
       assert.match(await page.locator('#reuse-direct > details').innerText(), /INVALIDATE_DIRECT_VICTIM/);
@@ -58,6 +59,57 @@ test('reuse alternatives retain all histories and native answers without JavaScr
       await page.keyboard.press('Enter');
       await page.waitForURL('**#selection-baseline');
       assert.equal(new URL(page.url()).hash, '#selection-baseline');
+    }
+  } finally { await context.close(); }
+});
+
+test('policy defense reveals a reset comparison and returns to the final defense route', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      await page.goto(base + language + '/reference/lru-worked-example.html?present=1#policy-compare');
+      assert.equal(await page.locator('#policy-compare').isVisible(), true);
+      const answer = page.locator('#policy-compare > details');
+      assert.equal(await answer.getAttribute('open'), null);
+      await answer.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.match(await answer.innerText(), /F42\/P → F43\/R → H1 → H2/);
+      assert.match(await answer.innerText(), /1003/);
+      await page.locator('[data-section-previous]').click();
+      assert.equal(new URL(page.url()).hash, '#policy-proposal');
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#policy-compare');
+      await page.keyboard.press('Escape');
+      await page.locator('#policy-defense a[href="../lessons/0017-defend-the-module-live.html#policy-review"]').click();
+      await page.waitForURL('**/0017-defend-the-module-live.html#policy-review');
+      await page.locator('#policy-review a[href="../reference/lru-worked-example.html#policy-proposal"]').click();
+      await page.waitForURL('**/lru-worked-example.html#policy-proposal');
+      await page.locator('[data-language-switcher] a').click();
+      assert.match(page.url(), new RegExp('/' + (language === 'en' ? 'ko' : 'en') + '/reference/lru-worked-example.html'));
+    } finally { await page.close(); }
+  }
+});
+
+test('policy counterexample and human rubric are reachable without scripts on mobile', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/reference/presentation-rehearsal-card.html#policy-review');
+      await page.locator('#policy-review a[href="lru-worked-example.html#policy-defense"]').focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/lru-worked-example.html#policy-defense');
+      const answer = page.locator('#policy-defense > details');
+      assert.equal(await answer.getAttribute('open'), null);
+      await answer.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.match(await answer.innerText(), /1022/);
+      assert.equal(await page.locator('#policy-defense table tbody tr').count(), 5);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.locator('#policy-defense a[href="#policy-proposal"]').focus();
+      await page.keyboard.press('Enter');
+      assert.equal(new URL(page.url()).hash, '#policy-proposal');
+      assert.equal(await page.locator('#policy-proposal').isVisible(), true);
     }
   } finally { await context.close(); }
 });

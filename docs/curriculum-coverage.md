@@ -2,6 +2,10 @@
 
 This author-only audit accompanies the [accepted design](seminar-curriculum-design.md). The public coverage-page URLs now redirect to the syllabus. Personal reading history and mastery state have been removed from the audience product; no participant completion is asserted here.
 
+## Ticket 04 policy-defense addition
+
+Ticket 04 adds the bounded immediate-hit-promotion defense to the existing worked-example pair at policy-proposal, policy-compare and policy-defense. It independently resets to checkpoint 3 and S49, defines fix-time protection/current-list placement with unchanged final-unfix migration, compares source-derived baseline and explicitly hypothetical states, and provides a 20-hit counterexample, correctness/performance verification plan and five-part human-review rubric. Lecture 17 and the technical-defense card link into it and have return routes. Existing native disclosures and presentation controls support keyboard/projection and complete mobile no-JavaScript reading. No engine change, performance result, new pair or human-language receipt is claimed; all three edited pairs remain pending. The ticket 04 handoff records source/check evidence and integration limits.
+
 ## Scope and six-axis review
 
 The manifest now contains 51 paths per language: 27 lectures, one landing page, 22 curriculum/reference pages, and one compatibility redirect. The original 48-path migration is recorded below; later additions are recorded separately. All Core and Advanced mechanisms remain required, with detailed source-level cross-engine comparison in the final phase and no fixed total duration.
