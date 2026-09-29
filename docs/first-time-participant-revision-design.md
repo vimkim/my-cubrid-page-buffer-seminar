@@ -49,7 +49,7 @@ These observations establish candidate problems. They do not settle the revised 
 
 ## Decision tree
 
-1. Revision boundary and completion target — Q1 pending.
+1. Revision boundary and completion target — Q1 accepted: first-principles route plus required prerequisites.
 2. Given that boundary: prerequisite order and conceptual stopping points.
 3. Given the route: continuous workload, page identity and explicit example resets.
 4. Given that story: concurrency and crash/flush timelines with bounded assumptions.
@@ -59,10 +59,25 @@ These observations establish candidate problems. They do not settle the revised 
 
 The interview advances one consequential question at a time. Decisions depending on an unanswered question remain pending.
 
-## Q1 — Proposed revision boundary
+## Q1 — Accepted revision boundary
 
-Pending user answer. Recommendation: make the existing first-principles route self-contained for the stated novice audience, revising linked lectures and adding the minimum prerequisite explanations needed for its replacement, progress and comparison story. Preserve the full curriculum's maintainer scope and deep references.
+The user selected A. Decision: make the existing first-principles route self-contained for the stated novice audience, revising linked lectures and adding the minimum prerequisite explanations needed for its replacement, progress and comparison story. Preserve the full curriculum's maintainer scope and deep references.
 
 Alternative: redesign the entire Core/Advanced curriculum in this effort, extending prerequisite and exercise review through recovery, ordered access, specialized interfaces and technical defense. This is a materially wider objective.
 
 Trade-off: the route-focused option targets the critique's principal reading experience and supports a bounded end-to-end diagnosis exercise; it does not claim to complete the broader maintainer curriculum redesign.
+
+
+Observable scope criteria:
+
+- The revised route explicitly reaches every prerequisite explanation needed by its scenarios before asking participants to use it.
+- Its linked explanations support a complete page-request/replacement/progress story and a bounded final diagnostic exercise.
+- Existing Core/Advanced depth and evidence remain available; completion of this revision does not assert completion of the full maintainer curriculum.
+
+## Q2 — Prerequisite placement (pending)
+
+Recommendation A: introduce constraints when the continuing request encounters them. Begin with a concrete record request, pages/frames/BCBs and textbook replacement. Establish basic fix/latch/dirty meanings before CUBRID policy; use a clean, unfixed scenario for admission, domains, zones and quota. Then let the request encounter fixed and dirty candidates, introducing the concurrency schedule and WAL/copied-generation explanation before resolving safe reuse and background progress. Finish with comparison and diagnosis.
+
+Alternative B: teach the concurrency and durability foundations in full before the CUBRID replacement sequence, then apply them together during candidate selection and progress.
+
+Trade-off: A reaches the central replacement topic sooner and gives each deeper mechanism an immediate problem to solve, but requires explicit scenario continuity and revisiting the pending request. B provides all prerequisites in advance but lengthens the introduction before participants reach the central policy story. Neither option permits using undefined concepts or silently assuming prior database knowledge. Exact section navigation and page boundaries remain downstream decisions.
