@@ -127,6 +127,7 @@
         </table></div>
         <div class="callout warn"><strong>“Public API” needs a boundary:</strong> <code>page_buffer.h</code> is a Server-module Interface. It is not an installed SQL, CCI, or application API. The useful design question is whether creation should remain a broadly composable enum value or become a narrower internal function.</div>
         <p><strong>Recommendation:</strong> retain the semantic no-read creation operation. If maintainers want a deeper Interface, hide or split it behind a creation function that implies WRITE and names the caller's initialization obligation. Keep the specialized external-sort full-page overwrite separate; it shares the no-read mechanism but not the allocation contract.</p>
+        <p><a href="../reference/new-page-vs-old-page.html">Follow the source-level NEW_PAGE versus OLD_PAGE comparison: residual frame bytes, format metadata, and publication order →</a></p>
         <p><a href="../../reference/new-page-fetch-mode-audit.md">Open the complete pinned call-site, PostgreSQL/InnoDB, counterfactual, design-option, and regression audit →</a></p>
       </section>
 

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="820" viewBox="0 0 1320 820" role="img" aria-labelledby="title desc">
+  <title id="title">OLD_PAGE and NEW_PAGE share miss preparation and split only at materialization</title>
+  <desc id="desc">A cold miss first runs the same preparation for both fetch modes: pgbuf_lock_page makes the thread the VPID load owner, pgbuf_allocate_bcb claims a reusable BCB with its permanently paired frame, and the BCB is bound to the VPID with a reset latch tuple and a null oldest_unflush_lsa. At page_buffer.c line 8494 the paths split. OLD_PAGE reads the DWB copy or the home data volume, decrypts TDE pages, and counts a read, so the frame holds the durable image of that VPID. NEW_PAGE scrambles the frame only in CUBRID_DEBUG builds, initializes the page LSA, writes minus one into the header volid and pageid, and counts a created page, so the frame body keeps the previous occupant's bytes. Both paths then call pgbuf_set_bcb_page_vpid: OLD_PAGE only asserts the header already matches, while NEW_PAGE treats minus one as first use and stamps the VPID, PAGE_UNKNOWN, reserve fields, and a zero TDE nonce. After the latch is granted, OLD_PAGE rejects a PAGE_UNKNOWN image with ER_PB_BAD_PAGEID, while NEW_PAGE accepts it and leaves the page type to the caller's initializer.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .shared{fill:#f7fafb;stroke:#9fb4bd;stroke-width:2}.chip{fill:#ffffff;stroke:#9fb4bd;stroke-width:1.5}.old{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.new{fill:#e8f5f3;stroke:#16847d;stroke-width:2}.oldstep{fill:#ffffff;stroke:#5968bd;stroke-width:1.5}.newstep{fill:#ffffff;stroke:#16847d;stroke-width:1.5}.debug{fill:#ffffff;stroke:#16847d;stroke-width:1.5;stroke-dasharray:6 4}.oldres{fill:#5968bd}.newres{fill:#16847d}.err{fill:#fff1f0;stroke:#b3261e;stroke-width:2}.ok{fill:#e8f5f3;stroke:#16847d;stroke-width:2}.merge{fill:#fff8ea;stroke:#b86b22;stroke-width:2}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.code{font:13px Menlo,Consolas,monospace;fill:#173443}.w{font:700 14px Inter,Arial,sans-serif;fill:#ffffff}.line{fill:none;stroke:#48626f;stroke-width:2.5;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">OLD_PAGE vs NEW_PAGE on a cold miss: same preparation, different materialization</text>
+
+  <rect x="40" y="66" width="1240" height="128" rx="16" class="shared"/>
+  <text x="62" y="92" class="band">SHARED BY BOTH MODES · pgbuf_claim_bcb_for_fix()</text>
+  <rect x="62" y="108" width="380" height="70" rx="10" class="chip"/>
+  <text x="78" y="134" class="code">pgbuf_lock_page()</text>
+  <text x="78" y="158" class="s">become the VPID load owner</text>
+  <rect x="470" y="108" width="380" height="70" rx="10" class="chip"/>
+  <text x="486" y="134" class="code">pgbuf_allocate_bcb()</text>
+  <text x="486" y="158" class="s">claim a reusable BCB + its paired frame</text>
+  <rect x="878" y="108" width="380" height="70" rx="10" class="chip"/>
+  <text x="894" y="134" class="code">bufptr-&gt;vpid = *vpid</text>
+  <text x="894" y="158" class="s">reset latch tuple, oldest_unflush_lsa = NULL</text>
+
+  <path d="M660 194 L660 226" class="line"/>
+  <text x="660" y="248" text-anchor="middle" class="code">page_buffer.c:8494 · if (fetch_mode != NEW_PAGE)</text>
+  <path d="M600 256 L340 280" class="line"/>
+  <path d="M720 256 L980 280" class="line"/>
+
+  <rect x="40" y="286" width="600" height="252" rx="16" class="old"/>
+  <text x="62" y="312" class="band">OLD_PAGE · READ THE EXISTING IMAGE</text>
+  <rect x="62" y="326" width="556" height="36" rx="8" class="oldstep"/>
+  <text x="78" y="349" class="code">dwb_read_page()</text><text x="250" y="349" class="s">use the DWB copy if one exists</text>
+  <rect x="62" y="370" width="556" height="36" rx="8" class="oldstep"/>
+  <text x="78" y="393" class="code">fileio_read()</text><text x="250" y="393" class="s">otherwise read the home data volume</text>
+  <rect x="62" y="414" width="556" height="36" rx="8" class="oldstep"/>
+  <text x="78" y="437" class="code">tde_decrypt_data_page()</text><text x="290" y="437" class="s">only for encrypted pages</text>
+  <rect x="62" y="458" width="556" height="30" rx="8" class="oldstep"/>
+  <text x="78" y="478" class="s">count PSTAT_PB_NUM_IOREADS and num_pages_read</text>
+  <rect x="62" y="496" width="556" height="30" rx="8" class="oldres"/>
+  <text x="78" y="516" class="w">Frame now holds the durable image of this VPID</text>
+
+  <rect x="680" y="286" width="600" height="252" rx="16" class="new"/>
+  <text x="702" y="312" class="band">NEW_PAGE · SKIP THE READ, STAMP METADATA</text>
+  <rect x="702" y="326" width="556" height="36" rx="8" class="debug"/>
+  <text x="718" y="349" class="code">pgbuf_scramble()</text><text x="880" y="349" class="s">CUBRID_DEBUG builds only</text>
+  <rect x="702" y="370" width="556" height="36" rx="8" class="newstep"/>
+  <text x="718" y="393" class="s">page LSA and end watermark: null LSA, or temp LSA on a temp volume</text>
+  <rect x="702" y="414" width="556" height="36" rx="8" class="newstep"/>
+  <text x="718" y="437" class="code">prv.pageid = prv.volid = -1</text><text x="960" y="437" class="s">permanent volume</text>
+  <rect x="702" y="458" width="556" height="30" rx="8" class="newstep"/>
+  <text x="718" y="478" class="s">count num_pages_created and num_hit, not a read</text>
+  <rect x="702" y="496" width="556" height="30" rx="8" class="newres"/>
+  <text x="718" y="516" class="w">Frame body still holds the previous occupant's bytes</text>
+
+  <path d="M340 538 L340 566" class="line"/>
+  <path d="M980 538 L980 566" class="line"/>
+
+  <rect x="40" y="570" width="1240" height="104" rx="16" class="merge"/>
+  <text x="62" y="596" class="band">COMMON · pgbuf_set_bcb_page_vpid() · page_buffer.c:2448 → 5439</text>
+  <text x="62" y="624" class="h">OLD_PAGE: header already names this VPID</text>
+  <text x="62" y="648" class="s">only asserts prv.volid/prv.pageid match the BCB</text>
+  <text x="702" y="624" class="h">NEW_PAGE: -1|-1 means first use</text>
+  <text x="702" y="648" class="s">stamp VPID, ptype = PAGE_UNKNOWN, reserves = 0, tde_nonce = 0</text>
+
+  <path d="M340 674 L340 702" class="line"/>
+  <path d="M980 674 L980 702" class="line"/>
+
+  <text x="660" y="700" text-anchor="middle" class="band">AFTER LATCH GRANT · page_buffer.c:2572–2616</text>
+  <rect x="40" y="710" width="600" height="86" rx="16" class="err"/>
+  <text x="62" y="738" class="h">PAGE_UNKNOWN is an invalid page</text>
+  <text x="62" y="762" class="s">set ER_PB_BAD_PAGEID, unfix, return NULL</text>
+  <text x="62" y="784" class="s">a typed image passes; no initializer is expected</text>
+  <rect x="680" y="710" width="600" height="86" rx="16" class="ok"/>
+  <text x="702" y="738" class="h">PAGE_UNKNOWN is the expected state</text>
+  <text x="702" y="762" class="s">return the WRITE-latched page; the caller's f_init</text>
+  <text x="702" y="784" class="s">sets ptype and every byte its format will read</text>
+</svg>

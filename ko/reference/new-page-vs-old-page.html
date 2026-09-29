@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>소스로 보는 NEW_PAGE와 OLD_PAGE</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
+<nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/reference/new-page-vs-old-page.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · 주제 심화</span><a href="../index.html">커리큘럼</a></div>
+  <header class="hero">
+    <div class="eyebrow">Lecture 3 이어보기 · Acquisition and ownership</div>
+    <h1>소스로 보는 NEW_PAGE와 OLD_PAGE</h1>
+    <p>두 mode는 BCB를 claim하고, VPID에 bind하고, latch를 grant하고, hash에 publish하는 과정이 똑같습니다. 달라지는 것은 세 가지입니다. frame의 bytes가 어디서 오는지, latch 뒤에 어떤 page type이 허용되는지, 그 bytes에 의미를 부여할 책임이 누구에게 있는지입니다.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Cold miss</span><span class="pill">잔여 bytes</span><span class="pill">형식 metadata</span><span class="pill">공개 순서</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="misconception">
+        <div class="eyebrow">01 · 그럴듯한 답에서 출발하기</div>
+        <h2>“NEW_PAGE는 새 page를 BCB에 등록한다”는 차이가 아닙니다</h2>
+        <p>흔히 이렇게 요약합니다. file manager가 page를 만들고, <code>NEW_PAGE</code>는 그 page를 page buffer에 넣는다. 이 주장을 <code>OLD_PAGE</code> miss와 비교해 보십시오. 그 miss도 VPID load owner가 되고, 짝지어진 frame과 함께 재사용 가능한 BCB를 claim하고, VPID를 bind하고, latch를 grant한 뒤, hash chain에 BCB를 publish합니다. 따라서 등록은 두 mode가 공유하는 작업이며, <code>NEW_PAGE</code>만의 특징이 아닙니다.</p>
+        <div class="table-scroll"><table>
+          <thead><tr><th>Cold miss의 단계</th><th><code>OLD_PAGE</code></th><th><code>NEW_PAGE</code></th></tr></thead>
+          <tbody>
+            <tr><td>Load lock, BCB claim, VPID bind, latch reset</td><td>수행</td><td>수행, 같은 코드</td></tr>
+            <tr><td>Frame bytes의 출처</td><td>DWB 사본 또는 home data volume. 필요하면 decrypt</td><td>없음. read를 건너뜀</td></tr>
+            <tr><td>Header metadata</td><td>image와 함께 들어오며 검사만 함</td><td>LSA를 초기화한 뒤 VPID, <code>PAGE_UNKNOWN</code>, reserve, TDE nonce를 기록</td></tr>
+            <tr><td>Latch 뒤의 <code>PAGE_UNKNOWN</code></td><td>Invalid page: <code>ER_PB_BAD_PAGEID</code></td><td>Caller가 type을 설정하기 전의 정상 상태</td></tr>
+            <tr><td>통계</td><td>Data-page read 1회</td><td>Created page이면서 hit로 집계</td></tr>
+            <tr><td>Grant, 두 debt ledger, hash publication</td><td>수행</td><td>수행, 같은 코드</td></tr>
+          </tbody>
+        </table></div>
+        <p class="big-claim"><code>NEW_PAGE</code>는 “이 page의 옛 bytes는 쓸모없다”는 caller의 약속입니다. Page buffer는 이 약속을 근거로 read를 건너뛰고, type이 없는 page를 받아들입니다.</p>
+        <p>Allocation-to-buffer contract, caller 의무, 다른 engine과의 비교는 <a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Lecture 5</a>가 소유합니다. 이 페이지는 source를 한 단계 더 깊이 따라갑니다.</p>
+      </section>
+
+      <section class="section" id="miss-branches">
+        <div class="eyebrow">02 · 의미 있는 분기는 하나</div>
+        <h2>경로는 조건 하나에서 갈라지고 두 검사에서 다시 만납니다</h2>
+        <img class="diagram" src="../../assets/new-page-miss-branches.svg" alt="공유 miss 준비, page_buffer.c 8494행의 fetch-mode 분기, 공통 header bootstrap, latch 뒤 page-type 규칙">
+        <p class="caption">Pinned revision의 일반 mutex 경로입니다. Temporary volume은 temporary LSA를 쓰고 on-page identity 비교를 건너뜁니다.</p>
+        <ol>
+          <li><strong>공유 준비.</strong> <code>pgbuf_claim_bcb_for_fix()</code>는 load owner가 된 뒤 <code>pgbuf_allocate_bcb()</code>를 부르고, <code>bufptr-&gt;vpid</code>를 bind하고, atomic latch tuple을 reset하고, <code>oldest_unflush_lsa</code>를 null로 만듭니다.</li>
+          <li><strong>분기.</strong> 모든 read는 <code>if (fetch_mode != NEW_PAGE)</code> 안에 있습니다. <code>OLD_PAGE</code>는 <code>dwb_read_page()</code>, 이어서 <code>fileio_read()</code>를 시도하고 TDE page를 decrypt합니다. <code>NEW_PAGE</code>는 <code>pgbuf_scramble()</code>을 <code>CUBRID_DEBUG</code> build에서만 실행합니다. 그다음 LSA 두 곳을 초기화하고, permanent volume이면 <code>-1</code>을 <code>prv.pageid</code>와 <code>prv.volid</code>에 씁니다.</li>
+          <li><strong>Header bootstrap.</strong> <code>pgbuf_fix()</code>는 <code>pgbuf_set_bcb_page_vpid()</code>를 부릅니다. Header가 <code>-1|-1</code>이면 BCB VPID를 기록하고 <code>ptype = PAGE_UNKNOWN</code>으로 두며, <code>p_reserve_1</code>, <code>p_reserve_2</code>, <code>tde_nonce</code>를 0으로 설정합니다. Storage에서 읽은 image라면 header가 이미 그 VPID를 가리키는지 assert만 합니다.</li>
+          <li><strong>Page-type 규칙.</strong> Latch 뒤의 <code>PAGE_UNKNOWN</code>은 <code>NEW_PAGE</code>, <code>OLD_PAGE_DEALLOCATED</code>, <code>OLD_PAGE_IF_IN_BUFFER</code>, <code>RECOVERY_PAGE</code>에서 허용됩니다. <code>OLD_PAGE</code>에서는 assert에 걸리고, <code>ER_PB_BAD_PAGEID</code>를 설정하고, unfix한 뒤 <code>NULL</code>을 반환합니다.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> 공유 claim은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8493"><code>page_buffer.c:8392–8493</code></a>, read 분기는 <code>8494–8598</code>, <code>NEW_PAGE</code> 분기는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8599-L8632"><code>8599–8632</code></a>에 있습니다. Header bootstrap은 <code>2448</code>과 <code>5439–5471</code>, page-type 규칙은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2572-L2616"><code>2572–2616</code></a>에 있습니다.</p>
+      </section>
+
+      <section class="section" id="frame-contents">
+        <div class="eyebrow">03 · Frame 안을 들여다보기</div>
+        <h2>Page buffer는 body를 지우지 않습니다</h2>
+        <p><code>NEW_PAGE</code> miss에서 BCB는 재사용되는 pool slot이고, 그 frame은 마지막으로 다른 VPID를 위해 채워졌습니다. Release build에서 page buffer는 이 frame에 <code>memset</code>도 <code>memcpy</code>도 하지 않습니다. Reserved header와 끝의 watermark LSA만 씁니다. 그 사이의 모든 byte는 이전 occupant의 data입니다.</p>
+        <img class="diagram" src="../../assets/new-page-frame-contents.svg" alt="NEW_PAGE miss 직후, 새 heap page, 마지막 overflow page, external-sort page의 네 가지 frame 배치. 잔여 bytes는 빗금으로 표시">
+        <p class="caption">폭은 개략적입니다. 빗금 영역에는 이 VPID가 bind되기 전에 frame이 담고 있던 bytes가 그대로 있습니다.</p>
+        <p><code>NEW_PAGE</code> frame에 payload를 복사하는 page-buffer 함수는 <code>pgbuf_copy_from_area()</code> 하나뿐입니다. 이 함수는 <code>NEW_PAGE</code>로 fix하고, <code>PAGE_AREA</code>로 설정하고, <code>memcpy ((char *) pgptr + start_offset, area, length)</code>를 호출하고, logging을 건너뛴 뒤 page를 dirty로 표시합니다. 유일한 외부 호출자인 external sort는 <code>DB_PAGESIZE</code> 영역 전체를 복사합니다.</p>
+        <div class="callout warn"><strong>단서:</strong> “read를 건너뛴다”는 “0으로 채운 page를 준다”는 뜻이 아닙니다. Debug build가 frame을 일부러 scramble하는 것도, bytes가 0이라고 가정하는 코드를 일찍 실패시키기 위해서입니다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>NEW_PAGE</code> metadata 기록은 <code>page_buffer.c:8599–8632</code>, scramble은 <code>11293–11307</code>, <code>pgbuf_copy_from_area()</code>는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4833-L4912"><code>4833–4912</code></a>, 그 호출자는 <code>external_sort.c:5918</code>에 있습니다. 이 helper가 <code>do_fetch</code>를 무시한다는 사실은 <a href="../../unresolved-or-version-sensitive-findings.md#a-current-pinned-revision-interface-hazards">VS-03</a>에 기록되어 있습니다.</p>
+      </section>
+
+      <section class="section" id="format-invariants">
+        <div class="eyebrow">04 · 첫째 안전 조건</div>
+        <h2>형식 metadata가 모든 read의 범위를 정합니다</h2>
+        <p>Body에 잔여 bytes가 있다면 caller는 page 전체를 덮어써야 할까요? 흔한 initializer들을 보면 그렇지 않습니다. Page 형식마다 reader에게 어느 bytes가 의미 있는지 알려 주는 metadata가 있습니다. Caller는 그 metadata를 세워야 하고, metadata를 따르는 reader는 나머지를 해석하지 않습니다.</p>
+        <div class="table-scroll"><table>
+          <thead><tr><th>Owner와 initializer</th><th>쓰는 내용</th><th>Reader의 범위를 정하는 것</th></tr></thead>
+          <tbody>
+            <tr><td>Heap: <code>heap_vpid_init_new()</code></td><td><code>PAGE_HEAP</code>, <code>spage_initialize()</code>, chain record 1개</td><td><code>num_slots</code>, slot offset, <code>offset_to_free_area</code></td></tr>
+            <tr><td>B-tree: <code>btree_initialize_new_page()</code></td><td><code>PAGE_BTREE</code>, <code>spage_initialize()</code>, <code>RVBT_GET_NEWPAGE</code> log</td><td>같은 slotted-page header</td></tr>
+            <tr><td>Overflow: <code>file_init_page_type()</code> 다음 <code>overflow_insert()</code></td><td>먼저 <code>PAGE_OVERFLOW</code>, 나중에 <code>next_vpid</code>, <code>length</code>, payload</td><td><code>first_part-&gt;length</code>와 <code>next_vpid</code> chain</td></tr>
+            <tr><td>Disk: <code>disk_manager.c:590</code>의 volume header</td><td><code>PAGE_VOLHEADER</code>와 <code>DISK_VOLUME_HEADER</code> field</td><td>Header 구조체 자체</td></tr>
+            <tr><td>External sort: <code>pgbuf_copy_from_area()</code></td><td><code>DB_PAGESIZE</code> 영역 전체</td><td>잔여 bytes가 남지 않음</td></tr>
+          </tbody>
+        </table></div>
+        <p><code>spage_initialize()</code>는 <code>SPAGE_HEADER</code>만 씁니다. <code>num_slots = 0</code>, <code>total_free</code>, <code>cont_free</code>, <code>offset_to_free_area</code>를 설정할 뿐 free area는 지우지 않습니다. Recovery도 같은 규칙을 따릅니다. <code>pgbuf_log_new_page()</code>는 초기화된 앞부분 <code>data_size</code> bytes만 log하고, <code>file_init_page_type()</code>은 payload 없이 type만 담은 <code>RVPGBUF_NEW_PAGE</code> record를 남깁니다.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>heap_file.c:2830–2860</code>, <code>btree.c:5184–5194</code>, <code>slotted_page.c:1065–1090</code>, <code>file_manager.c:5388–5405</code>, <code>overflow_file.c:149–228</code>, <code>disk_manager.c:590–600</code>, <code>page_buffer.c:15093–15123</code>. Overflow read의 범위 제한은 <code>overflow_file.c:794–818</code>에 있습니다.</p>
+      </section>
+
+      <section class="section" id="publication">
+        <div class="eyebrow">05 · 둘째 안전 조건</div>
+        <h2>공개되지 않은 VPID에는 정당한 reader가 없습니다</h2>
+        <p>형식 metadata는 metadata 자체가 유효해진 뒤에야 reader를 보호합니다. Overflow insertion이 이 틈을 드러냅니다. 생성을 두 번의 fix로 나누어 수행하는데, 그 사이의 page는 type은 있지만 내용은 일관되지 않습니다.</p>
+        <img class="diagram" src="../../assets/new-page-publication-order.svg" alt="Overflow insertion 시간선: NEW_PAGE fix와 type만의 초기화, payload를 쓰는 OLD_PAGE refix, 이어서 VPID 반환과 heap 공개">
+        <ol>
+          <li><code>file_alloc_multiple()</code>은 page마다 <code>file_alloc()</code>을 부릅니다. 각 page는 <code>NEW_PAGE</code>로 fix되고, <code>PAGE_OVERFLOW</code> type을 받은 뒤 unfix됩니다. Type을 정하는 함수는 <code>file_init_page_type()</code>입니다.</li>
+          <li><code>overflow_insert()</code>는 각 page를 <strong><code>OLD_PAGE</code></strong>로 다시 fix합니다. Type이 더는 <code>PAGE_UNKNOWN</code>이 아니므로 latch 뒤 규칙을 통과합니다.</li>
+          <li><code>next_vpid</code>와 <code>length</code>를 쓰고, <code>memcpy</code>로 payload를 복사하고, <code>RVOVF_NEWPAGE_INSERT</code>를 log한 뒤 unfix합니다.</li>
+          <li>두 단계가 모두 끝난 뒤에야 <code>*ovf_vpid = vpids[0]</code>을 반환합니다. <code>heap_ovf_insert()</code>가 그 VPID로 OID를 만들고, heap은 나중에 그 OID를 home record에 저장합니다.</li>
+        </ol>
+        <p>1단계와 3단계 사이에 누군가 이 page를 fix한다면 type 검사를 통과하고 쓰레기 <code>length</code>를 믿게 됩니다. Page buffer 안에는 그런 fix를 막는 장치가 없습니다. 이 틈이 안전한 까닭은 아직 어떤 저장된 reference도 이 VPID를 가리키지 않아, 정당한 reader가 도착할 수 없기 때문입니다.</p>
+        <div class="callout"><strong>조건은 하나가 아니라 둘입니다.</strong> 잔여 bytes가 무해하려면 (1) owner가 누군가 의존하기 전에 형식 metadata를 세우고, (2) 그 metadata가 일관될 때까지 VPID를 공개하지 않아야 합니다. Page type만으로는 어느 쪽도 보장되지 않습니다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> 두 단계 insertion은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/overflow_file.c#L145-L235"><code>overflow_file.c:145–235</code></a>, page별 allocation은 <code>file_manager.c:5649</code>와 <code>5495–5516</code>, OID 생성은 <code>heap_file.c:6097–6112</code>에 있습니다.</p>
+      </section>
+
+      <section class="section" id="stale-vpid">
+        <div class="eyebrow">06 · Page-buffer contract가 끝나는 곳</div>
+        <h2>재할당된 VPID보다 옛 reference가 오래 살 수 있습니다</h2>
+        <p>공개 조건은 VPID를 가리키는 reference가 모두 새것이라고 가정합니다. <code>NEW_PAGE</code> <em>hit</em>은 이 가정을 깹니다. 해제된 page는 <code>ptype = PAGE_UNKNOWN</code>인 BCB를 유지합니다. Allocation이 같은 VPID를 다시 내주면 <code>NEW_PAGE</code>는 그 resident BCB를 재사용합니다. Header가 이미 기록되어 있으므로 miss 전용 초기화는 실행되지 않습니다. 그런데 <em>옛</em> 공개본에서 VPID를 읽은 thread, 예를 들어 이전 <code>next_vpid</code>를 본 scan이 여전히 그 page를 fix하려 할 수 있습니다.</p>
+        <p>새 owner의 initializer가 실제 type을 설정한 뒤에는, page buffer가 그 낡은 fix와 정당한 fix를 구별할 수 없습니다. 따라서 보호 장치는 caller protocol에 있으며, 경로마다 제각기 마련되어 있습니다.</p>
+        <div class="table-scroll"><table>
+          <thead><tr><th>경로</th><th>Pinned revision에서 보이는 보호</th><th>증거 수준</th></tr></thead>
+          <tbody>
+            <tr><td>Heap chain scan</td><td>다음 page를 <code>OLD_PAGE_PREVENT_DEALLOC</code>으로 fix할 때까지 이전 page를 fix한 채로 둡니다. Page buffer는 latch 대기 전에 avoid-deallocation count를 등록하고, vacuum은 page를 제거하기 전에 <code>pgbuf_has_prevent_dealloc()</code>을 다시 확인합니다.</td><td>이 경로에 대해 Verified mechanism</td></tr>
+            <tr><td>캐시하거나 표본으로 얻은 VPID</td><td><code>bestspace</code>, <code>btree_load</code>, parallel heap scan, histogram sampler는 <code>OLD_PAGE_MAYBE_DEALLOCATED</code>를 쓰고 <code>ER_PB_BAD_PAGEID</code>를 “사라짐”으로 처리합니다. 아직 해제된 상태인 page는 잡아내지만, 이미 재할당되어 type이 정해진 page는 잡아내지 못합니다.</td><td>한계를 명시한 Verified mechanism</td></tr>
+            <tr><td>OID 직접 접근</td><td><code>heap_prepare_object_page()</code>는 일반 <code>OLD_PAGE</code>를 씁니다. 안전성은 permanent file의 해제를 commit 뒤로 미루는 것과, vacuum이 reference를 먼저 제거하는 것에 기대는 것으로 보입니다.</td><td>Inference. 분석 필요</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout warn"><strong>Fetch-mode contract 밖의 문제:</strong> 재할당 뒤의 stale VPID 안전성은 caller protocol이지, <code>NEW_PAGE</code>나 <code>OLD_PAGE</code>의 보장이 아닙니다. 경로 전체를 아우르는 논증은 아직 검증되지 않았으며, uncertainty registry에 <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">VS-22</a>로 기록되어 있습니다.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> resident <code>NEW_PAGE</code> hit은 <code>page_buffer.c:2399–2406</code>, <code>PAGE_UNKNOWN</code>으로의 해제는 <code>15182–15221</code>, 미뤄진 permanent 해제는 <code>file_manager.c:6149–6156</code>, heap-scan 순서는 <code>heap_file.c:7547–7576</code>, avoid-deallocation 등록은 <code>page_buffer.c:2474–2477</code>, vacuum 재확인은 <code>heap_file.c:3382–3389</code>와 <code>vacuum.c:1850</code>에 있습니다. 그 밖에 <code>bestspace.cpp:681–693</code>, <code>heap_file.c:25571</code>도 참고하십시오.</p>
+      </section>
+
+      <section class="section" id="definition">
+        <div class="eyebrow">07 · 차이를 다시 정의하기</div>
+        <h2>반례를 견디는 정의</h2>
+        <div class="table-scroll"><table>
+          <thead><tr><th></th><th><code>OLD_PAGE</code></th><th><code>NEW_PAGE</code></th></tr></thead>
+          <tbody>
+            <tr><td>Caller의 주장</td><td>이 page는 이미 공개되었고, 저장된 bytes에 의미가 있다.</td><td>Allocation이 방금 이 VPID를 만들었고, 옛 bytes에는 의미가 없다.</td></tr>
+            <tr><td>Miss materialization</td><td>DWB나 volume에서 읽고 decrypt한다.</td><td>읽지 않고 header metadata만 기록한다. Body에는 잔여 bytes가 남는다.</td></tr>
+            <tr><td><code>PAGE_UNKNOWN</code></td><td>공개된 page가 사라졌다는 뜻: error</td><td>초기화 전의 정상 상태</td></tr>
+            <tr><td>이후 caller의 의무</td><td>Page의 기존 형식을 따른다.</td><td>VPID를 공개하기 전에 type과 형식 metadata를 세우고, log하고, dirty로 표시한다.</td></tr>
+            <tr><td>두 mode가 공유하는 것</td><td colspan="2">Load lock, BCB claim, identity convergence, latch grant, fix debt, hash publication</td></tr>
+          </tbody>
+        </table></div>
+        <p>Overflow insertion에서 보았듯이, 생성되고 type도 정해졌지만 아직 채워지지 않은 page를 나중에 다시 fix할 때는 <code>OLD_PAGE</code>를 써도 됩니다. Fetch mode는 page가 얼마나 최근에 할당되었는지가 아니라, 저장된 bytes에 대해 caller가 무엇을 알고 있는지를 나타냅니다.</p>
+      </section>
+
+      <section class="section" id="checkpoint">
+        <div class="eyebrow">08 · 멈추고 추론하기</div>
+        <h2>새 변경에 정의를 적용해 보기</h2>
+        <div class="quiz" data-audience-checkpoint>
+          <h3>Scenario</h3>
+          <p>어떤 변경은 새 page 형식을 추가하는데, 그 initializer는 record 개수를 담은 16-byte header만 씁니다. Reader는 <code>count</code>개의 고정 크기 record를 순회합니다. 다른 제안은 “안전을 위해” page buffer가 <code>memset</code>으로 모든 <code>NEW_PAGE</code> frame을 지우자고 합니다.</p>
+          <p><strong>생각해 볼 점:</strong> 첫 설계는 무엇을 보장해야 합니까? VPID를 다른 page에 저장해도 되는 시점은 언제입니까? <code>memset</code> 제안은 어떤 비용을 치르며, 무엇을 고치지 못합니까?</p>
+          <details class="answer-disclosure"><summary>설명 열기</summary><p>Initializer는 reader가 page에 도달하기 전에 실제 page type과 <code>count = 0</code>을 설정해야 합니다. Reader는 <code>count</code>를 넘어 읽어서는 안 됩니다. VPID를 다른 곳에 저장해도 되는 것은 header가 일관된 뒤이거나, creator가 header를 마무리하는 WRITE latch를 아직 쥐고 있는 동안입니다. Reference를 따라온 reader는 그 latch를 기다려야 하기 때문입니다. 모든 frame을 0으로 채우면 allocation마다 page 전체 쓰기가 추가됩니다. 잔여 bytes는 0으로 바뀌지만 <code>count</code>를 올바르게 만들지는 못하고, 재할당 뒤 page에 도달하는 stale VPID에는 아무 효과가 없습니다. 그 위험은 byte 내용이 아니라 caller protocol의 문제입니다.</p></details>
+        </div>
+      </section>
+
+      <section class="section" id="source-route">
+        <div class="eyebrow">Primary reading</div>
+        <h2>이 순서로 따라가 보기</h2>
+        <ol>
+          <li><code>page_buffer.c:8392–8632</code>: 공유 claim, 이어서 read 분기와 <code>NEW_PAGE</code> 분기를 나란히 봅니다.</li>
+          <li><code>page_buffer.c:2440–2448</code>, <code>5439–5471</code>: 공통 header bootstrap</li>
+          <li><code>page_buffer.c:2572–2616</code>: fetch mode별 page-type 규칙</li>
+          <li><code>file_manager.c:5495–5516</code>, <code>heap_file.c:2830–2860</code>: owner initializer 하나</li>
+          <li><code>overflow_file.c:145–235</code>, <code>heap_file.c:6097–6112</code>: type 먼저, 내용은 나중에, 공개는 마지막에</li>
+        </ol>
+        <p><a href="../lessons/0003-trace-fix-convergence.html#intent">← Lecture 3 fetch mode로 돌아가기</a></p>
+        <p><a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Lecture 5 allocation contract로 이어가기 →</a></p>
+        <p><a href="../../reference/new-page-fetch-mode-audit.md">NEW_PAGE 전체 audit 열기 →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="페이지 목차">
+      <strong>페이지 지도</strong>
+      <a href="#misconception">1. 그럴듯한 답</a>
+      <a href="#miss-branches">2. 분기 하나</a>
+      <a href="#frame-contents">3. Frame 안</a>
+      <a href="#format-invariants">4. 형식 metadata</a>
+      <a href="#publication">5. 공개 순서</a>
+      <a href="#stale-vpid">6. Stale VPID</a>
+      <a href="#definition">7. 정의</a>
+      <a href="#checkpoint">8. 멈추고 추론하기</a>
+      <a href="#source-route">Primary reading</a>
+      <hr>
+      <a href="../lessons/0003-trace-fix-convergence.html">Lecture 3</a>
+      <a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Lecture 5 · NEW_PAGE</a>
+      <a href="../index.html">커리큘럼</a>
+    </nav>
+  </div>
+
+<footer class="footer">관련 자료: <a href="../../reference/new-page-fetch-mode-audit.md">NEW_PAGE fetch-mode audit</a> · <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a></footer>
+</main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
+</body>
+</html>

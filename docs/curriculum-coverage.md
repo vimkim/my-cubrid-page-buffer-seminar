@@ -183,3 +183,10 @@ The collection now contains 52 registered page pairs. Added `reference/first-pri
 Added concept/purpose/absence/example introductions to lectures 0000, 0001, 0002, 0006A, 0006B, 0006C, 0007, 0012B, and 0018A. Added compact verified paths for acquisition, array initialization, ordinary final-unfix admission, all four daemon roles, PostgreSQL Clock selection, and InnoDB common-LRU eviction. Existing canonical detail, lecture order, anchors, and presentation controls are retained.
 
 All affected wording remains pending genuine human Korean-naturalness and semantic-parity review. This change does not manufacture or renew a human receipt. See `docs/first-principles-delivery-checks.md` for the implementation verification record.
+
+
+## NEW_PAGE versus OLD_PAGE deep dive (2026-09-30)
+
+The collection now contains 53 registered page pairs. Added `reference/new-page-vs-old-page.html` in English/Korean with a stable root redirect, a Topic-library entry, and links from the Lecture 3 fetch-mode table and the Lecture 5 `NEW_PAGE` section. It follows the pinned source one level below Lecture 5: the single miss branch, the header bootstrap, residual frame bytes, format metadata that bounds reads, publication order in overflow insertion, and stale-VPID safety as a caller protocol tracked as `VS-22`. Three new diagrams live in `assets/`.
+
+Lecture 5 remains the canonical owner of the allocation-to-buffer contract. The canonical audit gains a short "Why residual frame bytes are harmless" section. The new pair is pending genuine human Korean-naturalness and semantic-parity review.

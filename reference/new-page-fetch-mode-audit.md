@@ -167,6 +167,41 @@ page is already in the pool, InnoDB frees its spare block and falls back to a
 normal latched get rather than reinitializing the frame.
 [InnoDB resident branch](https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0buf.cc#L5094-L5143).
 
+### Why residual frame bytes are harmless
+
+On a miss, the reused frame body still contains the bytes of the frame's
+previous VPID; release builds neither clear nor copy it. Callers do not need to
+overwrite the whole page. Two conditions make the residue harmless:
+
+![OLD_PAGE and NEW_PAGE share miss preparation and split only at materialization](../assets/new-page-miss-branches.svg)
+
+![Frame layouts after a NEW_PAGE miss, for a new heap page, the last overflow page, and an external-sort page](../assets/new-page-frame-contents.svg)
+
+1. **Format metadata bounds every read.** The owner establishes the metadata
+   that tells readers which bytes are meaningful. `spage_initialize()` writes
+   only `SPAGE_HEADER`, so heap and B-tree free areas keep residual bytes;
+   overflow readers stop at `first_part->length`. Recovery logs follow the same
+   rule: `pgbuf_log_new_page()` records only the initialized prefix, and
+   `file_init_page_type()` logs a type-only `RVPGBUF_NEW_PAGE` record.
+2. **The VPID stays unpublished until that metadata is consistent.**
+   `overflow_insert()` types each page through `file_alloc_multiple()` and
+   `NEW_PAGE`, unfixes it, then refixes it with `OLD_PAGE` to write
+   `next_vpid`, `length`, and the payload. Between those fixes the page passes
+   the page-type check while its metadata is garbage. It is safe only because
+   the first VPID is returned, and stored by the heap, after both phases.
+
+![Overflow insertion types each page first, fills it later, and publishes its VPID last](../assets/new-page-publication-order.svg)
+
+[Slotted-page header initialization](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/slotted_page.c#L1065-L1090),
+[two-phase overflow insertion](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/overflow_file.c#L145-L235),
+[bounded overflow read](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/overflow_file.c#L794-L818),
+and [overflow OID construction](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/heap_file.c#L6097-L6112).
+
+The publication condition does not cover a VPID obtained from an earlier
+publication and used after reallocation. That stale-reference safety is a
+caller protocol outside the fetch-mode contract and is tracked as `VS-22` in
+the [uncertainty registry](../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations).
+
 ## 3. What the caller must complete
 
 `NEW_PAGE` and new-page recovery logging are separate operations. The fetch

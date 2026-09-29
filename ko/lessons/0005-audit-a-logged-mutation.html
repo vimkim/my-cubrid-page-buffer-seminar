@@ -127,6 +127,7 @@
         </table></div>
         <div class="callout warn"><strong>“Public API”에는 boundary가 필요합니다.</strong> <code>page_buffer.h</code>는 Server-module Interface이며 설치되는 SQL, CCI, application API가 아닙니다. 실제 design 질문은 creation을 넓게 조합할 수 있는 enum으로 유지할지, 더 좁은 internal function으로 만들지입니다.</div>
         <p><strong>Recommendation:</strong> semantic no-read creation operation은 유지합니다. 더 deep한 Interface가 필요하다면 WRITE를 암시하고 caller initialization obligation을 이름에 드러내는 creation function 뒤로 숨기거나 분리합니다. External sort의 specialized full-page overwrite는 allocation contract가 다르므로 별도로 유지해야 합니다.</p>
+        <p><a href="../reference/new-page-vs-old-page.html">소스 수준의 NEW_PAGE와 OLD_PAGE 비교 보기: 잔여 frame bytes, 형식 metadata, 공개 순서 →</a></p>
         <p><a href="../../reference/new-page-fetch-mode-audit.md">전체 pinned call-site, PostgreSQL/InnoDB, counterfactual, design option, regression audit 열기 →</a></p>
       </section>
 

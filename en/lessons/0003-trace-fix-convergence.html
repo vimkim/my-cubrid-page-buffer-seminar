@@ -39,7 +39,7 @@
           <thead><tr><th>Mode</th><th>Plain meaning</th><th>Important outcome</th></tr></thead>
           <tbody>
             <tr><td><code>OLD_PAGE</code></td><td>An allocated page already exists.</td><td>A miss reads its existing bytes from DWB or the data volume. A <code>PAGE_UNKNOWN</code> image is an error.</td></tr>
-            <tr><td><code>NEW_PAGE</code></td><td>Allocation already produced this new VPID.</td><td>A miss skips old-byte I/O and initializes page-buffer metadata, not the logical payload. <code>PAGE_UNKNOWN</code> is accepted until the caller initializes the page type.</td></tr>
+            <tr><td><code>NEW_PAGE</code></td><td>Allocation already produced this new VPID.</td><td>A miss skips old-byte I/O and initializes page-buffer metadata, not the logical payload. <code>PAGE_UNKNOWN</code> is accepted until the caller initializes the page type. <a href="../reference/new-page-vs-old-page.html">Compare both modes in source →</a></td></tr>
             <tr><td><code>OLD_PAGE_IF_IN_BUFFER</code></td><td>I want the page only if it is resident now.</td><td>A hash miss returns <code>NULL</code> without claiming a BCB or reading the volume.</td></tr>
             <tr><td><code>OLD_PAGE_PREVENT_DEALLOC</code></td><td>An existing page must survive the gap before latch grant.</td><td>A temporary avoid-deallocation count bridges identity validation to successful fix; it is removed after grant.</td></tr>
             <tr><td><code>OLD_PAGE_DEALLOCATED</code></td><td>Recovery work needs a deallocated image.</td><td>The common path may return a <code>PAGE_UNKNOWN</code> image. Deallocation undo uses it to restore the old type.</td></tr>
@@ -47,6 +47,7 @@
             <tr><td><code>RECOVERY_PAGE</code></td><td>Recovery must accept any allocation state.</td><td>It skips ordinary allocation validation and accepts normal, immature/new, or <code>PAGE_UNKNOWN</code> images.</td></tr>
           </tbody>
         </table></div>
+        <p><a href="../reference/new-page-vs-old-page.html">See where NEW_PAGE and OLD_PAGE differ in source: the one miss branch, the residual frame bytes, format metadata, and publication order →</a></p>
         <p><a href="0005-audit-a-logged-mutation.html#new-page">Lecture 5 owns the complete allocation, miss/hit, caller-obligation, cross-engine, and removal explanation →</a></p>
 
         <h3>The five latch-mode enum values</h3>
@@ -207,6 +208,7 @@
       <a href="#primary-reading">Primary reading</a>
       <hr>
       <a href="../reference/fix-convergence-map.html">Fix-convergence card</a>
+      <a href="../reference/new-page-vs-old-page.html">NEW_PAGE vs OLD_PAGE</a>
       <a href="../../learning/02-fix-hold-release.md">Canonical Core page</a>
       <a href="0004-repay-fix-debt.html">Next lecture</a>
       <a href="../index.html">Curriculum</a>

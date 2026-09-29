@@ -39,7 +39,7 @@
           <thead><tr><th>Mode</th><th>쉬운 의미</th><th>중요한 결과</th></tr></thead>
           <tbody>
             <tr><td><code>OLD_PAGE</code></td><td>할당된 기존 page가 있습니다.</td><td>Miss이면 DWB 또는 data volume에서 기존 bytes를 읽습니다. <code>PAGE_UNKNOWN</code> image는 error입니다.</td></tr>
-            <tr><td><code>NEW_PAGE</code></td><td>Allocation이 이 새 VPID를 이미 만들었습니다.</td><td>Miss이면 old-byte I/O를 건너뛰고 logical payload가 아닌 page-buffer metadata만 초기화합니다. Caller가 page type을 초기화하기 전의 <code>PAGE_UNKNOWN</code>을 허용합니다.</td></tr>
+            <tr><td><code>NEW_PAGE</code></td><td>Allocation이 이 새 VPID를 이미 만들었습니다.</td><td>Miss이면 old-byte I/O를 건너뛰고 logical payload가 아닌 page-buffer metadata만 초기화합니다. Caller가 page type을 초기화하기 전의 <code>PAGE_UNKNOWN</code>을 허용합니다. <a href="../reference/new-page-vs-old-page.html">두 mode를 소스로 비교하기 →</a></td></tr>
             <tr><td><code>OLD_PAGE_IF_IN_BUFFER</code></td><td>지금 resident일 때만 page가 필요합니다.</td><td>Hash miss이면 BCB를 claim하거나 volume을 읽지 않고 <code>NULL</code>을 반환합니다.</td></tr>
             <tr><td><code>OLD_PAGE_PREVENT_DEALLOC</code></td><td>기존 page가 latch grant 전 틈에서 deallocation되지 않아야 합니다.</td><td>Identity validation부터 fix 성공까지 임시 avoid-deallocation count로 잇고, grant 뒤 제거합니다.</td></tr>
             <tr><td><code>OLD_PAGE_DEALLOCATED</code></td><td>Recovery 작업이 deallocated image에 접근해야 합니다.</td><td>Common path가 <code>PAGE_UNKNOWN</code> image를 반환할 수 있습니다. Deallocation undo는 이를 받아 예전 type을 복구합니다.</td></tr>
@@ -47,6 +47,7 @@
             <tr><td><code>RECOVERY_PAGE</code></td><td>Recovery가 어떤 allocation state든 받아야 합니다.</td><td>일반 allocation validation을 생략하고 normal, immature/new, <code>PAGE_UNKNOWN</code> image를 모두 허용합니다.</td></tr>
           </tbody>
         </table></div>
+        <p><a href="../reference/new-page-vs-old-page.html">NEW_PAGE와 OLD_PAGE가 소스에서 어디서 갈라지는지 보기: miss 분기 하나, frame에 남는 잔여 bytes, 형식 metadata, 공개 순서 →</a></p>
         <p><a href="0005-audit-a-logged-mutation.html#new-page">Allocation, miss/hit, caller obligation, 다른 engine 비교, 제거 판단의 전체 설명은 Lecture 5에서 이어집니다 →</a></p>
 
         <h3>Latch-mode enum의 다섯 값을 구분합니다</h3>
@@ -207,6 +208,7 @@
       <a href="#primary-reading">필수 읽기</a>
       <hr>
       <a href="../reference/fix-convergence-map.html">Fix-convergence 카드</a>
+      <a href="../reference/new-page-vs-old-page.html">NEW_PAGE와 OLD_PAGE</a>
       <a href="../../learning/02-fix-hold-release.md">Canonical Core 문서</a>
       <a href="0004-repay-fix-debt.html">다음 lecture</a>
       <a href="../index.html">강의 홈</a>

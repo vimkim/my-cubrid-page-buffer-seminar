@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="640" viewBox="0 0 1320 640" role="img" aria-labelledby="title desc">
+  <title id="title">An overflow page is typed first, filled later, and published last</title>
+  <desc id="desc">Three lanes share one time axis for one overflow insertion. In the creator lane, file_alloc fixes the new VPID with NEW_PAGE and WRITE at t1. At t2 file_init_page_type sets ptype to PAGE_OVERFLOW, logs RVPGBUF_NEW_PAGE without payload, marks the page dirty, and unfixes it. At t3 overflow_insert fixes the same VPID again with OLD_PAGE and WRITE; it passes the post-latch check because the type is no longer PAGE_UNKNOWN. At t4 it writes next_vpid and length, copies the payload, logs RVOVF_NEWPAGE_INSERT, and unfixes. At t5 overflow_insert returns the first VPID and heap_ovf_insert turns it into an overflow OID. At t6 the heap stores that OID in the home record. The page-state lane shows PAGE_UNKNOWN with residual bytes from t1 to t2, a typed page with garbage length and next_vpid from t2 to t4, and a consistent overflow page after t4. The reader lane shows that no stored reference to the VPID exists before t6, so the typed-but-inconsistent window from t2 to t4 has no legitimate reader.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#48626f"/></marker>
+    <style>
+      .lane{fill:#f7fafb;stroke:#d4dfe3;stroke-width:2}.new{fill:#e8f5f3;stroke:#16847d;stroke-width:2}.old{fill:#edf0ff;stroke:#5968bd;stroke-width:2}.pub{fill:#fff3df;stroke:#b86b22;stroke-width:2}.unknown{fill:#f1f3f4;stroke:#6b7780;stroke-width:2}.danger{fill:#fff1f0;stroke:#b3261e;stroke-width:2}.good{fill:#e8f5f3;stroke:#16847d;stroke-width:2}.none{fill:#f6f7f8;stroke:#6b7780;stroke-width:2;stroke-dasharray:8 5}.reach{fill:#fff3df;stroke:#b86b22;stroke-width:2}.bracket{fill:none;stroke:#b3261e;stroke-width:3}.mark{fill:#173f57}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.band{font:700 14px Inter,Arial,sans-serif;fill:#123a52;letter-spacing:1px}.h{font:700 14px Inter,Arial,sans-serif;fill:#173443}.s{font:11.5px Inter,Arial,sans-serif;fill:#526874}.code{font:11.5px Menlo,Consolas,monospace;fill:#173443}.num{font:700 12px Inter,Arial,sans-serif;fill:#fff}.red{font:700 13px Inter,Arial,sans-serif;fill:#b3261e}.axis{fill:none;stroke:#48626f;stroke-width:3;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">Overflow insertion: typed first, filled later, published last</text>
+
+  <!-- time marks -->
+  <g>
+    <circle cx="235" cy="80" r="13" class="mark"/><text x="235" y="84" text-anchor="middle" class="num">t1</text>
+    <circle cx="410" cy="80" r="13" class="mark"/><text x="410" y="84" text-anchor="middle" class="num">t2</text>
+    <circle cx="590" cy="80" r="13" class="mark"/><text x="590" y="84" text-anchor="middle" class="num">t3</text>
+    <circle cx="770" cy="80" r="13" class="mark"/><text x="770" y="84" text-anchor="middle" class="num">t4</text>
+    <circle cx="950" cy="80" r="13" class="mark"/><text x="950" y="84" text-anchor="middle" class="num">t5</text>
+    <circle cx="1130" cy="80" r="13" class="mark"/><text x="1130" y="84" text-anchor="middle" class="num">t6</text>
+  </g>
+
+
+  <!-- creator lane -->
+  <rect x="20" y="106" width="1280" height="196" rx="16" class="lane"/>
+  <text x="36" y="132" class="band">CREATOR</text>
+  <rect x="150" y="146" width="170" height="140" rx="10" class="new"/>
+  <text x="162" y="168" class="h">file_alloc()</text>
+  <text x="162" y="190" class="code">pgbuf_fix (NEW_PAGE,</text>
+  <text x="162" y="206" class="code">  WRITE)</text>
+  <text x="162" y="230" class="s">miss: no read, header</text>
+  <text x="162" y="246" class="s">stamped, body residual</text>
+  <rect x="330" y="146" width="170" height="140" rx="10" class="new"/>
+  <text x="342" y="168" class="h">file_init_page_type</text>
+  <text x="342" y="190" class="s">ptype = PAGE_OVERFLOW</text>
+  <text x="342" y="210" class="s">log RVPGBUF_NEW_PAGE</text>
+  <text x="342" y="226" class="s">(type only, no payload)</text>
+  <text x="342" y="250" class="s">dirty, then unfix</text>
+  <rect x="510" y="146" width="170" height="140" rx="10" class="old"/>
+  <text x="522" y="168" class="h">overflow_insert()</text>
+  <text x="522" y="190" class="code">pgbuf_fix (OLD_PAGE,</text>
+  <text x="522" y="206" class="code">  WRITE)</text>
+  <text x="522" y="230" class="s">passes: ptype is no</text>
+  <text x="522" y="246" class="s">longer PAGE_UNKNOWN</text>
+  <rect x="690" y="146" width="170" height="140" rx="10" class="old"/>
+  <text x="702" y="168" class="h">fill the page</text>
+  <text x="702" y="190" class="s">next_vpid, length</text>
+  <text x="702" y="210" class="code">memcpy (payload)</text>
+  <text x="702" y="232" class="s">log RVOVF_NEWPAGE_</text>
+  <text x="702" y="248" class="s">INSERT, then unfix</text>
+  <rect x="870" y="146" width="170" height="140" rx="10" class="pub"/>
+  <text x="882" y="168" class="h">return VPID</text>
+  <text x="882" y="190" class="code">*ovf_vpid = vpids[0]</text>
+  <text x="882" y="214" class="s">heap_ovf_insert()</text>
+  <text x="882" y="230" class="s">builds ovf_oid</text>
+  <rect x="1050" y="146" width="170" height="140" rx="10" class="pub"/>
+  <text x="1062" y="168" class="h">publish</text>
+  <text x="1062" y="190" class="s">heap stores the OID</text>
+  <text x="1062" y="206" class="s">in the home record</text>
+  <text x="1062" y="230" class="s">VPID becomes</text>
+  <text x="1062" y="246" class="s">reachable</text>
+
+  <!-- page state lane -->
+  <rect x="20" y="316" width="1280" height="102" rx="16" class="lane"/>
+  <text x="36" y="342" class="band">PAGE STATE</text>
+  <rect x="150" y="356" width="250" height="46" rx="8" class="unknown"/>
+  <text x="162" y="377" class="h">PAGE_UNKNOWN</text><text x="162" y="394" class="s">body residual</text>
+  <rect x="410" y="356" width="360" height="46" rx="8" class="danger"/>
+  <text x="422" y="377" class="red">typed, but length/next_vpid are garbage</text><text x="422" y="394" class="s">passes the fetch-mode type check</text>
+  <rect x="780" y="356" width="500" height="46" rx="8" class="good"/>
+  <text x="792" y="377" class="h">consistent overflow page</text><text x="792" y="394" class="s">reads bounded by length</text>
+
+  <!-- reader lane -->
+  <rect x="20" y="432" width="1280" height="102" rx="16" class="lane"/>
+  <text x="36" y="458" class="band">OTHER READERS</text>
+  <rect x="150" y="472" width="970" height="46" rx="8" class="none"/>
+  <text x="162" y="493" class="h">no stored reference names this VPID</text><text x="162" y="510" class="s">a legitimate reader cannot reach the page in the typed-but-inconsistent window</text>
+  <rect x="1130" y="472" width="150" height="46" rx="8" class="reach"/>
+  <text x="1142" y="493" class="h">reachable</text><text x="1142" y="510" class="s">via home record</text>
+
+  <path d="M410 94 L410 101 L770 101 L770 94" class="bracket"/>
+
+  <path d="M150 570 L1280 570" class="axis"/>
+  <text x="150" y="596" class="s">time within one overflow_insert() call and its heap caller</text>
+  <text x="400" y="622" class="red">Window t2–t4: the page type does not make it safe; the unpublished VPID does.</text>
+</svg>

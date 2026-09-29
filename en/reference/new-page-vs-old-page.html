@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NEW_PAGE versus OLD_PAGE in source</title>
+  <link rel="stylesheet" href="../../assets/teach-course.css">
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
+<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
+<nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/reference/new-page-vs-old-page.html" hreflang="ko" lang="ko">KO</a></nav>
+<main class="course-shell" id="seminar-content">
+  <div class="topline"><span>CUBRID page buffer · topic deep dive</span><a href="../index.html">Curriculum</a></div>
+  <header class="hero">
+    <div class="eyebrow">Lecture 3 continuation · Acquisition and ownership</div>
+    <h1>NEW_PAGE versus OLD_PAGE in source</h1>
+    <p>Both modes claim, bind, latch, and publish a BCB in the same way. They differ in where the frame's bytes come from, which page type is legal after the latch, and who must make the bytes meaningful.</p>
+    <div class="pills"><span class="pill">Pinned: f799e05</span><span class="pill">Cold miss</span><span class="pill">Residual bytes</span><span class="pill">Format metadata</span><span class="pill">Publication order</span></div>
+  </header>
+
+  <div class="lesson-grid">
+    <article class="lesson-main">
+      <section class="section" id="misconception">
+        <div class="eyebrow">01 · Start from a tempting answer</div>
+        <h2>“NEW_PAGE registers the new page in a BCB” is not the difference</h2>
+        <p>A tempting summary is that the file manager creates the page and <code>NEW_PAGE</code> places it in the page buffer. Test that claim against an <code>OLD_PAGE</code> miss. That miss also becomes the VPID load owner, claims a reusable BCB with its paired frame, binds the VPID, grants the latch, and publishes the BCB in the hash chain. Registration is therefore shared work, not a property of <code>NEW_PAGE</code>.</p>
+        <div class="table-scroll"><table>
+          <thead><tr><th>Step on a cold miss</th><th><code>OLD_PAGE</code></th><th><code>NEW_PAGE</code></th></tr></thead>
+          <tbody>
+            <tr><td>Load lock, BCB claim, VPID bind, latch reset</td><td>Yes</td><td>Yes, identical code</td></tr>
+            <tr><td>Where the frame bytes come from</td><td>DWB copy or home data volume, decrypted if needed</td><td>Nowhere; the read is skipped</td></tr>
+            <tr><td>Header metadata</td><td>Arrives with the image; only checked</td><td>LSA initialized, then VPID, <code>PAGE_UNKNOWN</code>, reserves, and TDE nonce stamped</td></tr>
+            <tr><td><code>PAGE_UNKNOWN</code> after the latch</td><td>Invalid page: <code>ER_PB_BAD_PAGEID</code></td><td>Expected until the caller sets the type</td></tr>
+            <tr><td>Statistics</td><td>A data-page read</td><td>A created page counted as a hit</td></tr>
+            <tr><td>Grant, both debt ledgers, hash publication</td><td>Yes</td><td>Yes, identical code</td></tr>
+          </tbody>
+        </table></div>
+        <p class="big-claim"><code>NEW_PAGE</code> is the caller's promise that the page's old bytes are worthless. Page buffer uses that promise to skip the read and to accept an untyped page.</p>
+        <p>The allocation-to-buffer contract, caller obligations, and cross-engine comparison belong to <a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Lecture 5</a>. This page follows the source one level deeper.</p>
+      </section>
+
+      <section class="section" id="miss-branches">
+        <div class="eyebrow">02 · The only branch that matters</div>
+        <h2>The paths split at one condition and rejoin at two checks</h2>
+        <img class="diagram" src="../../assets/new-page-miss-branches.svg" alt="Shared miss preparation, the fetch-mode branch at page_buffer.c line 8494, the common header bootstrap, and the post-latch page-type rule">
+        <p class="caption">Normal mutex path at the pinned revision. Temporary volumes use a temporary LSA and skip the on-page identity comparison.</p>
+        <ol>
+          <li><strong>Shared preparation.</strong> <code>pgbuf_claim_bcb_for_fix()</code> becomes load owner, calls <code>pgbuf_allocate_bcb()</code>, binds <code>bufptr-&gt;vpid</code>, resets the atomic latch tuple, and nulls <code>oldest_unflush_lsa</code>.</li>
+          <li><strong>The branch.</strong> <code>if (fetch_mode != NEW_PAGE)</code> guards every read. <code>OLD_PAGE</code> tries <code>dwb_read_page()</code>, then <code>fileio_read()</code>, then decrypts TDE pages. <code>NEW_PAGE</code> runs <code>pgbuf_scramble()</code> in <code>CUBRID_DEBUG</code> builds only, initializes both LSA locations, and writes <code>-1</code> into <code>prv.pageid</code> and <code>prv.volid</code> on a permanent volume.</li>
+          <li><strong>Header bootstrap.</strong> <code>pgbuf_fix()</code> calls <code>pgbuf_set_bcb_page_vpid()</code>. For a header of <code>-1|-1</code> it stamps the BCB VPID and sets <code>ptype = PAGE_UNKNOWN</code>, <code>p_reserve_1</code>, <code>p_reserve_2</code>, and <code>tde_nonce</code> to zero. For an image read from storage it only asserts that the header already names the VPID.</li>
+          <li><strong>Page-type rule.</strong> After the latch, <code>PAGE_UNKNOWN</code> is legal for <code>NEW_PAGE</code>, <code>OLD_PAGE_DEALLOCATED</code>, <code>OLD_PAGE_IF_IN_BUFFER</code>, and <code>RECOVERY_PAGE</code>. For <code>OLD_PAGE</code> it asserts, sets <code>ER_PB_BAD_PAGEID</code>, unfixes, and returns <code>NULL</code>.</li>
+        </ol>
+        <p class="source-note"><strong>Verified mechanism:</strong> shared claim at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8493"><code>page_buffer.c:8392–8493</code></a>; read branch at <code>8494–8598</code>; <code>NEW_PAGE</code> branch at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8599-L8632"><code>8599–8632</code></a>; header bootstrap at <code>2448</code> and <code>5439–5471</code>; page-type rule at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2572-L2616"><code>2572–2616</code></a>.</p>
+      </section>
+
+      <section class="section" id="frame-contents">
+        <div class="eyebrow">03 · Look inside the frame</div>
+        <h2>Page buffer never clears the body</h2>
+        <p>On a <code>NEW_PAGE</code> miss the BCB is a reused pool slot, and its frame was last filled for some other VPID. Page buffer calls neither <code>memset</code> nor <code>memcpy</code> on that frame in a release build. It writes only the reserved header and the end watermark LSA. Every byte between them is the previous occupant's data.</p>
+        <img class="diagram" src="../../assets/new-page-frame-contents.svg" alt="Four frame layouts: after a NEW_PAGE miss, a new heap page, the last overflow page, and an external-sort page, with residual bytes hatched">
+        <p class="caption">The widths are schematic. Hatched regions contain whatever bytes the frame held before this VPID was bound.</p>
+        <p>The one page-buffer function that copies payload into a <code>NEW_PAGE</code> frame is <code>pgbuf_copy_from_area()</code>. It fixes with <code>NEW_PAGE</code>, sets <code>PAGE_AREA</code>, calls <code>memcpy ((char *) pgptr + start_offset, area, length)</code>, skips logging, and marks the page dirty. Its only external caller, external sort, copies the whole <code>DB_PAGESIZE</code> area.</p>
+        <div class="callout warn"><strong>Qualification:</strong> “skips the read” does not mean “returns a zeroed page.” Debug builds scramble the frame precisely so that code which assumes zeroed bytes fails early.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>NEW_PAGE</code> metadata writes at <code>page_buffer.c:8599–8632</code>; scramble at <code>11293–11307</code>; <code>pgbuf_copy_from_area()</code> at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4833-L4912"><code>4833–4912</code></a>; its caller at <code>external_sort.c:5918</code>. <a href="../../unresolved-or-version-sensitive-findings.md#a-current-pinned-revision-interface-hazards">VS-03</a> records that this helper ignores <code>do_fetch</code>.</p>
+      </section>
+
+      <section class="section" id="format-invariants">
+        <div class="eyebrow">04 · First safety condition</div>
+        <h2>Format metadata bounds every read</h2>
+        <p>If the body holds residual bytes, must the caller overwrite the whole page? The common initializers show that it does not. Each page format carries metadata that tells a reader which bytes are meaningful. The caller must establish that metadata; readers that obey it never interpret the rest.</p>
+        <div class="table-scroll"><table>
+          <thead><tr><th>Owner and initializer</th><th>What it writes</th><th>What bounds a reader</th></tr></thead>
+          <tbody>
+            <tr><td>Heap: <code>heap_vpid_init_new()</code></td><td><code>PAGE_HEAP</code>, <code>spage_initialize()</code>, one chain record</td><td><code>num_slots</code>, slot offsets, <code>offset_to_free_area</code></td></tr>
+            <tr><td>B-tree: <code>btree_initialize_new_page()</code></td><td><code>PAGE_BTREE</code>, <code>spage_initialize()</code>, <code>RVBT_GET_NEWPAGE</code> log</td><td>The same slotted-page header</td></tr>
+            <tr><td>Overflow: <code>file_init_page_type()</code>, then <code>overflow_insert()</code></td><td><code>PAGE_OVERFLOW</code> first; later <code>next_vpid</code>, <code>length</code>, and the payload</td><td><code>first_part-&gt;length</code> and the chain of <code>next_vpid</code></td></tr>
+            <tr><td>Disk: volume header at <code>disk_manager.c:590</code></td><td><code>PAGE_VOLHEADER</code> and the <code>DISK_VOLUME_HEADER</code> fields</td><td>The header structure itself</td></tr>
+            <tr><td>External sort: <code>pgbuf_copy_from_area()</code></td><td>The whole <code>DB_PAGESIZE</code> area</td><td>No residual bytes remain</td></tr>
+          </tbody>
+        </table></div>
+        <p><code>spage_initialize()</code> writes only <code>SPAGE_HEADER</code>: <code>num_slots = 0</code>, <code>total_free</code>, <code>cont_free</code>, and <code>offset_to_free_area</code>. It never clears the free area. Recovery follows the same rule. <code>pgbuf_log_new_page()</code> logs only the initialized prefix of <code>data_size</code> bytes, and <code>file_init_page_type()</code> logs a type-only <code>RVPGBUF_NEW_PAGE</code> record with no payload.</p>
+        <p class="source-note"><strong>Verified mechanism:</strong> <code>heap_file.c:2830–2860</code>, <code>btree.c:5184–5194</code>, <code>slotted_page.c:1065–1090</code>, <code>file_manager.c:5388–5405</code>, <code>overflow_file.c:149–228</code>, <code>disk_manager.c:590–600</code>, and <code>page_buffer.c:15093–15123</code>. Overflow reads are bounded at <code>overflow_file.c:794–818</code>.</p>
+      </section>
+
+      <section class="section" id="publication">
+        <div class="eyebrow">05 · Second safety condition</div>
+        <h2>An unpublished VPID has no legitimate reader</h2>
+        <p>Format metadata protects readers only after the metadata is itself valid. Overflow insertion exposes the gap. It performs creation in two separate fixes, and between them the page is typed but inconsistent.</p>
+        <img class="diagram" src="../../assets/new-page-publication-order.svg" alt="Overflow insertion timeline: NEW_PAGE fix and type-only initialization, an OLD_PAGE refix that writes the payload, then return and heap publication of the VPID">
+        <ol>
+          <li><code>file_alloc_multiple()</code> calls <code>file_alloc()</code> for each page. Each page is fixed with <code>NEW_PAGE</code>, typed <code>PAGE_OVERFLOW</code> by <code>file_init_page_type()</code>, and unfixed.</li>
+          <li><code>overflow_insert()</code> fixes each page again with <strong><code>OLD_PAGE</code></strong>. The post-latch rule passes because the type is no longer <code>PAGE_UNKNOWN</code>.</li>
+          <li>It writes <code>next_vpid</code> and <code>length</code>, copies the payload with <code>memcpy</code>, logs <code>RVOVF_NEWPAGE_INSERT</code>, and unfixes.</li>
+          <li>Only after both phases does it return <code>*ovf_vpid = vpids[0]</code>. <code>heap_ovf_insert()</code> turns that VPID into an OID, and the heap later stores it in a home record.</li>
+        </ol>
+        <p>During the window between steps 1 and 3, a reader that fixed the page would pass the type check and trust a garbage <code>length</code>. Nothing stops such a fix inside page buffer. The window is safe because no stored reference names the VPID yet, so no legitimate reader can arrive.</p>
+        <div class="callout"><strong>Two conditions, not one:</strong> residual bytes are harmless when (1) the owner establishes its format metadata before anyone relies on it, and (2) the VPID stays unpublished until that metadata is consistent. The page type alone guarantees neither.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> two-phase insertion at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/overflow_file.c#L145-L235"><code>overflow_file.c:145–235</code></a>; per-page allocation at <code>file_manager.c:5649</code> and <code>5495–5516</code>; OID construction at <code>heap_file.c:6097–6112</code>.</p>
+      </section>
+
+      <section class="section" id="stale-vpid">
+        <div class="eyebrow">06 · Where the page-buffer contract ends</div>
+        <h2>A reallocated VPID can outlive an old reference</h2>
+        <p>The publication condition assumes that every reference to the VPID is new. A <code>NEW_PAGE</code> <em>hit</em> breaks that assumption. A deallocated page keeps its BCB with <code>ptype = PAGE_UNKNOWN</code>. If allocation hands out the same VPID again, <code>NEW_PAGE</code> reuses that resident BCB. Its header is already stamped, so no miss-only initialization runs. A thread that read the VPID from the <em>old</em> publication, such as a scan that saw a previous <code>next_vpid</code>, may still try to fix it.</p>
+        <p>Once the new owner's initializer has set a real type, page buffer cannot distinguish that stale fix from a legitimate one. The protection therefore lives in caller protocols, and each path supplies its own:</p>
+        <div class="table-scroll"><table>
+          <thead><tr><th>Path</th><th>Protection seen at the pinned revision</th><th>Evidence level</th></tr></thead>
+          <tbody>
+            <tr><td>Heap chain scan</td><td>Keeps the previous page fixed until the next page is fixed with <code>OLD_PAGE_PREVENT_DEALLOC</code>. Page buffer registers the avoid-deallocation count before the latch wait, and vacuum rechecks <code>pgbuf_has_prevent_dealloc()</code> before it removes a page.</td><td>Verified mechanism for this path</td></tr>
+            <tr><td>Cached or sampled VPIDs</td><td><code>bestspace</code>, <code>btree_load</code>, parallel heap scan, and the histogram sampler use <code>OLD_PAGE_MAYBE_DEALLOCATED</code> and treat <code>ER_PB_BAD_PAGEID</code> as “gone.” This catches a page that is still deallocated, not one already reallocated and typed.</td><td>Verified mechanism with a stated limit</td></tr>
+            <tr><td>Direct OID access</td><td><code>heap_prepare_object_page()</code> uses plain <code>OLD_PAGE</code>. Safety appears to rely on permanent-file deallocation being postponed until commit and on vacuum removing references first.</td><td>Inference; analysis required</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout warn"><strong>Outside the fetch-mode contract:</strong> stale-VPID safety after reallocation is a caller protocol, not a guarantee of <code>NEW_PAGE</code> or <code>OLD_PAGE</code>. The complete cross-path argument has not been verified; the uncertainty registry tracks it as <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">VS-22</a>.</div>
+        <p class="source-note"><strong>Verified mechanism:</strong> resident <code>NEW_PAGE</code> hit at <code>page_buffer.c:2399–2406</code>; deallocation to <code>PAGE_UNKNOWN</code> at <code>15182–15221</code>; postponed permanent deallocation at <code>file_manager.c:6149–6156</code>; heap-scan ordering at <code>heap_file.c:7547–7576</code>; avoid-deallocation registration at <code>page_buffer.c:2474–2477</code>; vacuum rechecks at <code>heap_file.c:3382–3389</code> and <code>vacuum.c:1850</code>; <code>bestspace.cpp:681–693</code>; <code>heap_file.c:25571</code>.</p>
+      </section>
+
+      <section class="section" id="definition">
+        <div class="eyebrow">07 · Restate the difference</div>
+        <h2>A definition that survives the counterexamples</h2>
+        <div class="table-scroll"><table>
+          <thead><tr><th></th><th><code>OLD_PAGE</code></th><th><code>NEW_PAGE</code></th></tr></thead>
+          <tbody>
+            <tr><td>Caller claims</td><td>The page is already published and its stored bytes mean something.</td><td>Allocation just produced this VPID, and its old bytes mean nothing.</td></tr>
+            <tr><td>Miss materialization</td><td>Read DWB or volume; decrypt.</td><td>No read; stamp header metadata; the body keeps residual bytes.</td></tr>
+            <tr><td><code>PAGE_UNKNOWN</code></td><td>A published page has vanished: error.</td><td>The expected state before initialization.</td></tr>
+            <tr><td>Caller obligation afterward</td><td>Obey the page's existing format.</td><td>Establish type and format metadata, log, and dirty the page before its VPID is published.</td></tr>
+            <tr><td>Shared with the other mode</td><td colspan="2">Load lock, BCB claim, identity convergence, latch grant, fix debt, and hash publication.</td></tr>
+          </tbody>
+        </table></div>
+        <p>A later fix of a page that has been created and typed but not yet filled can legally use <code>OLD_PAGE</code>, as overflow insertion shows. The fetch mode describes what the caller knows about the stored bytes, not how recently the page was allocated.</p>
+      </section>
+
+      <section class="section" id="checkpoint">
+        <div class="eyebrow">08 · Pause and reason</div>
+        <h2>Test the definition on a new change</h2>
+        <div class="quiz" data-audience-checkpoint>
+          <h3>Scenario</h3>
+          <p>A proposed change adds a page format whose initializer writes only a 16-byte header containing a record count. A reader loops over <code>count</code> fixed-size records. Another proposal asks page buffer to <code>memset</code> every <code>NEW_PAGE</code> frame “for safety.”</p>
+          <p><strong>Consider:</strong> what must the first design guarantee, when may the VPID be stored in another page, and what does the <code>memset</code> proposal cost or fail to fix?</p>
+          <details class="answer-disclosure"><summary>Open the explanation</summary><p>The initializer must set a real page type and <code>count = 0</code> before any reader can reach the page. The reader must never read past <code>count</code>. The VPID may be stored elsewhere only once the header is consistent, or while the creator still holds the WRITE latch under which it finishes the header, because a reader that follows the reference must wait for that latch. Zeroing every frame adds a full-page write to every allocation. It replaces residual bytes with zeros but cannot make <code>count</code> correct, and it does nothing for a stale VPID that reaches the page after reallocation. That hazard belongs to the caller protocol, not to the byte contents.</p></details>
+        </div>
+      </section>
+
+      <section class="section" id="source-route">
+        <div class="eyebrow">Primary reading</div>
+        <h2>Trace it in this order</h2>
+        <ol>
+          <li><code>page_buffer.c:8392–8632</code>: shared claim, then the read branch and the <code>NEW_PAGE</code> branch side by side.</li>
+          <li><code>page_buffer.c:2440–2448</code> and <code>5439–5471</code>: the common header bootstrap.</li>
+          <li><code>page_buffer.c:2572–2616</code>: the page-type rule for each fetch mode.</li>
+          <li><code>file_manager.c:5495–5516</code> and <code>heap_file.c:2830–2860</code>: an owner initializer.</li>
+          <li><code>overflow_file.c:145–235</code> and <code>heap_file.c:6097–6112</code>: typed first, filled later, published last.</li>
+        </ol>
+        <p><a href="../lessons/0003-trace-fix-convergence.html#intent">← Return to Lecture 3 fetch modes</a></p>
+        <p><a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Continue to the Lecture 5 allocation contract →</a></p>
+        <p><a href="../../reference/new-page-fetch-mode-audit.md">Open the complete NEW_PAGE audit →</a></p>
+      </section>
+    </article>
+
+    <nav class="lesson-nav" aria-label="Page contents">
+      <strong>Page map</strong>
+      <a href="#misconception">1. Tempting answer</a>
+      <a href="#miss-branches">2. One branch</a>
+      <a href="#frame-contents">3. Inside the frame</a>
+      <a href="#format-invariants">4. Format metadata</a>
+      <a href="#publication">5. Publication order</a>
+      <a href="#stale-vpid">6. Stale VPID</a>
+      <a href="#definition">7. Definition</a>
+      <a href="#checkpoint">8. Pause and reason</a>
+      <a href="#source-route">Primary reading</a>
+      <hr>
+      <a href="../lessons/0003-trace-fix-convergence.html">Lecture 3</a>
+      <a href="../lessons/0005-audit-a-logged-mutation.html#new-page">Lecture 5 · NEW_PAGE</a>
+      <a href="../index.html">Curriculum</a>
+    </nav>
+  </div>
+
+<footer class="footer">Related sources: <a href="../../reference/new-page-fetch-mode-audit.md">NEW_PAGE fetch-mode audit</a> · <a href="../../learning/02-fix-hold-release.md">Fix, Hold, and Release</a></footer>
+</main>
+<nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav>
+</body>
+</html>

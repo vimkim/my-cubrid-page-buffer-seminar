@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="640" viewBox="0 0 1320 640" role="img" aria-labelledby="title desc">
+  <title id="title">What a NEW_PAGE frame holds and which bytes each page format trusts</title>
+  <desc id="desc">Four horizontal bars show one frame from the FILEIO_PAGE reserved header to the end watermark. After a NEW_PAGE miss, page buffer has written only the reserved header and the watermark LSA; the whole body still holds the previous occupant's bytes. A heap page after heap_vpid_init_new has a slotted-page header, one chain record, and one slot at the end; the free area between offset_to_free_area and the slot array keeps residual bytes that no reader interprets. The last page of an overflow chain has next_vpid and a payload copied with memcpy; the tail beyond the remaining length keeps residual bytes. A page written by pgbuf_copy_from_area for external sort is overwritten across the whole DB_PAGESIZE area. The legend distinguishes page-buffer metadata, caller-written bytes, residual bytes, and the metadata boundary that stops a reader.</desc>
+  <defs>
+    <pattern id="residual" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#f1f3f4"/><line x1="0" y1="0" x2="0" y2="10" stroke="#b9c2c7" stroke-width="4"/></pattern>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b86b22"/></marker>
+    <style>
+      .pb{fill:#16847d}.caller{fill:#5968bd}.res{fill:url(#residual);stroke:#9aa6ad;stroke-width:1}.frame{fill:none;stroke:#48626f;stroke-width:2}.bound{stroke:#b86b22;stroke-width:3;stroke-dasharray:6 4}.t{font:700 22px Inter,Arial,sans-serif;fill:#173443}.h{font:700 15px Inter,Arial,sans-serif;fill:#173443}.s{font:13px Inter,Arial,sans-serif;fill:#526874}.code{font:12px Menlo,Consolas,monospace;fill:#173443}.w{font:700 12px Inter,Arial,sans-serif;fill:#ffffff}.wc{font:12px Menlo,Consolas,monospace;fill:#ffffff}.note{font:700 13px Inter,Arial,sans-serif;fill:#b86b22}
+    </style>
+  </defs>
+
+  <text x="40" y="44" class="t">One frame, four moments: which bytes are written, and which are merely left over</text>
+  <text x="300" y="76" class="s">FILEIO_PAGE.prv</text>
+  <text x="1260" y="76" text-anchor="end" class="s">end watermark</text>
+
+  <!-- Row A -->
+  <text x="40" y="112" class="h">After a NEW_PAGE miss</text>
+  <text x="40" y="132" class="s">before the caller's f_init</text>
+  <rect x="300" y="92" width="40" height="52" class="pb"/><text x="320" y="123" text-anchor="middle" class="w">prv</text>
+  <rect x="340" y="92" width="900" height="52" class="res"/>
+  <text x="790" y="123" text-anchor="middle" class="h">previous occupant's bytes · never read from disk, not cleared</text>
+  <rect x="1240" y="92" width="20" height="52" class="pb"/>
+  <rect x="300" y="92" width="960" height="52" class="frame"/>
+
+  <!-- Row B -->
+  <text x="40" y="222" class="h">Heap page</text>
+  <text x="40" y="242" class="s">heap_vpid_init_new()</text>
+  <rect x="300" y="202" width="40" height="52" class="pb"/><text x="320" y="233" text-anchor="middle" class="w">prv</text>
+  <rect x="340" y="202" width="90" height="52" class="caller"/><text x="385" y="226" text-anchor="middle" class="w">SPAGE_</text><text x="385" y="243" text-anchor="middle" class="w">HEADER</text>
+  <rect x="430" y="202" width="70" height="52" class="caller"/><text x="465" y="233" text-anchor="middle" class="w">chain</text>
+  <rect x="500" y="202" width="680" height="52" class="res"/>
+  <text x="840" y="233" text-anchor="middle" class="s">free area · residual bytes nobody interprets</text>
+  <rect x="1180" y="202" width="60" height="52" class="caller"/><text x="1210" y="233" text-anchor="middle" class="w">slot 0</text>
+  <rect x="1240" y="202" width="20" height="52" class="pb"/>
+  <rect x="300" y="202" width="960" height="52" class="frame"/>
+  <line x1="500" y1="192" x2="500" y2="264" class="bound"/>
+  <line x1="1180" y1="192" x2="1180" y2="264" class="bound"/>
+  <text x="500" y="284" class="note">offset_to_free_area</text>
+  <text x="1180" y="284" text-anchor="end" class="note">slot array · num_slots = 1</text>
+
+  <!-- Row C -->
+  <text x="40" y="342" class="h">Last overflow page</text>
+  <text x="40" y="362" class="s">overflow_insert()</text>
+  <rect x="300" y="322" width="40" height="52" class="pb"/><text x="320" y="353" text-anchor="middle" class="w">prv</text>
+  <rect x="340" y="322" width="90" height="52" class="caller"/><text x="385" y="353" text-anchor="middle" class="w">next_vpid</text>
+  <rect x="430" y="322" width="400" height="52" class="caller"/><text x="630" y="353" text-anchor="middle" class="wc">memcpy (copyto, data, copy_length)</text>
+  <rect x="830" y="322" width="410" height="52" class="res"/>
+  <text x="1035" y="353" text-anchor="middle" class="s">tail beyond the remaining length</text>
+  <rect x="1240" y="322" width="20" height="52" class="pb"/>
+  <rect x="300" y="322" width="960" height="52" class="frame"/>
+  <line x1="830" y1="312" x2="830" y2="384" class="bound"/>
+  <text x="830" y="404" text-anchor="middle" class="note">reader stops at the byte count from first_part-&gt;length</text>
+
+  <!-- Row D -->
+  <text x="40" y="462" class="h">External-sort page</text>
+  <text x="40" y="482" class="s">pgbuf_copy_from_area()</text>
+  <rect x="300" y="442" width="40" height="52" class="pb"/><text x="320" y="473" text-anchor="middle" class="w">prv</text>
+  <rect x="340" y="442" width="900" height="52" class="caller"/><text x="790" y="473" text-anchor="middle" class="wc">memcpy over 0 … DB_PAGESIZE · no residual bytes remain</text>
+  <rect x="1240" y="442" width="20" height="52" class="pb"/>
+  <rect x="300" y="442" width="960" height="52" class="frame"/>
+
+  <!-- Legend -->
+  <rect x="40" y="540" width="1240" height="76" rx="14" fill="#f7fafb" stroke="#d4dfe3" stroke-width="2"/>
+  <rect x="64" y="566" width="26" height="22" class="pb"/><text x="100" y="582" class="s">page-buffer metadata: header identity, ptype, LSA</text>
+  <rect x="440" y="566" width="26" height="22" class="caller"/><text x="476" y="582" class="s">written by the owning caller</text>
+  <rect x="700" y="566" width="26" height="22" class="res"/><text x="736" y="582" class="s">residual bytes</text>
+  <line x1="900" y1="566" x2="900" y2="590" class="bound"/><text x="914" y="582" class="s">format metadata that bounds every read</text>
+</svg>
