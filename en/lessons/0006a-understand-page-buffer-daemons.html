@@ -22,15 +22,23 @@
 <section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><h2>Why move work into background threads?</h2><p>A daemon here is a managed background thread that repeats a task and waits. It lets shared maintenance or cleaning proceed independently of one request. This is not a separate database server process, and the four page-buffer daemons do not all write pages.</p><p>Without background execution, necessary work has to move to foreground callers or another scheduler. That can increase request latency or reduce prepared clean-frame supply; it does not by itself prove corruption. Removing a thread while leaving its queues or wait protocol dependent on it is a different, unsafe change. Stand-alone mode is evidence that synchronous alternatives exist, not a recipe for disabling a live server daemon.</p><p>Keep four jobs separate: page-flush submits dirty page images; post-flush completes queued BCB work; maintenance adjusts quotas and zones; flush-control updates soft I/O pacing credits. The next lectures trace each job and its absence consequences.</p></section>
 
       <section class="section" id="daemon">
-        <div class="eyebrow">01 · Define daemon</div>
-        <h2>One daemon is one thread that executes one task and pauses</h2>
+<h2>Each daemon works and waits independently</h2>
+<p>The four daemons are background threads with distinct roles. A timer or wakeup provides an execution opportunity; current state determines whether useful work follows.</p>
+<details class="technical-detail"><summary>Expand implementation details and sources</summary>
+
+
         <p><code>create_daemon()</code> creates one managed execution context and one <code>std::thread</code>. Its loop is simple: execute the task, ask its <code>cubthread::looper</code> how long to pause, then execute again. The four names are therefore four independent control loops, rather than interchangeable workers pulling dirty pages from one queue.</p>
         <p>The task runs once immediately after construction. A fixed period is a start-to-start target: the looper subtracts the previous execution time. A 100 ms period does not mean “finish work, then always sleep another 100 ms,” and it does not guarantee useful work on every pass.</p>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="lifecycle">
-        <div class="eyebrow">02 · Full lifecycle</div>
-        <h2>Creation, enablement, useful work, and destruction happen separately</h2>
+<h2>Work starts after recovery and stops before pool teardown</h2>
+<p>The server creates the threads during recovery, but useful page-buffer work waits for the boot gate. Normal shutdown stops them before pool teardown. Stand-alone mode does not create these four threads.</p>
+<details class="technical-detail"><summary>Expand implementation details and sources</summary>
+
+
         <img class="diagram" src="../../assets/page-buffer-daemon-lifecycle.svg" alt="Page-buffer daemon creation, recovery gate, useful loop, and joined destruction">
         <ol>
           <li>The page-buffer pool, LRUs, queues, and monitors are initialized first.</li>
@@ -41,11 +49,16 @@
           <li><code>log_final()</code> and pool teardown happen after the page-buffer daemons have stopped, so no daemon outlives the shared state it touches.</li>
         </ol>
         <p>Stand-alone mode creates none of these four threads. When background page-flush is unavailable, the relevant requester can perform victim flushing synchronously.</p>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="cadence">
-        <div class="eyebrow">03 · Timer, wake, and useful work</div>
-        <h2>Each role has its own pause and admission rule</h2>
+<h2>How the four daemons divide the work</h2>
+<div class="table-scroll"><table><thead><tr><th>Daemon</th><th>Responsibility</th><th>Page writes</th></tr></thead><tbody><tr><td>Page-flush</td><td>Submit eligible dirty-page copies to the write path</td><td>Yes</td></tr><tr><td>Post-flush</td><td>Finish delegated BCB bookkeeping and try to assign a safe frame</td><td>No new write</td></tr><tr><td>Maintenance</td><td>Adjust quotas and zone boundaries using sampled activity</td><td>No</td></tr><tr><td>Flush-control</td><td>Supply credits consumed after successful OS writes</td><td>No</td></tr></tbody></table></div><p>Timers and wakeups provide an opportunity to check for work. Useful work still depends on the boot gate, queues, replacement pressure and other current conditions.</p><details class="technical-detail"><summary>Timing and wakeup details</summary>
+
+
+
         <img class="diagram" src="../../assets/page-buffer-daemon-cadence.svg" alt="Maintenance, page-flush, post-flush, and flush-control cadence patterns">
         <div class="table-scroll"><table>
           <thead><tr><th>Daemon</th><th>Plain job</th><th>Nominal pause</th><th>Explicit work wake</th><th>Page-image I/O?</th></tr></thead>
@@ -57,41 +70,40 @@
           </tbody>
         </table></div>
         <div class="callout"><strong>Wake is a hint, not a durable event:</strong> the generic waiter accepts <code>wakeup()</code> only while it is sleeping. If the task is already running, the call is not stored for its next pause. Each task therefore rechecks shared pressure or queue state when it executes.</div>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="plain-language-bridge" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-post-flush-payload="PGBUF_BCB-pointer" data-post-flush-new-io="none">
-        <div class="eyebrow">04 · Two phrases in plain English</div>
-        <h2>Neither mechanism writes the same page a second time</h2>
+
+
+        <h2>Post-flush and flush-control do not write the page again</h2>
         <div class="callout"><strong>File-I/O token bucket:</strong> a shared balance of page-sized credits. Participating writers spend credits after a successful OS write; when the balance is empty they may pause before continuing. Flush-control periodically replaces the balance, so this is soft pacing rather than permission to perform the write. <a href="0006c-follow-maintenance-and-pacing.html#control">See the exact producer, consumer, and bypass rules →</a></div>
         <div class="callout"><strong>Page-flush hands completion to post-flush:</strong> page submission has finished, but in-memory BCB bookkeeping remains. Under allocator pressure, page-flush may queue only the BCB pointer for post-flush to finish; it does not pass page bytes or request another write. <a href="0006b-follow-page-flush-handoff.html#handoff">See what moves, the four conditions, and the local fallback →</a></div>
-      </section>
+
+</section>
 
       <section class="section" id="routes">
-        <div class="eyebrow">05 · Choose the next page</div>
-        <h2>Study the two cooperating pairs separately</h2>
+
+
+        <h2>Cleaning and bookkeeping / policy and pacing</h2>
         <div class="callout"><strong>Lecture 6B — page-flush and post-flush:</strong> first trace page-flush as it selects and submits one stable generation. Then follow the choice: finish the BCB bookkeeping locally, or queue only its pointer so post-flush can recheck it and possibly wake an allocator.</div>
         <div class="callout"><strong>Lecture 6C — maintenance and flush-control:</strong> first follow replacement samples into quotas and zones. Separately, see a successful file write request page credits and the 50 ms control loop replace their shared balance. Neither control path carries a page image.</div>
         <p>Checkpoint, the log-flush daemon, foreground/WRITE-owner flushes, and DWB helper daemons are outside this four-role group. They can support or reuse the same durability machinery without becoming page-buffer daemon workers.</p>
-      </section>
+
+</section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">06 · Pause and reason</div>
-        <h2>Explain one complete thread lifecycle and route four jobs</h2>
-        <div class="quiz" data-audience-checkpoint>
-          <h3>Prompt</h3><p>Explain what happens from daemon construction during recovery through normal shutdown. Then name the role, cadence, and I/O responsibility of all four daemons.</p>
-
-          <details class="answer-disclosure"><summary>Open the explanation</summary><p>one daemon owns one OS thread, task, looper, and waiter -> its first task executes immediately but returns while the recovery gate is closed -> opening the gate is separate from waking a sleeper -> a timer grants an opportunity and the task may still do no work -> maintenance tries quota policy every 100 ms -> page-flush uses a default 1000 ms timer plus pressure wakes and is the only role that submits page images -> post-flush backs off 1, 10, 100 ms into wake-only and finishes BCB state -> flush-control targets 50 ms and refreshes post-write pacing -> shutdown stops, wakes, joins, and retires the threads before pool teardown.</p></details></div>
-      </section>
+<h2>Who does what when frames are scarce?</h2>
+<div class="quiz" data-audience-checkpoint><p>An allocator waits while many pages are dirty. Do all four daemons write pages?</p><details class="answer-disclosure"><summary>Show explanation</summary><p>No. Page-flush submits eligible page images. Post-flush finishes delegated BCB work and may assign a safe frame to an allocator. Maintenance handles quotas and zones; flush-control manages pacing credits consumed after successful OS writes.</p></details></div>
+</section>
 
       <section class="section" id="primary-reading">
-        <div class="eyebrow">Primary reading</div>
-        <h2>Read the generic loop before each role</h2>
-        <p>Start with pinned <code>thread_daemon.cpp:208–245</code>, <code>thread_looper.cpp:118–224</code>, and <code>thread_waiter.cpp:76–224</code>. Then read the four task bodies and initializers at <code>page_buffer.c:16971–17228</code>.</p>
-        <p><a href="../../reference/page-buffer-daemon-lifecycle-audit.md">Open the complete pinned-source lifecycle audit →</a></p>
-        <p><a href="0006-flush-one-generation.html">← Lecture 0006</a> · <a href="0006b-follow-page-flush-handoff.html">Continue to Lecture 0006B →</a></p>
-      </section>
+<h2>References</h2>
+<details class="technical-detail"><summary>Sources and further reading</summary><ul><li><a href="../../reference/page-buffer-daemon-lifecycle-audit.md">Open the complete pinned-source lifecycle audit →</a></li></ul></details>
+</section>
     </article>
-    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Why move work into background threads?</a><strong>Lecture map</strong><a href="#daemon">1. One daemon</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#plain-language-bridge">4. Two phrases</a><a href="#routes">5. Focused routes</a><a href="#retrieval">6. Explain it</a><a href="#primary-reading">Primary reading</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">Curriculum</a></nav>
+    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Why move work into background threads?</a><strong>Lecture map</strong><a href="#daemon">Each daemon works and waits independently</a><a href="#lifecycle">Work starts after recovery and stops before pool teardown</a><a href="#cadence">How the four daemons divide the work</a><a href="#plain-language-bridge">Post-flush and flush-control do not write the page again</a><a href="#routes">Cleaning and bookkeeping / policy and pacing</a><a href="#retrieval">Who does what when frames are scarce?</a><a href="#primary-reading">References</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">Curriculum</a></nav>
   </div>
 
 <nav class="lecture-navigation" data-lecture-nav aria-label="Lecture sequence"><a rel="prev" href="0006-flush-one-generation.html">← Lecture 6 · Flush generations and WAL ordering</a><a rel="next" href="0006b-follow-page-flush-handoff.html">Lecture 6B · Page-flush and post-flush handoff →</a></nav></main>

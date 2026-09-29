@@ -8,36 +8,57 @@
 <section class="section" id="first-code-path"><h2>Page-flush: 사본 제출의 호출 경로</h2><p>이 page-flush 경로는 neighbor flush를 거치지 않는 non-DWB write 분기다. WAL flush와 page 제출은 공통 flush helper 안에서 순서대로 수행되는 형제 작업이며, WAL helper가 page writer를 호출하는 관계는 아니다.</p><figure class="source-call-path"><pre>pgbuf_page_flush_daemon_task::execute
   → pgbuf_flush_victim_candidates
     → pgbuf_bcb_flush_with_wal
-      → fileio_write</pre><figcaption>소스에서 확인한 호출 관계. 실행 중 수집한 스택이 아니다. 화살표는 조건이 맞을 때의 직접 호출이며, 들여쓴 가지는 같은 호출자의 분기다.</figcaption></figure><p class="source-note">고정 소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17055">page_buffer.c:17029–17055</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4088">page_buffer.c:4040–4088</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10830-L10898">page_buffer.c:10830–10898</a></p></section>
+      → fileio_write</pre><figcaption>소스에서 확인한 직접 호출 관계입니다. 조건에 따른 분기를 보여 주며, 실행 중 수집한 스택은 아닙니다.</figcaption></figure><details class="technical-detail"><summary>소스 위치 펼치기</summary><p class="source-note">고정 소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17055">page_buffer.c:17029–17055</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4088">page_buffer.c:4040–4088</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10830-L10898">page_buffer.c:10830–10898</a></p></details></section>
 <section class="section" id="post-flush-code-path"><h2>Post-flush: 별도의 실행에서 처리 마치기</h2><p>별도의 consumer 실행에서 완료 처리가 적격 direct-victim 배정에 도달할 때 다음 경로를 따른다.</p><figure class="source-call-path"><pre>pgbuf_page_post_flush_execute
   → pgbuf_assign_flushed_pages
-    → pgbuf_assign_direct_victim</pre><figcaption>소스에서 확인한 호출 관계. 실행 중 수집한 스택이 아니다. 화살표는 조건이 맞을 때의 직접 호출이며, 들여쓴 가지는 같은 호출자의 분기다.</figcaption></figure><p class="source-note">고정 소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17072-L17080">page_buffer.c:17072–17080</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15496-L15556">page_buffer.c:15496–15556</a></p><p>그 사이의 전달은 비동기이며 <code>flushed_bcbs</code> queue에 BCB pointer를 넣고 wake한다. Page-flush producer, 존재하는 post-flush daemon, 대기 allocator, enqueue 성공이 모두 필요하다. Wake는 중첩 함수 호출이 아니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10929-L10954">Enqueue와 현장 fallback</a>.</p></section>
+    → pgbuf_assign_direct_victim</pre><figcaption>소스에서 확인한 직접 호출 관계입니다. 조건에 따른 분기를 보여 주며, 실행 중 수집한 스택은 아닙니다.</figcaption></figure><details class="technical-detail"><summary>소스 위치 펼치기</summary><p class="source-note">고정 소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17072-L17080">page_buffer.c:17072–17080</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15496-L15556">page_buffer.c:15496–15556</a></p></details><p>그 사이의 전달은 비동기이며 <code>flushed_bcbs</code> queue에 BCB pointer를 넣고 wake한다. Page-flush producer, 존재하는 post-flush daemon, 대기 allocator, enqueue 성공이 모두 필요하다. Wake는 중첩 함수 호출이 아니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10929-L10954">Enqueue와 현장 fallback</a>.</p></section>
 
-<section class="section" id="trigger"><div class="eyebrow">01 · Trigger</div><h2>timer pass와 demand wake는 서로 다른 admission rule을 가집니다</h2>
+<section class="section" id="trigger">
+<h2>Timer와 frame 부족이 page-flush를 깨운다</h2>
+<p>주기적인 실행과 frame 부족에 따른 wakeup이 있습니다. 깨어났다는 사실만으로 page를 썼다고 판단할 수는 없습니다. 작업은 대기 allocator와 현재 교체 압력을 확인합니다.</p>
+<details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
 <p><code>pgbuf-page-flush</code>는 기본 1,000 ms인 <code>page_bg_flush_interval</code>만큼 pause합니다. 0이면 wake가 올 때까지 무기한 기다립니다. normal victim search가 실패하거나, clean bottom 제거 뒤 dirty bottom이 드러나거나, 선택한 victim scan이 reusable BCB를 못 찾으면 allocation/victim pressure가 깨웁니다.</p>
-<p>sleep 중 관찰된 demand wake는 <code>pgbuf_flush_victim_candidates()</code>를 최소 한 번 호출하게 합니다. timer timeout은 direct-victim waiter가 있거나 충분한 victim request 뒤 sampled hit ratio가 99.9% 아래일 때만 호출합니다. pressure가 남으면 task 한 번에 여러 call을 반복할 수 있고, timed pass가 page를 하나도 submit하지 않을 수도 있습니다.</p></section>
+<p>sleep 중 관찰된 demand wake는 <code>pgbuf_flush_victim_candidates()</code>를 최소 한 번 호출하게 합니다. timer timeout은 direct-victim waiter가 있거나 충분한 victim request 뒤 sampled hit ratio가 99.9% 아래일 때만 호출합니다. pressure가 남으면 task 한 번에 여러 call을 반복할 수 있고, timed pass가 page를 하나도 submit하지 않을 수도 있습니다.</p>
+</details>
+</section>
 
-<section class="section" id="selection"><div class="eyebrow">02 · Page-flush iteration</div><h2>selection은 candidate를 기록하고 protected recheck가 submission을 허가합니다</h2>
+<section class="section" id="selection">
+
+<h2>후보를 모은 뒤, 현재 상태와 WAL을 확인한다</h2>
 <ol><li>pressure를 읽고 LRU별 priority와 scan budget을 계산합니다.</li><li>LRU mutex를 하나씩 잡고 cold LRU3 node를 따라가며 candidate BCB pointer와 VPID를 저장합니다.</li><li>LRU lock을 놓고 sequentiality를 위해 candidate를 VPID로 sort할 수 있습니다.</li><li>candidate마다 BCB를 lock하고 같은 VPID, DIRTY, 현재 FLUSHING 없음, 여전히 LRU3, fix 0을 다시 확인합니다.</li><li>WAL boundary가 준비되지 않았으면 skip하고 log-flush를 깨웁니다. allocator pressure에서는 필요한 log boundary를 한 번 force하고 재시도할 수 있습니다.</li><li>하나의 stable generation을 copy하여 DWB 또는 direct I/O로 submit하고 필요하면 neighbor page도 포함합니다.</li></ol>
-<p>512 MiB/16 KiB 예에서 <code>B=32,768</code>입니다. 기본 1% unboosted selection budget은 327개 check이고, 최대 10× boost는 3,270개로 12,800-page 200 MiB cap보다 작습니다. 이것은 inspection budget이지 write 개수 보장이 아닙니다.</p></section>
+<details class="technical-detail"><summary>후보 탐색량 계산 예제</summary><p>512 MiB/16 KiB 예에서 <code>B=32,768</code>입니다. 기본 1% unboosted selection budget은 327개 check이고, 최대 10× boost는 3,270개로 12,800-page 200 MiB cap보다 작습니다. 이것은 inspection budget이지 write 개수 보장이 아닙니다.</p></details>
 
-<section class="section" id="handoff" data-handoff-payload="PGBUF_BCB-pointer" data-handoff-after="successful-submission" data-handoff-new-io="none" data-handoff-fallback="page-flush-local"><div class="eyebrow">03 · Conditional handoff</div><h2>“submission 완료”와 “BCB bookkeeping 미완료”를 구분합니다</h2>
+</section>
+
+<section class="section" id="handoff" data-handoff-payload="PGBUF_BCB-pointer" data-handoff-after="successful-submission" data-handoff-new-io="none" data-handoff-fallback="page-flush-local">
+<h2>Queue에는 페이지 내용이 아니라 BCB 포인터를 넘긴다</h2>
 <img class="diagram" src="../../assets/page-flush-post-flush-handoff.svg" alt="page-flush에서 post-flush로 가는 조건부 handoff와 local completion fallback">
 <p>이 시점에는 stable page generation이 설정된 DWB/direct-write submission boundary를 넘었지만, BCB에는 아직 이전 flush가 진행 중이라고 기록되어 있습니다. 이 state를 clear하고 flush waiter를 깨우며 clean frame을 기다리는 allocator에 직접 줄지 판단하는 일은 CPU-side bookkeeping입니다. handoff는 이 bookkeeping 담당자만 바꾸며 page write를 반복하지 않습니다.</p>
 <ol><li><strong>이동하는 것:</strong> copy한 page image가 아니라 control record를 가리키는 <code>PGBUF_BCB *</code> 하나입니다.</li><li><strong>받는 곳:</strong> bounded <code>flushed_bcbs</code> queue를 거쳐 post-flush daemon이 받습니다.</li><li><strong>받은 쪽이 하는 일:</strong> 현재 BCB를 lock하고 다시 확인한 뒤 이전 <code>FLUSHING</code> state를 clear하고 flush waiter를 깨우며, 가능하면 clean frame을 allocator에 reserve합니다.</li><li><strong>여기서 하지 않는 일:</strong> post-flush는 새 page I/O를 시작하지 않습니다.</li></ol>
 <p>page-flush가 submission을 만들었고, post-flush가 존재하며, allocator가 기다리고, 8,192-entry queue가 pointer를 받아야만 delegate합니다. 조건 하나라도 맞지 않으면 page-flush가 같은 BCB bookkeeping을 직접 수행합니다.</p>
-<p>DWB가 켜져 있으면 successful submission은 stable image가 DWB에 들어갔다는 뜻일 수 있어 home-volume write보다 앞섭니다. 따라서 이 handoff는 page-buffer submission boundary를 나타낼 뿐, 보편적인 disk durability나 transaction durability를 뜻하지 않습니다.</p></section>
+<p>DWB가 켜져 있으면 successful submission은 stable image가 DWB에 들어갔다는 뜻일 수 있어 home-volume write보다 앞섭니다. 따라서 이 handoff는 page-buffer submission boundary를 나타낼 뿐, 보편적인 disk durability나 transaction durability를 뜻하지 않습니다.</p>
+</section>
 
-<section class="section" id="post"><div class="eyebrow">04 · Post-flush 작업</div><h2>consumer는 allocator handoff 전에 현재 BCB state를 다시 확인합니다</h2>
+<section class="section" id="post">
+<h2>Post-flush가 실행될 때는 상태가 달라졌을 수 있다</h2>
 <p>Post-flush는 queue가 빌 때까지 drain합니다. pointer마다 BCB를 lock하고 fix 0, LRU3 membership, clean/eligible flag, private list라면 quota를 다시 봅니다. submission 뒤 resident page가 fix되거나 다시 dirty해지거나 hot해졌을 수 있습니다.</p>
-<p>현재도 eligible해야 live direct-victim waiter 하나에게 reserve할 수 있습니다. 결과와 무관하게 old FLUSHING generation을 끝내고 BCB flush waiter를 깨웁니다. work를 consume하면 다음 pause는 1 ms로 reset되고, 연속 idle timeout은 10 ms, 100 ms를 거쳐 wake-only infinite sleep으로 갑니다.</p></section>
+<p>현재도 eligible해야 live direct-victim waiter 하나에게 reserve할 수 있습니다. 결과와 무관하게 old FLUSHING generation을 끝내고 BCB flush waiter를 깨웁니다. work를 consume하면 다음 pause는 1 ms로 reset되고, 연속 idle timeout은 10 ms, 100 ms를 거쳐 wake-only infinite sleep으로 갑니다.</p>
+</section>
 
-<section class="section" id="cost"><div class="eyebrow">05 · 비용</div><h2>local traversal은 bounded이고 elapsed time은 WAL과 storage가 좌우합니다</h2>
+<section class="section" id="cost">
+<h2>탐색량과 I/O 대기 시간을 구분한다</h2>
+<p>후보를 찾는 작업량과 실제 경과 시간은 다릅니다. WAL, DWB, file I/O와 lock 대기가 완료 시간에 영향을 줍니다.</p>
+<details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
 <div class="table-scroll"><table><thead><tr><th>역할</th><th>Structural work</th><th>Wall-time 추가 요소</th></tr></thead><tbody><tr><td>Page-flush</td><td><code>O(T + L + K + C log C + C·N)</code></td><td>LRU/BCB contention, WAL, DWB, file I/O, scheduling</td></tr><tr><td>Post-flush</td><td><code>O(Q + S + F)</code></td><td>queue CAS, BCB/thread mutex, allocator와 flush waiter wake</td></tr></tbody></table></div>
-<p><code>T</code>는 thread-counter shard, <code>L</code>은 LRU, <code>K</code>는 inspected node, <code>C</code>는 candidate, <code>N</code>은 neighbor span, <code>Q</code>는 consumed BCB pointer, <code>S</code>는 stale allocator wait record, <code>F</code>는 flush waiter입니다.</p></section>
+<p><code>T</code>는 thread-counter shard, <code>L</code>은 LRU, <code>K</code>는 inspected node, <code>C</code>는 candidate, <code>N</code>은 neighbor span, <code>Q</code>는 consumed BCB pointer, <code>S</code>는 stale allocator wait record, <code>F</code>는 flush waiter입니다.</p>
+</details>
+</section>
 
 <section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>Queue에 들어간 BCB가 다시 dirty가 된 경우</h2><p>Page 제출 뒤 post-flush queue에 BCB가 들어갔지만, consumer 실행 전에 다른 thread가 다시 dirty로 만들었습니다. 이 frame을 allocator에 바로 넘길 수 있을까요?</p><details class="answer-disclosure"><summary>설명 펼치기</summary><p>아닙니다. Consumer는 BCB를 lock하고 현재 상태를 다시 검사합니다. 이전 FLUSHING generation을 끝내고 flush waiter를 깨우는 일과, 현재 clean하고 적격인 frame을 allocator에 예약하는 일은 별개입니다. Queue의 BCB pointer가 상태의 불변을 보장하지는 않습니다.</p></details></section>
-<section class="section" id="primary-reading"><div class="eyebrow">핵심 읽을거리</div><h2>selection과 completion을 별도 ownership step으로 trace합니다</h2><p>Pinned <code>page_buffer.c:3780–4169,10925–10952,15420–15589,16971–17204</code>를 읽습니다.</p><p><a href="../../reference/page-buffer-daemon-lifecycle-audit.md#2-pgbuf-page-flush-create-clean-replacement-supply">상세 lifecycle evidence 열기 →</a></p><p><a href="0006a-understand-page-buffer-daemons.html">← Lecture 6A</a> · <a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C로 계속 →</a></p></section>
-</article><nav class="lesson-nav" aria-label="Lesson 목차"><a href="#first-code-path">Page-flush: 사본 제출의 호출 경로</a><a href="#post-flush-code-path">Post-flush: 별도의 실행에서 처리 마치기</a><strong>Lecture map</strong><a href="#trigger">1. Trigger</a><a href="#selection">2. Selection</a><a href="#handoff">3. Handoff</a><a href="#post">4. Post-flush</a><a href="#cost">5. 비용</a><a href="#primary-reading">핵심 읽을거리</a><hr><a href="0006a-understand-page-buffer-daemons.html">Lecture 6A</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">과정 홈</a></nav></div>
+<section class="section" id="primary-reading">
+<h2>참고 자료</h2>
+<details class="technical-detail"><summary>소스와 참고 자료</summary><ul><li><a href="../../reference/page-buffer-daemon-lifecycle-audit.md#2-pgbuf-page-flush-create-clean-replacement-supply">상세 lifecycle evidence 열기 →</a></li></ul></details>
+</section>
+</article><nav class="lesson-nav" aria-label="Lesson 목차"><a href="#first-code-path">Page-flush: 사본 제출의 호출 경로</a><a href="#post-flush-code-path">Post-flush: 별도의 실행에서 처리 마치기</a><strong>Lecture map</strong><a href="#trigger">Timer와 frame 부족이 page-flush를 깨운다</a><a href="#selection">후보를 모은 뒤, 현재 상태와 WAL을 확인한다</a><a href="#handoff">Queue에는 페이지 내용이 아니라 BCB 포인터를 넘긴다</a><a href="#post">Post-flush가 실행될 때는 상태가 달라졌을 수 있다</a><a href="#cost">탐색량과 I/O 대기 시간을 구분한다</a><a href="#primary-reading">참고 자료</a><hr><a href="0006a-understand-page-buffer-daemons.html">Lecture 6A</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">과정 홈</a></nav></div>
 <footer class="footer">selection, generation submission, BCB completion, allocator reservation을 네 사건으로 구분하세요.</footer><nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0006a-understand-page-buffer-daemons.html">← Lecture 6A · Page-buffer daemon의 lifecycle</a><a rel="next" href="0006c-follow-maintenance-and-pacing.html">Lecture 6C · Replacement maintenance와 I/O pacing →</a></nav></main><nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 제어"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav>
 </body></html>

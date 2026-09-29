@@ -129,3 +129,14 @@ framework or SQL performance improvement is included. Future YCSB/sysbench
 improvement claims are bounded to tested conditions; customer-wide
 representativeness is not a prerequisite for this presentation and remains
 unestablished.
+
+## Presentation-focused editing (2026-09-30)
+
+The user confirmed that existing EN/KO pages used by the three-hour route should
+serve the live presentation directly. Core explanations, diagrams, concrete
+examples and representative function paths stay visible; optional implementation
+detail uses native disclosures. Document-use instructions, evidence-taxonomy
+lessons and assigned-reading directives leave these explanations. Necessary safety
+conditions remain beside the claims they qualify. The presenter uses the existing
+three-hour route as an index and opens each topic manually; the full curriculum's
+previous/next navigation remains unchanged. See the [editing decisions](presentation-friendly-design.md).

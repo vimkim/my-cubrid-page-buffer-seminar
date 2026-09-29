@@ -20,7 +20,7 @@
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="purpose">
-        <div class="eyebrow">01 · 한 가지 질문</div>
+
         <h2>Page miss에 frame이 필요할 때 어디서 가져올까요?</h2>
         <p>사용하지 않은 BCB/frame pair가 INVALID list에 있으면 CUBRID가 그것을 꺼냅니다. Resident page를 제거하지 않습니다. INVALID가 비어야만 LRU의 차가운 끝에서 안전하게 replace할 resident page를 찾습니다.</p>
         <p class="big-claim">Replacement는 고정된 BCB/frame pair 안의 VPID와 bytes를 바꿉니다. Pair를 새로 만들거나 BCB A를 다른 frame으로 바꾸지 않습니다.</p>
@@ -28,7 +28,7 @@
       </section>
 
       <section class="section" id="states">
-        <div class="eyebrow">02 · 다섯 가지 list-membership 상태</div>
+
         <h2>VOID BCB는 모든 management list 밖에 있습니다</h2>
         <img class="diagram" src="../../assets/bcb-replacement-state-machine.svg" alt="BCB 하나가 INVALID, VOID, LRU1, LRU2, LRU3와 보호된 detach 및 rebind를 거치는 그림">
         <div class="table-scroll"><table><thead><tr><th>상태</th><th>쉬운 의미</th><th>Victim search 여부</th></tr></thead><tbody>
@@ -39,7 +39,7 @@
           <tr><td><code>LRU3</code></td><td>차가운 부분이며 ordinary victim search가 보는 유일한 zone입니다.</td><td>예. 그러나 safety check가 모든 node를 거부할 수 있습니다.</td></tr>
         </tbody></table></div>
         <p>새로 load한 resident page는 첫 fix가 끝날 때까지 계속 VOID일 수 있습니다. VPID가 resident hash에 이미 들어 있고 <code>fcnt</code>가 양수일 수도 있습니다. VOID만으로 identity, ownership, dirty state, overwrite 가능 여부는 알 수 없습니다. <code>prev_BCB</code>/<code>next_BCB</code>가 현재 INVALID나 LRU에 BCB를 연결하지 않는다는 뜻뿐입니다.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:174–216,5559–5667,6636–6994,8904–8952,15860–15986</code>.</p>
+        <p class="source-note"><strong>소스:</strong> <code>page_buffer.c:174–216,5559–5667,6636–6994,8904–8952,15860–15986</code>.</p>
       </section>
 
       <section class="section" id="textbook-vs-cubrid">
@@ -54,7 +54,7 @@
           <tr><th scope="row">어디서 victim을 찾나?</th><td>하나의 순서에서 가장 오래된 끝.</td><td>Quota와 후보 광고 정보를 이용해 private/shared 리스트를 선택한 뒤, 선택한 리스트 안에서 제한된 범위를 검색합니다.</td></tr>
           <tr><th scope="row">어떤 관리 비용이 드나?</th><td>정확한 접근 순서를 유지합니다. O(1) metadata 갱신에도 작업과 동기화 비용은 있습니다.</td><td>조건부 재연결에 더해 zone·domain·quota·후보 정보를 관리합니다. 어느 정책도 공짜이거나 항상 더 빠르지는 않습니다.</td></tr>
         </tbody></table></div>
-        <p class="source-note">Verified mechanism / Implementation policy: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6675-L6845">해제와 zone 분기</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9250">리스트 선택</a>. 특정 리비전의 비교이며 runtime 측정 결과가 아닙니다.</p>
+        <p class="source-note">Verified mechanism / 소스: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6675-L6845">해제와 zone 분기</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9250">리스트 선택</a>. 특정 리비전의 비교이며 runtime 측정 결과가 아닙니다.</p>
       </section>
 
       <section class="section" id="lru-hit-comparison" data-audience-checkpoint>
@@ -100,16 +100,18 @@
       </section>
 
       <section class="section" id="lru-tradeoffs">
-        <h2>덜 정확한 순서는 절충이지 성능 우위의 증거가 아니다</h2>
+
+        <h2>순서 갱신을 줄이는 이유와 남는 비용</h2>
         <p>R/P 예제는 정확한 recency 순서를 유지할 때 필요한 재연결을 생략합니다. 동시 접근에서는 공유 metadata의 재연결을 조율하는 비용도 고려해야 합니다. 고정 소스의 주석은 LRU1 항목을 제자리에 두는 이유로 성능상의 의도를 명시합니다. 하지만 그 주석은 benchmark 결과가 아닙니다.</p>
         <p>CUBRID도 BCB 동기화, 조건부 리스트 갱신, 경계 관리, activity/quota 집계, 후보 검색 비용을 지불합니다. 여러 리스트가 일부 metadata 작업을 분산할 수는 있지만 경합을 없애지는 않습니다. Exact LRU와 CUBRID가 다른 victim을 선택할 수 있으므로 순서 관리 작업을 줄이는 대신 miss 양상이 달라질 수 있습니다. 전체 효과는 workload에 따라 측정해야 합니다.</p>
         <p><strong>CUBRID가 항상 더 빠르거나, scan의 영향을 받지 않거나, 최적이거나, starvation이 없다고 결론 내리면 안 됩니다.</strong> 이 baseline의 AOUT은 비활성이므로 “CUBRID는 2Q다”도 충분한 설명이 아닙니다. 기존 quota·검색·진행의 불확실성은 근거 레지스트리에 남아 있으며, 이 설명이 해결한 것은 아닙니다.</p>
         <p class="source-note"><a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6719-L6720">LRU1 유지의 성능 의도를 설명한 주석</a> · <a href="../../reference/replacement-policy-quantities-and-costs.md">비용과 수량의 정본 설명</a> · <a href="../../unresolved-or-version-sensitive-findings.md">버전별 불확실성</a> · <a href="../reference/lru-worked-example.html#policy-proposal">즉시 승격 제안을 검토하는 정책 방어 연습</a>.</p>
-      </section>
+
+</section>
 
       <section class="section" id="trip">
         <p><a href="../reference/lru-worked-example.html#snapshot">구체적인 수치와 소스 확인 지점으로 최초 배치와 재접근 따라가기 →</a></p>
-        <div class="eyebrow">03 · BCB 하나의 전체 여정</div>
+
         <h2>List pressure가 BCB A를 점진적으로 차갑게 만듭니다</h2>
         <img class="diagram" src="../../assets/replacement-lifecycle-quantities.svg" alt="하나의 BCB가 pool 초기화, 첫 사용, LRU resident 상태와 replacement pressure를 거치는 그림">
         <ol>
@@ -126,7 +128,7 @@
 
       <section class="section" id="decision">
         <p><a href="../reference/lru-worked-example.html#reuse-reject">후보 거절 예측</a> · <a href="../reference/lru-worked-example.html#reuse-safe">보호된 C50/Q → C50/T 재사용 추적</a></p>
-        <div class="eyebrow">04 · BCB A가 victim이 될까요?</div>
+
         <h2>LRU3에 있는 것 외에도 모든 현재 상태가 안전해야 합니다</h2>
         <img class="diagram" src="../../assets/one-bcb-victim-decision.svg" alt="LRU3 BCB 하나를 건너뛰거나 victim으로 detach하는 판단 과정">
         <div class="table-scroll"><table><thead><tr><th>현재 BCB A</th><th>현재 결과</th><th>이유</th></tr></thead><tbody>
@@ -141,11 +143,11 @@
           <tr><td>Clean하고 idle인 LRU3, flag/waiter 없음, mutex와 protected recheck 성공</td><td><strong>A를 detach</strong></td><td>BCB mutex를 유지하며 A가 LRU3 → VOID로 바뀝니다.</td></tr>
         </tbody></table></div>
         <p><code>pgbuf_get_victim_from_lru_list()</code>는 이미 선택된 LRU index 하나를 받습니다. <code>victim_hint</code> 또는 bottom에서 시작해 <code>prev_BCB</code>를 따라 최대 1,000개의 BCB node를 봅니다. 1,000개 list나 모든 transaction을 순회하는 것이 아닙니다. Private threshold demotion <code>D</code>는 이 bounded walk 전에 일어날 수 있습니다.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:221–263,9256–9538,16217–16228</code>.</p>
+        <p class="source-note"><strong>소스:</strong> <code>page_buffer.c:221–263,9256–9538,16217–16228</code>.</p>
       </section>
 
       <section class="section" id="private">
-        <div class="eyebrow">05 · Private는 policy domain</div>
+
         <h2>List membership은 transaction ownership이 아닙니다</h2>
         <p>Session은 이미 존재하는 private-list ID 하나를 빌릴 뿐 private cache를 받는 것이 아닙니다. 여러 session이 list를 공유할 수 있고, 다른 domain이 그 BCB를 fix할 수 있으며, assignment를 release해도 BCB를 비우지 않습니다.</p>
         <p><a href="0012b-understand-private-lru-index.html">기본값이 152인 이유, local/full index 범위, assignment lifetime, movement, activity와 정확한 private/shared victim-search 순서는 Lecture 12B에서 계속 확인하세요 →</a></p>
@@ -153,17 +155,17 @@
 
       <section class="section" id="progress">
         <p><a href="../reference/lru-worked-example.html#reuse-flush">G와 G+1 완료 비교</a> · <a href="../reference/lru-worked-example.html#reuse-direct">reservation, 취소, retry 예측</a></p>
-        <div class="eyebrow">06 · 안전한 victim이 없을 때</div>
+
         <h2>CUBRID는 BCB가 안전해질 때까지 기다립니다</h2>
         <img class="diagram" src="../../assets/allocation-progress.svg" alt="INVALID list부터 victim search, direct-victim wait, retry, timeout과 error까지의 allocation 흐름">
         <p>INVALID가 비었고 normal search도 실패하면 <code>pgbuf_allocate_bcb()</code>는 direct-victim waiter queue에 들어가 flush daemon을 깨울 수 있습니다. Producer가 BCB를 clean한 뒤 reserve할 수 있습니다. 소비하기 전에 다른 fix가 접근하면 reservation을 취소하고 allocator가 retry합니다.</p>
         <p>DIRTY LRU3 BCB는 WAL-safe page write가 완료된 뒤에야 재사용할 수 있습니다. Write 중에는 <code>FLUSHING</code>이 replacement를 계속 막습니다. Page가 generation G+1로 다시 dirty해지면 그 새 debt가 direct assignment를 막습니다.</p>
         <p>모든 allocation path는 assignment, retry, interrupt, timeout, explicit error 중 하나로 끝납니다. <code>ER_PB_ALL_BUFFERS_DIRTY</code>는 fallback error 이름이며 모든 BCB가 실제로 dirty였음을 증명하지 않습니다. Source는 특정 waiter의 wall-clock fairness를 증명하지 않습니다.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:8181–8403,9067–9253,10925–10952,15420–15652,16972–17255</code>.</p>
+        <p class="source-note"><strong>소스:</strong> <code>page_buffer.c:8181–8403,9067–9253,10925–10952,15420–15652,16972–17255</code>.</p>
       </section>
 
       <section class="section" id="practice" data-audience-checkpoint>
-        <div class="eyebrow">07 · 이해 확인</div>
+
         <h2>지금 BCB A를 재사용할 수 있을까요?</h2>
         <p>A가 INVALID에 있는 상태에서 시작합니다. Page P를 A에 load하고 final-unfix한 뒤 LRU3까지 demote합니다. 그리고 A가 clean·idle인 경우, A가 DIRTY인 경우, scan 직전에 다른 thread가 A를 fix한 경우를 각각 생각해 보세요. 현재 list/zone, 처음 거부하는 field나 lock, A를 page Q에 rebind하기 전에 필요한 event를 말해 보세요.</p>
         <details class="answer-disclosure"><summary>설명 펼치기</summary><div class="callout"><strong>Model spine:</strong> INVALID는 victimization을 피함 → VOID는 unlinked이지 free라는 뜻이 아님 → LRU3만 search → flags/owners/waiters/try-lock/final recheck가 결정 → VOID detach가 hash removal보다 먼저 → 고정된 pair가 Q를 받음.</div></details>
@@ -171,20 +173,17 @@
 
 <section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>Fix가 없어도 dirty인 page</h2><p>BCB의 fix count는 0이고 LRU3에 있지만 DIRTY 상태입니다. Allocator가 즉시 재사용해도 될까요?</p><details class="answer-disclosure"><summary>설명 펼치기</summary><p>안 됩니다. Fix count 0과 LRU3 소속은 필요한 검사일 뿐 충분한 안전성 증명이 아닙니다. Dirty byte를 버릴 수 없으며, victim 선택에는 현재 flag, owner, waiter와 보호된 상태의 검사도 필요합니다. 안전한 frame이 생기려면 flush와 재시도가 필요할 수 있습니다.</p></details></section>
       <section class="section" id="primary-reading">
-        <div class="eyebrow">핵심 읽을거리</div>
-        <h2>먼저 네 함수만 따라가세요</h2>
-        <p><code>pgbuf_allocate_bcb()</code>, <code>pgbuf_get_victim()</code>, <code>pgbuf_get_victim_from_lru_list()</code>, <code>pgbuf_victimize_bcb()</code>를 읽습니다. 그다음 Lecture 12B에서 index와 list-selection model을 보거나 canonical Markdown에서 전체 policy와 cost map을 확인합니다.</p>
-        <p><a href="../../advanced/replacement-progress.md">Canonical replacement page 열기 →</a></p>
-        <p><a  href="0007-replace-one-frame.html">← 이전 강의 7</a> · <a href="0012b-understand-private-lru-index.html">Lecture 0012B: private LRU index로 계속 →</a></p>
-      </section>
+<h2>참고 자료</h2>
+<details class="technical-detail"><summary>소스와 참고 자료</summary><ul><li><a href="../../advanced/replacement-progress.md">Canonical replacement page 열기 →</a></li></ul></details>
+</section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson 목차">
       <strong>Lecture map</strong>
-      <a href="#purpose">1. 왜 replace할까?</a><a href="#states">2. INVALID와 VOID</a>
-      <a href="#textbook-vs-cubrid">교과서 LRU와 CUBRID</a><a href="#lru-hit-comparison">P hit의 순서 비교</a><a href="#lru-conditional-movement">조건부 이동</a><a href="#lru-policy-layers">서로 다른 세 결정</a><a href="#lru-tradeoffs">비용과 한계</a><a href="#trip">3. BCB 하나의 lifetime</a>
-      <a href="#decision">4. Victim scenario</a><a href="#private">5. Private-domain 연결</a><a href="#progress">6. 안전한 victim 없음</a>
-      <a href="#practice">7. 이해 확인</a><a href="#primary-reading">핵심 읽을거리</a>
+      <a href="#purpose">Page miss에 frame이 필요할 때 어디서 가져올까요?</a><a href="#states">VOID BCB는 모든 management list 밖에 있습니다</a>
+      <a href="#textbook-vs-cubrid">왜 CUBRID의 LRU는 교과서의 exact LRU와 다를까?</a><a href="#lru-hit-comparison">P에 다시 접근하면 R 앞으로 갈까?</a><a href="#lru-conditional-movement">Final unfix는 무조건 이동이 아니라 판단 시점이다</a><a href="#lru-policy-layers">배치, 검색, 안전한 재사용은 서로 다른 결정이다</a><a href="#lru-tradeoffs">순서 갱신을 줄이는 이유와 남는 비용</a><a href="#trip">List pressure가 BCB A를 점진적으로 차갑게 만듭니다</a>
+      <a href="#decision">LRU3에 있는 것 외에도 모든 현재 상태가 안전해야 합니다</a><a href="#private">List membership은 transaction ownership이 아닙니다</a><a href="#progress">CUBRID는 BCB가 안전해질 때까지 기다립니다</a>
+      <a href="#practice">지금 BCB A를 재사용할 수 있을까요?</a><a href="#primary-reading">참고 자료</a>
       <hr>
       <a href="0012b-understand-private-lru-index.html">Private-LRU lecture →</a>
       <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a><a href="../index.html">과정 홈</a>

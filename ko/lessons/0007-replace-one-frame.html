@@ -22,7 +22,7 @@
 <section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><h2>정책은 후보를 고르고, 보호 절차는 재사용을 허용한다</h2><p>교체에는 두 질문이 있다. 어느 resident page를 내보내는 편이 유리한가? 어느 frame을 지금 안전하게 재사용할 수 있는가? CUBRID에서는 배치, domain 선택, LRU3 탐색, 보호 아래의 적격성 검사가 나뉜다. 선호 정책이 없으면 안전하게 교체하더라도 유용한 page를 버릴 수 있다. 안전 검사가 없으면 정책상 좋은 후보도 위험하다.</p><p><strong>구성 예제:</strong> invalid list가 비어 있다. 선택한 LRU3를 탐색하다 A, B를 차례로 만난다. A는 dirty이고, B는 clean이며 fix count가 0이고 waiter나 avoid-victim 상태가 없다. A는 건너뛴다. B도 try-lock에 성공하고 보호 아래 재검사를 통과해야 재사용할 수 있다. 다른 thread가 먼저 B를 fix했다면 B 역시 건너뛴다. 이것은 선택된 list 하나의 탐색 예시이며, CUBRID를 frame 세 개로 구성했다는 뜻이 아니다.</p><p>Victim 확보에 성공하면 기존 resident mapping을 제거한 뒤 요청한 page를 그 자리에 연결한다. 메모리 mapping 제거가 disk page 삭제는 아니다. 안전한 후보가 없으면 사용 반납, cleaning, 재시도, 지원되는 direct-victim 전달 등 다른 진행 경로가 필요하다.</p></section>
 
       <section class="section" id="story">
-        <div class="eyebrow">01 · 필요한 이유부터 시작</div>
+
         <h2>Page miss가 나면 incoming bytes를 담을 slot이 필요합니다</h2>
         <p>Page B를 요청했지만 resident가 아니라고 합시다. Page buffer에는 B를 담을 BCB/frame slot 하나가 필요합니다.</p>
         <ol>
@@ -32,12 +32,15 @@
           <li><strong>Detach한 뒤 rebind합니다.</strong> 이전 mapping을 안전하게 제거하고 나면 같은 BCB/frame slot에 B를 load할 수 있습니다.</li>
         </ol>
         <p class="big-claim">Replacement는 “가장 오래된 page를 찾기”가 아닙니다. “충분히 오래되었고 지금 재사용해도 안전한 page를 찾기”입니다.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8235"><code>pgbuf_allocate_bcb()</code></a>가 invalid-list first, LRU victim search second 순서를 설명하고 구현합니다.</p>
+        <p class="source-note"><strong>소스:</strong> pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8235"><code>pgbuf_allocate_bcb()</code></a>가 invalid-list first, LRU victim search second 순서를 설명하고 구현합니다.</p>
       </section>
 
       <section class="section" id="structures-cost">
-        <div class="eyebrow">01A · 자료구조와 비용</div>
-        <h2>“Invalid list를 시도한다”는 linked-list head 하나를 pop한다는 뜻입니다</h2>
+<h2>후보 검색의 자료구조와 비용</h2>
+<p>빈 자리는 invalid list에서 먼저 찾습니다. 없으면 선택한 LRU의 LRU3를 탐색합니다. 최대 1,000개라는 제한은 선택한 리스트 한 번의 탐색에 적용되며 전체 할당 시간의 상한이 아닙니다.</p>
+<details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
+
+
         <img class="diagram" src="../../assets/replacement-data-structures.svg" alt="BCB table array, singly linked invalid list, bounded doubly linked LRU scan, hash removal, page read, new mapping publication의 관계도">
         <p class="caption">Array는 storage를 소유하고 invalid/LRU link는 runtime에 그 stable BCB slot의 일부를 조직합니다.</p>
         <p>Startup에서 <code>BCB_table</code>을 contiguous array로 할당합니다. Initialization이 각 slot의 <code>next_BCB</code>를 다음 slot에 연결하므로 최초 invalid list 구성은 한 번의 <code>O(N)</code>입니다. Runtime allocation path가 이 array loop를 반복하지는 않습니다.</p>
@@ -71,18 +74,25 @@
         <p>Higher-level policy는 caller의 private LRU, advertise된 다른 private list, advertise된 shared list, 마지막 own-list fallback에 대해 selected-list 호출을 여러 번 할 수 있습니다. 호출마다 새로운 1,000-node budget을 가집니다. 선택한 private list가 over quota이면 scan 전에 boundary node <code>M</code>개를 demote할 수도 있는데, 이 작업은 <code>MAX_DEPTH</code> 밖입니다. 따라서 helper 전체는 <code>O(M + K)</code>, linked-list scan 자체는 bounded <code>O(K)</code>입니다.</p>
         <div class="callout"><strong>다른 1,000과 혼동하지 마세요.</strong> Pinned source는 명시적인 <em>shared</em> <code>num_LRU_chains</code>를 1,000으로 제한하고 자동 shared list 하나당 buffer 약 1,000개를 목표로 합니다. 어느 쪽도 private LRU 개수의 상한이 아닙니다.</div>
         <div class="callout"><strong>“얼마나 오래”에 관하여:</strong> pinned source에는 operation bound가 있지만 보정된 nanosecond 값은 없습니다. <code>PSTAT_PB_ALLOC_BCB</code>, <code>PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM</code>, list-search timer, condition-wait time을 기록합니다. Target workload에서는 이 counter나 focused benchmark를 사용해야 하며 Big-O를 latency claim으로 바꾸면 안 됩니다.</div>
-        <p class="source-note"><strong>Verified mechanism:</strong> BCB array construction과 initial link는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>page_buffer.c:5559–5660</code></a>, invalid-list structure와 head initialization은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L626-L634"><code>626–634</code></a>와 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5907-L5919"><code>5907–5919</code></a>, constant-time pop/push는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8905-L8983"><code>8905–8983</code></a>, bounded LRU scan과 pre-scan adjustment는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9327-L9537"><code>9327–9537</code></a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9984-L10048"><code>9984–10048</code></a>, private count는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L13941-L13985"><code>13941–13985</code></a>에 있습니다.</p>
-      </section>
+        <p class="source-note"><strong>소스:</strong> BCB array construction과 initial link는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>page_buffer.c:5559–5660</code></a>, invalid-list structure와 head initialization은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L626-L634"><code>626–634</code></a>와 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5907-L5919"><code>5907–5919</code></a>, constant-time pop/push는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8905-L8983"><code>8905–8983</code></a>, bounded LRU scan과 pre-scan adjustment는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9327-L9537"><code>9327–9537</code></a>과 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9984-L10048"><code>9984–10048</code></a>, private count는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L13941-L13985"><code>13941–13985</code></a>에 있습니다.</p>
+
+</details>
+</section>
 
       <section class="section" id="aout">
-        <div class="eyebrow">01B · 별도 historical topic</div>
-        <h2>비활성 AOUT 이력은 강의 12A에서 다루는 필수 학습 주제입니다</h2>
+<h2>이 리비전에서는 AOUT가 꺼져 있다</h2>
+<p>AOUT 이력을 사용하는 코드가 남아 있어도, 이 리비전은 설정값을 0으로 강제합니다. 따라서 현재 동작을 활성 2Q 알고리즘으로 설명하지 않습니다.</p>
+<details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
+
+
         <p>Pinned startup path는 AOUT을 강제로 끄므로 여기서 배우는 active safety path에 포함되지 않습니다. Lecture 0012A가 ghost-entry structure, dormant admission branch, historical disablement, revival boundary를 담당합니다.</p>
         <p><a href="0012a-understand-aout-ghost-history.html">Lecture 0012A: 비활성 AOUT ghost history 열기 →</a></p>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="slot">
-        <div class="eyebrow">02 · 재사용되는 것 이해하기</div>
+
         <h2>Slot은 그대로 있고 page identity가 바뀝니다</h2>
         <p>BCB는 frame 하나와 짝을 이루는 reusable descriptor입니다. Pool 안에서 두 address는 안정적입니다. 현재 resident page는 <code>bcb-&gt;vpid</code>가 이름 붙이며, 이 identity는 통제된 detach/load sequence를 거쳐 바뀝니다.</p>
         <div class="table-scroll"><table>
@@ -97,8 +107,9 @@
       </section>
 
       <section class="section" id="gate">
-        <div class="eyebrow">03 · Safety gate 사용하기</div>
-        <h2>재사용 전에 쉬운 질문 네 개를 합니다</h2>
+
+
+        <h2>오래된 후보라도 안전해야 재사용한다</h2>
         <img class="diagram" src="../../assets/victim-eligibility.svg" alt="ownership, dirty와 flushing state, waiter와 transient flag를 확인하고 victim 선택 전에 protected revalidation을 거치는 safety gate">
         <p class="caption">LRU position은 candidate를 제안할 뿐이며 safety gate를 무시하게 해 주지 않습니다.</p>
         <div class="table-scroll"><table>
@@ -111,11 +122,13 @@
           </tbody>
         </table></div>
         <div class="callout warn"><strong>버려야 할 shortcut:</strong> <code>fcnt == 0</code>은 “현재 count된 fixer가 없다”만 뜻합니다. Clean, not flushing, no waiters, safely detached까지 한꺼번에 뜻하지 않습니다.</div>
-      </section>
+
+</section>
 
       <section class="section" id="handoff-details">
-        <div class="eyebrow">04 · Race 닫기</div>
-        <h2>싸게 scan한 뒤 destructive decision은 lock 아래에서 내립니다</h2>
+
+
+        <h2>후보를 찾은 뒤 보호 아래에서 다시 확인한다</h2>
         <ol>
           <li>LRU mutex가 list를 안정시킨 동안 scanner가 가능성 있는 candidate를 찾습니다.</li>
           <li><code>PGBUF_BCB_TRYLOCK()</code>이 그 BCB를 보호하려고 시도합니다. LRU mutex를 가진 채 기다리지 않으며, 실패하면 candidate를 건너뜁니다.</li>
@@ -123,11 +136,12 @@
           <li>통과한 candidate만 LRU에서 제거합니다. Victimization/rebind가 exclusive handoff를 갖도록 BCB lock을 유지한 채 반환합니다.</li>
         </ol>
         <p>왜 두 번 확인할까요? 첫 read는 <em>hint</em>입니다. 그 read와 BCB lock 사이에 다른 thread가 page를 fix하거나 flush를 시작할 수 있습니다. Protected read가 실제 decision입니다. 사실이 바뀌었으면 건너뛰고 계속 찾습니다.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> victim predicate는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9265-L9325"><code>page_buffer.c:9265–9325</code></a>, scan, try-lock, protected recheck, detach, locked return은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>9399–9478</code></a>에 있습니다.</p>
-      </section>
+        <p class="source-note"><strong>소스:</strong> victim predicate는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9265-L9325"><code>page_buffer.c:9265–9325</code></a>, scan, try-lock, protected recheck, detach, locked return은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>9399–9478</code></a>에 있습니다.</p>
+
+</section>
 
       <section class="section" id="no-victim">
-        <div class="eyebrow">05 · 안전한 slot이 없을 때</div>
+
         <h2>Allocator는 재사용 가능한 BCB가 생길 때까지 기다립니다</h2>
         <p>모든 candidate가 fixed, dirty, flushing, waiting 또는 다른 handoff 상태라면 victim search는 아무것도 반환하지 않습니다. Flush는 dirty candidate를 clean하게 만들 수 있고 unfix는 ownership을 끝낼 수 있습니다. Server mode에서 allocating thread는 direct-assigned victim을 기다릴 수 있고, 소비 전에 그 candidate가 다시 fixed되면 재시도합니다.</p>
         <p>LRU policy는 안전한 candidate 중 무엇을 선호하고 어떻게 progress를 만들지 결정합니다. Revision마다 바뀔 수 있습니다. Safety rule은 바뀌지 않습니다. Successful fixer나 incomplete flush generation이 slot rebind 뒤까지 살아남아서는 안 됩니다.</p>
@@ -139,12 +153,13 @@
             <tr><td>Flush와 direct-victim progress</td><td>첫 search에서 아무것도 못 찾았을 때 eligible slot이 생기도록 돕습니다.</td></tr>
           </tbody>
         </table></div>
-        <p class="source-note"><strong>Implementation policy:</strong> wait/retry는 pinned <code>page_buffer.c:8236–8403</code>에 있습니다. 자세한 LRU lifetime, quota, direct-victim behavior는 이 첫 mental model이 아니라 아래 Core와 Advanced 문서가 담당합니다.</p>
+        <p class="source-note"><strong>소스:</strong> wait/retry는 pinned <code>page_buffer.c:8236–8403</code>에 있습니다. 자세한 LRU lifetime, quota, direct-victim behavior는 이 첫 mental model이 아니라 아래 Core와 Advanced 문서가 담당합니다.</p>
       </section>
 
       <section class="section" id="verbs">
-        <div class="eyebrow">06 · replacement 동사 구분하기</div>
-        <h2>Unfix, flush, victimize는 서로 다른 debt를 끝냅니다</h2>
+
+
+        <h2>Unfix·flush·교체는 각각 다른 일이다</h2>
         <div class="table-scroll"><table>
           <thead><tr><th>Operation</th><th>끝나는 것</th><th>남을 수 있는 것</th></tr></thead>
           <tbody>
@@ -153,10 +168,11 @@
             <tr><td>Victimize</td><td>모든 safety condition을 통과한 뒤의 old resident mapping.</td><td>Logical page는 storage에 계속 존재합니다.</td></tr>
           </tbody>
         </table></div>
-      </section>
+
+</section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · 함께 생각하기</div>
+
         <h2>가능한 candidate 하나를 고릅니다</h2>
         <div class="quiz" data-audience-checkpoint>
           <h3>문제</h3>
@@ -169,26 +185,23 @@
       </section>
 
       <section class="section" id="primary-reading">
-        <div class="eyebrow">필수 읽기</div>
-        <h2>Candidate 하나를 scan부터 detach까지 추적합니다</h2>
-        <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>page_buffer.c:9399–9478</code></a>을 읽고 cheap prefilter, BCB try-lock, protected victimizable check, LRU removal 네 지점을 표시하세요.</p>
-        <p><a href="../../learning/05-replace-one-frame.md">Canonical replacement chapter 열기 →</a> · <a href="../../advanced/replacement-progress.md">Advanced progress detail 열기 →</a></p>
-        <p><a  href="0006c-follow-maintenance-and-pacing.html">← 이전 강의 6C</a> · <a  href="0012-prove-replacement-progress.html">다음: 강의 12 →</a></p>
-      </section>
+<h2>참고 자료</h2>
+<details class="technical-detail"><summary>소스와 참고 자료</summary><ul><li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>page_buffer.c:9399–9478</code></a></li><li><a href="../../learning/05-replace-one-frame.md">Canonical replacement chapter 열기 →</a></li><li><a href="../../advanced/replacement-progress.md">Advanced progress detail 열기 →</a></li></ul></details>
+</section>
     </article>
 
     <nav class="lesson-nav" aria-label="강의 목차"><a href="#first-principles">정책은 후보를 고르고, 보호 절차는 재사용을 허용한다</a>
       <strong>강의 지도</strong>
-      <a href="#story">1. Slot이 필요한 이유</a>
-      <a href="#structures-cost">1A. 자료구조와 비용</a>
-      <a href="#aout">1B. AOUT 안내</a>
-      <a href="#slot">2. 재사용되는 것</a>
-      <a href="#gate">3. Safety 질문 네 개</a>
-      <a href="#handoff-details">4. Protected recheck</a>
-      <a href="#no-victim">5. 안전한 slot 없음</a>
-      <a href="#verbs">6. 동사 세 개</a>
-      <a href="#retrieval">7. Candidate 선택</a>
-      <a href="#primary-reading">필수 읽기</a>
+      <a href="#story">Page miss가 나면 incoming bytes를 담을 slot이 필요합니다</a>
+      <a href="#structures-cost">후보 검색의 자료구조와 비용</a>
+      <a href="#aout">이 리비전에서는 AOUT가 꺼져 있다</a>
+      <a href="#slot">Slot은 그대로 있고 page identity가 바뀝니다</a>
+      <a href="#gate">오래된 후보라도 안전해야 재사용한다</a>
+      <a href="#handoff-details">후보를 찾은 뒤 보호 아래에서 다시 확인한다</a>
+      <a href="#no-victim">Allocator는 재사용 가능한 BCB가 생길 때까지 기다립니다</a>
+      <a href="#verbs">Unfix·flush·교체는 각각 다른 일이다</a>
+      <a href="#retrieval">가능한 candidate 하나를 고릅니다</a>
+      <a href="#primary-reading">참고 자료</a>
       <hr>
       <a href="../reference/replacement-safety-card.html">Replacement-safety card</a>
       <a href="../../learning/05-replace-one-frame.md">Canonical Core 문서</a>

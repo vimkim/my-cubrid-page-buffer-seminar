@@ -20,7 +20,7 @@
   <div class="lesson-grid">
     <article class="lesson-main">
       <section class="section" id="purpose">
-        <div class="eyebrow">01 · The one question</div>
+
         <h2>A page miss needs a frame; where does that frame come from?</h2>
         <p>If an unused BCB/frame pair exists on the INVALID list, CUBRID pops it. No resident page is removed. Only after INVALID is empty does CUBRID search the cold end of an LRU for a resident page that is safe to replace.</p>
         <p class="big-claim">Replacement changes the VPID and bytes inside a fixed BCB/frame pair. It does not manufacture a new pair and does not swap BCB A to another frame.</p>
@@ -28,7 +28,7 @@
       </section>
 
       <section class="section" id="states">
-        <div class="eyebrow">02 · Five list-membership states</div>
+
         <h2>VOID means the BCB is outside every management list</h2>
         <img class="diagram" src="../../assets/bcb-replacement-state-machine.svg" alt="One BCB moving through INVALID, VOID, LRU1, LRU2, LRU3, protected detach, and rebind">
         <div class="table-scroll"><table><thead><tr><th>State</th><th>Plain meaning</th><th>Victim search?</th></tr></thead><tbody>
@@ -39,7 +39,7 @@
           <tr><td><code>LRU3</code></td><td>Cold part and the only ordinary victim-search zone.</td><td>Yes, but safety checks may reject every node.</td></tr>
         </tbody></table></div>
         <p>A newly loaded resident page can remain VOID during its entire first fix. Its VPID may already be in the resident hash and its <code>fcnt</code> may be positive. VOID says nothing about identity, ownership, dirty state, or whether overwriting is legal. It says only that <code>prev_BCB</code>/<code>next_BCB</code> do not currently link the BCB into INVALID or an LRU.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:174–216,5559–5667,6636–6994,8904–8952,15860–15986</code>.</p>
+        <p class="source-note"><strong>Source:</strong> <code>page_buffer.c:174–216,5559–5667,6636–6994,8904–8952,15860–15986</code>.</p>
       </section>
 
       <section class="section" id="textbook-vs-cubrid">
@@ -54,7 +54,7 @@
           <tr><th scope="row">Where is a victim sought?</th><td>The oldest end of that one order.</td><td>Private/shared selection uses quota and advertised candidates before a bounded scan of one chosen list.</td></tr>
           <tr><th scope="row">What must be maintained?</th><td>Exact access ordering; even O(1) metadata updates and their synchronization have costs.</td><td>Conditional relinking plus zone, domain, quota and candidate metadata. Neither policy is free or universally faster.</td></tr>
         </tbody></table></div>
-        <p class="source-note">Verified mechanism / Implementation policy: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6675-L6845">release and zone branches</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9250">list selection</a>. This is a revision-bound comparison, not a runtime measurement.</p>
+        <p class="source-note">Verified mechanism / Source: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6675-L6845">release and zone branches</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9250">list selection</a>. This is a revision-bound comparison, not a runtime measurement.</p>
       </section>
 
       <section class="section" id="lru-hit-comparison" data-audience-checkpoint>
@@ -100,16 +100,18 @@
       </section>
 
       <section class="section" id="lru-tradeoffs">
-        <h2>Less exact ordering is a trade-off, not a performance verdict</h2>
+
+        <h2>Why reduce ordering updates, and what costs remain?</h2>
         <p>The R/P example avoids the relink needed to maintain exact recency. With concurrent access, relinking shared metadata also requires coordination. The pinned source explicitly describes keeping an LRU1 member in place as a performance intention; that comment is not a benchmark result.</p>
         <p>CUBRID still pays for BCB synchronization, conditional list updates, boundaries, activity/quota accounting and candidate scans. Multiple lists can distribute some metadata work but do not eliminate contention. Exact LRU and CUBRID can choose different victims, so reduced ordering work may trade against different miss behavior. The net effect depends on the workload and must be measured.</p>
         <p><strong>Do not conclude that CUBRID is always faster, scan-proof, optimal or starvation-free.</strong> At this baseline AOUT is dormant, so “CUBRID is 2Q” is also not an adequate description. Existing quota/search/progress uncertainties remain in the evidence registry; the explanation does not resolve them.</p>
         <p class="source-note"><a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6719-L6720">Source comment about LRU1 performance intention</a> · <a href="../../reference/replacement-policy-quantities-and-costs.md">canonical costs and quantities</a> · <a href="../../unresolved-or-version-sensitive-findings.md">version-sensitive findings</a> · <a href="../reference/lru-worked-example.html#policy-proposal">test the idea of immediate promotion in the policy-defense exercise</a>.</p>
-      </section>
+
+</section>
 
       <section class="section" id="trip">
         <p><a href="../reference/lru-worked-example.html#snapshot">Work through admission and reuse with explicit counts and source checkpoints →</a></p>
-        <div class="eyebrow">03 · One BCB's complete trip</div>
+
         <h2>BCB A can age without a clock ticking it down</h2>
         <img class="diagram" src="../../assets/replacement-lifecycle-quantities.svg" alt="Pool initialization, first use, LRU residency, and replacement pressure across one BCB lifetime">
         <ol>
@@ -126,7 +128,7 @@
 
       <section class="section" id="decision">
         <p><a href="../reference/lru-worked-example.html#reuse-reject">Predict rejected candidates</a> · <a href="../reference/lru-worked-example.html#reuse-safe">Trace protected C50/Q → C50/T reuse</a></p>
-        <div class="eyebrow">04 · Will BCB A be a victim?</div>
+
         <h2>LRU3 is only the first eligibility checkpoint</h2>
         <img class="diagram" src="../../assets/one-bcb-victim-decision.svg" alt="Decision path that either skips one LRU3 BCB or detaches it as a victim">
         <div class="table-scroll"><table><thead><tr><th>BCB A now</th><th>Result now</th><th>Why</th></tr></thead><tbody>
@@ -141,11 +143,11 @@
           <tr><td>Clean idle LRU3, no flags/waiters, mutex and protected recheck succeed</td><td><strong>Detach A</strong></td><td>A changes LRU3 → VOID with the BCB mutex retained.</td></tr>
         </tbody></table></div>
         <p><code>pgbuf_get_victim_from_lru_list()</code> receives one already selected LRU index. It starts at <code>victim_hint</code> or bottom and follows <code>prev_BCB</code> through at most 1,000 BCB nodes. It does not scan 1,000 lists or all transactions. Private threshold demotions <code>D</code> can happen before this bounded walk.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:221–263,9256–9538,16217–16228</code>.</p>
+        <p class="source-note"><strong>Source:</strong> <code>page_buffer.c:221–263,9256–9538,16217–16228</code>.</p>
       </section>
 
       <section class="section" id="private">
-        <div class="eyebrow">05 · Private is a policy domain</div>
+
         <h2>List membership is not transaction ownership</h2>
         <p>A session borrows one already-existing private-list ID; it does not receive a private cache. Multiple sessions may share the list, another domain may fix its BCBs, and releasing an assignment does not drain them.</p>
         <p><a href="0012b-understand-private-lru-index.html">Continue in Lecture 12B for why the default is 152, the local and full index ranges, assignment lifetime, movement, activity, and exact private/shared victim-search order →</a></p>
@@ -153,17 +155,17 @@
 
       <section class="section" id="progress">
         <p><a href="../reference/lru-worked-example.html#reuse-flush">Compare G and G+1 completion</a> · <a href="../reference/lru-worked-example.html#reuse-direct">Predict reservation, revocation, and retry</a></p>
-        <div class="eyebrow">06 · When no safe victim exists</div>
+
         <h2>CUBRID waits until a BCB becomes safe to reuse</h2>
         <img class="diagram" src="../../assets/allocation-progress.svg" alt="Allocation path from invalid list through victim search, direct-victim wait, retry, timeout, and error">
         <p>If INVALID is empty and normal search finds nothing, <code>pgbuf_allocate_bcb()</code> can enter a direct-victim waiter queue and wake the flush daemon. A producer may clean and reserve a BCB. If another fix reaches it before consumption, the reservation is revoked and the allocator retries.</p>
         <p>A DIRTY LRU3 BCB becomes reusable only after WAL-safe page write completion. During the write, <code>FLUSHING</code> still blocks replacement. If the page is dirtied again as generation G+1, that newer debt prevents direct assignment.</p>
         <p>Every allocation path ends in assignment, retry, interrupt, timeout, or explicit error. <code>ER_PB_ALL_BUFFERS_DIRTY</code> is a fallback error name and does not prove that every BCB was literally dirty. The source does not prove wall-clock fairness for one waiter.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> <code>page_buffer.c:8181–8403,9067–9253,10925–10952,15420–15652,16972–17255</code>.</p>
+        <p class="source-note"><strong>Source:</strong> <code>page_buffer.c:8181–8403,9067–9253,10925–10952,15420–15652,16972–17255</code>.</p>
       </section>
 
       <section class="section" id="practice" data-audience-checkpoint>
-        <div class="eyebrow">07 · Check your model</div>
+
         <h2>Can BCB A be reused now?</h2>
         <p>Start with A on INVALID. Load page P into A, final-unfix it, demote it to LRU3, then consider three variants: A is clean and idle; A is DIRTY; another thread fixes A just before the scan. For each variant, name the current list/zone, the first rejecting field or lock, and the event required before A can be rebound to page Q.</p>
         <details class="answer-disclosure"><summary>Open the explanation</summary><div class="callout"><strong>Model spine:</strong> INVALID avoids victimization → VOID is unlinked, not free → only LRU3 is searched → flags/owners/waiters/try-lock/final recheck decide → detach to VOID precedes hash removal → the fixed pair receives Q.</div></details>
@@ -171,20 +173,17 @@
 
 <section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>An unfixed page is still dirty</h2><p>A BCB has zero fixes and belongs to LRU3, but it is DIRTY. Can the allocator reuse it immediately?</p><details class="answer-disclosure"><summary>Explore the explanation</summary><p>No. Zero fixes and LRU3 membership are necessary checks, not a complete safety proof. Dirty bytes must not be discarded. Victim selection also checks current flags, owners, waiters, and protected state; progress may require flushing and retrying before a safe frame exists.</p></details></section>
       <section class="section" id="primary-reading">
-        <div class="eyebrow">Primary reading</div>
-        <h2>Trace only four functions first</h2>
-        <p>Read <code>pgbuf_allocate_bcb()</code>, <code>pgbuf_get_victim()</code>, <code>pgbuf_get_victim_from_lru_list()</code>, and <code>pgbuf_victimize_bcb()</code>. Then use Lecture 12B for the index and list-selection model, or the canonical Markdown for the full policy and cost map.</p>
-        <p><a href="../../advanced/replacement-progress.md">Open the canonical replacement page →</a></p>
-        <p><a  href="0007-replace-one-frame.html">← Previous lecture 7</a> · <a href="0012b-understand-private-lru-index.html">Continue to Lecture 0012B: private LRU indexes →</a></p>
-      </section>
+<h2>References</h2>
+<details class="technical-detail"><summary>Sources and further reading</summary><ul><li><a href="../../advanced/replacement-progress.md">Open the canonical replacement page →</a></li></ul></details>
+</section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lecture map</strong>
-      <a href="#purpose">1. Why replace?</a><a href="#states">2. INVALID and VOID</a>
-      <a href="#textbook-vs-cubrid">Exact LRU versus CUBRID</a><a href="#lru-hit-comparison">P hit: compare the orders</a><a href="#lru-conditional-movement">Conditional movement</a><a href="#lru-policy-layers">Three policy decisions</a><a href="#lru-tradeoffs">Costs and limits</a><a href="#trip">3. One BCB lifetime</a>
-      <a href="#decision">4. Victim scenarios</a><a href="#private">5. Private-domain bridge</a><a href="#progress">6. No safe victim</a>
-      <a href="#practice">7. Check the model</a><a href="#primary-reading">Primary reading</a>
+      <a href="#purpose">A page miss needs a frame; where does that frame come from?</a><a href="#states">VOID means the BCB is outside every management list</a>
+      <a href="#textbook-vs-cubrid">Why CUBRID's LRU is not textbook exact LRU</a><a href="#lru-hit-comparison">Access P again: does it pass R?</a><a href="#lru-conditional-movement">Final unfix is a decision point, not an automatic move</a><a href="#lru-policy-layers">Three decisions: placement, search, safe reuse</a><a href="#lru-tradeoffs">Why reduce ordering updates, and what costs remain?</a><a href="#trip">BCB A can age without a clock ticking it down</a>
+      <a href="#decision">LRU3 is only the first eligibility checkpoint</a><a href="#private">List membership is not transaction ownership</a><a href="#progress">CUBRID waits until a BCB becomes safe to reuse</a>
+      <a href="#practice">Can BCB A be reused now?</a><a href="#primary-reading">References</a>
       <hr>
       <a href="0012b-understand-private-lru-index.html">Private-LRU lecture →</a>
       <a href="../../advanced/replacement-progress.md">Canonical Advanced page</a><a href="../index.html">Curriculum</a>

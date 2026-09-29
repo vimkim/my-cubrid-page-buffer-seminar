@@ -22,15 +22,23 @@
 <section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><h2>왜 일부 일을 background thread가 맡는가?</h2><p>여기서 daemon은 작업을 반복하고 기다리는, 관리되는 background thread다. 공통 유지보수나 cleaning을 개별 요청과 독립적으로 진행하게 한다. 별도의 DB 서버 process라는 뜻은 아니며, 네 page-buffer daemon이 모두 page를 쓰는 것도 아니다.</p><p>Background 실행이 없다면 필요한 일을 foreground 호출자나 다른 scheduler가 맡아야 한다. 요청 지연이 늘거나 미리 준비된 clean frame이 줄 수 있지만, 이것만으로 손상을 단정할 수는 없다. Queue나 대기 절차가 그대로 의존하는데 thread만 없애는 변경은 별개의 위험한 변경이다. Stand-alone mode는 동기 대안이 존재한다는 근거이지 실행 중인 서버 daemon을 끄는 방법이 아니다.</p><p>네 역할을 구분한다. Page-flush는 dirty page image를 제출한다. Post-flush는 queue에 넘긴 BCB 처리를 마친다. Maintenance는 quota와 zone을 조정한다. Flush-control은 soft I/O pacing credit을 갱신한다. 다음 강의에서 각 역할의 호출 경로와 없을 때의 영향을 확인한다.</p></section>
 
       <section class="section" id="daemon">
-        <div class="eyebrow">01 · daemon 정의하기</div>
-        <h2>daemon 하나는 task 하나를 실행하고 pause하는 thread 하나입니다</h2>
+<h2>각 daemon은 독립적으로 일하고 기다린다</h2>
+<p>네 daemon은 서로 다른 역할을 가진 background thread입니다. Timer나 wakeup은 실행 기회이고, 실제 작업 여부는 현재 상태를 확인한 뒤 결정합니다.</p>
+<details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
+
+
         <p><code>create_daemon()</code>은 managed execution context 하나와 <code>std::thread</code> 하나를 만듭니다. loop는 간단합니다. task를 실행하고, <code>cubthread::looper</code>에게 pause 시간을 물은 뒤, 다시 task를 실행합니다. 따라서 네 이름은 하나의 dirty-page queue에서 같은 일을 꺼내는 worker가 아니라 서로 독립적인 control loop입니다.</p>
         <p>task는 생성 직후 한 번 실행됩니다. fixed period는 start-to-start 목표입니다. looper가 직전 task 실행 시간을 빼므로 100 ms 주기가 “작업을 끝낸 뒤 항상 100 ms를 더 sleep한다”는 뜻도, 매번 유용한 작업을 한다는 보장도 아닙니다.</p>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="lifecycle">
-        <div class="eyebrow">02 · 전체 lifecycle</div>
-        <h2>생성, enable, 유용한 작업, 소멸은 서로 다른 순간입니다</h2>
+<h2>복구가 끝난 뒤 작업하고, pool보다 먼저 종료한다</h2>
+<p>서버는 복구 중에 thread를 만들지만 boot gate가 열리기 전에는 page-buffer 작업을 하지 않습니다. 정상 종료에서는 pool을 정리하기 전에 daemon을 멈춥니다. Stand-alone mode에서는 이 네 thread를 만들지 않습니다.</p>
+<details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
+
+
         <img class="diagram" src="../../assets/page-buffer-daemon-lifecycle.svg" alt="page-buffer daemon 생성, recovery gate, useful loop, join destruction">
         <ol>
           <li>먼저 page-buffer pool, LRU, queue, monitor를 초기화합니다.</li>
@@ -41,11 +49,16 @@
           <li><code>log_final()</code>과 pool teardown은 daemon이 모두 멈춘 뒤 실행되므로 shared state보다 오래 사는 daemon은 없습니다.</li>
         </ol>
         <p>stand-alone mode에서는 이 네 thread를 만들지 않습니다. background page-flush가 없으면 관련 requester가 victim flushing을 동기적으로 수행할 수 있습니다.</p>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="cadence">
-        <div class="eyebrow">03 · Timer, wake, useful work</div>
-        <h2>각 역할은 서로 다른 pause와 admission rule을 가집니다</h2>
+<h2>네 daemon이 나누어 맡는 일</h2>
+<div class="table-scroll"><table><thead><tr><th>Daemon</th><th>하는 일</th><th>페이지 쓰기</th></tr></thead><tbody><tr><td>Page-flush</td><td>조건에 맞는 dirty page의 사본을 기록 경로에 제출</td><td>있음</td></tr><tr><td>Post-flush</td><td>전달받은 BCB 상태 처리를 마치고 안전한 frame 배정을 시도</td><td>새 write 없음</td></tr><tr><td>Maintenance</td><td>접근 활동에 따라 quota와 zone 경계를 조정</td><td>없음</td></tr><tr><td>Flush-control</td><td>성공한 OS write 뒤에 소비하는 credit을 공급</td><td>없음</td></tr></tbody></table></div><p>Timer와 wakeup은 일을 확인할 기회를 줍니다. 실제 작업은 boot gate, queue, 교체 압력 등의 현재 조건을 만족해야 진행합니다.</p><details class="technical-detail"><summary>실행 주기와 wakeup 세부 동작</summary>
+
+
+
         <img class="diagram" src="../../assets/page-buffer-daemon-cadence.svg" alt="maintenance, page-flush, post-flush, flush-control의 실행 주기와 깨우기 조건">
         <div class="table-scroll"><table>
           <thead><tr><th>Daemon</th><th>쉽게 말한 역할</th><th>Nominal pause</th><th>명시적 work wake</th><th>Page-image I/O?</th></tr></thead>
@@ -57,41 +70,40 @@
           </tbody>
         </table></div>
         <div class="callout"><strong>Wake는 hint이며 durable event가 아닙니다.</strong> generic waiter는 sleep 중일 때만 <code>wakeup()</code>을 받아들입니다. task가 이미 RUNNING이면 다음 pause를 위한 event로 저장하지 않습니다. 따라서 task는 실행될 때 shared pressure 또는 queue state를 다시 확인합니다.</div>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="plain-language-bridge" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-post-flush-payload="PGBUF_BCB-pointer" data-post-flush-new-io="none">
-        <div class="eyebrow">04 · 어려운 표현 두 개 풀어 읽기</div>
-        <h2>두 mechanism 모두 같은 page를 한 번 더 write한다는 뜻이 아닙니다</h2>
+
+
+        <h2>Post-flush와 flush-control은 페이지를 다시 쓰지 않는다</h2>
         <div class="callout"><strong>File-I/O token bucket:</strong> 여러 writer가 공유하는 page 단위 credit 잔액입니다. 참여하는 writer는 OS write가 성공한 뒤 credit을 소비하고, 잔액이 없으면 계속 진행하기 전에 잠시 기다릴 수 있습니다. Flush-control은 주기적으로 잔액을 교체하므로 write 수행 허가가 아니라 soft pacing입니다. <a href="0006c-follow-maintenance-and-pacing.html#control">정확한 producer, consumer, bypass rule 보기 →</a></div>
         <div class="callout"><strong>Page-flush가 completion을 post-flush에 넘김:</strong> page submission은 끝났지만 in-memory BCB bookkeeping이 남았다는 뜻입니다. allocator pressure가 있으면 page-flush는 BCB pointer만 queue에 넣어 post-flush가 마무리하게 할 수 있습니다. page byte를 넘기거나 새 write를 요청하지 않습니다. <a href="0006b-follow-page-flush-handoff.html#handoff">이동하는 것, 네 조건, local fallback 보기 →</a></div>
-      </section>
+
+</section>
 
       <section class="section" id="routes">
-        <div class="eyebrow">05 · 다음 lecture 고르기</div>
-        <h2>서로 협력하는 두 역할씩 나누어 봅니다</h2>
+
+
+        <h2>Cleaning과 상태 처리 / 정책과 속도 조절</h2>
         <div class="callout"><strong>Lecture 6B — page-flush와 post-flush:</strong> 먼저 page-flush가 stable generation 하나를 선택하고 submit하는 과정을 따라갑니다. 그다음 BCB bookkeeping을 직접 끝낼지, pointer만 queue에 넣어 post-flush가 다시 확인하고 allocator를 깨우게 할지 나뉘는 지점을 봅니다.</div>
         <div class="callout"><strong>Lecture 6C — maintenance와 flush-control:</strong> 먼저 replacement sample이 quota와 zone으로 바뀌는 과정을 봅니다. 별도로 successful file write가 page credit을 요청하고 50 ms control loop가 shared balance를 교체하는 과정도 봅니다. 어느 control path도 page image를 전달하지 않습니다.</div>
         <p>checkpoint, log-flush daemon, foreground/WRITE-owner flush, DWB helper daemon은 이 네 역할 밖에 있습니다. 같은 durability mechanism을 지원하거나 재사용해도 page-buffer daemon worker가 되는 것은 아닙니다.</p>
-      </section>
+
+</section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">06 · Retrieval 연습</div>
-        <h2>thread lifecycle 하나와 네 역할을 직접 설명합니다</h2>
-        <div class="quiz" data-audience-checkpoint>
-          <h3>문제</h3><p>recovery 중 daemon 생성부터 정상 shutdown까지 설명하세요. 그 다음 네 daemon의 역할, cadence, I/O 책임을 각각 말하세요.</p>
-
-          <details class="answer-disclosure"><summary>설명 펼치기</summary><p>daemon 하나는 OS thread, task, looper, waiter 하나를 가진다 -> 생성 직후 task가 실행되지만 recovery gate가 닫혀 있어 반환한다 -> gate를 여는 것과 sleeper wake는 별개다 -> timer는 실행 기회를 줄 뿐 task가 아무 일도 하지 않을 수 있다 -> maintenance는 100 ms마다 quota policy를 시도한다 -> page-flush는 기본 1000 ms timer와 pressure wake를 가지며 page image를 submit하는 유일한 역할이다 -> post-flush는 1, 10, 100 ms 뒤 wake-only로 backoff하며 BCB state를 끝낸다 -> flush-control은 50 ms를 목표로 post-write pacing을 갱신한다 -> shutdown은 pool teardown 전에 thread를 stop, wake, join, retire한다.</p></details></div>
-      </section>
+<h2>Frame이 부족할 때 누가 어떤 일을 할까?</h2>
+<div class="quiz" data-audience-checkpoint><p>Dirty page가 많아 allocator가 기다립니다. 네 daemon이 모두 페이지를 쓰는 것일까요?</p><details class="answer-disclosure"><summary>설명 펼치기</summary><p>아닙니다. Page-flush는 조건에 맞는 page image를 제출합니다. Post-flush는 전달받은 BCB 처리를 마치고 안전할 때 allocator에 배정할 수 있습니다. Maintenance는 quota와 zone, flush-control은 성공한 OS write 이후의 pacing credit을 관리합니다.</p></details></div>
+</section>
 
       <section class="section" id="primary-reading">
-        <div class="eyebrow">핵심 읽을거리</div>
-        <h2>각 역할보다 generic loop를 먼저 읽습니다</h2>
-        <p>Pinned <code>thread_daemon.cpp:208–245</code>, <code>thread_looper.cpp:118–224</code>, <code>thread_waiter.cpp:76–224</code>부터 읽습니다. 그 다음 <code>page_buffer.c:16971–17228</code>의 네 task body와 initializer를 읽습니다.</p>
-        <p><a href="../../reference/page-buffer-daemon-lifecycle-audit.md">전체 pinned-source lifecycle audit 열기 →</a></p>
-        <p><a href="0006-flush-one-generation.html">← Lecture 0006</a> · <a href="0006b-follow-page-flush-handoff.html">Lecture 0006B로 계속 →</a></p>
-      </section>
+<h2>참고 자료</h2>
+<details class="technical-detail"><summary>소스와 참고 자료</summary><ul><li><a href="../../reference/page-buffer-daemon-lifecycle-audit.md">전체 pinned-source lifecycle audit 열기 →</a></li></ul></details>
+</section>
     </article>
-    <nav class="lesson-nav" aria-label="Lesson 목차"><a href="#first-principles">왜 일부 일을 background thread가 맡는가?</a><strong>Lecture map</strong><a href="#daemon">1. Daemon 하나</a><a href="#lifecycle">2. Lifecycle</a><a href="#cadence">3. Cadence</a><a href="#plain-language-bridge">4. 표현 두 개</a><a href="#routes">5. 집중 경로</a><a href="#retrieval">6. 직접 설명</a><a href="#primary-reading">핵심 읽을거리</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">과정 홈</a></nav>
+    <nav class="lesson-nav" aria-label="Lesson 목차"><a href="#first-principles">왜 일부 일을 background thread가 맡는가?</a><strong>Lecture map</strong><a href="#daemon">각 daemon은 독립적으로 일하고 기다린다</a><a href="#lifecycle">복구가 끝난 뒤 작업하고, pool보다 먼저 종료한다</a><a href="#cadence">네 daemon이 나누어 맡는 일</a><a href="#plain-language-bridge">Post-flush와 flush-control은 페이지를 다시 쓰지 않는다</a><a href="#routes">Cleaning과 상태 처리 / 정책과 속도 조절</a><a href="#retrieval">Frame이 부족할 때 누가 어떤 일을 할까?</a><a href="#primary-reading">참고 자료</a><hr><a href="0006b-follow-page-flush-handoff.html">Lecture 6B</a><a href="0006c-follow-maintenance-and-pacing.html">Lecture 6C</a><a href="../index.html">과정 홈</a></nav>
   </div>
 
 <nav class="lecture-navigation" data-lecture-nav aria-label="강의 순서"><a rel="prev" href="0006-flush-one-generation.html">← Lecture 6 · Flush generation과 WAL 순서</a><a rel="next" href="0006b-follow-page-flush-handoff.html">Lecture 6B · Page-flush와 post-flush handoff →</a></nav></main>

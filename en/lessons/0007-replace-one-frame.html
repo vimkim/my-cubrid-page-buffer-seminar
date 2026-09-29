@@ -22,7 +22,7 @@
 <section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><h2>Preference chooses a candidate; protection authorizes reuse</h2><p>Replacement has two questions: which resident page would be economical to lose, and which frame may be reused safely now? CUBRID separates placement, domain selection, LRU3 scanning, and protected eligibility checks. Without a preference policy, reuse can still be safe but may discard useful pages. Without the safety checks, a favorable candidate can still be dangerous.</p><p><strong>Constructed example:</strong> the invalid list is empty. A selected LRU3 scan encounters A then B; A is dirty, B is clean with zero fix count and no waiters or avoid-victim state. A is skipped. B is reusable only if its try-lock succeeds and the protected recheck still passes. If another thread fixes B first, skip B too. This is a bounded example of one selected-list scan, not a claim about a three-frame CUBRID configuration.</p><p>A successful victim leaves its old resident mapping before the slot is bound to the requested page. Removing an in-memory mapping does not delete the disk page. If no safe candidate is found, allocator progress needs another path: release, cleaning, retry, or a supported direct-victim handoff.</p></section>
 
       <section class="section" id="story">
-        <div class="eyebrow">01 · Start with the need</div>
+
         <h2>A page miss needs a slot to hold the incoming bytes</h2>
         <p>Suppose page B is requested but is not resident. The page buffer needs one BCB/frame slot for B.</p>
         <ol>
@@ -32,12 +32,15 @@
           <li><strong>Detach, then rebind.</strong> After the old mapping is safely removed, the same BCB/frame slot can load B.</li>
         </ol>
         <p class="big-claim">Replacement is not “find the oldest page.” It is “find an old-enough page that is safe to reuse now.”</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8235"><code>pgbuf_allocate_bcb()</code></a> documents and implements invalid-list first, then LRU victim search.</p>
+        <p class="source-note"><strong>Source:</strong> pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8235"><code>pgbuf_allocate_bcb()</code></a> documents and implements invalid-list first, then LRU victim search.</p>
       </section>
 
       <section class="section" id="structures-cost">
-        <div class="eyebrow">01A · Data structures and cost</div>
-        <h2>“Try the invalid list” means pop one linked-list head</h2>
+<h2>Candidate-search structures and costs</h2>
+<p>Allocation tries the invalid list first, then searches LRU3 in a selected LRU. The 1,000-entry limit applies to one selected-list scan, not to the entire allocation time.</p>
+<details class="technical-detail"><summary>Expand implementation details and sources</summary>
+
+
         <img class="diagram" src="../../assets/replacement-data-structures.svg" alt="BCB table array feeding a singly linked invalid list, a bounded doubly linked LRU scan, hash removal, page read, and new mapping publication">
         <p class="caption">The array owns storage. The invalid and LRU links organize subsets of those stable BCB slots at runtime.</p>
         <p>At startup, <code>BCB_table</code> is allocated as a contiguous array. Initialization sets each slot's <code>next_BCB</code> to the next slot, so building the initial invalid list is <code>O(N)</code> once. The runtime allocation path does not repeat that array loop.</p>
@@ -71,18 +74,25 @@
         <p>The higher-level policy can make several selected-list calls: the caller's private LRU, an advertised other-private list, an advertised shared list, and a final own-list fallback. Each call gets a fresh 1,000-node budget. If a selected private list is over quota, the helper may also demote <code>M</code> boundary nodes before the scan; that work is outside <code>MAX_DEPTH</code>. The helper is therefore <code>O(M + K)</code>, while the linked-list scan itself is bounded <code>O(K)</code>.</p>
         <div class="callout"><strong>Why other 1,000s are misleading:</strong> pinned source separately caps explicitly configured <em>shared</em> <code>num_LRU_chains</code> at 1,000 and targets roughly 1,000 buffers per automatically sized shared list. Neither constant caps private LRU count.</div>
         <div class="callout"><strong>About “how long”:</strong> the pinned source gives operation bounds, not a calibrated nanosecond value. It records <code>PSTAT_PB_ALLOC_BCB</code>, <code>PSTAT_PB_ALLOC_BCB_SEARCH_VICTIM</code>, list-search timers, and condition-wait time. Use those counters or a focused benchmark for a target workload; do not convert Big-O into a latency claim.</div>
-        <p class="source-note"><strong>Verified mechanism:</strong> BCB array construction and initial links are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>page_buffer.c:5559–5660</code></a>; invalid-list structure and head initialization at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L626-L634"><code>626–634</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5907-L5919"><code>5907–5919</code></a>; constant-time pop/push at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8905-L8983"><code>8905–8983</code></a>; bounded LRU scan and pre-scan adjustment at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9327-L9537"><code>9327–9537</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9984-L10048"><code>9984–10048</code></a>; private count at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L13941-L13985"><code>13941–13985</code></a>.</p>
-      </section>
+        <p class="source-note"><strong>Source:</strong> BCB array construction and initial links are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>page_buffer.c:5559–5660</code></a>; invalid-list structure and head initialization at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L626-L634"><code>626–634</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5907-L5919"><code>5907–5919</code></a>; constant-time pop/push at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8905-L8983"><code>8905–8983</code></a>; bounded LRU scan and pre-scan adjustment at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9327-L9537"><code>9327–9537</code></a> and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9984-L10048"><code>9984–10048</code></a>; private count at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L13941-L13985"><code>13941–13985</code></a>.</p>
+
+</details>
+</section>
 
       <section class="section" id="aout">
-        <div class="eyebrow">01B · Separate historical topic</div>
-        <h2>Dormant AOUT history is a required curriculum topic in Lecture 12A</h2>
+<h2>AOUT is disabled at this revision</h2>
+<p>Although ghost-history code remains, this revision forces its setting to zero. It therefore does not run that active 2Q behavior.</p>
+<details class="technical-detail"><summary>Expand implementation details and sources</summary>
+
+
         <p>The pinned startup path forces AOUT off, so it is not part of the active safety path taught here. Lecture 0012A owns the ghost-entry structure, dormant admission branches, historical disablement, and revival boundary.</p>
         <p><a href="0012a-understand-aout-ghost-history.html">Open Lecture 0012A: dormant AOUT ghost history →</a></p>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="slot">
-        <div class="eyebrow">02 · Understand what is reused</div>
+
         <h2>The slot stays; the page identity changes</h2>
         <p>A BCB is a reusable descriptor paired with one reusable frame. Their pool addresses are stable. The current resident page is named by <code>bcb-&gt;vpid</code>, and that identity changes only through the controlled detach/load sequence.</p>
         <div class="table-scroll"><table>
@@ -97,8 +107,9 @@
       </section>
 
       <section class="section" id="gate">
-        <div class="eyebrow">03 · Use the safety gate</div>
-        <h2>Ask four plain questions before reuse</h2>
+
+
+        <h2>An old candidate must still be safe to reuse</h2>
         <img class="diagram" src="../../assets/victim-eligibility.svg" alt="A safety gate checking ownership, dirty and flushing state, waiters and transient flags, then protected revalidation before victim selection">
         <p class="caption">LRU position suggests a candidate. It never overrides the safety gate.</p>
         <div class="table-scroll"><table>
@@ -111,11 +122,13 @@
           </tbody>
         </table></div>
         <div class="callout warn"><strong>Shortcut to reject:</strong> <code>fcnt == 0</code> means “no current fixer was counted.” It does not also mean clean, not flushing, no waiters, and safely detached.</div>
-      </section>
+
+</section>
 
       <section class="section" id="handoff-details">
-        <div class="eyebrow">04 · Close the race</div>
-        <h2>Scan cheaply, then make the destructive decision under locks</h2>
+
+
+        <h2>Recheck the candidate under protection</h2>
         <ol>
           <li>The LRU mutex stabilizes the list while the scanner finds a likely candidate.</li>
           <li><code>PGBUF_BCB_TRYLOCK()</code> tries to protect that BCB. It does not wait while holding the LRU mutex; failure skips the candidate.</li>
@@ -123,11 +136,12 @@
           <li>Only a passing candidate is removed from the LRU. It is returned still BCB-locked so victimization/rebind owns an exclusive handoff.</li>
         </ol>
         <p>Why check twice? The first read is a <em>hint</em>. Between that read and the BCB lock, another thread may fix the page or start a flush. The protected read is the decision. If the facts changed, skip and continue searching.</p>
-        <p class="source-note"><strong>Verified mechanism:</strong> victim predicates are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9265-L9325"><code>page_buffer.c:9265–9325</code></a>; scan, try-lock, protected recheck, detach, and locked return are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>9399–9478</code></a>.</p>
-      </section>
+        <p class="source-note"><strong>Source:</strong> victim predicates are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9265-L9325"><code>page_buffer.c:9265–9325</code></a>; scan, try-lock, protected recheck, detach, and locked return are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>9399–9478</code></a>.</p>
+
+</section>
 
       <section class="section" id="no-victim">
-        <div class="eyebrow">05 · When no slot is safe</div>
+
         <h2>The allocator waits until a reusable BCB becomes available</h2>
         <p>If every candidate is fixed, dirty, flushing, waiting, or in another handoff, victim search returns nothing. A flush can make a dirty candidate clean. An unfix can end ownership. In server mode, an allocating thread may wait for a directly assigned victim and retry if that candidate is fixed again before consumption.</p>
         <p>The LRU policy decides which safe candidate to prefer and how to make progress. It may change across revisions. The safety rule does not: a successful fixer or incomplete flush generation must not survive the slot's rebind.</p>
@@ -139,12 +153,13 @@
             <tr><td>Flush and direct-victim progress</td><td>Help produce an eligible slot when the first search finds none.</td></tr>
           </tbody>
         </table></div>
-        <p class="source-note"><strong>Implementation policy:</strong> wait/retry is pinned at <code>page_buffer.c:8236–8403</code>. Detailed LRU lifetime, quota, and direct-victim behavior belong to the linked Core and Advanced pages, not this first mental model.</p>
+        <p class="source-note"><strong>Source:</strong> wait/retry is pinned at <code>page_buffer.c:8236–8403</code>. Detailed LRU lifetime, quota, and direct-victim behavior belong to the linked Core and Advanced pages, not this first mental model.</p>
       </section>
 
       <section class="section" id="verbs">
-        <div class="eyebrow">06 · Keep replacement verbs distinct</div>
-        <h2>Unfix, flush, and victimize solve different debts</h2>
+
+
+        <h2>Unfix, flush and replacement do different work</h2>
         <div class="table-scroll"><table>
           <thead><tr><th>Operation</th><th>What ends</th><th>What can remain</th></tr></thead>
           <tbody>
@@ -153,10 +168,11 @@
             <tr><td>Victimize</td><td>The old resident mapping, after every safety condition passes.</td><td>The logical page still exists on storage.</td></tr>
           </tbody>
         </table></div>
-      </section>
+
+</section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Pause and reason</div>
+
         <h2>Choose the only possible candidate</h2>
         <div class="quiz" data-audience-checkpoint>
           <h3>Prompt</h3>
@@ -169,26 +185,23 @@
       </section>
 
       <section class="section" id="primary-reading">
-        <div class="eyebrow">Primary reading</div>
-        <h2>Trace one candidate from scan to detach</h2>
-        <p>Read pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>page_buffer.c:9399–9478</code></a>. Mark four points: cheap prefilter, BCB try-lock, protected victimizable check, and LRU removal.</p>
-        <p><a href="../../learning/05-replace-one-frame.md">Open the canonical replacement chapter →</a> · <a href="../../advanced/replacement-progress.md">Open advanced progress details →</a></p>
-        <p><a  href="0006c-follow-maintenance-and-pacing.html">← Previous lecture 6C</a> · <a  href="0012-prove-replacement-progress.html">Continue to Lecture 12 →</a></p>
-      </section>
+<h2>References</h2>
+<details class="technical-detail"><summary>Sources and further reading</summary><ul><li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9399-L9478"><code>page_buffer.c:9399–9478</code></a></li><li><a href="../../learning/05-replace-one-frame.md">Open the canonical replacement chapter →</a></li><li><a href="../../advanced/replacement-progress.md">Open advanced progress details →</a></li></ul></details>
+</section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Preference chooses a candidate; protection authorizes reuse</a>
       <strong>Lecture map</strong>
-      <a href="#story">1. Why a slot is needed</a>
-      <a href="#structures-cost">1A. Structures and cost</a>
-      <a href="#aout">1B. AOUT route</a>
-      <a href="#slot">2. What gets reused</a>
-      <a href="#gate">3. Four safety questions</a>
-      <a href="#handoff-details">4. Protected recheck</a>
-      <a href="#no-victim">5. No safe slot</a>
-      <a href="#verbs">6. Three verbs</a>
-      <a href="#retrieval">7. Choose a candidate</a>
-      <a href="#primary-reading">Primary reading</a>
+      <a href="#story">A page miss needs a slot to hold the incoming bytes</a>
+      <a href="#structures-cost">Candidate-search structures and costs</a>
+      <a href="#aout">AOUT is disabled at this revision</a>
+      <a href="#slot">The slot stays; the page identity changes</a>
+      <a href="#gate">An old candidate must still be safe to reuse</a>
+      <a href="#handoff-details">Recheck the candidate under protection</a>
+      <a href="#no-victim">The allocator waits until a reusable BCB becomes available</a>
+      <a href="#verbs">Unfix, flush and replacement do different work</a>
+      <a href="#retrieval">Choose the only possible candidate</a>
+      <a href="#primary-reading">References</a>
       <hr>
       <a href="../reference/replacement-safety-card.html">Replacement-safety card</a>
       <a href="../../learning/05-replace-one-frame.md">Canonical Core page</a>

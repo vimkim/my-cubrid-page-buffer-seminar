@@ -12,43 +12,34 @@
   <div class="topline"><span>CUBRID page buffer · lecture 0002</span><a href="../index.html">강의 홈</a></div>
   <header class="hero">
     <div class="eyebrow">LECTURE 2 / 기초 모델</div>
-    <h1>객체와 독립적인 상태 축</h1>
-    <p>Identity, resident storage, 빌려 쓰는 접근 권한, ownership accounting은 같은 페이지의 서로 다른 측면을 설명합니다.</p>
+    <h1>객체와 독립적인 상태 축</h1><p>페이지 식별자, frame, BCB를 구분하고 초기화와 사용 상태를 연결합니다.</p>
     <div class="pills"><span class="pill">VPID</span><span class="pill">BCB</span><span class="pill">Frame</span><span class="pill">PAGE_PTR</span><span class="pill">fcnt</span><span class="pill">Holder</span></div>
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
-<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><h2>필요한 역할부터 보고 자료구조의 이름 붙이기</h2><p>열람 책상이 한정된 도서관을 생각해 보자. Page identity는 책의 이름, frame은 책상, BCB는 그 책상의 상태 기록에 비유할 수 있다. 이 비유는 이름과 공간을 구분하기 위한 것이며, locking이나 durability까지 설명하지는 않는다.</p><div class="table-scroll"><table><thead><tr><th>구성 요소</th><th>무엇이며 왜 필요한가</th><th>없으면 무엇을 대신 마련해야 하는가</th></tr></thead><tbody><tr><td>Page identity / VPID</td><td>논리 page의 이름이다.</td><td>식별 검사가 없으면 Q로 재사용된 자리를 P로 착각할 수 있다.</td></tr><tr><td>Frame array</td><td>Resident page의 실제 bytes를 담는 메모리다.</td><td>크기가 정해진 재사용 공간이 없다면 다른 저장 위치나 할당 전략이 필요하다.</td></tr><tr><td>BCB array</td><td>Frame마다 하나씩 있는 제어 정보다. 식별자, fix count, latch, dirty/flush 상태를 관리한다.</td><td>Bytes만 보고는 재사용이 안전한지 알 수 없다. 동등한 제어 정보가 다른 곳에라도 필요하다.</td></tr><tr><td>Resident hash</td><td>Page의 이름으로 후보 BCB를 찾는 색인이다. 이후 정확한 이름을 확인한다.</td><td>이 색인이 없으면 다른 조회 방법이 필요하다. BCB 전체 순회는 조회 작업을 늘린다.</td></tr><tr><td>Invalid list</td><td>Resident 식별자가 없는 BCB를 모아 확보할 수 있게 한다.</td><td>빈 자리 색인이 없으면 사용하지 않는 자리를 찾는 데도 다른 검색이 필요하다.</td></tr><tr><td>LRU array</td><td>여러 list descriptor를 담은 배열이다. 각 list는 여러 BCB를 연결하고 zone 경계를 가진다.</td><td>교체 메타데이터가 없으면 다른 정책이나 반복 검색으로 후보를 정해야 한다.</td></tr><tr><td>Holder / fix count / latch</td><td>Thread별 사용 의무, 전체 사용 수, 내용 접근의 동시성 제어다.</td><td>동등한 보호가 없으면 사용 중인 frame을 다른 실행 흐름이 재사용하거나 변경할 수 있다.</td></tr></tbody></table></div><p>BCB array와 LRU array는 서로 다른 배열이다. BCB 배열은 frame의 제어 정보를 보관하고, LRU descriptor는 list 구성을 관리한다. BCB의 소속이 private에서 shared로 바뀌어도 별도의 물리 buffer pool로 옮겨 가는 것은 아니다.</p></section>
+<section class="section" id="first-principles">
+<h2>이름 → 제어 정보 → 페이지 내용</h2>
+<p><a href="../reference/first-principles-route.html">3시간 경로 ↑</a></p><p>페이지 이름, 내용을 담는 자리, 그 자리의 상태를 나누어 보면 구조가 단순해집니다. Page buffer는 이름으로 BCB를 찾고, BCB를 통해 frame과 현재 사용 상태를 확인합니다.</p><div class="table-scroll"><table><thead><tr><th>구조</th><th>역할</th></tr></thead><tbody><tr><td>VPID</td><td>어느 페이지인가?</td></tr><tr><td>Frame array</td><td>페이지 내용이 들어 있는 메모리 자리들</td></tr><tr><td>BCB array</td><td>Frame마다 식별자·사용 수·latch·dirty 상태를 기록</td></tr><tr><td>Resident hash</td><td>VPID로 후보 BCB를 빠르게 조회하고 식별자를 확인</td></tr><tr><td>Invalid list</td><td>아직 resident 페이지를 담지 않은 BCB들을 연결</td></tr><tr><td>LRU array</td><td>여러 교체 리스트의 descriptor와 zone 경계를 관리</td></tr></tbody></table></div><p>BCB 배열과 LRU 배열은 다릅니다. BCB는 frame마다 하나이고, LRU descriptor 하나는 여러 BCB를 리스트로 연결합니다.</p>
+</section>
 
       <section class="section" id="first-code-path"><h2>초기화는 배열을 만들고, miss는 그 자리를 재사용한다</h2><p>기존 manager를 재사용하지 않는 boot 경로에서 두 형제 helper가 BCB/frame 저장 공간과 shared/private LRU descriptor 배열을 만든다. 첫 helper가 두 번째 helper를 호출하는 것은 아니다. LRU는 비어 있고, 처음 사용하지 않는 BCB는 invalid list로 연결된다. 이후 BCB[42]가 P, 다음에는 Q를 나타내더라도 BCB 객체 자체는 그대로다.</p><figure class="source-call-path"><pre>logtb_define_trantable
   → logtb_define_trantable_log_latch
     → pgbuf_initialize
       ├→ pgbuf_initialize_bcb_table
-      └→ pgbuf_initialize_lru_list</pre><figcaption>소스에서 확인한 호출 관계. 실행 중 수집한 스택이 아니다. 화살표는 조건이 맞을 때의 직접 호출이며, 들여쓴 가지는 같은 호출자의 분기다.</figcaption></figure><p class="source-note">고정 소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_tran_table.c#L383-L495">log_tran_table.c:383–495</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1748-L1763">page_buffer.c:1748–1763</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5785">page_buffer.c:5559–5785</a></p></section>
+      └→ pgbuf_initialize_lru_list</pre><figcaption>소스에서 확인한 직접 호출 관계입니다. 조건에 따른 분기를 보여 주며, 실행 중 수집한 스택은 아닙니다.</figcaption></figure><details class="technical-detail"><summary>소스 위치 펼치기</summary><p class="source-note">고정 소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_tran_table.c#L383-L495">log_tran_table.c:383–495</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1748-L1763">page_buffer.c:1748–1763</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5785">page_buffer.c:5559–5785</a></p></details></section>
 
 <section class="section" id="six-objects">
-        <div class="eyebrow">01 · 추적하기 전에 이름 붙이기</div>
-        <h2>“Page”는 객체 하나가 아닙니다</h2>
-        <img class="diagram" src="../../assets/object-ownership-map.svg" alt="여섯 page-buffer 객체와 ownership 관계">
-        <p class="caption">실선은 resident structure의 관계이고, 점선은 임시 borrowing 또는 debt입니다.</p>
-        <div class="table-scroll"><table>
-          <thead><tr><th>객체</th><th>무엇인가</th><th>중요한 lifetime</th></tr></thead>
-          <tbody>
-            <tr><td><code>VPID</code></td><td><code>(volid, pageid)</code>로 이루어진 identity value.</td><td>resident가 아니어도 존재할 수 있습니다. allocation validity는 page buffer 바깥의 책임입니다.</td></tr>
-            <tr><td>BCB</td><td>현재 identity와 control state를 담는 재사용 가능한 pool control block.</td><td>pool과 수명을 함께하며, 시간에 따라 다른 VPID를 나타낼 수 있습니다.</td></tr>
-            <tr><td>Frame</td><td>BCB와 일대일로 짝지어진 page 크기의 bytes.</td><td>pool과 수명을 함께하며, 내용은 현재 resident-identity generation에 속합니다.</td></tr>
-            <tr><td><code>PAGE_PTR</code></td><td>caller가 현재 frame에 접근할 때 보는 주소.</td><td>matching unfix에서 사용 권한이 끝나는 borrowed view입니다.</td></tr>
-            <tr><td>Global <code>fcnt</code></td><td>모든 thread에 걸쳐 grant된 fix 수를 세는 BCB 단위 count.</td><td>양수인 debt는 일반적인 frame 재사용을 막습니다.</td></tr>
-            <tr><td>Thread holder</td><td>thread별 BCB reference와 중첩된 <code>fix_count</code>.</td><td>그 thread가 마지막 nested debt를 갚을 때까지 남습니다.</td></tr>
-          </tbody>
-        </table></div>
-        <p class="source-note"><strong>Verified mechanism:</strong> holder, atomic-latch <code>fcnt</code>, BCB, paired frame의 정의는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a>에 있습니다. table의 일대일 pairing은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>5559–5660</code></a>에서 확인할 수 있습니다.</p>
-      </section>
+<h2>Frame 하나와 두 가지 사용 기록</h2>
+<img class="diagram" src="../../assets/object-ownership-map.svg" alt="여섯 page-buffer 객체와 ownership 관계"><p>BCB와 frame은 일대일로 연결됩니다. <code>PAGE_PTR</code>는 frame 안의 내용을 가리키며, 해당 fix를 unfix할 때 사용 권한이 끝납니다. 주소가 같아도 그 이후에는 다른 페이지의 내용일 수 있습니다.</p><ul><li><code>fcnt</code>: 모든 스레드에 걸쳐 아직 반납하지 않은 fix 수입니다.</li><li><strong>Holder:</strong> 어느 스레드가 어느 BCB를 몇 번 fix했는지 기록합니다. 같은 스레드가 중첩해서 fix할 수도 있습니다.</li></ul><p class="source-note"><strong>소스:</strong> holder, atomic-latch <code>fcnt</code>, BCB, paired frame의 정의는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a>에 있습니다. table의 일대일 pairing은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>5559–5660</code></a>에서 확인할 수 있습니다.</p>
+</section>
 
       <section class="section" id="runtime-shapes" data-default-buffer-count="32768" data-default-page-size="16KiB" data-default-holder-count="7" data-holder-growth-count="10">
-        <div class="eyebrow">01A · 이름을 구체적인 구조로 연결하기</div>
-        <h2>각 객체의 실제 표현, 기본 규모와 초기 상태를 함께 봅니다</h2>
+<h2>미리 만든 frame과 BCB를 재사용한다</h2>
+<p>512 MiB buffer와 16 KiB 페이지를 가정하면 frame은 32,768개이며 BCB도 같은 수입니다. Fix할 때마다 frame을 새로 할당하지 않습니다. BCB, hash, holder 같은 관리 정보는 설정된 페이지 용량 외에 메모리를 더 사용합니다.</p>
+<details class="technical-detail"><summary>구조체·할당 개수·메모리 비용 펼치기</summary>
+
+
         <p>여섯 이름이 각각 독립된 allocation 하나를 뜻하는 것은 아닙니다. <code>VPID</code>는 값이고, BCB와 frame은 pool array이며, <code>PAGE_PTR</code>는 빌려 쓰는 pointer입니다. Global <code>fcnt</code>는 각 BCB 안의 field이고 holder는 thread별 ledger entry입니다. 아래 기본 상태는 pinned baseline의 512 MiB data buffer와 16 KiB I/O page size를 가정합니다.</p>
         <div class="table-scroll"><table>
           <thead><tr><th>객체</th><th>구체적인 표현</th><th>기본 할당과 시작 상태</th><th>기억할 크기 경계</th></tr></thead>
@@ -63,97 +54,60 @@
         </table></div>
         <div class="callout"><strong>기본 메모리 모습:</strong> core pool은 32,768개 reusable BCB와 여기에 짝지어진 32,768개 reusable 16 KiB frame이라는 두 fixed array가 중심입니다. Fix는 frame을 하나 더 할당하지 않습니다. Global/per-thread debt를 만들고 기존 frame 안을 가리키는 borrowed pointer 하나를 반환합니다.</div>
         <div class="callout warn"><strong>Evidence boundary:</strong> formula와 source width는 유지하되, 특정 compiler의 <code>sizeof(PGBUF_BCB)</code>, <code>sizeof(PGBUF_HOLDER)</code>, padding, mutex layout과 debug footprint를 stable ABI claim으로 만들면 안 됩니다.</div>
-        <p class="source-note"><strong>Verified mechanism:</strong> value와 view는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/compat/dbtype_def.h#L956-L961"><code>VPID</code> fields</a>와 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/storage_common.h#L146"><code>PAGE_PTR</code> alias</a>에서 정의합니다. Holder constant는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L86-L94"><code>page_buffer.c:86–94</code></a>, holder, atomic-latch, BCB, frame layout은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>460–555</code></a>, BCB/frame construction은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>5559–5660</code></a>, holder initialization은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5926-L5996"><code>5926–5996</code></a>에 있습니다. Ownership contract는 <a href="../../learning/01-contract-and-objects.md#six-objects-six-lifetimes">canonical six-object explanation</a>, default count 계산은 <a href="0012b-understand-private-lru-index.html#index-space">Lecture 0012B</a>에서 이어서 보세요.</p>
-      </section>
+        <p class="source-note"><strong>소스:</strong> value와 view는 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/compat/dbtype_def.h#L956-L961"><code>VPID</code> fields</a>와 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/storage_common.h#L146"><code>PAGE_PTR</code> alias</a>에서 정의합니다. Holder constant는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L86-L94"><code>page_buffer.c:86–94</code></a>, holder, atomic-latch, BCB, frame layout은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>460–555</code></a>, BCB/frame construction은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5660"><code>5559–5660</code></a>, holder initialization은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5926-L5996"><code>5926–5996</code></a>에 있습니다. Ownership contract는 <a href="../../learning/01-contract-and-objects.md#six-objects-six-lifetimes">canonical six-object explanation</a>, default count 계산은 <a href="0012b-understand-private-lru-index.html#index-space">Lecture 0012B</a>에서 이어서 보세요.</p>
+
+</details>
+</section>
 
       <section class="section" id="three-clocks">
-        <div class="eyebrow">02 · 겹쳐 있는 세 lifetime</div>
-        <h2>주소가 그대로여도 그 주소에 부여한 의미는 끝날 수 있습니다</h2>
-        <div class="journey">
-          <article><span class="step">1</span><h3>Pool lifetime</h3><p>BCB와 frame storage는 page buffer 초기화부터 종료까지 존재합니다.</p></article>
-          <article><span class="step">2</span><h3>Resident generation</h3><p>invalidation이나 안전한 재사용으로 identity가 바뀌기 전까지 BCB/frame은 현재 VPID 하나를 나타냅니다.</p></article>
-          <article><span class="step">3</span><h3>Borrow lifetime</h3><p>성공한 fix 하나는 matching unfix까지 debt를 전제로 <code>PAGE_PTR</code>를 한 번 사용할 권한을 줍니다.</p></article>
-          <article><span class="step">!</span><h3>함정</h3><p>pointer 주소가 그대로라고 해서 identity가 유지되거나 release 후에도 ownership이 계속된다는 뜻은 아닙니다.</p></article>
-        </div>
-        <p class="big-claim">Pointer equality는 page identity가 아니고, storage lifetime은 permission lifetime이 아닙니다.</p>
-      </section>
+<h2>메모리·페이지·접근 권한의 수명은 다르다</h2>
+<div class="journey"><article><h3>메모리 자리</h3><p>BCB와 frame은 pool 초기화부터 종료까지 유지됩니다.</p></article><article><h3>현재 페이지</h3><p>P가 나가고 Q가 들어오면 같은 자리가 다른 페이지를 나타냅니다.</p></article><article><h3>한 번의 사용</h3><p>성공한 fix부터 대응하는 unfix까지 해당 접근 권한이 유지됩니다.</p></article></div>
+</section>
 
       <section class="section" id="four-axes">
-        <div class="eyebrow">03 · scalar state 대신 tuple로 보기</div>
-        <h2>서로 독립적인 네 질문을 던집니다</h2>
-        <img class="diagram" src="../../assets/state-axes.svg" alt="서로 독립적인 네 page-buffer state axis">
-        <p class="caption">그림의 위치는 coordinate를 나타낼 뿐, 반드시 따라야 하는 순서가 아닙니다.</p>
-        <div class="table-scroll"><table>
-          <thead><tr><th>Axis</th><th>답하는 질문</th><th>답할 수 없는 질문</th></tr></thead>
-          <tbody>
-            <tr><td>Identity / residency</td><td>이 BCB/frame이 나타내는 VPID가 있다면 무엇인가?</td><td>어느 thread가 소유하는지, bytes가 recoverable한지.</td></tr>
-            <tr><td>Ownership</td><td>현재 어떤 granted fix가 일반 재사용을 막고 있는가?</td><td>어떤 latch mode가 내용을 보호하는지, dirty인지.</td></tr>
-            <tr><td>Concurrency</td><td>지금 누가 bytes를 읽거나 변경할 수 있는가?</td><td>transaction visibility, ownership lifetime, durability.</td></tr>
-            <tr><td>Durability / propagation</td><td>어느 generation을 propagate해야 하며 recovery boundary는 무엇인가?</td><td>page가 resident인지, fixed인지, 안전하게 재사용할 수 있는지.</td></tr>
-          </tbody>
-        </table></div>
-      </section>
+<h2>페이지 상태를 네 질문으로 나누기</h2>
+<img class="diagram" src="../../assets/state-axes.svg" alt="서로 독립적인 네 page-buffer state axis"><ul><li><strong>Resident?</strong> 어떤 페이지가 메모리에 있는가?</li><li><strong>Fixed?</strong> 아직 이 frame을 사용 중인 fix가 있는가?</li><li><strong>Latch?</strong> 지금 내용을 읽거나 변경할 권한은 누구에게 있는가?</li><li><strong>Dirty / flushing?</strong> 저장해야 할 변경이 남았는가, 사본을 기록 중인가?</li></ul><p>한 항목의 답이 다른 항목의 답을 결정하지는 않습니다. 사용이 끝난 페이지도 dirty일 수 있습니다.</p>
+</section>
 
       <section class="section" id="classify">
-        <div class="eyebrow">04 · 분류 예제</div>
-        <h2>잘못된 두 shortcut을 드러내는 정상 state</h2>
-        <p>BCB가 여전히 VPID <code>(8, 41)</code>을 나타내고, global <code>fcnt == 0</code>, latch mode는 <code>NO_LATCH</code>, resident generation은 DIRTY라고 가정해 봅시다.</p>
-        <div class="table-scroll"><table>
-          <thead><tr><th>Coordinate</th><th>분류</th></tr></thead>
-          <tbody>
-            <tr><td>Identity / residency</td><td>VPID <code>(8, 41)</code>로 resident입니다.</td></tr>
-            <tr><td>Ownership</td><td>미지급 fix debt가 없습니다.</td></tr>
-            <tr><td>Concurrency</td><td>이 snapshot에는 grant된 content latch가 없습니다.</td></tr>
-            <tr><td>Durability / propagation</td><td>DIRTY입니다. 이 resident generation에는 아직 page-image propagation이 필요합니다.</td></tr>
-          </tbody>
-        </table></div>
-        <div class="callout warn"><strong>버려야 할 두 결론:</strong> VPID가 여전히 resident이므로 <code>fcnt == 0</code>은 “evicted”를 뜻하지 않습니다. 또한 일반 재사용에는 dirty/flush, waiter, replacement-zone, protected revalidation 확인이 남아 있으므로 “eligible victim”이라는 뜻도 아닙니다.</div>
-        <p>이제 “page state”라는 말이 왜 지나치게 모호한지 알 수 있습니다. 유용한 설명은 네 coordinate로 된 tuple입니다.</p>
-      </section>
+<h2>사용은 끝났지만 변경 내용은 남아 있다</h2>
+<p>페이지 P가 resident이고, <code>fcnt == 0</code>, <code>NO_LATCH</code>, DIRTY라고 합시다.</p><ul><li>현재 사용자는 없지만 P는 메모리에 남아 있습니다.</li><li>변경 내용이 있으므로 곧바로 덮어쓸 수는 없습니다.</li><li>재사용하려면 변경 내용 처리와 dirty/flushing, waiter 등의 보호된 재검사가 필요합니다.</li></ul>
+</section>
 
       <section class="section" id="success">
-        <div class="eyebrow">05 · 성공한 fix에 적용하기</div>
-        <h2>성공이 보장하는 것과 보장하지 못하는 것</h2>
+<h2>성공이 보장하는 것과 보장하지 못하는 것</h2>
+<p>Fix 성공은 해당 페이지를 사용할 권한을 얻었다는 뜻입니다. Clean 상태나 트랜잭션 완료를 보장하지는 않습니다.</p>
+<details class="technical-detail"><summary>Fix 성공과 반환 이후의 조건</summary>
+
+
         <p>정상 READ fix가 성공하면 resident identity mapping, 이 acquisition을 포함한 양수의 fix debt, grant된 READ page latch, borrowed pointer lifetime이 성립합니다. 성공만으로는 clean/dirty, durable 여부, record 존재, 올바른 transaction locking, caller correctness를 <em>보장하지 않습니다</em>.</p>
         <div class="callout"><strong>matching unfix 후:</strong> 이 acquisition의 debt와 pointer 사용 lifetime은 끝납니다. BCB/frame은 계속 resident일 수 있고, 다른 fix 때문에 global <code>fcnt</code>가 양수로 남을 수 있습니다. ownership을 release했다고 durability state가 바뀌지도 않습니다.</div>
-        <p class="source-note"><strong>Interface contract와 Verified mechanism:</strong> 정상 successful-fix postcondition과 matching release는 <a href="../../learning/01-contract-and-objects.md">canonical Core 설명</a>에서 연결합니다. pinned path는 <code>page_buffer.c:2260–2685</code>, <code>6277–6634</code>, <code>3062–3201</code>입니다.</p>
-      </section>
+        <p class="source-note"><strong>소스:</strong> 정상 successful-fix postcondition과 matching release는 <a href="../../learning/01-contract-and-objects.md">canonical Core 설명</a>에서 연결합니다. pinned path는 <code>page_buffer.c:2260–2685</code>, <code>6277–6634</code>, <code>3062–3201</code>입니다.</p>
+
+</details>
+</section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">06 · 함께 생각하기</div>
-        <h2>그리고, 분류하고, 함께 생각하기합니다</h2>
-        <div class="quiz" data-audience-checkpoint>
-          <h3>문제</h3>
-          <p>기억만으로 여섯 객체의 map을 그리세요. 이어서 “resident, <code>fcnt == 0</code>, <code>NO_LATCH</code>, DIRTY”를 분류하고, 왜 evicted도 아니고 일반적인 eligible victim도 아닌지 설명하세요.</p>
-
-          <p><strong>생각할 점:</strong> 각 lifetime이 끝나는 지점을 포함하고 Interface contract와 Verified mechanism을 구분하세요.</p>
-
-
-
-          <details class="answer-disclosure"><summary>설명 펼치기</summary><p>identity value → reusable control block ↔ reusable bytes → borrowed view, global 및 per-thread debt, 네 coordinate, 반례.</p></details></div>
-
-      </section>
+<h2>Fix count가 0이면 빈 자리일까?</h2>
+<div class="quiz" data-audience-checkpoint><p>BCB가 P를 가리키고 <code>fcnt == 0</code>이며 DIRTY입니다. 지금 Q를 덮어써도 될까요?</p><details class="answer-disclosure"><summary>설명 펼치기</summary><p>안 됩니다. 사용자가 없어도 P는 resident이고 변경 내용은 남아 있습니다. 재사용에는 dirty/flushing, waiter 등의 상태와 보호 아래의 재검사가 필요합니다.</p></details></div>
+</section>
 
       <section class="section" id="primary-reading">
-        <div class="eyebrow">필수 읽기</div>
-        <h2>먼저 structure부터 읽습니다</h2>
-        <p>Pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a>를 읽으세요. holder debt, global <code>fcnt</code>, 현재 BCB VPID, frame linkage, dirty/LSA state라는 다섯 stored fact를 정확히 찾습니다. acquisition control flow를 추적하기 전에서 멈추세요.</p>
-        <p><a href="../reference/object-and-state-map.html">인쇄용 object-and-state card 열기 →</a></p>
-        <p><a href="0003-trace-fix-convergence.html">Lecture 0003로 계속 →</a></p>
-        <p><a href="0001-present-the-page-journey.html">← Lecture 0001로 돌아가기</a></p>
-      </section>
+<h2>참고 자료</h2>
+<details class="technical-detail"><summary>소스와 참고 자료</summary><ul><li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L460-L555"><code>page_buffer.c:460–555</code></a></li><li><a href="../reference/object-and-state-map.html">인쇄용 object-and-state card 열기 →</a></li></ul></details>
+</section>
     </article>
 
-    <nav class="lesson-nav" aria-label="강의 목차"><a href="#first-principles">필요한 역할부터 보고 자료구조의 이름 붙이기</a><a href="#first-code-path">초기화는 배열을 만들고, miss는 그 자리를 재사용한다</a>
+    <nav class="lesson-nav" aria-label="강의 목차"><a href="#first-principles">이름 → 제어 정보 → 페이지 내용</a><a href="#first-code-path">초기화는 배열을 만들고, miss는 그 자리를 재사용한다</a>
       <strong>강의 지도</strong>
-      <a href="#six-objects">1. 여섯 객체</a>
-      <a href="#runtime-shapes">1A. 실제 구조와 기본값</a>
-      <a href="#three-clocks">2. 세 lifetime</a>
-      <a href="#four-axes">3. 네 state axis</a>
-      <a href="#classify">4. snapshot 분류</a>
-      <a href="#success">5. fix에 적용</a>
-      <a href="#retrieval">6. 함께 생각하기</a>
-      <a href="#primary-reading">필수 읽기</a>
+      <a href="#six-objects">Frame 하나와 두 가지 사용 기록</a>
+      <a href="#runtime-shapes">미리 만든 frame과 BCB를 재사용한다</a>
+      <a href="#three-clocks">메모리·페이지·접근 권한의 수명은 다르다</a>
+      <a href="#four-axes">페이지 상태를 네 질문으로 나누기</a>
+      <a href="#classify">사용은 끝났지만 변경 내용은 남아 있다</a>
+      <a href="#success">성공이 보장하는 것과 보장하지 못하는 것</a>
+      <a href="#retrieval">Fix count가 0이면 빈 자리일까?</a>
+      <a href="#primary-reading">참고 자료</a>
       <hr>
       <a href="../reference/object-and-state-map.html">Object-and-state 카드</a>
       <a href="../../learning/01-contract-and-objects.md">Canonical Core 문서</a>

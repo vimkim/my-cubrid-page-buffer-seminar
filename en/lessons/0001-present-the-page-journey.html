@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lecture 1 — Module boundary and page journey</title>
+  <title>Lecture 1 — What does a page buffer do?</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
 <body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
@@ -12,108 +12,56 @@
   <div class="topline"><span>CUBRID page buffer · lecture 0001</span><a href="../index.html">Curriculum</a></div>
   <header class="hero">
     <div class="eyebrow">LECTURE 1 / Foundations</div>
-    <h1>Module boundary and page journey</h1>
-    <p>Follow a logical page from acquisition through mutation, propagation, and frame reuse. Each transition has an owner and an evidence boundary.</p>
-    <div class="pills"><span class="pill">Boundary</span><span class="pill">Ownership</span><span class="pill">Caller</span><span class="pill">Durability</span><span class="pill">Replacement</span><span class="pill">Evidence</span></div>
+    <h1>What does a page buffer do?</h1><p>Follow how repeated page requests reuse memory, how threads access it safely, and how changes reach storage.</p>
+
   </header>
 
   <div class="lesson-grid">
     <article class="lesson-main">
-<section class="section" id="first-principles"><p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><h2>What is a page buffer, and why keep one?</h2><p>A database page is a fixed-size unit of stored data. A frame is a reusable memory slot that can hold one page image. The page buffer manages these slots and their identities so database code can reuse resident bytes instead of requesting the same page from the storage layer for every access.</p><p>Without a database-managed buffer, a database could still use direct I/O or rely on an OS cache, but it would need another design for shared page identity, concurrent access, and writeback. Removing only caching mainly loses reuse; removing the ownership and writeback protocols without replacements risks inconsistent bytes or lost changes. An OS cache does not automatically implement the database’s page latch and WAL rules.</p><p><strong>Example:</strong> read page P, release it, then request P again. If P remains resident, the second request can reuse its frame. If it has left, the request must materialize it again. A buffer miss is not proof of physical device I/O: another storage layer may satisfy the read.</p><p>The next diagram follows the miss branch. A resident hit does not allocate another frame. A successful fix grants temporary use; unfix repays that use, without implying flush, commit, or eviction.</p></section>
+<section class="section" id="first-principles">
+<h2>Why keep pages in memory?</h2>
+<p><a href="../reference/first-principles-route.html">Three-hour route ↑</a></p><p>A database reads and writes data in <strong>pages</strong>. A <strong>frame</strong> is a memory slot for one page. The <strong>page buffer</strong> manages these slots so that later requests can reuse pages already in memory.</p><p>Read page P, do some other work, then request P again. If P is still in memory, this is a <strong>hit</strong>; otherwise it is a <strong>miss</strong>. A miss needs a frame. If there is no unused slot, another page must be safely removed.</p><div class="callout">A hit may still wait for another thread’s latch. A miss may be served by a lower cache, so it does not necessarily cause physical disk I/O.</div>
+</section>
+
+
+      <section class="section" id="boundary">
+<h2>Use with fix, release with unfix</h2>
+<p>Threads sharing memory need two protections: a frame must not be reused for another page while it is in use, and access to its contents must be coordinated.</p><ul><li><strong>Fix:</strong> prepare the requested page and obtain the requested page latch and temporary access. On success, <code>PAGE_PTR</code> gives access to its contents.</li><li><strong>Unfix:</strong> release the access obtained by that fix. Its returned pointer must no longer be used. The page itself may remain resident.</li></ul><p>The page latch protects concurrent access to memory. Transaction-level locking, logging, and commit remain separate responsibilities.</p><details class="technical-detail"><summary>Fix/unfix sources</summary><p class="source-note">Source: <a href="../../learning/01-contract-and-objects.md">Contract and Objects</a>. Source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2260-L2685"><code>page_buffer.c:2260–2685</code></a>, <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>6277–6634</code></a>, and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3062-L3201"><code>3062–3201</code></a>.</p></details>
+</section>
+
+      <section class="section" id="objects">
+<h2>A page identity is different from its memory slot</h2>
+<p>P is a page identity; a frame is the slot holding its contents. Later, the same frame can hold Q. Its BCB records which page it currently represents and whether it is in use.</p><img class="diagram" src="../../assets/object-ownership-map.svg" alt="VPID, BCB, frame, PAGE_PTR, global fix count, and per-thread holder ownership map"><p><code>VPID</code> identifies the page, the BCB holds control information, and the frame holds data. <code>fcnt</code> counts granted fixes across threads; holders record each thread’s fixes. The structures page develops these relationships.</p>
+</section>
+
+      <section class="section" id="journey">
+<h2>One request for page P</h2>
+<div class="journey page-request-journey"><article><span class="step">1</span><h3>Request P</h3><p>Look up whether P is resident.</p></article><article><span class="step">2</span><h3>Make room on a miss</h3><p>Use an unused frame, or safely remove a candidate and read P into its slot.</p></article><article><span class="step">3</span><h3>Obtain access</h3><p>After fix succeeds, use the contents with the granted latch.</p></article><article><span class="step">4</span><h3>Read or modify</h3><p>A modifying caller handles the required logging and dirty marking.</p></article><article><span class="step">5</span><h3>Finish using it</h3><p>Unfix the page. This does not itself mean flush or commit.</p></article><article><span class="step">6</span><h3>Write back and reuse</h3><p>Dirty contents are written with WAL ordering: make the corresponding log durable first. Once safe, the frame can be reused for another page.</p></article></div><p>This summarizes an ordinary request for an existing page. Not every request writes or evicts it, and flushing can occur in another execution context.</p>
+</section>
 <section class="section" id="first-code-path"><h2>A miss reaches frame acquisition through a real helper</h2><figure class="source-call-path"><pre>pgbuf_fix_release
   → pgbuf_claim_bcb_for_fix
     → pgbuf_allocate_bcb
       → pgbuf_get_victim
-        → pgbuf_get_victim_from_lru_list</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><p class="source-note">Pinned source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2416">page_buffer.c:2416</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8500">page_buffer.c:8392–8500</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403">page_buffer.c:8181–8403</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9067-L9253">page_buffer.c:9067–9253</a></p><p>The last two calls apply when the invalid list supplies no slot and the selected victim-search branch reaches an LRU. Allocation can retry or wait; this graph is not every execution.</p></section>
+        → pgbuf_get_victim_from_lru_list</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><details class="technical-detail"><summary>Expand source locations</summary><p class="source-note">Source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2416">page_buffer.c:2416</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8392-L8500">page_buffer.c:8392–8500</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8181-L8403">page_buffer.c:8181–8403</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9067-L9253">page_buffer.c:9067–9253</a></p></details><p>The last two calls apply when the invalid list supplies no slot and the selected victim-search branch reaches an LRU. Allocation can retry or wait; this graph is not every execution.</p></section>
 
-      <section class="section" id="boundary">
-        <div class="eyebrow">01 · Begin at the seam</div>
-        <h2>The Module’s contract with the caller</h2>
-        <p class="lede">The page-buffer Module turns a logical page identity plus access intent into temporary, latched access to resident bytes. That is a powerful contract—but it does not finish the caller's logical operation.</p>
-        <p class="big-claim">A successful normal fix connects <code>VPID</code> to a resident BCB/frame, grants the requested page latch, records one ownership debt, and lends a <code>PAGE_PTR</code> until the matching unfix.</p>
-        <div class="callout warn"><strong>Reasoning guardrail:</strong> do not reduce the contract to “it gets a page from memory.” That hides identity validation, miss materialization, latch grant, fix accounting, pointer lifetime, and the work still owned by the caller.</div>
-        <p class="source-note">Canonical explanation: <a href="../../learning/01-contract-and-objects.md">Contract and Objects</a>. Pinned source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2260-L2685"><code>page_buffer.c:2260–2685</code></a>, <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>6277–6634</code></a>, and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3062-L3201"><code>3062–3201</code></a>.</p>
-      </section>
 
-      <section class="section" id="objects">
-        <div class="eyebrow">02 · Keep the nouns separate</div>
-        <h2>One “page” is six different things</h2>
-        <img class="diagram" src="../../assets/object-ownership-map.svg" alt="VPID, BCB, frame, PAGE_PTR, global fix count, and per-thread holder ownership map">
-        <p class="caption">Read this as relationships and lifetimes, not as a call flow.</p>
-        <p><code>VPID</code> names the logical page. A reusable BCB records which identity is resident and points to a reusable frame. <code>PAGE_PTR</code> is only a borrowed view into those bytes. Global <code>fcnt</code> and the current thread's holder are two ledgers for outstanding fix debt.</p>
-        <div class="callout"><strong>Four sentences worth memorizing:</strong> fixed is not resident; dirty is not durable; unfix is not flush; eviction is not deallocation.</div>
-      </section>
 
-      <section class="section" id="journey">
-        <div class="eyebrow">03 · The six-part narrative</div>
-        <h2>Follow one logical page through its complete journey</h2>
-        <div class="journey">
-          <article><span class="step">1</span><h3>Model the objects</h3><p>Separate identity, residency, ownership, concurrency, and durability before discussing algorithms.</p><a href="../../learning/01-contract-and-objects.md">Core 1 →</a></article>
-          <article><span class="step">2</span><h3>Borrow and repay</h3><p>Trace hit or miss preparation into one granted latch, two ownership ledgers, a borrowed pointer, and matching release.</p><a href="../../learning/02-fix-hold-release.md">Core 2 →</a></article>
-          <article><span class="step">3</span><h3>Complete correctness</h3><p>The caller supplies logical locks, validation, log record, page LSA, dirty transition, and all-exit cleanup.</p><a href="../../learning/03-caller-completes-correctness.md">Core 3 →</a></article>
-          <article><span class="step">4</span><h3>Propagate one generation</h3><p>A flusher copies generation G, forces its WAL boundary, writes through DWB/direct I/O, and preserves a concurrent G+1 re-dirty.</p><a href="../../learning/04-flush-one-generation.md">Core 4 →</a></article>
-          <article><span class="step">5</span><h3>Reuse safely</h3><p>Hard eligibility—unfixed, clean/not flushing, waiter-free, and revalidated—comes before LRU and progress policy.</p><a href="../../learning/05-replace-one-frame.md">Core 5 →</a></article>
-          <article><span class="step">6</span><h3>Defend a change</h3><p>Name the Interface family, state owner, invariant, failure unwind, caller impact, and risk-matched verification seam.</p><a href="../../learning/06-maintainer-capstone.md">Core 6 →</a></article>
-        </div>
-      </section>
 
-      <section class="section" id="documents">
-        <div class="eyebrow">04 · Navigate the document set</div>
-        <h2>Route a maintainer instead of duplicating detail</h2>
-        <div class="table-scroll"><table>
-          <thead><tr><th>Maintainer question</th><th>Document route</th><th>Route rationale</th></tr></thead>
-          <tbody>
-            <tr><td>“How does the Module work?”</td><td>Ordered <a href="../../page-buffer-teaching-material.md">Guide entry</a> and Core path</td><td>“Let's follow one page through the contract and its invariants.”</td></tr>
-            <tr><td>“How do I change or debug it?”</td><td><a href="../../playbooks/change-safely.md">Change</a>, <a href="../../playbooks/debug-by-symptom.md">diagnosis</a>, and <a href="../../playbooks/verify-a-change.md">verification</a> playbooks</td><td>“Start from the task, then link back to the owning explanation.”</td></tr>
-            <tr><td>“Where is that proved?”</td><td><a href="../../reference/source-map.md">Source map</a>, <a href="../../reference/invariant-index.md">invariant index</a>, inventory, and uncertainty registry</td><td>“Here is the exact claim level and its pinned evidence.”</td></tr>
-            <tr><td>“What about concurrency, daemons, recovery, or rare APIs?”</td><td>Task-selected <a href="../../advanced/acquisition-concurrency.md">Advanced path</a></td><td>“Core invariants still govern; this page extends them through the specialized mechanism.”</td></tr>
-            <tr><td>“Can I test my model?”</td><td><a href="../../questions/README.md">Question bank</a></td><td>“Predict first, locate the transition, then defend the evidence boundary.”</td></tr>
-          </tbody>
-        </table></div>
-      </section>
-
-      <section class="section" id="evidence">
-        <div class="eyebrow">05 · Evidence boundaries</div>
-        <h2>Label a claim before you strengthen it</h2>
-        <p>The guide uses six claim levels: <strong>Interface contract</strong>, <strong>Verified mechanism</strong>, <strong>Implementation policy</strong>, <strong>Inference</strong>, <strong>Runtime observation</strong>, and <strong>Historical evidence</strong>. This prevents a source-visible branch from becoming a timeless API promise, and prevents one lab run from becoming universal runtime truth.</p>
-        <div class="callout warn"><strong>Example:</strong> victim safety predicates are a Verified mechanism at the pinned revision. Exact LRU zones and scan order are Implementation policy. The existing run's lack of eviction is a Runtime observation—not proof that the victim path cannot execute.</div>
-        <p class="source-note">Evidence vocabulary: <a href="../../CONTEXT.md#evidence-language">CONTEXT.md</a>. Mutable candidate status: <a href="../../unresolved-or-version-sensitive-findings.md">Evidence and uncertainty registry</a>.</p>
-      </section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">06 · Pause and reason</div>
-        <h2>Reconstruct the page journey from memory</h2>
-        <div class="quiz" data-audience-checkpoint>
-          <h3>Prompt</h3>
-          <p>“What does CUBRID's page-buffer Module do, what journey should a maintainer follow, and how should the team use these documents during later work?”</p>
-
-          <p><strong>Consider:</strong> do not copy the model. Explain one consequence of confusing two axes, and label at least one claim by evidence level.</p>
-
-
-
-          <details class="answer-disclosure"><summary>Open the explanation</summary><p>boundary → objects and independent axes → fix/release ownership → caller completes correctness → flush generation → replacement eligibility before policy → task and evidence routes.</p></details></div>
-
-      </section>
+<h2>Does the page disappear after use?</h2>
+<div class="quiz" data-audience-checkpoint><p>Immediately after P is unfixed, another thread requests P. Must it be read again?</p><details class="answer-disclosure"><summary>Show explanation</summary><p>No. If P is still resident, the request can use the same frame. Unfix ends one use; eviction removes the resident mapping. The new request must obtain its own fix.</p></details></div>
+</section>
 
       <section class="section" id="primary-reading">
-        <div class="eyebrow">Primary reading</div>
-        <h2>Read the route selector, then only Core page 1</h2>
-        <p>Read <a href="../../page-buffer-teaching-material.md">the Guide entry</a> once for document topology, then study <a href="../../learning/01-contract-and-objects.md">Contract and Objects</a>. For primary-source contact, inspect only the public choices in <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a> today. Detailed latch CAS and miss cleanup are outside this lecture's working-memory budget.</p>
-        <p><a href="../reference/presentation-spine.html">Open the printable page-journey map →</a></p>
-        <p><a href="0002-separate-objects-from-state.html">Continue to Lecture 0002 →</a></p>
-      </section>
+<span id="documents"></span><span id="evidence"></span>
+<h2>References</h2>
+<details class="technical-detail"><summary>Sources and further reading</summary><ul><li><a href="../../page-buffer-teaching-material.md">the Guide entry</a></li><li><a href="../../learning/01-contract-and-objects.md">Contract and Objects</a></li><li><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.h#L172-L203"><code>page_buffer.h:172–203</code></a></li><li><a href="../reference/presentation-spine.html">Open the printable page-journey map →</a></li></ul></details>
+
+</section>
     </article>
 
-    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">What is a page buffer, and why keep one?</a><a href="#first-code-path">A miss reaches frame acquisition through a real helper</a>
-      <strong>Lecture map</strong>
-      <a href="#boundary">1. Begin at the seam</a>
-      <a href="#objects">2. Keep the nouns separate</a>
-      <a href="#journey">3. Six-part narrative</a>
-      <a href="#documents">4. Route the document set</a>
-      <a href="#evidence">5. Label the evidence</a>
-      <a href="#retrieval">6. Pause and reason</a>
-      <a href="#primary-reading">Primary reading</a>
-      <hr>
+    <nav class="lesson-nav" aria-label="Lesson contents"><strong>On this page</strong><a href="#first-principles">Why keep pages in memory?</a><a href="#boundary">Use with fix, release with unfix</a><a href="#objects">A page identity is different from its memory slot</a><a href="#journey">One request for page P</a><a href="#first-code-path">A miss reaches frame acquisition through a real helper</a><a href="#retrieval">Does the page disappear after use?</a><a href="#primary-reading">References</a><hr>
       <a href="../reference/presentation-spine.html">Page-journey map</a>
       <a href="0002-separate-objects-from-state.html">Next lecture</a>
       <a href="../../questions/README.md">Question bank</a>

@@ -24,15 +24,16 @@
   → BufferAlloc
     → GetVictimBuffer
       → StrategyGetBuffer
-        → ClockSweepTick</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><p class="source-note">Pinned source: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L1223-L1251">bufmgr.c:1223–1251</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2268">bufmgr.c:2268</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2671">bufmgr.c:2548–2671</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">freelist.c:239–317</a></p><p>Usage credit is not a timestamp or lifetime hit count. Default first pin by a backend can raise it up to 5; nested pins held by that backend do not keep raising shared credit. Access-strategy rings take a different first route and contain shared-buffer IDs, not a separate privately owned pool.</p><p><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3380">Pin credit rules</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L135-L146">Credit cap</a></p></section>
+        → ClockSweepTick</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><details class="technical-detail"><summary>Expand source locations</summary><p class="source-note">Source: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L1223-L1251">bufmgr.c:1223–1251</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2268">bufmgr.c:2268</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2671">bufmgr.c:2548–2671</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">freelist.c:239–317</a></p></details><p>Usage credit is not a timestamp or lifetime hit count. Default first pin by a backend can raise it up to 5; nested pins held by that backend do not keep raising shared credit. Access-strategy rings take a different first route and contain shared-buffer IDs, not a separate privately owned pool.</p><p><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3380">Pin credit rules</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L135-L146">Credit cap</a></p></section>
 <section class="section" id="innodb-first-trace"><h2>InnoDB: inspect the old tail, then retry the free list</h2><p>Constructed example: one pool instance, an established old region in a list longer than 512 entries, empty free list, no compressed-page alternative, and no races. Starting at the tail, A is buffer-fixed: skip. B is dirty: skip for clean eviction. C is clean and relocatable: evict. The allocation loop returns to the free list to obtain a block. Under concurrency another thread can take that block first.</p><figure class="source-call-path"><pre>buf_LRU_get_free_block
   → buf_LRU_scan_and_free_block
     → buf_LRU_free_from_common_LRU_list
-      → buf_LRU_free_page</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><p class="source-note">Pinned source: <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L517-L580">buf0lru.cc:517–580</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L300-L382">buf0lru.cc:300–382</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L956">buf0lru.cc:956</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0flu.cc#L476-L497">buf0flu.cc:476–497</a></p><p>Disk-read admission goes just after LRU_old when the old region exists. A newly created page enters young, and short lists use head insertion. Once eviction has begun, the default old-page time gate requires a qualifying access at least 1,000 ms after the first logical access; time passing alone does not promote a page. Old and young both contain resident pages, not ghost entries. Without midpoint admission and delayed promotion, another policy would need to resist scan pollution.</p><p><a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L855-L909">Admission</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/include/buf0buf.ic#L180-L203">Access-time gate</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/handler/ha_innodb.cc#L23090-L23100">Defaults</a></p></section>
+      → buf_LRU_free_page</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><details class="technical-detail"><summary>Expand source locations</summary><p class="source-note">Source: <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L517-L580">buf0lru.cc:517–580</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L300-L382">buf0lru.cc:300–382</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L956">buf0lru.cc:956</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0flu.cc#L476-L497">buf0flu.cc:476–497</a></p></details><p>Disk-read admission goes just after LRU_old when the old region exists. A newly created page enters young, and short lists use head insertion. Once eviction has begun, the default old-page time gate requires a qualifying access at least 1,000 ms after the first logical access; time passing alone does not promote a page. Old and young both contain resident pages, not ghost entries. Without midpoint admission and delayed promotion, another policy would need to resist scan pollution.</p><p><a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L855-L909">Admission</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/include/buf0buf.ic#L180-L203">Access-time gate</a> · <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/handler/ha_innodb.cc#L23090-L23100">Defaults</a></p></section>
 
       <section class="section" id="map">
-        <div class="eyebrow">01 · One comparison frame</div>
-        <h2>Follow one page through three decisions</h2>
+
+
+        <h2>What each engine remembers and how it finds candidates</h2>
         <img class="diagram" src="../../assets/three-engine-replacement-paths.svg" alt="Admission, reuse, and victim paths for CUBRID, PostgreSQL, and InnoDB replacement policies">
         <p class="caption">The shared hard rule is simple: a fixed or pinned frame is not an ordinary victim. Admission, hotness memory, candidate order, and dirty handling are implementation policy.</p>
         <div class="table-scroll"><table>
@@ -43,11 +44,15 @@
             <tr><td>Where is the candidate?</td><td>LRU3 of one policy-selected list.</td><td>First unpinned zero-count descriptor reached by the clock.</td><td>A clean relocatable page scanned backward from the old tail.</td></tr>
           </tbody>
         </table></div>
-      </section>
+
+</section>
 
       <section class="section" id="cubrid">
-        <div class="eyebrow">02 · CUBRID</div>
-        <h2>Choose a domain, then search its cold zone</h2>
+<h2>CUBRID: choose a domain, then inspect LRU3</h2>
+<p>Private/shared lists and three zones organize candidate preference. Ordinary reuse requires clean state and protected checks of users, waiters and other state. AOUT is disabled at this revision.</p>
+<details class="technical-detail"><summary>Expand implementation details and sources</summary>
+
+
         <ol>
           <li><strong>Admission:</strong> at the pinned AOUT-disabled baseline, a newly loaded VOID BCB enters private S+p at LRU1 top when its final-unfix execution context has an enabled private-LRU assignment; otherwise it enters shared LRU2 middle.</li>
           <li><strong>Reuse:</strong> LRU1 stays in place. An LRU2 page returns to LRU1 only when its list-tick age is at least half the current LRU2 count. Ordinary LRU3 reuse returns to LRU1.</li>
@@ -56,11 +61,16 @@
         </ol>
         <div class="callout"><strong>Scan resistance:</strong> private/shared locality and zone admission reduce how one access stream competes with another. The source contains AOUT ghost history, but this pinned build forces its ratio to zero, so do not credit active 2Q behavior.</div>
         <p class="source-note"><strong>Pinned CUBRID:</strong> <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6636-L7040">admission and hit transitions</a>, <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9315-L9538">bounded LRU3 scan</a>, and <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14252-L14511">quota adjustment</a>.</p>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="postgresql">
-        <div class="eyebrow">03 · PostgreSQL</div>
-        <h2>Decay reuse credit with a global clock hand</h2>
+<h2>PostgreSQL: the clock reduces reuse credits</h2>
+<p>Instead of an exact recency rank, it uses a bounded usage count. The clock skips pinned buffers, decrements positive counts, and claims an unpinned zero-count candidate. Dirty candidates may require flushing and revalidation.</p>
+<details class="technical-detail"><summary>Expand implementation details and sources</summary>
+
+
         <ol>
           <li><strong>Admission:</strong> a newly claimed shared descriptor receives <code>usage_count = 1</code>.</li>
           <li><strong>Reuse:</strong> the first pin by a backend increments shared <code>usage_count</code> up to 5. A nested pin by the same backend changes only its private refcount, so it earns no second shared credit.</li>
@@ -69,11 +79,16 @@
         </ol>
         <div class="callout"><strong>No LRU order:</strong> two descriptors with <code>usage_count = 2</code> have no “older one first” relation. The count is bounded reuse credit decayed by clock visits, not a timestamp or linked-list rank.</div>
         <p class="source-note"><strong>Pinned PostgreSQL:</strong> <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L104-L317">clock selection</a>, <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L136-L147">maximum usage count 5</a>, and <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L420-L540">strategy-ring sizes</a>.</p>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="innodb">
-        <div class="eyebrow">04 · MySQL / InnoDB</div>
-        <h2>Admit disk reads into the old region before granting young status</h2>
+<h2>InnoDB: admit into old and observe reuse</h2>
+<p>In a list with an old region, disk-read pages enter at the old boundary. A qualifying later access can promote them to young. Newly created pages and short lists have different admission rules. Time passing alone does not promote a page.</p>
+<details class="technical-detail"><summary>Expand implementation details and sources</summary>
+
+
         <ol>
           <li><strong>Topology:</strong> each buffer-pool instance owns an LRU, free list, and flush list. Once the LRU has at least 512 entries, <code>LRU_old</code> splits one physical list into young and old regions.</li>
           <li><strong>Admission:</strong> once the old region is established, a disk-read page enters immediately after its boundary. Short lists admit at the LRU head. The old target defaults to 37%. A page created directly in memory enters at the young head.</li>
@@ -82,10 +97,12 @@
         </ol>
         <div class="callout"><strong>Scan resistance:</strong> a one-pass scan fills the old region but rapid first touches do not promote every page into young. Old/new are resident regions, not a 2Q ghost list of evicted identities.</div>
         <p class="source-note"><strong>Pinned MySQL/InnoDB:</strong> <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L855-L927">midpoint insertion</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0buf.cc#L4960-L4975">disk-read caller</a>, <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/handler/ha_innodb.cc#L23090-L23100">37% and 1,000ms defaults</a>, and <a href="https://github.com/mysql/mysql-server/blob/06a5c1c99c377fc41b2eba1ea244e8b220bdc3c8/storage/innobase/buf/buf0lru.cc#L493-L640">free-block pressure loop</a>.</p>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="dirty">
-        <div class="eyebrow">05 · Dirty pages change progress</div>
+
         <h2>Writeback progress remains a separate mechanism</h2>
         <div class="table-scroll"><table>
           <thead><tr><th>Engine</th><th>When the candidate is dirty</th><th>Background help</th></tr></thead>
@@ -99,8 +116,11 @@
       </section>
 
       <section class="section" id="misreadings">
-        <div class="eyebrow">06 · Prevent false equivalence</div>
-        <h2>Similar words hide different algorithms</h2>
+<h2>Similar names do not imply identical behavior</h2>
+<p>All three protect frames in use, but differ in how they remember reuse and find candidates. Comparing performance requires measurements with controlled workloads and configurations.</p>
+<details class="technical-detail"><summary>Expand implementation details and sources</summary>
+
+
         <div class="table-scroll"><table>
           <thead><tr><th>Tempting shortcut</th><th>Correction</th></tr></thead>
           <tbody>
@@ -111,38 +131,31 @@
           </tbody>
         </table></div>
         <div class="callout warn"><strong>No winner follows from source shape.</strong> Hit ratio and latency also depend on effective pool bytes, page/row layout, workload, dirtying, cleaning, checkpoint behavior, and contention. This lecture supplies measurement hypotheses, not benchmark results.</div>
-      </section>
+
+</details>
+</section>
 
       <section class="section" id="retrieval">
-        <div class="eyebrow">07 · Pause and reason</div>
-        <h2>Trace the second access and the first dirty victim</h2>
-        <div class="quiz" data-audience-checkpoint>
-          <h3>Prompt</h3>
-          <p>A sequential scan touches a page once, later touches it again, and then allocation pressure reaches it while dirty. Explain the possible policy path in each engine.</p>
-
-
-
-          <details class="answer-disclosure"><summary>Open the explanation</summary><p>CUBRID: private LRU1 or shared LRU2 admission -> zone/age-based boost -> advertised one-list LRU3 scan capped at 1000 -> dirty must be flushed before ordinary detach -> PostgreSQL: usage_count 1 admission -> first backend pin raises it up to 5 while nested local pin does not -> clock skips pins, decrements positive count, selects zero -> dirty selection may be flushed by allocator -> InnoDB: disk read enters old head, default old target 37% -> promotion normally waits 1000ms -> scan from old tail, first common attempt capped at 100 -> dirty pressure invokes cleaner or foreground flush -> all three exclude owned frames, but no policy name proves performance superiority.</p></details></div>
-      </section>
+<h2>Compare candidate selection, not names</h2>
+<div class="quiz" data-audience-checkpoint><p>Can a recently used page become a replacement candidate? Separate reuse information from safety conditions in each engine.</p><details class="answer-disclosure"><summary>Show explanation</summary><p>CUBRID uses domains and zones, PostgreSQL uses usage credits, and InnoDB uses young/old placement. Candidate preference is separate from actual frame reuse, which also needs protection of active users and dirty handling. Policy names alone do not establish a performance winner.</p></details></div>
+</section>
 
       <section class="section" id="primary-reading">
-        <div class="eyebrow">Primary reading</div>
-        <h2>Use the detailed evidence note for maintenance claims</h2>
-        <p>The <a href="../../reference/cross-database-replacement-policy-comparison.md">pinned primary-source comparison</a> includes exact source routes, concurrency shapes, scan strategy details, and evidence boundaries omitted from this lecture.</p>
-        <p><a href="0018-compare-three-buffer-pools.html">← Return to the simple three-buffer-pool comparison</a></p>
-      </section>
+<h2>References</h2>
+<details class="technical-detail"><summary>Sources and further reading</summary><ul><li><a href="../../reference/cross-database-replacement-policy-comparison.md">pinned primary-source comparison</a></li></ul></details>
+</section>
     </article>
 
     <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Compare the same four questions</a><a href="#postgres-first-trace">PostgreSQL: inspect, age, skip, claim</a><a href="#innodb-first-trace">InnoDB: inspect the old tail, then retry the free list</a>
       <strong>Lecture map</strong>
-      <a href="#map">1. Three decisions</a>
-      <a href="#cubrid">2. CUBRID</a>
-      <a href="#postgresql">3. PostgreSQL</a>
-      <a href="#innodb">4. InnoDB</a>
-      <a href="#dirty">5. Dirty candidates</a>
-      <a href="#misreadings">6. False equivalence</a>
-      <a href="#retrieval">7. Trace it</a>
-      <a href="#primary-reading">Primary reading</a>
+      <a href="#map">What each engine remembers and how it finds candidates</a>
+      <a href="#cubrid">CUBRID: choose a domain, then inspect LRU3</a>
+      <a href="#postgresql">PostgreSQL: the clock reduces reuse credits</a>
+      <a href="#innodb">InnoDB: admit into old and observe reuse</a>
+      <a href="#dirty">Writeback progress remains a separate mechanism</a>
+      <a href="#misreadings">Similar names do not imply identical behavior</a>
+      <a href="#retrieval">Compare candidate selection, not names</a>
+      <a href="#primary-reading">References</a>
       <hr>
       <a href="0018-compare-three-buffer-pools.html">Simple comparison</a>
       <a href="../../reference/cross-database-replacement-policy-comparison.md">Evidence note</a>
