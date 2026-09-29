@@ -31,3 +31,47 @@ Reproduce the source gates with `node scripts/check-bilingual-teaching-site.mjs 
 Focused visual inspection used 1440×1000 projection/reading and 390×844 no-JavaScript mobile viewports. It covered every new concept/code section, all four daemon graphs, both engine examples, the route, and the misconception recap. Screenshots are transient local artifacts under `/tmp/seminar-*`; the source files and this verification record are the durable deliverables.
 
 Human review remains tracked separately in work item 55. This implementation does not certify final human acceptance or presenter mastery.
+
+## Replacement revision: current verification (2026-09-30)
+
+The original delivery receipts above are historical. This revision adds the
+paired `reference/replacement-lab.html`, shared interactive model, links from
+three canonical lectures and the delivery route/library, and native evidence in
+[the experiment record](../experiments/replacement/README.md). The presentation
+still totals 180 minutes; its two replacement blocks remain 20 and 35 minutes.
+
+The native program links SERVER_MODE at the pin plus isolated observation and a
+mutex-protected maintenance freeze. Flush daemons remain live. Accepted runs
+must exit zero and pass per-VPID receipt validation. Earlier failed fixture
+trials are documented in the experiment record and excluded from results.
+Configured `ctest` contains no tests at this pin; that command does not certify
+the experiment. The actual native runs and receipt checks provide its validation.
+
+Current automatic source gates pass for 53 pairs. Maintainer-guide source, SVG,
+HTTP and live DOM checks pass for 43 pages and 60 displayed SVGs (103 resources).
+Existing browser regressions pass 22/22 without skips. The dedicated lab check
+runs the independent finite-trace OPT oracle, all 36 policy traces, controls,
+zone steps, 1440/390px light/dark layouts and no-JavaScript reading in both
+languages on headless Chromium and Firefox. Its durable receipt is
+[browser-checks.json](../experiments/replacement/browser-checks.json).
+
+The presenter notes, cue card and deep-dive Markdown render with headings and
+tables in Copyparty; relative presenter-to-lab navigation was exercised. Review
+links currently resolve to the retained seminar task worktree. When approving
+merges and cleanup across both repositories, update those links to the agreed
+permanent location before removing that worktree.
+
+The full bilingual aggregate still fails the human-review currency gate: 53
+missing Korean review receipts and 106 absent/stale language fingerprints. No
+human acceptance receipt or presenter-mastery evidence was invented. This gate
+remains separately tracked as work item 55.
+
+Final recorded native executions use source commit
+`282f81cebad9c875fb4f03348ccbcdb8d15a1c04`: four zero exits and two independently
+validated pairs of raw receipts. The fitting control's frozen quota was 1995 and
+1990 respectively, while its repeated reads were all hits; the cyclic case had
+quota 2048 and all misses on each pass in both executions. The patch applies
+cleanly to the original clean pinned worktree. Both validator regression suites
+pass (45 tests); the receipt analyzer rejects four deliberately corrupted traces.
+Final served checks pass for 266 resources and 107 pages. Source whitespace and
+presenter links/anchors, fences, and contiguous schedules pass.

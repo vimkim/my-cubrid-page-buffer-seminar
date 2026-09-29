@@ -4,6 +4,7 @@
   "canonicalLanguage": "en",
   "legacyRedirectMinimumDays": 90,
   "pages": [
+    { "path": "reference/replacement-lab.html", "en": "en/reference/replacement-lab.html", "ko": "ko/reference/replacement-lab.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "reference/first-principles-route.html", "en": "en/reference/first-principles-route.html", "ko": "ko/reference/first-principles-route.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0000a-database-bridge.html", "en": "en/lessons/0000a-database-bridge.html", "ko": "ko/lessons/0000a-database-bridge.html", "review": { "state": "pending" }, "fingerprints": {} },
     { "path": "lessons/0000-replacement-foundations.html", "en": "en/lessons/0000-replacement-foundations.html", "ko": "ko/lessons/0000-replacement-foundations.html", "review": { "state": "pending" }, "fingerprints": {} },

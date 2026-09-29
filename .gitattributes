@@ -1,0 +1,3 @@
+# Preserve exact source-patch context and captured configuration bytes for hashes.
+experiments/replacement/native-experiment.patch whitespace=-blank-at-eol
+experiments/replacement/cubrid.conf whitespace=-blank-at-eol

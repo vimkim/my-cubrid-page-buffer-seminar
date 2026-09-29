@@ -1,0 +1,70 @@
+[
+  {
+    "engine": "chromium",
+    "language": "en",
+    "artifact": "http://127.0.0.1:3936/en/reference/replacement-lab.html",
+    "oracleCases": 12,
+    "policyTraces": 36,
+    "ui": "pass",
+    "viewports": [
+      "1440/light",
+      "390/light",
+      "1440/dark",
+      "390/dark"
+    ],
+    "noJavaScript": "static results visible",
+    "consoleErrors": [],
+    "scope": "Educational replacement model and rendered explanation; no CUBRID engine runtime experiment."
+  },
+  {
+    "engine": "chromium",
+    "language": "ko",
+    "artifact": "http://127.0.0.1:3936/ko/reference/replacement-lab.html",
+    "oracleCases": 12,
+    "policyTraces": 36,
+    "ui": "pass",
+    "viewports": [
+      "1440/light",
+      "390/light",
+      "1440/dark",
+      "390/dark"
+    ],
+    "noJavaScript": "static results visible",
+    "consoleErrors": [],
+    "scope": "Educational replacement model and rendered explanation; no CUBRID engine runtime experiment."
+  },
+  {
+    "engine": "firefox",
+    "language": "en",
+    "artifact": "http://127.0.0.1:3936/en/reference/replacement-lab.html",
+    "oracleCases": 12,
+    "policyTraces": 36,
+    "ui": "pass",
+    "viewports": [
+      "1440/light",
+      "390/light",
+      "1440/dark",
+      "390/dark"
+    ],
+    "noJavaScript": "static results visible",
+    "consoleErrors": [],
+    "scope": "Educational replacement model and rendered explanation; no CUBRID engine runtime experiment."
+  },
+  {
+    "engine": "firefox",
+    "language": "ko",
+    "artifact": "http://127.0.0.1:3936/ko/reference/replacement-lab.html",
+    "oracleCases": 12,
+    "policyTraces": 36,
+    "ui": "pass",
+    "viewports": [
+      "1440/light",
+      "390/light",
+      "1440/dark",
+      "390/dark"
+    ],
+    "noJavaScript": "static results visible",
+    "consoleErrors": [],
+    "scope": "Educational replacement model and rendered explanation; no CUBRID engine runtime experiment."
+  }
+]

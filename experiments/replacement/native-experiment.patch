@@ -1,0 +1,336 @@
+diff --git a/conf/cubrid.conf b/conf/cubrid.conf
+index 2f6c48cb4..2f3c6b0c7 100644
+--- a/conf/cubrid.conf
++++ b/conf/cubrid.conf
+@@ -40,10 +40,10 @@ service=server,broker,manager
+ # Manual > Performance Tuning > Database Server Configuration > Default Parameters
+ 
+ # Size of data buffer are using K, M, G, T unit
+-data_buffer_size=512M
++data_buffer_size=64M
+ 
+ # Size of log buffer are using K, M, G, T unit
+-log_buffer_size=256M
++log_buffer_size=16M
+ 
+ # Size of sort buffer are using K, M, G, T unit
+ # The sort buffer should be allocated per thread.
+diff --git a/cubrid/CMakeLists.txt b/cubrid/CMakeLists.txt
+index db587d313..65e51055f 100644
+--- a/cubrid/CMakeLists.txt
++++ b/cubrid/CMakeLists.txt
+@@ -816,3 +816,9 @@ if(WIN32)
+     FILES_MATCHING PATTERN "*.pdb"
+     )
+ endif(WIN32)
++
++# Isolated seminar experiment; links the real SERVER_MODE page buffer.
++add_executable(seminar_replacement ../experiments/seminar-replacement/main.cpp)
++target_compile_definitions(seminar_replacement PRIVATE SERVER_MODE ${COMMON_DEFS})
++target_include_directories(seminar_replacement PRIVATE ${EP_INCLUDES})
++target_link_libraries(seminar_replacement PRIVATE cubrid ${EP_LIBS})
+diff --git a/experiments/seminar-replacement/README.md b/experiments/seminar-replacement/README.md
+new file mode 100644
+index 000000000..56cc29371
+--- /dev/null
++++ b/experiments/seminar-replacement/README.md
+@@ -0,0 +1,43 @@
++# Controlled replacement experiment
++
++This executable links the real SERVER_MODE CUBRID page buffer at baseline
++`f799e05d77d5300c6ea5753b4a6cc7caee6d8912`, with experiment-only observation added
++through existing quiz trace sites. It is not a replacement-policy implementation
++or a benchmark. The branch configuration uses a 64 MiB data buffer and 16 MiB log
++buffer. Other application worktrees and the pinned baseline remain unchanged.
++
++Configure and build this branch with the project's CMake workflow, install it,
++and load that installation's environment. The target is `seminar_replacement`.
++Use a disposable database created by this installation, with no server process
++or other clients accessing it. Set `CUBRID_DATABASES` to its private registry.
++
++```sh
++cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX="$CUBRID"
++cmake --build build
++cmake --install build
++cubrid createdb --db-volume-size=64M --log-volume-size=40M seminar_lab en_US.utf8
++build/bin/seminar_replacement seminar_lab fits > fits.jsonl
++build/bin/seminar_replacement seminar_lab cycle > cycle.jsonl
++```
++
++The executable allocates real permanent-file pages, flushes their initialized
++images, lets normal maintenance run for 600 ms, freezes maintenance under a mutex (waiting for any in-progress callback), and
++invalidates resident pages before the measured reads. It executes three ordered
++READ fix/unfix passes over half the actual pool size (`fits`) or actual pool size
++plus one (`cycle`). The actual pool size is read from the engine, not assumed.
++Observation records include request VPID, hit/read/eviction events, and private
++LRU quota, thresholds, counts and AOUT capacity after each request. Private-index
++to whole-LRU-index conversion follows the engine macro.
++
++Flush daemons remain running. The program resumes maintenance before rollback,
++releases the private assignment and transaction, and shuts down. Success requires
++process exit zero as well as a complete trace. Debug validation may access volume
++metadata in addition to the requested pages. Classify target hit/miss by matching
++both volid and pageid, rather than counting every trace event as target traffic.
++
++Daemon scheduling during setup can change the frozen quota; record it rather than
++assuming a fixed ratio. Freezing maintenance bounds this clean read experiment and is
++not a claim about live concurrent service behavior. Trace overhead invalidates
++latency comparisons. READ_FROM_DISK denotes the engine read path, not a physical
++storage-device miss. The seminar repository retains the raw compressed traces,
++independent receipt analyzer, result tables, and evidence limits.
+diff --git a/experiments/seminar-replacement/main.cpp b/experiments/seminar-replacement/main.cpp
+new file mode 100644
+index 000000000..3f952713c
+--- /dev/null
++++ b/experiments/seminar-replacement/main.cpp
+@@ -0,0 +1,145 @@
++/*
++ * Copyright 2008 Search Solution Corporation
++ * Copyright 2016 CUBRID Corporation
++ *
++ *  Licensed under the Apache License, Version 2.0 (the "License");
++ *  you may not use this file except in compliance with the License.
++ *  You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ *  Unless required by applicable law or agreed to in writing, software
++ *  distributed under the License is distributed on an "AS IS" BASIS,
++ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ *  See the License for the specific language governing permissions and
++ *  limitations under the License.
++ *
++ */
++
++#include "config.h"
++#include "boot_sr.h"
++#include "critical_section.h"
++#include "error_manager.h"
++#include "file_manager.h"
++#include "log_impl.h"
++#include "log_manager.h"
++#include "message_catalog.h"
++#include "page_buffer.h"
++#include "system_parameter.h"
++#include "thread_manager.hpp"
++#include "thread_entry_task.hpp"
++#include "tz_support.h"
++#include <cstdio>
++#include <cstring>
++#include <cstdlib>
++#include <thread>
++#include <chrono>
++
++// XXX: SHOULD BE THE LAST INCLUDE HEADER
++#include "memory_wrapper.hpp"
++
++extern void seminar_begin (int);
++extern void seminar_end ();
++extern void seminar_snapshot (THREAD_ENTRY *, int);
++extern int seminar_buffers ();
++extern void seminar_freeze_maintenance (bool);
++namespace
++{
++  THREAD_ENTRY *fixture_thread = nullptr;
++
++  bool boot (const char *database)
++  {
++    if (er_init (nullptr, ER_NEVER_EXIT) != NO_ERROR)
++      {
++	return false;
++      }
++    cubthread::initialize (fixture_thread);
++    if (!fixture_thread || msgcat_init () != NO_ERROR || tz_load () != NO_ERROR)
++      {
++	return false;
++      }
++    if (sysprm_load_and_init (database, nullptr, SYSPRM_LOAD_ALL) != NO_ERROR)
++      {
++	return false;
++      }
++    if (sync_initialize_sync_stats () != NO_ERROR || csect_initialize_static_critical_sections () != NO_ERROR)
++      {
++	return false;
++      }
++    CHECK_ARGS checks = {true, true};
++    if (boot_restart_server (fixture_thread, false, database, false, &checks, nullptr, true) != NO_ERROR)
++      {
++	return false;
++      }
++    TRAN_STATE state;
++    return logtb_assign_tran_index (fixture_thread, NULL_TRANID, TRAN_ACTIVE, nullptr, &state,
++				    TRAN_LOCK_INFINITE_WAIT, TRAN_READ_COMMITTED) != NULL_TRAN_INDEX;
++  }
++
++
++  void require (bool ok, const char *what)
++  {
++    if (!ok)
++      {
++	std::fprintf (stderr, "SEMINAR FAILURE: %s (error %d)\n", what, er_errid ());
++	std::abort ();
++      }
++  }
++
++}
++int main (int argc, char **argv)
++{
++  if (argc != 3 || (std::strcmp (argv[2], "fits") && std::strcmp (argv[2], "cycle")))
++    {
++      return 2;
++    }
++  require (boot (argv[1]), "boot");
++  fixture_thread->private_lru_index = pgbuf_assign_private_lru (fixture_thread);
++  pgbuf_thread_variables_init (fixture_thread);
++  require (fixture_thread->private_lru_index >= 0, "private LRU");
++  const int buffers = seminar_buffers ();
++  const int count = std::strcmp (argv[2], "fits") == 0 ? buffers / 2 : buffers + 1;
++  VPID *pages = new VPID[count];
++  VFID file;
++  PAGE_TYPE kind = PAGE_OVERFLOW;
++  require (file_create_with_npages (fixture_thread, FILE_BTREE_OVERFLOW_KEY, count, nullptr, &file) == NO_ERROR, "file");
++  for (int i = 0; i < count; ++i)
++    {
++      PAGE_PTR page = nullptr;
++      require (file_alloc (fixture_thread, &file, file_init_page_type, &kind, &pages[i], &page) == NO_ERROR, "allocate");
++      require (pgbuf_flush_with_wal (fixture_thread, page) != nullptr, "flush initialized page");
++      pgbuf_unfix (fixture_thread, page);
++    }
++  require (pgbuf_flush_all (fixture_thread, NULL_VOLID) == NO_ERROR, "flush setup");
++  // Let normal maintenance observe setup activity, then freeze background scheduling.
++  BO_ENABLE_FLUSH_DAEMONS ();
++  std::this_thread::sleep_for (std::chrono::milliseconds (600));
++  seminar_freeze_maintenance (true);
++  require (pgbuf_invalidate_all (fixture_thread, NULL_VOLID) == NO_ERROR, "cold buffer");
++  std::printf ("{\"type\":\"setup\",\"scenario\":\"%s\",\"buffers\":%d,\"pages\":%d,\"passes\":3,\"page_buffer_daemons\":\"maintenance-frozen-flushers-live\"}\n",
++	       argv[2], buffers, count);
++  seminar_snapshot (fixture_thread, -1);
++  for (int pass = 0; pass < 3; ++pass)
++    for (int i = 0; i < count; ++i)
++      {
++	int request = pass * count + i;
++	std::printf ("{\"type\":\"request\",\"request\":%d,\"pass\":%d,\"index\":%d,\"volid\":%d,\"pageid\":%d}\n", request,
++		     pass, i, (int) pages[i].volid, pages[i].pageid);
++	seminar_begin (request);
++	PAGE_PTR page = pgbuf_fix (fixture_thread, &pages[i], OLD_PAGE, PGBUF_LATCH_READ, PGBUF_UNCONDITIONAL_LATCH);
++	require (page != nullptr, "read fix");
++	pgbuf_unfix (fixture_thread, page);
++	seminar_end ();
++	seminar_snapshot (fixture_thread, request);
++      }
++  std::fflush (stdout);
++  // Resume ordinary maintenance before rollback and shutdown.
++  seminar_freeze_maintenance (false);
++  delete [] pages;
++  int transaction = fixture_thread->tran_index;
++  log_abort (fixture_thread, transaction);
++  pgbuf_release_private_lru (fixture_thread, fixture_thread->private_lru_index);
++  logtb_release_tran_index (fixture_thread, transaction);
++  xboot_shutdown_server (fixture_thread, ER_THREAD_FINAL);
++  return 0;
++}
+diff --git a/experiments/seminar-replacement/observe.inc b/experiments/seminar-replacement/observe.inc
+new file mode 100644
+index 000000000..c1ed03035
+--- /dev/null
++++ b/experiments/seminar-replacement/observe.inc
+@@ -0,0 +1,46 @@
++/*
++ * Copyright 2008 Search Solution Corporation
++ * Copyright 2016 CUBRID Corporation
++ *
++ *  Licensed under the Apache License, Version 2.0 (the "License");
++ *  you may not use this file except in compliance with the License.
++ *  You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ *  Unless required by applicable law or agreed to in writing, software
++ *  distributed under the License is distributed on an "AS IS" BASIS,
++ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ *  See the License for the specific language governing permissions and
++ *  limitations under the License.
++ *
++ */
++
++/* Experiment-only observation, after page_buffer.c definitions. */
++static thread_local int seminar_request = -1;
++void seminar_trace_event (const char *event, const VPID *vpid)
++{
++  if (seminar_request >= 0 && vpid != NULL)
++    printf ("{\"type\":\"event\",\"request\":%d,\"event\":\"%s\",\"volid\":%d,\"pageid\":%d}\n",
++            seminar_request, event, (int) vpid->volid, vpid->pageid);
++}
++void seminar_begin (int request) { seminar_request = request; }
++void seminar_end () { seminar_request = -1; }
++int seminar_buffers () { return pgbuf_Pool.num_buffers; }
++void seminar_snapshot (THREAD_ENTRY *thread_p, int request)
++{
++  /* Maintenance is frozen; the clean target workload has one caller. */
++  PGBUF_LRU_LIST *lru = PGBUF_GET_LRU_LIST (PGBUF_LRU_INDEX_FROM_PRIVATE (thread_p->private_lru_index));
++  pthread_mutex_lock (&lru->mutex);
++  printf ("{\"type\":\"snapshot\",\"request\":%d,\"buffers\":%d,\"list\":%d,\"quota\":%d,\"zones\":[%d,%d,%d],\"thresholds\":[%d,%d],\"aout\":%d}\n",
++          request, pgbuf_Pool.num_buffers, lru->index, lru->quota,
++          lru->count_lru1, lru->count_lru2, lru->count_lru3,
++          lru->threshold_lru1, lru->threshold_lru2, pgbuf_Pool.buf_AOUT_list.max_count);
++  pthread_mutex_unlock (&lru->mutex);
++}
++
++void seminar_freeze_maintenance (bool freeze)
++{
++  std::lock_guard<std::mutex> guard (seminar_maintenance_mutex);
++  seminar_maintenance_frozen = freeze;
++}
+diff --git a/src/storage/page_buffer.c b/src/storage/page_buffer.c
+index 369135d51..ab8f27470 100644
+--- a/src/storage/page_buffer.c
++++ b/src/storage/page_buffer.c
+@@ -75,6 +75,8 @@
+ #include "probes.h"
+ #endif /* ENABLE_SYSTEMTAP */
+ #include "thread_entry.hpp"
++#include <mutex>
++
+ // XXX: SHOULD BE THE LAST INCLUDE HEADER
+ #include "memory_wrapper.hpp"
+ 
+@@ -853,9 +855,20 @@ HFID *pgbuf_ordered_null_hfid = NULL;
+  * Events of that single page are appended to CUBRID_PGBUF_TRACE_FILE
+  * (default /tmp/pgbuf_quiz_trace.log).
+  * --------------------------------------------------------------------------------------------- */
++#if defined (SERVER_MODE)
++extern void seminar_trace_event (const char *, const VPID *);
++/* *INDENT-OFF* */
++static std::mutex seminar_maintenance_mutex;
++static bool seminar_maintenance_frozen = false;
++/* *INDENT-ON* */
++#endif
++
+ static void
+ pgbuf_quiz_trace (const char *event, const VPID * vpid, const char *detail)
+ {
++#if defined (SERVER_MODE)
++  seminar_trace_event (event, vpid);
++#endif
+   static volatile int trace_state = -1;	/* -1: unknown, 0: off, 1: on */
+   static VPID trace_vpid;
+   static const char *trace_file = NULL;
+@@ -16996,6 +17009,8 @@ pgbuf_get_page_flush_interval (bool & is_timed_wait, cubthread::delta_time & per
+ static void
+ pgbuf_page_maintenance_execute (cubthread::entry & thread_ref)
+ {
++  std::lock_guard<std::mutex> seminar_guard (seminar_maintenance_mutex);
++  if (seminar_maintenance_frozen) return;
+   if (!BO_IS_FLUSH_DAEMON_AVAILABLE ())
+       {
+         return;
+@@ -17577,3 +17592,9 @@ exit_on_error:
+ 
+   return error;
+ }
++
++#if defined (SERVER_MODE)
++/* *INDENT-OFF* */
++#include "../../experiments/seminar-replacement/observe.inc"
++/* *INDENT-ON* */
++#endif

@@ -1,0 +1,44 @@
+{
+  "baseline": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+  "experiment_commit": "282f81cebad9c875fb4f03348ccbcdb8d15a1c04",
+  "date": "2026-09-30",
+  "build_type": "Debug",
+  "mode": "SERVER_MODE",
+  "compiler": "g++ (GCC) 11.5.0 20240719 (Red Hat 11.5.0-5)",
+  "kernel": "5.14.0-570.30.1.el9_6.x86_64",
+  "binary_sha256": "a530bf9a935b477bd5cbe99450eab52f1b7fc7909c3293402a95e8d4be579eb4",
+  "libcubrid_sha256": "82d1c10cedb4482fe0eaae6d51f64bf71c8b3c0ed5926c8b95ca6f5149187144",
+  "patch_sha256": "3c3190189554071f3b5d66bc2a619f3d24e29885338c05771389d981ee5238e6",
+  "config_sha256": "f6067bd412724fdfddb632724e3ab0e36f8d5f96cd66d6d15b58de87d1109ca1",
+  "executions": [
+    {
+      "scenario": "fits",
+      "trial": "final",
+      "exit": 0
+    },
+    {
+      "scenario": "cycle",
+      "trial": "final",
+      "exit": 0
+    },
+    {
+      "scenario": "fits",
+      "trial": "repeat",
+      "exit": 0
+    },
+    {
+      "scenario": "cycle",
+      "trial": "repeat",
+      "exit": 0
+    }
+  ],
+  "ctest": "No tests configured at baseline; native runs and analyzer are the actual verification",
+  "conditions": {
+    "frames": 4096,
+    "page_bytes": 16384,
+    "request_contexts": 1,
+    "maintenance": "frozen under mutex during measured reads",
+    "flush_daemons": "remain running",
+    "timing_claim": false
+  }
+}

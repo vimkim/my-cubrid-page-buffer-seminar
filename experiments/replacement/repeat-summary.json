@@ -1,0 +1,136 @@
+[
+  {
+    "file": "fits-repeat.jsonl.gz",
+    "sha256": "e7e8f347a0d15169d9999f72cd126bf3a77698c583b8160a1811b80326ccb4c8",
+    "setup": {
+      "type": "setup",
+      "scenario": "fits",
+      "buffers": 4096,
+      "pages": 2048,
+      "passes": 3,
+      "page_buffer_daemons": "maintenance-frozen-flushers-live"
+    },
+    "passes": [
+      {
+        "hits": 0,
+        "misses": 2048,
+        "target_evictions": 0,
+        "all_reads": 2050
+      },
+      {
+        "hits": 2048,
+        "misses": 0,
+        "target_evictions": 0,
+        "all_reads": 0
+      },
+      {
+        "hits": 2048,
+        "misses": 0,
+        "target_evictions": 0,
+        "all_reads": 0
+      }
+    ],
+    "initial": {
+      "type": "snapshot",
+      "request": -1,
+      "buffers": 4096,
+      "list": 54,
+      "quota": 1990,
+      "zones": [
+        0,
+        0,
+        0
+      ],
+      "thresholds": [
+        99,
+        99
+      ],
+      "aout": 0
+    },
+    "final": {
+      "type": "snapshot",
+      "request": 6143,
+      "buffers": 4096,
+      "list": 54,
+      "quota": 1990,
+      "zones": [
+        99,
+        99,
+        1850
+      ],
+      "thresholds": [
+        99,
+        99
+      ],
+      "aout": 0
+    },
+    "verdict": "PASS: request counts, VPID outcomes, residency transitions, cold start, quota thresholds and fitting control"
+  },
+  {
+    "file": "cycle-repeat.jsonl.gz",
+    "sha256": "2884b9997d77d604197df806a0a1b71225b6731586aee6bad3c184b501922ed2",
+    "setup": {
+      "type": "setup",
+      "scenario": "cycle",
+      "buffers": 4096,
+      "pages": 4097,
+      "passes": 3,
+      "page_buffer_daemons": "maintenance-frozen-flushers-live"
+    },
+    "passes": [
+      {
+        "hits": 0,
+        "misses": 4097,
+        "target_evictions": 4,
+        "all_reads": 4099
+      },
+      {
+        "hits": 0,
+        "misses": 4097,
+        "target_evictions": 4097,
+        "all_reads": 4097
+      },
+      {
+        "hits": 0,
+        "misses": 4097,
+        "target_evictions": 4097,
+        "all_reads": 4097
+      }
+    ],
+    "initial": {
+      "type": "snapshot",
+      "request": -1,
+      "buffers": 4096,
+      "list": 54,
+      "quota": 2048,
+      "zones": [
+        0,
+        0,
+        0
+      ],
+      "thresholds": [
+        102,
+        102
+      ],
+      "aout": 0
+    },
+    "final": {
+      "type": "snapshot",
+      "request": 12290,
+      "buffers": 4096,
+      "list": 54,
+      "quota": 2048,
+      "zones": [
+        102,
+        102,
+        3889
+      ],
+      "thresholds": [
+        102,
+        102
+      ],
+      "aout": 0
+    },
+    "verdict": "PASS: request counts, VPID outcomes, residency transitions, cold start, quota thresholds and fitting control"
+  }
+]

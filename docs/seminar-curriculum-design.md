@@ -102,3 +102,30 @@ The delivery assumes basic programming only and allocates 150 teaching minutes: 
 Representative diagrams use 3–5 verified real function names. Sibling branches remain branches, and asynchronous BCB queue handoffs are explained separately from synchronous call stacks. No new runtime captures or performance comparisons are claimed. Comparison sources retain the existing PostgreSQL and MySQL pins. Abstract textbook traces are distinct from the larger-pool constructed database examples.
 
 The new pair enters the existing human-review registry as pending. Automated source, bilingual technical-parity, and browser checks do not constitute a human Korean-language review or demonstrate participant mastery.
+
+## Replacement cases and native evidence revision (2026-09-30)
+
+The follow-up interview reconfirmed the bounded 180-minute presentation within
+this unlimited multi-session curriculum. Preserve 150 teaching minutes, ten
+break minutes and twenty questions/buffer minutes. Reorganize the existing
+20-minute textbook block and 35-minute CUBRID replacement block around repeated
+reads mixed with a scan, an oversized cyclic working set, its MRU counterexample,
+and zone-transition costs. Preserve the other topic allocations and compact
+verified source paths; move extended tracing into presenter supporting material.
+
+Compare candidate state (clean/dirty, read/write fixed, and flush caller ownership)
+rather than requiring separate SELECT/INSERT and INSERT/INSERT demonstrations.
+The educational replacement model, source-derived zone transitions, and native
+CUBRID receipts have separate evidence labels. The paired replacement lab is the
+canonical owner of these worked cases; relevant lectures and the delivery route
+link to it. It is not a full CUBRID simulator.
+
+The user explicitly included a minimal native fix/unfix experiment at the pinned
+revision, with a cyclic set larger than the pool and a fitting control. Preserve
+its program, observation patch, configuration, raw traces, receipt analyzer and
+limitations in `experiments/replacement/`. Runtime conclusions apply to the
+recorded controlled setup. No replacement-policy change, general measurement
+framework or SQL performance improvement is included. Future YCSB/sysbench
+improvement claims are bounded to tested conditions; customer-wide
+representativeness is not a prerequisite for this presentation and remains
+unestablished.
