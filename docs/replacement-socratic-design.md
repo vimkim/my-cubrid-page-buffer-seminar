@@ -89,3 +89,32 @@ omitting each mechanism. Show domain-local reuse, sampled-activity prediction,
 cross-domain/hot reuse signals and maintenance-cost trade-offs alongside their
 failure boundaries. Contrast shared-only, private-without-quota and
 private-without-migration models; separate policy losses from safety failures.
+
+## Clarity revision: equal protection capacity (2026-09-30)
+
+Lecture 0007 now compares LRU1=100 plus LRU2=100 with LRU1=200, retaining
+existing LRU1 reuse behavior in the latter teaching alternative. Extra protected
+capacity alone does not justify LRU2. The distinction is conditional promotion
+in LRU2 versus keeping position in LRU1. A larger region with an equivalent
+conditional promotion rule remains a possible alternative; no comparative
+performance advantage is established here.
+
+Private/shared rationale and assumptions are shorter, with migration predicates
+and edge cases in a technical disclosure. The visible explanation states that
+private-to-shared migration enters shared LRU2 independently of dormant AOUT.
+The exact pinned source was read with `git show f799e05:src/storage/page_buffer.c`
+to avoid relying on working-tree instrumentation. Existing anchors are retained.
+
+Verification in the sibling task worktree, served at local Copyparty port 3942:
+
+- Maintainer aggregate: all gates passed, including 43 Markdown pages,
+  63 displayed SVGs, 106 HTTP resources and 43 live-DOM pages.
+- Bilingual aggregate with HTTP and headless DOM checks: only the existing
+  translation-review gate reported failures (162 missing-receipt or stale
+  fingerprint diagnostics across 54 pairs). No human receipts were supplied.
+- Focused EN/KO checks passed for mobile width, no-JavaScript disclosures,
+  presentation mode, keyboard disclosure, next-section navigation and page errors.
+  The Korean presentation view was visually inspected.
+- `git diff --check` passed. No validation or shared interaction code changed.
+
+Human language acceptance and participant comprehension remain unverified.
