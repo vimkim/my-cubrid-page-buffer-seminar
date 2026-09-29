@@ -74,10 +74,14 @@ Observable scope criteria:
 - Its linked explanations support a complete page-request/replacement/progress story and a bounded final diagnostic exercise.
 - Existing Core/Advanced depth and evidence remain available; completion of this revision does not assert completion of the full maintainer curriculum.
 
-## Q2 — Prerequisite placement (pending)
+## Q2 — Prerequisite placement (deferred)
 
 Recommendation A: introduce constraints when the continuing request encounters them. Begin with a concrete record request, pages/frames/BCBs and textbook replacement. Establish basic fix/latch/dirty meanings before CUBRID policy; use a clean, unfixed scenario for admission, domains, zones and quota. Then let the request encounter fixed and dirty candidates, introducing the concurrency schedule and WAL/copied-generation explanation before resolving safe reuse and background progress. Finish with comparison and diagnosis.
 
 Alternative B: teach the concurrency and durability foundations in full before the CUBRID replacement sequence, then apply them together during candidate selection and progress.
 
 Trade-off: A reaches the central replacement topic sooner and gives each deeper mechanism an immediate problem to solve, but requires explicit scenario continuity and revisiting the pending request. B provides all prerequisites in advance but lengthens the introduction before participants reach the central policy story. Neither option permits using undefined concepts or silently assuming prior database knowledge. Exact section navigation and page boundaries remain downstream decisions.
+
+## Interview pause
+
+The user deferred Q2 with “not today.” The interview is paused at their request. Q1 remains accepted; neither Q2 option is selected. Resume with Q2 when the user returns. No presentation implementation has begun.
