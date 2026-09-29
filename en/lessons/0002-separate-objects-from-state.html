@@ -19,8 +19,54 @@
   <div class="lesson-grid">
     <article class="lesson-main">
 <section class="section" id="first-principles">
-<h2>Identity → control information → page contents</h2>
-<p><a href="../reference/first-principles-route.html">First-principles route ↑</a></p><p>Separate the page’s identity, its memory slot, and the state of that slot. The page buffer looks up a BCB by page identity, then uses it to locate the frame and check its current state.</p><div class="table-scroll"><table><thead><tr><th>Structure</th><th>Role</th></tr></thead><tbody><tr><td>VPID</td><td>Which page is this?</td></tr><tr><td>Frame array</td><td>Memory slots holding page contents</td></tr><tr><td>BCB array</td><td>Identity, fix count, latch and dirty state for each frame</td></tr><tr><td>Resident hash</td><td>Find a candidate BCB by VPID, then validate its identity</td></tr><tr><td>Invalid list</td><td>Link BCBs without a resident page identity</td></tr><tr><td>LRU array</td><td>Manage descriptors and zone boundaries for multiple replacement lists</td></tr></tbody></table></div><p>The BCB array and LRU array are different. Each frame has one BCB; each LRU descriptor manages a list of many BCBs.</p>
+<h2>Why do we need more than page bytes?</h2>
+<p><a href="../reference/first-principles-route.html">First-principles route ↑</a></p>
+<p>Suppose a thread needs page P from a database file. We want to keep P in memory so the next request can use it again. Later, memory fills up and another page Q needs a place. What must we remember to make this safe?</p>
+<h3>1. VPID — which page did we ask for?</h3>
+<p><strong>Could we just remember a memory address?</strong> An address tells us where bytes are now. That same address may hold Q after P leaves. We need a name for the requested page that does not depend on its current memory slot.</p>
+<p><code>VPID</code> identifies the page by volume and page number. For this example, P and Q have different VPIDs. Without checking page identity, a caller looking for P could receive Q’s bytes. A VPID alone does not mean the page is already in memory.</p>
+</section>
+
+<section class="section" id="why-frame">
+<h2>2. Frame array — where can P’s bytes stay?</h2>
+<p><strong>Once we have P’s name, do we have its contents?</strong> No. Reading P needs actual memory to hold its page image. One such reusable memory slot is a <strong>frame</strong>; CUBRID allocates an array of them when the pool starts.</p>
+<p><strong>Why reuse a fixed set of slots?</strong> If we kept allocating memory for every different page, memory use would keep growing. A bounded pool keeps some pages and eventually reuses a slot for another page.</p>
+<p>For example, frame 42 can hold P now and Q later. The frame is the place; the VPID identifies what is currently there. Reusing the place safely requires more information than the page bytes.</p>
+</section>
+
+<section class="section" id="why-bcb">
+<h2>3. BCB array — may we overwrite frame 42?</h2>
+<p><strong>Q needs space. Can we replace P just because we know its address?</strong> What if a thread is still reading P? It could see Q halfway through its work. What if P contains changes not yet written back? Overwriting it could lose those changes.</p>
+<p>Each frame therefore has a <strong>buffer control block (BCB)</strong>: a record of its current page identity and control state. CUBRID pairs each frame with one entry in the BCB array.</p>
+<ul>
+<li><strong>Fix count (<code>fcnt</code>):</strong> how many granted uses have not ended? A fix grants access; matching unfix releases that use. A positive count prevents ordinary frame reuse.</li>
+<li><strong>Page latch:</strong> which reads or modifications may proceed together? Keeping P in memory alone would not stop conflicting access to its contents.</li>
+<li><strong>Dirty state:</strong> are there changes still to write back? The last user leaving does not erase that obligation.</li>
+</ul>
+<p>These facts answer different questions. <code>fcnt == 0</code> does not mean “empty” or “safe to overwrite.” The BCB and frame remain the same objects when their current page changes from P to Q.</p>
+</section>
+
+<section class="section" id="why-resident-hash">
+<h2>4. Resident hash — is P already here?</h2>
+<p><strong>A second thread asks for P. Must it read P from storage again?</strong> First it should find out whether P is already resident, meaning present in the buffer pool.</p>
+<p>We could inspect every BCB’s VPID. That can work, but repeats a pool-wide search. The <strong>resident hash</strong> uses the requested VPID to narrow the search to candidate BCBs.</p>
+<p><strong>Does a matching hash bucket prove that we found P?</strong> No. Different VPIDs can share a bucket, and concurrent reuse must be handled. Lookup checks the actual identity under the required protection. Without that check, finding a candidate could be mistaken for finding the requested page.</p>
+</section>
+
+<section class="section" id="why-invalid-list">
+<h2>5. Invalid list — which slots have no page yet?</h2>
+<p><strong>The pool has just started. Must P evict another page?</strong> No. The frames exist, but initially they have no resident page assigned.</p>
+<p>The <strong>invalid list</strong> links the BCBs with no resident page identity. It gives the allocation path a way to find this unused capacity. “Invalid” here does not mean that a database page is corrupt.</p>
+<p><strong>Could we manage without this list?</strong> We would need another way to find unassigned slots, such as scanning BCBs. Without any such tracking, we could overlook empty capacity and try to replace a resident page unnecessarily. A resident P with zero fixes is different: its slot still holds P.</p>
+</section>
+
+<section class="section" id="why-lru-array">
+<h2>6. LRU array — when no slot is empty, where do we look?</h2>
+<p><strong>Q needs a slot and every frame holds a page. Which page should leave?</strong> We want to keep useful pages and consider less useful ones for replacement. With no usage-based policy, we could repeatedly discard a page needed again immediately and reread it.</p>
+<p>CUBRID organizes BCBs into multiple replacement lists with zones. The <strong>LRU array</strong> stores the descriptors that manage those lists, including their ends and zone boundaries. The replacement policy uses this organization to guide its search.</p>
+<p><strong>Is an LRU descriptor another BCB?</strong> No. One BCB describes one frame; one LRU descriptor manages a list containing many BCBs. These are two different arrays.</p>
+<p><strong>Does being a replacement candidate make P safe to overwrite?</strong> No. List position guides selection; protected checks of fixes, dirty/flushing state, waiters and other conditions still decide whether reuse may proceed. Without those checks, a useful ranking could still lead to lost changes or reuse during access.</p>
+<div class="quiz" data-audience-checkpoint><p>P has no remaining fixes but is dirty. Q needs space. Has P become an empty slot?</p><details class="answer-disclosure"><summary>Reason through the answer</summary><p>No. The BCB still identifies P, the frame still holds P’s bytes, and the dirty state records changes to preserve. Zero fixes answers only whether granted uses remain. The invalid list tracks unassigned slots; replacement of this resident page requires writeback and protected rechecks.</p></details></div>
 </section>
 
       <section class="section" id="first-code-path"><h2>Startup creates the arrays; a miss reuses their slots</h2><p>On the boot path that does not reuse existing managers, two sibling helpers create paired BCB/frame storage and the shared/private LRU descriptor array. The first does not call the second. LRUs start empty; initially unused BCBs are linked on the invalid list. BCB[42] can later represent P and then Q without becoming another BCB object.</p><figure class="source-call-path"><pre>logtb_define_trantable
@@ -98,7 +144,7 @@
 </section>
     </article>
 
-    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Identity → control information → page contents</a><a href="#first-code-path">Startup creates the arrays; a miss reuses their slots</a>
+    <nav class="lesson-nav" aria-label="Lesson contents"><a href="#first-principles">Why do we need more than page bytes?</a><a href="#why-frame">Frame: a place for the bytes</a><a href="#why-bcb">BCB: control safe use</a><a href="#why-resident-hash">Resident hash: find P</a><a href="#why-invalid-list">Invalid list: find unassigned slots</a><a href="#why-lru-array">LRU array: guide replacement</a><a href="#first-code-path">Startup creates the arrays; a miss reuses their slots</a>
       <strong>Lecture map</strong>
       <a href="#six-objects">One frame, two records of use</a>
       <a href="#runtime-shapes">Reuse preallocated frames and BCBs</a>
