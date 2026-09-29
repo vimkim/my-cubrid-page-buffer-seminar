@@ -140,3 +140,14 @@ lessons and assigned-reading directives leave these explanations. Necessary safe
 conditions remain beside the claims they qualify. The presenter uses the existing
 three-hour route as an index and opens each topic manually; the full curriculum's
 previous/next navigation remains unchanged. See the [editing decisions](presentation-friendly-design.md).
+
+
+## Replacement foundations visual progression (2026-09-30)
+
+The user confirmed a single-example progression for the paired foundations
+lecture, with visible prerequisite terms, FIFO/LRU request stepping, a reversible
+Clock walkthrough, and OPT's distinction between an exact future trace and a
+known workload pattern. The existing 20-minute textbook block targets FIFO/LRU
+victim prediction, one Clock sweep and OPT's conceptual advantage; full tracing
+remains available for the longer curriculum. The [design and verification
+record](replacement-foundations-clarity.md) owns these scoped decisions.
