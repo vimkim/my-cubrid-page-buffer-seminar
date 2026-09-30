@@ -2,6 +2,20 @@
 
 This author-only audit accompanies the [accepted design](seminar-curriculum-design.md). The public coverage-page URLs now redirect to the syllabus. Personal reading history and mastery state have been removed from the audience product; no participant completion is asserted here.
 
+## Lecture 7A split (2026-09-30)
+
+The subsequent queue and hint additions grew 7A to 21 sections. Those sections
+are retained across 7A (8: lists and queues), 7B (6: candidate checks and reuse),
+and 7C (7: progress, costs and limits), in both languages. Existing anchors remain
+reachable through native compatibility links; active links route directly to
+their owners. Landing pages, syllabi, lecture dependency order, manifest, both
+first-principles itineraries and the Korean presenter script follow the split.
+The manifest contains 58 pairs. Human language review remains pending.
+
+See [the split verification record](victim-selection-split-checks.md) for checks,
+content preservation, and limitations. The earlier split record below describes
+its historical state before subsequent additions.
+
 ## Lecture 7 split (2026-09-30)
 
 Lecture 7 now owns LRU organization, admission, zones, movement and quota.

@@ -86,7 +86,7 @@
           <div class="model-answer">
             <p><strong>Model answer:</strong> 첫 lookup은 candidate만 찾습니다. thread가 fix, release, remove, reuse에 필요한 protection을 얻기 전에 다른 thread가 resident mapping을 바꿀 수 있습니다. protection 아래의 identity check는 중요한 transition 시점에도 BCB가 예상한 VPID를 나타낸다는 사실을 입증합니다.</p>
             <p><strong>이렇게 방어하세요:</strong> 같은 BCB address가 아직 존재하는지를 보는 것이 아닙니다. 고정된 slot이 지금도 같은 identity를 가졌는지 확인하는 것입니다.</p>
-            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once">Canonical answer와 source anchor</a> · <a href="../lessons/0007a-select-and-reuse-frame.html#handoff-details">Lecture 7A</a></p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once">Canonical answer와 source anchor</a> · <a href="../lessons/0007b-recheck-and-reuse-frame.html#handoff-details">Lecture 7B</a></p>
           </div>
         </details>
       </article>
@@ -402,7 +402,7 @@
             <p><strong>Pressure:</strong> nonresident materialization은 invalid list를 먼저 시도하고 free slot이 없을 때만 victim을 찾습니다. 모든 BCB가 fixed이면 하나도 빼앗지 않습니다. Server mode는 이후 unfix를 기다리거나 timeout/interrupt/shutdown으로 끝나며, no-daemon path는 동기식으로 retry하고 victim이 없으면 실패합니다.</p>
             <p><strong>One LRU:</strong> 한 BCB에는 link 한 쌍과 encoded list index/zone 하나가 있습니다. Private-to-shared move는 새 list에 add하기 전에 VOID로 remove합니다. LRU object는 pool lifetime을 가지며 context assignment와 BCB membership은 더 짧습니다.</p>
             <p><strong>소스:</strong> <code>src/storage/page_buffer.c:499-623,8181-8403,9265-9538,9695-10415,14513-14650,15900-16030</code></p>
-            <p class="answer-route"><a href="../lessons/0007a-select-and-reuse-frame.html#handoff-details">Bilingual protected-handoff 설명</a> · <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical LRU lifetime</a></p>
+            <p class="answer-route"><a href="../lessons/0007b-recheck-and-reuse-frame.html#handoff-details">Bilingual protected-handoff 설명</a> · <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical LRU lifetime</a></p>
           </div>
         </details>
       </article>

@@ -7,19 +7,28 @@ authorized implementation.
 
 ## Lecture split (2026-09-30)
 
-The user requested a shorter Lecture 7 after its expansion to 38 sections. The
-causal sequence now spans two paired lecture pages: `0007-replace-one-frame.html`
-retains pool/list organization, admission, zones, movement and quota (18 sections);
-`0007a-select-and-reuse-frame.html` continues from list selection through victim
-queues, residency outcomes, safe reuse and progress (20 sections). This supersedes
-the single-page packaging and unchanged-navigation constraints below. Mechanism
-content, source evidence, examples and reset boundaries remain intact.
+Lecture 7 owns pool/list organization, admission, zones, movement and quota.
+After the queue explanations expanded, the user requested a further split of
+Lecture 7A. Its 21 sections now span three paired pages:
 
-The full curriculum places 7A immediately after 7. The bounded first-principles
-session retains its existing stop order and included sections; its policy exit at
-quota now coincides with the end of Lecture 7. The itinerary and current Korean
-script use direct links to 7A for selection and reuse. Old Lecture 7 fragment URLs
-retain explicit destination links outside the presentation section sequence.
+- `0007a-select-and-reuse-frame.html`: list selection, queue registration and
+  consumption, queue policy, and the independent residency checkpoint (8 sections).
+- `0007b-recheck-and-reuse-frame.html`: victim hint, candidate eligibility,
+  protected recheck, identity reuse, representative source path, and request
+  reconstruction (6 sections).
+- `0007c-replacement-progress-and-costs.html`: no-victim progress, distinct
+  operations, maintenance/search costs, workload limits, dormant AOUT, and
+  references (7 sections).
+
+The full curriculum follows 7 → 7A → 7B → 7C → 12. Mechanism content, source
+evidence, examples and reset boundaries remain intact. Each new page restates
+its scenario prerequisites; question headings no longer carry the old continuous
+numbering. The first-principles itinerary keeps its twelve stops and selected
+sections, with reuse spanning 7B and the opening of 7C. The session exit at
+`no-victim` remains explicit before deferred detail. Both itineraries and the
+current Korean script link directly to the owning page. Old Lecture 7 and 7A
+fragments retain explicit destination links outside the presentation sequence;
+7A's compatibility list uses a native disclosure for no-JavaScript access.
 
 ## Accepted decisions
 

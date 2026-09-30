@@ -569,7 +569,7 @@ test('ticket04 common checkpoint resets both residency predictions in EN and KO'
       assert.equal(new URL(page.url()).hash, '#session-displacement');
       await page.locator('[data-section-previous]').click();
       assert.equal(await page.locator('#session-retention details').getAttribute('open'), null);
-      await page.goto(base + language + '/lessons/0007a-select-and-reuse-frame.html?present=1#handoff-details');
+      await page.goto(base + language + '/lessons/0007b-recheck-and-reuse-frame.html?present=1#handoff-details');
       const race = page.locator('#handoff-details');
       assert.doesNotMatch(await race.locator('.replacement-map').innerText(), /Reject|제외|거부/);
       await race.locator('summary').focus();
@@ -595,7 +595,7 @@ test('ticket04 branch explanations remain keyboard-readable without JavaScript o
         assert.equal(await page.locator('#' + id + ' details > p').first().isVisible(), true);
       }
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-      await page.goto(base + language + '/lessons/0007a-select-and-reuse-frame.html#handoff-details');
+      await page.goto(base + language + '/lessons/0007b-recheck-and-reuse-frame.html#handoff-details');
       await page.locator('#handoff-details summary').focus();
       await page.keyboard.press('Enter');
       assert.equal(await page.locator('#handoff-details details > p').first().isVisible(), true);
@@ -790,7 +790,7 @@ test('ticket07 zone and protected-recheck assumptions precede concealed outcomes
       const premise = zone.locator(':scope > p').filter({ hasText: language === 'en' ? 'Assume H1' : 'H1이 뒤쪽' });
       assert.equal(await premise.isVisible(), true);
       assert.equal(await zone.locator('details[open]').count(), 0);
-      await page.goto(base + language + '/lessons/0007a-select-and-reuse-frame.html?present=1#handoff-details');
+      await page.goto(base + language + '/lessons/0007b-recheck-and-reuse-frame.html?present=1#handoff-details');
       const race = page.locator('#handoff-details');
       assert.equal(await race.locator(':scope > p').filter({ hasText: language === 'en' ? 'no intervening unfix' : '그 사이에 unfix는 없습니다' }).isVisible(), true);
       const answer = race.locator('details');
@@ -834,7 +834,7 @@ test('Lecture 7 policy ends at quota and continues into Lecture 7A in presentati
       await page.keyboard.press('Enter');
       await page.waitForURL('**/0007a-select-and-reuse-frame.html?present=1');
       assert.equal(await page.locator('#list-choice').isVisible(), true);
-      assert.equal(await page.locator('.lesson-main > section.section').count(), 20);
+      assert.equal(await page.locator('.lesson-main > section.section').count(), 8);
       await page.locator('#list-choice > details.answer-disclosure > summary').focus();
       await page.keyboard.press('Enter');
       assert.equal(await page.locator('#list-choice > details.answer-disclosure[open]').count(), 1);
@@ -855,7 +855,7 @@ test('Lecture 7 old section bookmarks and return navigation work without scripts
       await page.goto(base + language + '/lessons/0007-replace-one-frame.html#session-recheck');
       await page.locator('#session-recheck a').focus();
       await page.keyboard.press('Enter');
-      await page.waitForURL('**/0007a-select-and-reuse-frame.html#session-recheck');
+      await page.waitForURL('**/0007b-recheck-and-reuse-frame.html#session-recheck');
       const answer = page.locator('#handoff-details > details');
       await answer.locator('summary').focus();
       await page.keyboard.press('Enter');
@@ -863,8 +863,54 @@ test('Lecture 7 old section bookmarks and return navigation work without scripts
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       await page.locator('[data-lecture-nav] a[rel="prev"]').focus();
       await page.keyboard.press('Enter');
-      await page.waitForURL('**/0007-replace-one-frame.html');
-      assert.equal(await page.locator('#quota > details.answer-disclosure').count(), 1);
+      await page.waitForURL('**/0007a-select-and-reuse-frame.html');
+      assert.equal(await page.locator('#list-choice > details.answer-disclosure').count(), 1);
+    }
+  } finally { await context.close(); }
+});
+
+test('split victim lectures preserve presentation navigation and the session boundary', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      await page.goto(base + language + '/lessons/0007a-select-and-reuse-frame.html?present=1#session-outcomes');
+      assert.equal(await page.locator('[data-section-next]').isDisabled(), true);
+      await page.locator('[data-lecture-nav] a[rel="next"]').click();
+      await page.waitForURL('**/0007b-recheck-and-reuse-frame.html?present=1');
+      assert.equal(await page.locator('#victim-hint-lifecycle').isVisible(), true);
+      assert.equal(await page.locator('.lesson-main > section.section').count(), 6);
+      await page.locator('[data-section-next]').click();
+      assert.equal(await page.locator('#gate').isVisible(), true);
+      await page.locator('[data-lecture-nav] a[rel="next"]').click();
+      await page.waitForURL('**/0007c-replacement-progress-and-costs.html?present=1');
+      assert.equal(await page.locator('#no-victim').isVisible(), true);
+      assert.equal(await page.locator('#no-victim [data-session-boundary]').isVisible(), true);
+      assert.equal(await page.locator('.lesson-main > section.section').count(), 7);
+      await page.locator('[data-language-switcher] a').click();
+      assert.match(page.url(), /0007c-replacement-progress-and-costs.html/);
+      assert.equal(await page.locator('#no-victim').isVisible(), true);
+    } finally { await page.close(); }
+  }
+});
+
+test('old 7A bookmarks expose new owners and disclosures on mobile without JavaScript', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      for (const [anchor, destination] of [['session-recheck', '0007b-recheck-and-reuse-frame.html'], ['no-victim', '0007c-replacement-progress-and-costs.html']]) {
+        await page.goto(base + language + '/lessons/0007a-select-and-reuse-frame.html#' + anchor, { waitUntil: 'networkidle' });
+        const disclosure = page.locator('aside details');
+        if (await disclosure.getAttribute('open') === null) await disclosure.locator('summary').click();
+        await page.locator('#' + anchor + ' a').focus();
+        await page.keyboard.press('Enter');
+        await page.waitForURL('**/' + destination + '#' + anchor);
+        const section = page.locator(anchor === 'session-recheck' ? '#handoff-details' : '#no-victim');
+        await section.locator('details > summary').focus();
+        await page.keyboard.press('Enter');
+        assert.notEqual(await section.locator('details').getAttribute('open'), null);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      }
     }
   } finally { await context.close(); }
 });
