@@ -86,7 +86,8 @@
         <p>Cooling goes the other way. A scan admits more pages; when zone thresholds are exceeded, boundary nodes can move LRU1 → LRU2 → LRU3 even without another access to that page. Wall-clock time alone does not perform this movement. <a href="../reference/lru-worked-example.html#cooling">The existing scan example</a> derives the exact boundary changes.</p>
         <p>Do not combine three different notions of age: list-event age controls the LRU2 boost test; the accepted quota-adjustment epoch limits activity sampling; a separate hot-fix heuristic contributes to migration. None is a precise timestamp of the last access, and LRU1 membership does not prove that the separate hotness test is true.</p>
         <p class="source-note">Source checkpoints: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6713-L6725">zero-count and waiter gates</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6780-L6845">LRU2/LRU3 outcomes</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1053-L1058">list-event age test</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9985-L10106">zone adjustment</a>. <a href="0012b-understand-private-lru-index.html#activity">Lecture 12B separates the activity fields</a>.</p>
-      </section>
+      <p><a href="0007-replace-one-frame.html#reuse-age">Calculate saved-tick age, including a boost that does not reset it</a>; then <a href="0007-replace-one-frame.html#boost-boundary">follow promotion and boundary demotion under one list mutex</a>.</p>
+</section>
 
       <section class="section" id="lru-policy-layers">
         <h2>Three decisions: placement, search, safe reuse</h2>

@@ -215,9 +215,10 @@ For ordinary, non-vacuum, non-temporary pages, the decision table is:
 “Hot” means the current BCB residency has reached 64 registered general fixes.
 “Old enough” is not wall-clock time: it is
 `AGE_DIFF(bcb.tick_lru_list, list.tick_list) >= list.count_lru2 / 2`.
-`tick_list` advances on top/middle admission or top boost. Thus the test asks
-whether enough other list-position events have occurred since the BCB's saved
-tick, relative to current LRU2 size.
+`tick_list` advances on top/middle admission or top boost. The saved value is not
+reset by same-list boost or boundary demotion, so these events are not necessarily
+all from other BCBs. The canonical [saved-tick and protected-boost explanation](../advanced/replacement-progress.md#saved-ticks-and-a-protected-boost)
+owns the numeric example, integer division, changing population and lock scope.
 [age predicate](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1052-L1058),
 [top/middle tick updates](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9694-L9830)
 

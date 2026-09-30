@@ -48,14 +48,23 @@ hash tables = max(floor(A / 1,000), 1)</pre>
         </table></div>
         <p>This is admission ranking after load. It does not select the old victim, prove ownership, or authorize reuse. AOUT-off removes the ghost hit/miss subdivision, not the two current paths: an enabled assignment reaches private LRU1 top and no enabled assignment reaches shared LRU2 middle.</p>
         <p><a href="0012b-understand-private-lru-index.html#first-placement">Use Lecture 0012B for the canonical first-placement explanation, including the session-to-worker handoff and why the assignment belongs to the final-unfix context rather than the page →</a></p>
-      </section>
+      <h3>Would remembering evictions help the scan example?</h3>
+<p><strong>Hypothesis, with AOUT enabled:</strong> B reloads two pages under the same private assignment PB. H1 still has a ghost record from PB; S1 has none. Before boundary adjustment, H1 enters PB/LRU1 while S1 enters PB/LRU2. With AOUT off, both ordinary admissions enter PB/LRU1. No page bytes are cached in either ghost case: the miss and reload have already happened.</p>
+<details class="answer-disclosure"><summary>Expected trade-off, not a measured improvement</summary><p>Admitting unremembered scan pages below LRU1 could reduce their interference with reused pages. A same-domain ghost hit can regain stronger initial protection. But a reused page whose ghost has expired is also a miss in that history, and a saved index can outlive the session that used it. A different former index routes the reload to shared LRU2, not to a private owner. These cases can change hit rate and competition in either direction.</p><p>The private/shared same-list reuse rules still apply afterward: LRU1 keeps, LRU2 tests age, LRU3 normally boosts, subject to migration and special unfix. AOUT changes admission evidence; it supplies no new guarantee of fairness, safe reuse or performance.</p></details>
+</section>
       <section class="section" id="boundary">
         <div class="eyebrow">04 · Evidence boundary</div>
         <h2>Reviving AOUT requires a new engineering review</h2>
         <p>The forced-zero comment names <code>CBRD-20741</code>; revision history also routes readers to <code>CBRD-21135</code>. Available evidence leaves the root cause unknown. Removing the forced-zero line alone is not a complete fix.</p>
         <p>The retained comment “LRU + Aout of 2Q” describes design structure, not active startup behavior. Any revival needs concurrency, memory, policy, and measured-performance validation. Expected benefits are not measured performance claims.</p>
         <p class="source-note"><strong>Verified dormant source:</strong> <code>system_parameter.c:3463–3474,9931–9987</code>; <code>page_buffer.c:635–666,5802–5903,6885–6994,10468–10636</code>.</p>
-      </section>
+      <details class="technical-detail"><summary>What must a revival experiment verify?</summary><ul>
+<li>Trace the actual tuning, capacity, ghost hit/miss and first-placement branches; editing the ratio alone does not bypass forced-zero tuning.</li>
+<li>Reproduce or retire the historical failure on the chosen revision. Stress FIFO/hash/free-node agreement, bounded capacity and node recycling under concurrent insertion and lookup/removal.</li>
+<li>Exercise private-list release and reassignment, saved-index validity, same-domain and cross-domain reloads, and ordinary versus special unfix paths.</li>
+<li>Compare enabled/disabled runs with the same pool and workloads: repeated working set plus scan, expired ghost history and cross-domain reuse. Measure misses, per-domain retention, memory and global <code>Aout_mutex</code> contention as well as throughput.</li>
+</ul><p>The older assertion/core is historical evidence with unknown root cause; reproduction in the dormant pinned implementation remains unconfirmed. These are verification tasks, not results from a new run. <a href="../../reference/victim-scan-cap-and-aout-evidence.md">Read the retained source and historical evidence</a>.</p></details>
+</section>
 <section class="section" id="audience-checkpoint" data-audience-checkpoint><h2>Code exists, but is the policy active?</h2><p>Can the presence of AOUT structures explain a measured hit-rate change in the pinned server path?</p><details class="answer-disclosure"><summary>Explore the explanation</summary><p>Not by itself. AOUT is disabled in the pinned server path. Its dormant structures explain a possible ghost-history mechanism, not active workload behavior. Attributing a measurement to AOUT requires evidence that the measured build actually enables and executes that path.</p></details></section>
       <section class="section" id="primary-reading">
         <div class="eyebrow">Primary reading</div>

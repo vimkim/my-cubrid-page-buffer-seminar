@@ -447,6 +447,65 @@ case excluding mutex wait.
 
 Source: `src/storage/page_buffer.c:6713-7040,9695-10417`.
 
+## Saved ticks and a protected boost
+
+**Verified mechanism:** the old-enough test uses
+`PGBUF_AGE_DIFF(bcb->tick_lru_list, lru_list->tick_list) >= count_lru2 / 2`.
+New-membership helpers save the destination list tick. Top/middle insertion
+advances the list tick; ordinary same-list boost advances it without overwriting
+the BCB's saved tick. Boundary demotion does not reset that saved value either.
+Consequently age is neither time since the last boost nor time since LRU2 entry,
+and does not count distinct page accesses or current distance from the top.
+
+For a constructed non-wrapping example, saved tick 100 and list tick 150 give
+age 50. With `count_lru2 = 100`, an otherwise eligible LRU2 BCB passes the age
+test. Its boost leaves saved tick 100 and advances list tick to 151: age is 51,
+not zero. Assume LRU1 was exactly at a positive threshold; one boundary demotion
+then restores the LRU2 count to 100. Later demotion of the boosted page does not
+start a fresh age interval.
+
+The right-hand side uses integer division and the current population: counts
+100 and 101 both give 50; count 1 gives zero. A population decrease from 100
+to 80 can make an unchanged age of 40 pass. At wrap, the macro uses
+`DB_INT32_MAX - (saved - current)` when current is below saved; it is not an
+unbounded event history. The source motivates avoiding short-gap read/write
+repeats, but does not establish an optimality proof for one half or guarantee
+that every immediate repeat fails the test.
+
+This age is distinct from the registered-fix hotness heuristic and from
+`hit_age`/`adjust_age` activity sampling. The latter feeds quota and private-index
+assignment, not the direct boost predicate; the
+[activity evidence](../reference/private-lru-domain-hit-age-and-unfix-placement.md#2-who-advances-adjustage)
+owns those fields and their approximation limits.
+
+The ordinary final-unfix caller already holds the promoted BCB's mutex. For an
+LRU2 boost, `pgbuf_lru_boost_bcb()` holds `lru_list->mutex` continuously across
+removal, top insertion, `pgbuf_lru_adjust_zone1(..., true)`, and sanity checking.
+The adjustment helper does not acquire the list mutex itself or acquire each
+demoted BCB's mutex. `pgbuf_bcb_change_zone()` changes zone/index bits through
+CAS while preserving other flags; list protection still governs links, counts
+and boundaries.
+
+For example, with `threshold_lru1 = 2` and room for two LRU2 members:
+
+| Moment | LRU1, then LRU2 (front to back) | Counts |
+| --- | --- | --- |
+| Before an eligible H1 boost | H2 → S1 / H1 → S2 | 2 / 2 |
+| After H1 removal and top insertion | H1 → H2 → S1 / S2 | 3 / 1 |
+| After boundary adjustment | H1 → H2 / S1 → S2 | 2 / 2 |
+
+The last step changes S1's zone and the counts and sets `bottom_1` to H2; it
+leaves S1's links unchanged. H1's BCB mutex is not evidence that S1's BCB mutex
+was acquired. This is one linked list with a changed boundary. The positive
+threshold avoids the `min_one=true` case that enforces a minimum of one in
+this helper. An LRU3 boost invokes broader zone adjustment instead.
+
+Sources: [age macros](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1052-L1058),
+[tick increments](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9695-L9830),
+[boost and new-membership helpers](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10174-L10301),
+[zone-1 adjustment](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9890-L9933),
+and [zone CAS and counts](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15889-L15985).
+
 ## Why retain LRU2 instead of moving every reused page to the front?
 
 **Implementation policy:** merging LRU1 and LRU2 and moving a reused BCB to the

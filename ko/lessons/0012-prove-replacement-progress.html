@@ -86,7 +86,8 @@
         <p>냉각은 반대 방향입니다. Scan으로 새 page가 들어와 zone 임계치를 넘으면, 해당 page에 다시 접근하지 않아도 경계 노드가 LRU1 → LRU2 → LRU3으로 내려갈 수 있습니다. 벽시계 시간이 흐르는 것만으로 이동하지는 않습니다. <a href="../reference/lru-worked-example.html#cooling">기존 scan 예제</a>에서 정확히 어느 경계가 바뀌는지 계산합니다.</p>
         <p>서로 다른 세 기준을 섞지 마세요. 리스트 이벤트 age는 LRU2 승격 판단에 쓰이고, 유효한 quota 조정의 epoch는 activity 표본 등록을 제한하며, 별도의 hot-fix 기준은 migration 판단에 관여합니다. 어느 것도 정확한 마지막 접근 시각이 아니며, LRU1에 있다는 사실만으로 별도의 hot 판정이 참인 것도 아닙니다.</p>
         <p class="source-note">소스 확인 지점: <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6713-L6725">zero-count와 waiter 조건</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6780-L6845">LRU2/LRU3 결과</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1053-L1058">리스트 이벤트 age 검사</a>, <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9985-L10106">zone 조정</a>. <a href="0012b-understand-private-lru-index.html#activity">Lecture 12B에서 activity 필드를 구분합니다</a>.</p>
-      </section>
+      <p><a href="0007-replace-one-frame.html#reuse-age">Boost해도 초기화되지 않는 저장 tick으로 age 계산하기</a> · <a href="0007-replace-one-frame.html#boost-boundary">하나의 리스트 mutex 안에서 승격과 경계 강등 따라가기</a></p>
+</section>
 
       <section class="section" id="lru-policy-layers">
         <h2>배치, 검색, 안전한 재사용은 서로 다른 결정이다</h2>
