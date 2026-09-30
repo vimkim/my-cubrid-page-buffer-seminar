@@ -2,6 +2,41 @@
 
 This author-only audit accompanies the [accepted design](seminar-curriculum-design.md). The public coverage-page URLs now redirect to the syllabus. Personal reading history and mastery state have been removed from the audience product; no participant completion is asserted here.
 
+## Worked-example split (2026-09-30)
+
+The paired `reference/lru-worked-example.html` pages now own admission, movement,
+list selection (checkpoints 0–12), and the separate two-schedule residency example.
+The paired `reference/lru-reuse-and-policy.html` pages own the selection baseline,
+protected reuse (checkpoints 13–16), and hypothetical policy comparison and defense.
+The second page opens with the constructed starting conditions and retains links
+to the first page's complete chain and quota derivation. Existing mechanism text,
+source links, reset boundaries, and safety qualifications are retained.
+
+Both topic libraries, syllabus routes, related lecture links, previous/next
+navigation, and the pairing manifest expose the split. Old first-page fragment
+URLs retain explicit destination links that work without JavaScript. These
+compatibility links stay outside the presentation section sequence. The first-time
+participant route and its two residency branches keep their original URLs.
+Human Korean-language and semantic review remains pending against new fingerprints.
+
+Verification on the split worktree: all 24 original sections in each language are
+accounted for, with 16 on the first page and 8 on the second; mechanism text is
+unchanged outside the expanded starting checkpoint. All seven automated bilingual
+source gates pass for 55 pairs. The headless seminar browser suite passes 30/30
+checks, including mobile/no-JavaScript links, old fragment destinations, language
+switching, disclosures, and presentation stepping. Both aggregate validator unit
+suites pass 46/46 checks. Korean reading and projected reuse screenshots were
+inspected during the check.
+
+The maintainer aggregate passes Markdown (43 pages), relative links, SVG ownership
+(71 displayed, zero orphaned), English prose, and Copyparty HTTP (114 resources).
+Both aggregate live-DOM runs report a missing `/favicon.ico` on their first page;
+this HTTP 404 was also reproduced on the existing main server. The bilingual full
+aggregate additionally reports the existing pending human-review receipts and
+unrelated stale fingerprints. These gates remain failures, not passes; the split
+adds no human review receipt. The tested worktree was served at the Copyparty URL
+root on `http://127.0.0.1:3949`, using headless Chromium via `PLAYWRIGHT_MODULE`.
+
 ## Ticket 04 policy-defense addition
 
 Ticket 04 adds the bounded immediate-hit-promotion defense to the existing worked-example pair at policy-proposal, policy-compare and policy-defense. It independently resets to checkpoint 3 and S49, defines fix-time protection/current-list placement with unchanged final-unfix migration, compares source-derived baseline and explicitly hypothetical states, and provides a 20-hit counterexample, correctness/performance verification plan and five-part human-review rubric. Lecture 17 and the technical-defense card link into it and have return routes. Existing native disclosures and presentation controls support keyboard/projection and complete mobile no-JavaScript reading. No engine change, performance result, new pair or human-language receipt is claimed; all three edited pairs remain pending. The ticket 04 handoff records source/check evidence and integration limits.

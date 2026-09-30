@@ -76,16 +76,19 @@ test('integrated replacement route is reachable from library and syllabus withou
       await entry.focus();
       await page.keyboard.press('Enter');
       await page.waitForURL('**/lru-worked-example.html#snapshot');
+      await page.locator('[data-lecture-nav] a[rel="next"]').focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/lru-reuse-and-policy.html#selection-baseline');
       assert.equal(await page.locator('#policy-defense').isVisible(), true);
       await page.locator('#policy-defense > details > summary').focus();
       await page.keyboard.press('Enter');
       assert.equal(await page.locator('#policy-defense > details[open]').count(), 1);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.goto(base + language + '/reference/course-learning-path.html#replacement-route');
-      const resume = page.locator('#replacement-route a[href="lru-worked-example.html#selection-baseline"]');
+      const resume = page.locator('#replacement-route a[href="lru-reuse-and-policy.html#selection-baseline"]');
       await resume.focus();
       await page.keyboard.press('Enter');
-      await page.waitForURL('**/lru-worked-example.html#selection-baseline');
+      await page.waitForURL('**/lru-reuse-and-policy.html#selection-baseline');
       assert.equal(await page.locator('#reuse-safe').isVisible(), true);
     }
   } finally { await context.close(); }
@@ -95,7 +98,7 @@ test('reuse schedules reset answers across branch switches and forward/backward 
   for (const language of ['en', 'ko']) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     try {
-      await page.goto(base + language + '/reference/lru-worked-example.html?present=1#reuse-reject');
+      await page.goto(base + language + '/reference/lru-reuse-and-policy.html?present=1#reuse-reject');
       await page.locator('#reuse-reject > details > summary').click();
       assert.match(await page.locator('#reuse-reject > details').innerText(), /C50\/Q/);
       await page.locator('[data-section-next]').click();
@@ -125,7 +128,7 @@ test('reuse alternatives retain all histories and native answers without JavaScr
   try {
     const page = await context.newPage();
     for (const language of ['en', 'ko']) {
-      await page.goto(base + language + '/reference/lru-worked-example.html#reuse-flush');
+      await page.goto(base + language + '/reference/lru-reuse-and-policy.html#reuse-flush');
       for (const id of ['reuse-reject', 'reuse-safe', 'reuse-flush', 'reuse-direct']) {
         assert.equal(await page.locator('#' + id).isVisible(), true);
         await page.locator('#' + id + ' > details > summary').focus();
@@ -147,7 +150,7 @@ test('policy defense reveals a reset comparison and returns to the final defense
   for (const language of ['en', 'ko']) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     try {
-      await page.goto(base + language + '/reference/lru-worked-example.html?present=1#policy-compare');
+      await page.goto(base + language + '/reference/lru-reuse-and-policy.html?present=1#policy-compare');
       assert.equal(await page.locator('#policy-compare').isVisible(), true);
       const answer = page.locator('#policy-compare > details');
       assert.equal(await answer.getAttribute('open'), null);
@@ -162,10 +165,10 @@ test('policy defense reveals a reset comparison and returns to the final defense
       await page.keyboard.press('Escape');
       await page.locator('#policy-defense a[href="../lessons/0017-defend-the-module-live.html#policy-review"]').click();
       await page.waitForURL('**/0017-defend-the-module-live.html#policy-review');
-      await page.locator('#policy-review a[href="../reference/lru-worked-example.html#policy-proposal"]').click();
-      await page.waitForURL('**/lru-worked-example.html#policy-proposal');
+      await page.locator('#policy-review a[href="../reference/lru-reuse-and-policy.html#policy-proposal"]').click();
+      await page.waitForURL('**/lru-reuse-and-policy.html#policy-proposal');
       await page.locator('[data-language-switcher] a').click();
-      assert.match(page.url(), new RegExp('/' + (language === 'en' ? 'ko' : 'en') + '/reference/lru-worked-example.html'));
+      assert.match(page.url(), new RegExp('/' + (language === 'en' ? 'ko' : 'en') + '/reference/lru-reuse-and-policy.html'));
     } finally { await page.close(); }
   }
 });
@@ -176,9 +179,9 @@ test('policy counterexample and human rubric are reachable without scripts on mo
     const page = await context.newPage();
     for (const language of ['en', 'ko']) {
       await page.goto(base + language + '/reference/presentation-rehearsal-card.html#policy-review');
-      await page.locator('#policy-review a[href="lru-worked-example.html#policy-defense"]').focus();
+      await page.locator('#policy-review a[href="lru-reuse-and-policy.html#policy-defense"]').focus();
       await page.keyboard.press('Enter');
-      await page.waitForURL('**/lru-worked-example.html#policy-defense');
+      await page.waitForURL('**/lru-reuse-and-policy.html#policy-defense');
       const answer = page.locator('#policy-defense > details');
       assert.equal(await answer.getAttribute('open'), null);
       await answer.locator('summary').focus();
@@ -234,6 +237,9 @@ test('LRU pressure baseline and selection answers remain readable without script
       assert.match(await page.locator('#select-list > details').innerText(), /30867 > 5000/);
       assert.equal(await page.locator('#selection-baseline').isVisible(), true);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.locator('#selection-baseline a[href="lru-reuse-and-policy.html#selection-baseline"]').focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/lru-reuse-and-policy.html#selection-baseline');
       await page.locator('#selection-baseline a[href="../lessons/0012b-understand-private-lru-index.html#victim-search"]').focus();
       await page.keyboard.press('Enter');
       await page.waitForURL('**/0012b-understand-private-lru-index.html#victim-search');
@@ -797,4 +803,22 @@ test('ticket07 zone and protected-recheck assumptions precede concealed outcomes
       if (language === 'ko') await page.screenshot({ path: '/tmp/seminar07-recheck-projection.png' });
     }
   } finally { await page.close(); }
+});
+
+test('old worked-example bookmarks link to moved sections without scripts', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/reference/lru-worked-example.html#reuse-safe');
+      await page.locator('#reuse-safe a').focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/lru-reuse-and-policy.html#reuse-safe');
+      assert.equal(await page.locator('#reuse-safe > details').count(), 1);
+      await page.locator('[data-lecture-nav] a[rel="prev"]').focus();
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/lru-worked-example.html');
+      assert.equal(await page.locator('#session-displacement').isVisible(), true);
+    }
+  } finally { await context.close(); }
 });

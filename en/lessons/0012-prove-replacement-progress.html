@@ -106,7 +106,7 @@
         <p>The R/P example avoids the relink needed to maintain exact recency. With concurrent access, relinking shared metadata also requires coordination. The pinned source explicitly describes keeping an LRU1 member in place as a performance intention; that comment is not a benchmark result.</p>
         <p>CUBRID still pays for BCB synchronization, conditional list updates, boundaries, activity/quota accounting and candidate scans. Multiple lists can distribute some metadata work but do not eliminate contention. Exact LRU and CUBRID can choose different victims, so reduced ordering work may trade against different miss behavior. The net effect depends on the workload and must be measured.</p>
         <p><strong>Do not conclude that CUBRID is always faster, scan-proof, optimal or starvation-free.</strong> At this baseline AOUT is dormant, so “CUBRID is 2Q” is also not an adequate description. Existing quota/search/progress uncertainties remain in the evidence registry; the explanation does not resolve them.</p>
-        <p class="source-note"><a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6719-L6720">Source comment about LRU1 performance intention</a> · <a href="../../reference/replacement-policy-quantities-and-costs.md">canonical costs and quantities</a> · <a href="../../unresolved-or-version-sensitive-findings.md">version-sensitive findings</a> · <a href="../reference/lru-worked-example.html#policy-proposal">test the idea of immediate promotion in the policy-defense exercise</a>.</p>
+        <p class="source-note"><a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6719-L6720">Source comment about LRU1 performance intention</a> · <a href="../../reference/replacement-policy-quantities-and-costs.md">canonical costs and quantities</a> · <a href="../../unresolved-or-version-sensitive-findings.md">version-sensitive findings</a> · <a href="../reference/lru-reuse-and-policy.html#policy-proposal">test the idea of immediate promotion in the policy-defense exercise</a>.</p>
 
 </section>
 
@@ -128,7 +128,7 @@
       </section>
 
       <section class="section" id="decision">
-        <p><a href="../reference/lru-worked-example.html#reuse-reject">Predict rejected candidates</a> · <a href="../reference/lru-worked-example.html#reuse-safe">Trace protected C50/Q → C50/T reuse</a></p>
+        <p><a href="../reference/lru-reuse-and-policy.html#reuse-reject">Predict rejected candidates</a> · <a href="../reference/lru-reuse-and-policy.html#reuse-safe">Trace protected C50/Q → C50/T reuse</a></p>
 
         <h2>LRU3 is only the first eligibility checkpoint</h2>
         <img class="diagram" src="../../assets/one-bcb-victim-decision.svg" alt="Decision path that either skips one LRU3 BCB or detaches it as a victim">
@@ -155,7 +155,7 @@
       </section>
 
       <section class="section" id="progress">
-        <p><a href="../reference/lru-worked-example.html#reuse-flush">Compare G and G+1 completion</a> · <a href="../reference/lru-worked-example.html#reuse-direct">Predict reservation, revocation, and retry</a></p>
+        <p><a href="../reference/lru-reuse-and-policy.html#reuse-flush">Compare G and G+1 completion</a> · <a href="../reference/lru-reuse-and-policy.html#reuse-direct">Predict reservation, revocation, and retry</a></p>
 
         <h2>CUBRID waits until a BCB becomes safe to reuse</h2>
         <img class="diagram" src="../../assets/allocation-progress.svg" alt="Allocation path from invalid list through victim search, direct-victim wait, retry, timeout, and error">
@@ -167,7 +167,7 @@
 
       <section class="section" id="waiter-priority">
         <h2>Two policies give different waiters another chance</h2>
-        <p>In the <a href="../reference/lru-worked-example.html#reuse-direct">revoked-reservation example</a>, A still needs a frame for its requested page. On the first invalidated assignment, <code>pgbuf_get_direct_victim()</code> returns NULL and the allocator sets <code>high_priority = true</code> before rejoining the queue. Later retries retain that priority. This favors another attempt for A; it does not stop another thread from fixing the resident page again.</p>
+        <p>In the <a href="../reference/lru-reuse-and-policy.html#reuse-direct">revoked-reservation example</a>, A still needs a frame for its requested page. On the first invalidated assignment, <code>pgbuf_get_direct_victim()</code> returns NULL and the allocator sets <code>high_priority = true</code> before rejoining the queue. Later retries retain that priority. This favors another attempt for A; it does not stop another thread from fixing the resident page again.</p>
         <p>Always checking high first could keep ordinary low-priority waiters behind a continuing supply of high-priority work. <code>pgbuf_get_thread_waiting_for_direct_victim()</code> therefore increments a shared call counter and tries low first whenever the count is divisible by four. If that attempt fails, or on other calls, it tries high and then low.</p>
         <p><strong>The counter measures selection-function calls across waiters, not successful assignments or A's retry count.</strong> Queue selection only chooses a waiter to consider. Assignment still requires a live suspended waiter and an eligible BCB; successful receipt requires the allocator to run and pass the protected recheck. Neither priority rule prevents repeated revocation or bounds one request's completion time. The wait deadline is rebuilt on retry, so it is not a total-request deadline.</p>
         <details class="technical-detail"><summary>Follow the pinned source</summary><p><strong>Verified mechanism at f799e05:</strong> <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8250-L8325">queue registration and high-priority retry</a>; <a href="https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15565-L15651">queue selection and protected receipt</a>. See the <a href="../../reference/replacement-policy-first-principles-audit.md">first-principles audit</a> for the wider policy analysis. These are source-derived rules, not measured starvation or performance results.</p></details>
