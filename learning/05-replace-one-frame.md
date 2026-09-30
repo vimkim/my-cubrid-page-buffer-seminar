@@ -141,7 +141,43 @@ In this constructed flush trace, page X stays in shared S/LRU3, no other candida
 
 Source: [candidate mask](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L253-L263), [flag transition](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15817-L15838), [zone transition](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15914-L15980), [flush completion](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16108-L16112).
 
+#### Concrete callers that add private or shared candidates
+
+The two direct callers of `pgbuf_lru_add_victim_candidate()` are shared by private and shared lists:
+
+| Event | Path through the direct caller | Condition for addition |
+|---|---|---|
+| Zone aging | `pgbuf_lru_adjust_zone2()` or `pgbuf_lru_adjust_zones()` → `pgbuf_lru_fall_bcb_to_zone_3()` → `pgbuf_bcb_change_zone()` | Enters LRU3 without blocking flags; successful direct assignment exits before this transition. |
+| Bottom insertion/repositioning | `pgbuf_move_bcb_to_bottom_lru()` → `pgbuf_lru_add_bcb_to_bottom()` → `pgbuf_bcb_change_zone()`; VOID insertion also uses `pgbuf_lru_add_new_bcb_to_bottom()` | Destination LRU3, no blocking flags. Dirty bottom entries do not qualify. |
+| Flush completion | `pgbuf_bcb_mark_was_flushed()` → `pgbuf_bcb_update_flags()` | Already LRU3; clearing FLUSHING removes the last blocker. Re-dirty prevents addition. |
+| Explicit dirty clearing | `pgbuf_dealloc_temp_page()` or `pgbuf_invalidate_bcb()` → `pgbuf_bcb_clear_dirty()` → `pgbuf_bcb_update_flags()` | Already LRU3; DIRTY was the last blocker. Invalidation can remove the BCB afterward. |
+| Direct-victim cleanup | `pgbuf_get_direct_victim()` or `pgbuf_allocate_bcb()` → `pgbuf_bcb_update_flags()` | Already LRU3; removing the direct-victim or invalidated-direct-victim flag clears the last blocker. |
+
+The flag rule also applies to `pgbuf_bcb_mark_was_not_flushed(..., false)`: clearing the last blocker can add a candidate even on a failed-flush path; restoring DIRTY prevents it. A change in `fcnt` alone does not call candidate addition. Addition updates the hint and count before attempting publication; quota adjustment can publish existing candidates without a candidate-add call.
+
+Source: pinned `page_buffer.c:9833–9880, 9943–10120, 10426–10462` (zone paths), `2828, 8714, 8336, 15611–15619` (cleanup), `15674–15720, 15817–15838, 15972–15980` (direct callers), `16064–16125` (flush flags).
+
 #### Pop, requeue, and the big-private first-entry path
+
+![Exact queue-pop order and private pre-scan requeue](../assets/victim-queue-pop-flow.svg)
+
+| Queue | Exact pop gate |
+|---|---|
+| `big_private_lrus_with_victims` | First consume attempt inside the private helper; the caller enters only when quota is enabled and a flush daemon is available. |
+| `private_lrus_with_victims` | Big-private consume failed and `restricted == false`. |
+| `shared_lrus_with_victims` | Shared stage reached without an earlier victim; private restriction does not skip this stage. |
+
+The initial own-private search does not consume a queue. After that search is attempted and fails, a thread not exempt through `PGBUF_VACUUM_SHOULD_IGNORE_UNFIX()` sets `restrict_other` from `length > quota + MAX(10, (int)(quota * 0.01f))`. Otherwise the restriction remains false.
+
+Without the flush daemon, after a failed shared helper call the caller can consume another index while the shared queue is nonempty, the consumer-cursor delta is at most `num_LRU_list`, and the incremented loop counter is at most `num_LRU_list`. With the daemon, this stage makes one helper call.
+
+#### Repeated insertion versus duplicate registration
+
+![Index 32 is consumed before requeue, while a second candidate does not create a second entry](../assets/victim-queue-registration-token.svg)
+
+The same integer can be inserted repeatedly over time. The per-list flag/CAS protocol prevents multiple outstanding queue entries; the circular queue does not deduplicate integer values. One flag covers both private queues and remains set while a consumer holds the index. Consumers requeue directly with `produce()`. Early big-private publication permits overlapping scans of the same list without duplicate queued entries. Shared lists use the same registration protocol. If no requeue succeeds, clearing the flag allows a later candidate addition or quota adjustment to register that integer again.
+
+#### Private and shared consumer decisions
 
 The source calls a pop `consume(lru_idx)`. `pgbuf_get_victim()` reaches other-private queue discovery when quota is enabled and the flush daemon is available. `pgbuf_lfcq_get_victim_from_private_lru()` first tries the big-private queue; if empty, it falls back to the ordinary private queue only when `restricted` is false. It then tests the consumed list's size and candidate count. If size is greater than 100, greater than twice quota, and `count_vict_cand > 1`, it attempts to publish the index to the big-private queue **before** scanning. This can seed the big queue from an ordinary-queue entry, and makes the list discoverable by another consumer while the current consumer searches. The earlier contrary claim is corrected in [VS-19](../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations).
 
