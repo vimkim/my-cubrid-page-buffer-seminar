@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 660" role="img" aria-labelledby="title desc">
+<title id="title">Queue entries identify lists; BCBs stay in their LRU lists</title><desc id="desc">Constructed layout with 32 shared lists. Private P has global index 32 and shared S has index 0. Each queue contains integer list indices. A consumer looks up a list and then checks its BCBs.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#143c50"/></marker></defs>
+<rect width="960" height="660" rx="8" fill="#fffefb"/>
+<g font-family="sans-serif" fill="#17212b">
+<text x="30" y="42" font-size="30" fill="#143c50" font-weight="bold">A queue slot holds a list index</text>
+<text x="30" y="77" font-size="21" fill="#17212b" font-weight="normal">Constructed layout: 32 shared lists; P = private list 32, S = shared list 0</text>
+<text x="30" y="115" font-size="21" fill="#087c78" font-weight="bold" font-family="monospace">pgbuf_Pool.private_lrus_with_victims</text>
+<rect x="30" y="135" width="280" height="85" rx="6" fill="#f7f5ef" stroke="#d9dedf" stroke-width="2"/>
+<rect x="48" y="151" width="65" height="52" rx="6" fill="#e6f3f1" stroke="#087c78" stroke-width="2"/>
+<text x="65" y="186" font-size="27" fill="#087c78" font-weight="bold" font-family="monospace">32</text>
+<rect x="133" y="151" width="65" height="52" rx="6" fill="#e6f3f1" stroke="#087c78" stroke-width="2"/>
+<text x="150" y="186" font-size="27" fill="#087c78" font-weight="bold" font-family="monospace">33</text>
+<text x="224" y="183" font-size="25" fill="#17212b" font-weight="normal">…</text>
+<text x="34" y="252" font-size="20" fill="#143c50" font-weight="normal" font-family="monospace">consume(index)</text>
+<path d="M320 177 L475 177" stroke="#143c50" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="340" y="163" font-size="20" fill="#17212b" font-weight="normal">lookup</text>
+<rect x="490" y="123" width="435" height="165" rx="6" fill="#f7f5ef" stroke="#143c50" stroke-width="2"/>
+<text x="510" y="155" font-size="23" fill="#143c50" font-weight="bold" font-family="monospace">P: buf_LRU_list[32]</text>
+<text x="510" y="187" font-size="21" fill="#17212b" font-weight="normal">Private LRU3 — BCB nodes</text>
+<rect x="510" y="207" width="110" height="53" rx="6" fill="#fffefb" stroke="#d9dedf" stroke-width="2"/>
+<text x="544" y="242" font-size="24" fill="#17212b" font-weight="bold">A</text>
+<path d="M621 234 L640 234" stroke="#143c50" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="645" y="207" width="110" height="53" rx="6" fill="#fffefb" stroke="#d9dedf" stroke-width="2"/>
+<text x="679" y="242" font-size="24" fill="#17212b" font-weight="bold">B</text>
+<path d="M756 234 L775 234" stroke="#143c50" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="780" y="207" width="110" height="53" rx="6" fill="#fffefb" stroke="#d9dedf" stroke-width="2"/>
+<text x="814" y="242" font-size="24" fill="#17212b" font-weight="bold">C</text>
+<text x="510" y="317" font-size="20" fill="#17212b" font-weight="normal">Scan candidates; recheck before detach.</text>
+<text x="30" y="365" font-size="21" fill="#087c78" font-weight="bold" font-family="monospace">pgbuf_Pool.shared_lrus_with_victims</text>
+<rect x="30" y="385" width="280" height="85" rx="6" fill="#f7f5ef" stroke="#d9dedf" stroke-width="2"/>
+<rect x="48" y="401" width="65" height="52" rx="6" fill="#e6f3f1" stroke="#087c78" stroke-width="2"/>
+<text x="65" y="436" font-size="27" fill="#087c78" font-weight="bold" font-family="monospace">0</text>
+<rect x="133" y="401" width="65" height="52" rx="6" fill="#e6f3f1" stroke="#087c78" stroke-width="2"/>
+<text x="150" y="436" font-size="27" fill="#087c78" font-weight="bold" font-family="monospace">1</text>
+<text x="224" y="433" font-size="25" fill="#17212b" font-weight="normal">…</text>
+<text x="34" y="502" font-size="20" fill="#143c50" font-weight="normal" font-family="monospace">consume(index)</text>
+<path d="M320 427 L475 427" stroke="#143c50" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="340" y="413" font-size="20" fill="#17212b" font-weight="normal">lookup</text>
+<rect x="490" y="373" width="435" height="165" rx="6" fill="#f7f5ef" stroke="#143c50" stroke-width="2"/>
+<text x="510" y="405" font-size="23" fill="#143c50" font-weight="bold" font-family="monospace">S: buf_LRU_list[0]</text>
+<text x="510" y="437" font-size="21" fill="#17212b" font-weight="normal">Shared LRU3 — BCB nodes</text>
+<rect x="510" y="457" width="110" height="53" rx="6" fill="#fffefb" stroke="#d9dedf" stroke-width="2"/>
+<text x="544" y="492" font-size="24" fill="#17212b" font-weight="bold">X</text>
+<path d="M621 484 L640 484" stroke="#143c50" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="645" y="457" width="110" height="53" rx="6" fill="#fffefb" stroke="#d9dedf" stroke-width="2"/>
+<text x="679" y="492" font-size="24" fill="#17212b" font-weight="bold">Y</text>
+<path d="M756 484 L775 484" stroke="#143c50" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="780" y="457" width="110" height="53" rx="6" fill="#fffefb" stroke="#d9dedf" stroke-width="2"/>
+<text x="814" y="492" font-size="24" fill="#17212b" font-weight="bold">Z</text>
+<text x="510" y="567" font-size="20" fill="#17212b" font-weight="normal">Scan candidates; recheck before detach.</text>
+<text x="30" y="620" font-size="22" fill="#ad5c16" font-weight="bold">A number in the queue neither reserves a frame nor proves safe reuse.</text>
+</g>
+</svg>

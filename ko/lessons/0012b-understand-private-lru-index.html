@@ -173,7 +173,7 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
         </ol>
         <p>선택한 index는 각각 <code>pgbuf_get_victim_from_lru_list()</code>에 전달됩니다. 이 함수는 선택한 list의 LRU3만 최대 1,000 position까지 보고, dirty, flushing, fixed, waiter 존재, reservation 중, mutex busy인 BCB는 여전히 거부합니다.</p>
         <div class="callout"><strong>Direct victim은 그다음 단계이지 다섯 번째 LRU domain이 아닙니다.</strong> Server mode에서 page-flush를 사용할 수 있을 때 INVALID와 ordinary search가 실패하면 allocator는 flusher가 BCB를 clean하고 reserve할 때까지 기다릴 수 있습니다. 소비 전에 BCB가 다시 부적격해지면 이 handoff는 취소될 수 있습니다.</div>
-        <p class="source-note"><strong>Inference:</strong> <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">VS-19</a>는 restricted big-private queue의 initial producer가 pinned source에서 보이지 않는다는 점을 기록합니다. 이 branch를 progress나 fairness 보장으로 바꾸어 말하지 마세요.</p>
+<p class="source-note"><strong>Verified mechanism:</strong> 정정한 <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">VS-19</a>는 일반 private 큐에서 꺼낸 번호를 big-private 큐에 넣는 최초 등록 경로를 확인합니다. <a href="0007-replace-one-frame.html#victim-queue-policy">큐의 생명주기와 용량</a>에서 분기를 설명하며, 진행이나 공정성을 보장하지는 않습니다.</p>
         <p class="source-note"><strong>소스:</strong> list selection은 <code>page_buffer.c:9067–9253,16370–16567</code>에 있습니다. <strong>소스:</strong> selected-list eligibility와 revocable direct-victim path는 <code>page_buffer.c:8181–8403,9256–9538,15420–15652</code>에 있습니다.</p>
       </section>
 

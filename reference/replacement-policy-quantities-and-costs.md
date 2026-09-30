@@ -281,7 +281,8 @@ Not in the ordinary `pgbuf_get_victim` path. It tries:
 
 The candidate queue is precisely the indirection that avoids `O(P)` discovery.
 The list flag suppresses duplicate enqueue, and the consumer re-enqueues the
-list if it still has candidates. Stale queue entries are possible because a
+list when candidates remain and its queue-specific publication conditions pass
+(see the [canonical lifecycle](../learning/05-replace-one-frame.md#list-index-queues-publication-consumption-and-stale-entries)). Stale queue entries are possible because a
 zero candidate count is not removed from the lock-free queue; consuming such an
 entry yields a cheap failed list check rather than an all-list scan.
 [candidate decrement limitation](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15721-L15736),
@@ -313,16 +314,12 @@ The pinned source supports these **static risk candidates**:
    adjustment is an `O(T+L)` base pass. With thousands of configured lists, these are more
    plausible list-count scaling costs than ordinary cross-private victim
    discovery.
-3. The uncertainty registry records `VS-19`: the separate
-   `big_private_lrus_with_victims` queue is allocated and consumed, but
-   repository-wide pinned-source search finds no initial producer; its only
-   `produce` call re-enqueues an index that was already consumed from that same
-   queue. This makes the `restricted=true` escape path statically appear unable
-   to discover a first big list. Treat this as an implementation candidate, not
-   a demonstrated runtime defect.
-   [allocation](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1864-L1883),
-   [only consume/re-produce site](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16434-L16471)
-   and [mutable status](../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations)
+3. The earlier `VS-19` no-initial-producer claim was corrected: an index
+   consumed from the ordinary private queue can be published to the big-private
+   queue before scanning. Restricted discovery still skips ordinary entries
+   when the big queue is empty; workload effects are unmeasured. See the
+   [canonical queue lifecycle](../learning/05-replace-one-frame.md#list-index-queues-publication-consumption-and-stale-entries)
+   and [current registry status](../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations).
 4. The lock-free queue source documents a preemption hazard: a producer
    preempted while holding a slot can temporarily block that queue generation.
    This is not a linear list scan, but it is a latency risk under stress.

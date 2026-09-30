@@ -200,7 +200,7 @@ Victim discovery normally tries the caller's own private list if policy permits,
 
 The list-index circular queues request capacities `2P` for ordinary private indexes, `2P` for “big private” indexes, and `2S` for shared indexes; the queue implementation rounds requested capacity to a power of two. These are queues of **LRU indexes**, not page queues and not fixed partitions of BCBs. [Queue allocation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1864-L1892), [capacity rounding](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/lockfree_circular_queue.hpp#L210-L217).
 
-The separate `big_private_lrus_with_victims` first-producer question is routed through `VS-19`; do not claim that route is complete or broken without runtime instrumentation. [Pinned consume/requeue path](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16416-L16506), [current registry status](../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations).
+The earlier big-private first-producer question is corrected in `VS-19`: an index consumed from the ordinary private queue can seed `big_private_lrus_with_victims` before the list scan. See the [canonical queue lifecycle](../learning/05-replace-one-frame.md#list-index-queues-publication-consumption-and-stale-entries) and [current registry status](../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations). No workload-level fairness or performance conclusion follows.
 
 ## What the direct-victim flag means
 
@@ -230,4 +230,4 @@ Potential providers include final-unfix paths and successful flush completion; o
 3. Why does the latch queue retain only a head pointer rather than a tail or predecessor support? The mechanism and complexity are visible; design intent is not recorded in the inspected history.
 4. Are holder traversal, queue append/removal, or zero-crossing LRU work material bottlenecks under the target workload? Source complexity alone cannot answer; queue depth, held-set depth, mutex hold/wait time, and profile samples are required.
 5. What fairness guarantee, if any, is intended for reader grouping, promotion, and direct-victim assignment? The pinned source does not establish strict FIFO or starvation freedom.
-6. Are the conditions routed through `VS-18`, `VS-19`, and `VS-20` reachable and impactful in the deployment being presented? Follow their current status and proof route in the uncertainty registry rather than copying either into this note.
+6. Are the conditions routed through `VS-18` and `VS-20` reachable and impactful in the deployment being presented? Follow their current status and proof route in the uncertainty registry rather than copying either into this note.

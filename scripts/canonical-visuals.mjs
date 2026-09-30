@@ -54,6 +54,7 @@ export const canonicalVisualOwners = Object.freeze({
   "maintenance-and-pacing-control.svg": "reference/page-buffer-daemon-lifecycle-audit.md",
   "promotion-outcomes.svg": "advanced/acquisition-concurrency.md",
   "promotion-condition-choice.svg": "advanced/acquisition-concurrency.md",
+  "pool-arrays-and-lru-recap.svg": "learning/01-contract-and-objects.md",
   "private-lru-domain.svg": "advanced/replacement-progress.md",
   "private-lru-assignment-activity.svg": "advanced/replacement-progress.md",
   "redo-lsa-gate.svg": "advanced/recovery-and-lifecycle.md",
@@ -67,6 +68,9 @@ export const canonicalVisualOwners = Object.freeze({
   "two-lsa-timeline.svg": "learning/04-flush-one-generation.md",
   "unconditional-latch-scenarios.svg": "advanced/acquisition-concurrency.md",
   "unfix-lru-placement.svg": "advanced/replacement-progress.md",
+  "victim-list-queue-map.svg": "learning/05-replace-one-frame.md",
+  "shared-victim-queue-registration.svg": "learning/05-replace-one-frame.md",
+  "private-victim-queue-stale-index.svg": "learning/05-replace-one-frame.md",
   "victim-eligibility.svg": "learning/05-replace-one-frame.md",
   "why-thread-holder.svg": "advanced/holder-entry-lifecycle.md",
 });

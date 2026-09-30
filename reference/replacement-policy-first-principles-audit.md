@@ -760,11 +760,11 @@ The following limits must survive into the teaching rewrite:
   shorthand, but list association may be shared and the BCB stores no owner ID.
 - **Avoid deallocation is not avoid victimization.** The similarly named facts
   solve different problems.
-- **The big-private queue has an open source-shape question.** The visible
-  producer in `pgbuf_lfcq_get_victim_from_private_lru()` re-enqueues an index it
-  has already consumed; this audit did not find a clear initial producer.
-  Restricted other-private discovery should not be taught as a proven fairness
-  mechanism.
+- **The big-private first-entry path is established.** An ordinary private
+  queue consumer can publish its index to the big queue before scanning when
+  the size/candidate conditions pass. The previous analysis missed this branch;
+  see corrected `VS-19` and the [canonical queue lifecycle](../learning/05-replace-one-frame.md#list-index-queues-publication-consumption-and-stale-entries).
+  Restricted discovery remains policy, not a fairness guarantee.
 - **The maintenance direct-victim backup is not verified progress.** In the
   pinned `pgbuf_direct_victims_maintenance()` loops, `index` is initialized to
   `start_index` and the loop immediately requires `index != start_index`, so the

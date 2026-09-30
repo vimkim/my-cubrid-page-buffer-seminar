@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 675" role="img" aria-labelledby="title desc">
+<title id="title">Shared LRU3 flag transitions publish the shared list index</title><desc id="desc">Page X stays in shared list S at index 0. Dirty or flushing states do not count as candidates. Clearing the last invalid-candidate flag in LRU3 increments the candidate count and attempts publication of index 0. Fix count is checked later.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#143c50"/></marker></defs>
+<rect width="960" height="675" rx="8" fill="#fffefb"/>
+<g font-family="sans-serif" fill="#17212b">
+<text x="30" y="42" font-size="29" fill="#143c50" font-weight="bold">Shared: from a page state change to queue [0]</text>
+<text x="30" y="78" font-size="21" fill="#17212b" font-weight="normal">S = shared list 0; X is in S/LRU3. No other candidates or re-dirty.</text>
+<rect x="30" y="110" width="900" height="92" rx="6" fill="#fff1da" stroke="#ad5c16" stroke-width="2"/>
+<text x="50" y="145" font-size="24" fill="#ad5c16" font-weight="bold">1  X is DIRTY</text>
+<text x="50" y="179" font-size="22" fill="#17212b" font-weight="normal">Not counted as a victim candidate.</text>
+<path d="M480 204 L480 231" stroke="#143c50" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="30" y="235" width="900" height="92" rx="6" fill="#fff1da" stroke="#ad5c16" stroke-width="2"/>
+<text x="50" y="270" font-size="24" fill="#ad5c16" font-weight="bold">2  X is FLUSHING_TO_DISK</text>
+<text x="50" y="304" font-size="22" fill="#17212b" font-weight="normal">Still excluded, even after DIRTY is cleared.</text>
+<path d="M480 329 L480 356" stroke="#143c50" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="30" y="360" width="900" height="92" rx="6" fill="#e6f3f1" stroke="#087c78" stroke-width="2"/>
+<text x="50" y="395" font-size="24" fill="#087c78" font-weight="bold">3  Last invalid-candidate flag clears</text>
+<text x="50" y="429" font-size="22" fill="#17212b" font-weight="normal">X stays in LRU3; count_vict_cand: 0 → 1.</text>
+<path d="M480 454 L480 484" stroke="#143c50" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="30" y="490" width="900" height="110" rx="6" fill="#e6f3f1" stroke="#087c78" stroke-width="2"/>
+<text x="50" y="525" font-size="22" fill="#087c78" font-weight="bold" font-family="monospace">pgbuf_lru_add_victim_candidate()</text>
+<text x="50" y="559" font-size="21" fill="#17212b" font-weight="normal">Registration flag clear + CAS + successful produce(0) → queue [0]</text>
+<text x="50" y="584" font-size="20" fill="#17212b" font-weight="normal">Already registered? Keep the existing entry. Shared needs no quota test.</text>
+<text x="30" y="641" font-size="21" fill="#ad5c16" font-weight="bold">Candidate count does not test fcnt; a later scan must reject fixed pages.</text>
+</g>
+</svg>

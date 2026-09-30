@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 760" role="img" aria-labelledby="title desc">
+<title id="title">Own-list reuse leaves the queued list index for later consumption</title><desc id="desc">Private list P is global index 32. Two own-list detach operations lower its candidate count from two to zero without consuming queued index 32. A later queue consumer finds no candidate, does not requeue 32, and clears the registration flag.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#143c50"/></marker></defs>
+<rect width="960" height="760" rx="8" fill="#fffefb"/>
+<g font-family="sans-serif" fill="#17212b">
+<text x="30" y="42" font-size="29" fill="#143c50" font-weight="bold">Own-list reuse does not pop queue entry 32</text>
+<text x="30" y="78" font-size="21" fill="#17212b" font-weight="normal">P = private list 32; quota = 100; two candidates; ordinary private queue.</text>
+<text x="30" y="108" font-size="20" fill="#17212b" font-weight="normal">No reinsertion, new candidates, quota change, or competing consumers.</text>
+<text x="35" y="155" font-size="19" fill="#143c50" font-weight="bold">EVENT</text>
+<text x="430" y="155" font-size="19" fill="#143c50" font-weight="bold">P: SIZE / CANDIDATES</text>
+<text x="724" y="155" font-size="19" fill="#143c50" font-weight="bold">QUEUE / FLAG</text>
+<rect x="30" y="175" width="900" height="77" rx="6" fill="#f7f5ef" stroke="#d9dedf" stroke-width="2"/>
+<text x="48" y="209" font-size="21" fill="#17212b" font-weight="bold">Initial snapshot</text>
+<text x="445" y="211" font-size="24" fill="#143c50" font-weight="bold" font-family="monospace">102 / 2</text>
+<text x="730" y="208" font-size="25" fill="#087c78" font-weight="bold" font-family="monospace">[32]</text>
+<text x="815" y="208" font-size="20" fill="#17212b" font-weight="normal">set</text>
+<text x="48" y="236" font-size="18" fill="#17212b" font-weight="normal">P is registered; no BCB detached yet.</text>
+<rect x="30" y="269" width="900" height="77" rx="6" fill="#f7f5ef" stroke="#d9dedf" stroke-width="2"/>
+<text x="48" y="303" font-size="21" fill="#17212b" font-weight="bold">Owner detaches candidate A</text>
+<text x="445" y="305" font-size="24" fill="#143c50" font-weight="bold" font-family="monospace">101 / 1</text>
+<text x="730" y="302" font-size="25" fill="#087c78" font-weight="bold" font-family="monospace">[32]</text>
+<text x="815" y="302" font-size="20" fill="#17212b" font-weight="normal">set</text>
+<text x="48" y="330" font-size="18" fill="#17212b" font-weight="normal">Direct list lookup; no queue consume.</text>
+<rect x="30" y="363" width="900" height="77" rx="6" fill="#fff1da" stroke="#ad5c16" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="48" y="397" font-size="21" fill="#17212b" font-weight="bold">Owner detaches candidate B</text>
+<text x="445" y="399" font-size="24" fill="#143c50" font-weight="bold" font-family="monospace">100 / 0</text>
+<text x="730" y="396" font-size="25" fill="#ad5c16" font-weight="bold" font-family="monospace">[32]</text>
+<text x="815" y="396" font-size="20" fill="#17212b" font-weight="normal">set</text>
+<text x="48" y="424" font-size="18" fill="#ad5c16" font-weight="normal">Stale entry is allowed; the index still names P.</text>
+<rect x="30" y="457" width="900" height="77" rx="6" fill="#f7f5ef" stroke="#d9dedf" stroke-width="2"/>
+<text x="48" y="491" font-size="21" fill="#17212b" font-weight="bold">Consumer takes index 32</text>
+<text x="445" y="493" font-size="24" fill="#143c50" font-weight="bold" font-family="monospace">100 / 0</text>
+<text x="730" y="490" font-size="25" fill="#087c78" font-weight="bold" font-family="monospace">[ ]</text>
+<text x="815" y="490" font-size="20" fill="#17212b" font-weight="normal">set</text>
+<text x="48" y="518" font-size="18" fill="#17212b" font-weight="normal">Index is now held by the consumer.</text>
+<rect x="30" y="551" width="900" height="77" rx="6" fill="#f7f5ef" stroke="#d9dedf" stroke-width="2"/>
+<text x="48" y="585" font-size="21" fill="#17212b" font-weight="bold">No candidate; no requeue</text>
+<text x="445" y="587" font-size="24" fill="#143c50" font-weight="bold" font-family="monospace">100 / 0</text>
+<text x="730" y="584" font-size="25" fill="#087c78" font-weight="bold" font-family="monospace">[ ]</text>
+<text x="815" y="584" font-size="20" fill="#17212b" font-weight="normal">clear</text>
+<text x="48" y="612" font-size="18" fill="#17212b" font-weight="normal">Later candidate events can register P again.</text>
+<text x="30" y="695" font-size="20" fill="#143c50" font-weight="bold">PGBUF_LRU_VICTIM_LFCQ_FLAG tracks registration, not candidate count.</text>
+<text x="30" y="730" font-size="20" fill="#17212b" font-weight="normal">If a new candidate arrives before consume, the old entry can still be useful.</text>
+</g>
+</svg>

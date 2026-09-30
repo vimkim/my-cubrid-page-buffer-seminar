@@ -57,18 +57,28 @@ test("guide pages route VS IDs without copying mutable statuses", async () => {
   }
 });
 
-test("the final asset seam contains and displays exactly the canonical visual roster", async () => {
+test("the guide displays exactly its canonical visual roster within the shared asset seam", async () => {
   const expected = [...canonicalVisualNames];
-  assert.equal(expected.length, 63);
+  assert.ok(expected.length > 0);
   const assets = (await readdir(path.join(guideRoot, "assets")))
     .filter((entry) => entry.endsWith(".svg"))
     .sort();
-  assert.deepEqual(assets, expected);
+  for (const asset of expected) assert.ok(assets.includes(asset), asset);
 
-  const combined = (await guidePages()).map(({ markdown }) => markdown).join("\n");
-  for (const asset of expected) {
-    assert.match(combined, new RegExp(`\\.\\./assets/${asset.replace(".", "\\.")}`));
+  const pages = await guidePages();
+  const combined = pages.map(({ markdown }) => markdown).join("\n");
+  // Resolve targets before comparing ownership; seminar-only assets are checked
+  // by the aggregate validator and need not belong to the guide roster.
+  const displayed = new Set();
+  for (const { relativePath, markdown } of pages) {
+    for (const match of markdown.matchAll(/!\[[^\]]*\]\(([^ )]+)\)/g)) {
+      const target = decodeURIComponent(match[1].split(/[?#]/)[0]);
+      if (!target.endsWith(".svg")) continue;
+      const resolved = path.resolve(guideRoot, path.dirname(relativePath), target);
+      displayed.add(path.relative(path.join(guideRoot, "assets"), resolved));
+    }
   }
+  assert.deepEqual([...displayed].sort(), expected);
   for (const retired of ["latch-state.svg", "pool-map.svg", "wal-flush.svg"]) {
     assert.doesNotMatch(combined, new RegExp(retired.replace(".", "\\.")));
   }

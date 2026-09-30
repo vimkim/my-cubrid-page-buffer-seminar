@@ -564,3 +564,14 @@ executed, live-grill, and Reader-intake populations is owned by the
 Maintenance-scenario, and Applied-exercise prompt/answer pages. Legacy banks and
 executed evidence trees remain unchanged at their original paths; Canonical items
 link them instead of copying provenance, runners, or receipts.
+
+## Queue-discovery correction at the pinned baseline
+
+A focused source recheck on 2026-09-30 corrected the inherited `VS-19` claim:
+`pgbuf_lfcq_get_victim_from_private_lru()` can consume from the ordinary private
+queue and publish that same index to the big-private queue before scanning
+(`src/storage/page_buffer.c:16434-16471`). The producer is not limited to indices
+previously consumed from the big queue. Historical evidence remains unchanged;
+current interpretations defer to the [registry correction](./unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations)
+and [canonical queue lifecycle](./learning/05-replace-one-frame.md#list-index-queues-publication-consumption-and-stale-entries).
+The new queue diagrams are constructed source traces, not runtime observations.

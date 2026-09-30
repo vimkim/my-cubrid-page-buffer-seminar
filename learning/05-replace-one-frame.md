@@ -119,6 +119,58 @@ Once hard gates pass, the analyzed revision uses policy machinery: LRU placement
 
 Keep formulas and daemon coordination in [Replacement Policy and Background Progress](../advanced/replacement-progress.md). In core review, ask: “Could this policy choice change while every hard predicate and final recheck remains intact?”
 
+### List-index queues: publication, consumption, and stale entries
+
+**Verified mechanism / Implementation policy at f799e05.** These queues route an allocator to a list to search. Their elements are integer full LRU indices; they neither hold BCB pointers nor reserve frames for the consumer. They are separate from the direct-victim assignment machinery. In the following constructed layout, there are 32 shared lists: P names private `buf_LRU_list[32]`, while S names shared `buf_LRU_list[0]`. P's queued number is the integer 32. Private-domain index 0 maps to full LRU index 32 in this layout.
+
+![Integer queue entries route consumers to private and shared LRU lists](../assets/victim-list-queue-map.svg)
+
+The exact fields are `pgbuf_Pool.private_lrus_with_victims`, `pgbuf_Pool.big_private_lrus_with_victims`, and `pgbuf_Pool.shared_lrus_with_victims`, all `lockfree::circular_queue<int>` pointers. `pgbuf_lfcq_add_lru_with_victims()` uses CAS to set the list's `PGBUF_LRU_VICTIM_LFCQ_FLAG`, then calls `produce(lru_list->index)` on the ordinary private or shared queue. An already-set flag suppresses duplicate registration; a failed publication clears it. `pgbuf_lru_add_victim_candidate()` increments the candidate count and attempts registration for any shared list, or for a private list whose total size is strictly greater than quota. Every addition attempts registration, not only a zero-to-one count transition. `pgbuf_adjust_quotas()` also attempts registration for private lists with candidates above quota and for shared lists with candidates.
+
+Source: [queue fields](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L819-L823), [publication](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16370-L16414), [candidate addition](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15674-L15720), [quota adjustment](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14400-L14501).
+
+#### When a shared list becomes discoverable
+
+Candidate accounting requires LRU3 membership and no flag in `PGBUF_BCB_INVALID_VICTIM_CANDIDATE_MASK`: `PGBUF_BCB_DIRTY_FLAG`, `PGBUF_BCB_FLUSHING_TO_DISK_FLAG`, `PGBUF_BCB_VICTIM_DIRECT_FLAG`, and `PGBUF_BCB_INVALIDATE_DIRECT_VICTIM_FLAG`. It does **not** check fix count. The selected-list scan must still reject fixed pages and waiters and pass the protected eligibility check described above.
+
+Two transitions reach candidate addition: `pgbuf_bcb_change_zone()` moves a flag-eligible BCB into LRU3, or `pgbuf_bcb_update_flags()` clears the last invalid-candidate flag while the BCB remains in LRU3. An ordinary admission or private-to-shared migration into shared LRU2 does not itself add a candidate; subsequent zone adjustment may move it into LRU3.
+
+![A shared LRU3 page clearing its last exclusion flag can publish list index zero](../assets/shared-victim-queue-registration.svg)
+
+In this constructed flush trace, page X stays in shared S/LRU3, no other candidate exists, no re-dirty occurs, and no direct victim is assigned. DIRTY excludes X; FLUSHING continues to exclude it even after DIRTY clears. When the last exclusion flag clears, the count becomes one and S's index 0 is offered to the queue. A re-dirty or direct-victim flag prevents that transition. Conversely, a clean, flag-eligible BCB demoted from LRU2 to LRU3 can trigger registration without a flush.
+
+Source: [candidate mask](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L253-L263), [flag transition](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15817-L15838), [zone transition](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15914-L15980), [flush completion](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16108-L16112).
+
+#### Pop, requeue, and the big-private first-entry path
+
+The source calls a pop `consume(lru_idx)`. `pgbuf_get_victim()` reaches other-private queue discovery when quota is enabled and the flush daemon is available. `pgbuf_lfcq_get_victim_from_private_lru()` first tries the big-private queue; if empty, it falls back to the ordinary private queue only when `restricted` is false. It then tests the consumed list's size and candidate count. If size is greater than 100, greater than twice quota, and `count_vict_cand > 1`, it attempts to publish the index to the big-private queue **before** scanning. This can seed the big queue from an ordinary-queue entry, and makes the list discoverable by another consumer while the current consumer searches. The earlier contrary claim is corrected in [VS-19](../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations).
+
+After the selected-list scan, successful early big publication suppresses any second publication. Otherwise, the index is offered back to the ordinary queue only when candidates remain and the list is still above quota. If neither publication succeeds, the registration flag is cleared. A stale under-quota index with remaining candidates can therefore still receive one scan before being dropped; the consumer does not impose a fresh over-quota precondition before every selected-list call.
+
+`pgbuf_lfcq_get_victim_from_shared_lru()` consumes a shared index and scans its list. Requeue requires candidates remaining and `(multi_threaded || victim != NULL)`; the call site passes `has_flush_thread` as `multi_threaded`. When false, an unsuccessful first scan with remaining candidates gets a second selected-list attempt. Without successful requeue, the consumer clears the registration flag.
+
+Source: [selection order and call-site conditions](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9216), [private consumer](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16424-L16505), [shared consumer](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16516-L16578).
+
+#### Why own-list reuse leaves the queued number
+
+Own-list selection calls `pgbuf_get_victim_from_lru_list()` directly with its index, without consuming the queue. Successful detach changes the BCB to VOID and decreases the list's candidate count. Other candidates may remain, so removing one page does not invalidate the whole advertisement.
+
+![Own-list detach reduces candidate counts while index 32 remains queued until a later consumer drops it](../assets/private-victim-queue-stale-index.svg)
+
+This is an independent constructed sequence with quota 100, size 102, two candidates, a queued ordinary index 32, and no intervening reinsertion, new candidate, quota adjustment, or competing queue consumer. Two own-list detach operations reduce size to 100 and candidates to zero. `pgbuf_lru_remove_victim_candidate()` deliberately does not delete the queued index even at zero: an arbitrary entry is difficult to remove from the lock-free circular queue. The same stale-entry possibility exists when pages become dirty or leave LRU3.
+
+A later consumer takes 32, finds zero candidates, does not requeue it, and clears the registration flag. The integer still names the live list descriptor; it does not identify a detached/rebound BCB. If another candidate appears before consumption, the existing index can still be useful. The flag remains set while a consumer holds the index, so it is not an exact physical-queue-membership bit. The source also acknowledges a race between candidate addition and flag clearing: a producer can see the old set flag and omit registration just before the consumer clears it. Later candidate additions or quota adjustment can repair discovery. This is not a bounded-time fairness guarantee.
+
+Source: [own-list lookup](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9146), [detach and zone change](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10410-L10417), [zero-count removal policy](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15728-L15736), [consumer clearing and repair race](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16483-L16505).
+
+#### Capacity and removal tradeoffs
+
+Each private queue requests `2 * PGBUF_PRIVATE_LRU_COUNT` slots, and the shared queue requests `2 * PGBUF_SHARED_LRU_COUNT`. The circular-queue constructor rounds that request up to a power of two using `next_pow2(size)`, leaving an existing power of two unchanged. Thus 100 private lists give 256 slots **in each** private queue; 32 shared lists give 64 shared slots. Each slot holds one integer index. Capacity is fixed at initialization and depends on list counts, not resident-page count. It does not guarantee every concurrent publication succeeds.
+
+**Inference about alternative designs:** removing queue discovery without a replacement loses these paths to other-private/shared candidates, although own-list and other allocation paths remain. Replacing the queues with descriptor sweeps can retain discovery but may inspect every relevant list per attempt and requires fresh priority/concurrency handling. Removing only the big queue changes large-list priority and requires revisiting restricted discovery. None of these changes permits weaker BCB eligibility checks; a throughput or waiting-time claim requires controlled measurements.
+
+Source: [queue allocation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1864-L1886), [capacity rounding](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/lockfree_circular_queue.hpp#L208-L218), [rounding implementation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/lockfree_circular_queue.hpp#L409-L417), [queue design purpose](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16370-L16374).
+
 ### Advanced policy boundary
 
 Direct-victim assignment is revocable: if the candidate is fixed again before consumption, the allocator must request another candidate. That is enough for the Core policy classification; [Replacement Policy and Background Progress](../advanced/replacement-progress.md) owns the flag transitions, source trace, and progress argument.
