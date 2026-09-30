@@ -21,10 +21,10 @@ All seven branches start from the committed authoring contract atop the common c
 | 01 | Request, objects, opening | Reviewed; original tip `3b35a3e`, rebased/integrated `143df30`; scoped browser pass |
 | 02 | Concurrent use | Reviewed; original `ba960b6`, rebased/integrated `e5e8638`; append-only browser conflict preserved both tests; scoped browser pass |
 | 03 | Admission, domains, zones | Reviewed; original `ca22ff9`, rebased/integrated `f33de53`; source policy reconciled with 02/04 |
-| 04 | Branch outcomes, safe reuse | Assigned; reconcile 03 policy |
-| 05 | Background progress | Assigned; reconcile 04 outcome |
-| 06 | Engine comparison, closing | Assigned; reconcile 04 outcome |
-| 07 | Integrated delivery | Owner started after 02 slot released; preparing actual contribution map, waits for 01–06 integration before shared edits |
+| 04 | Branch outcomes, safe reuse | Complete; original `3becd74`, rebased/integrated `31cdf13`; policy and independent source/arithmetic review complete |
+| 05 | Background progress | Complete; original `e383af5`, rebased/integrated `b444c13`; actual 04 trace reconciled |
+| 06 | Engine comparison, closing | Complete; original `8d420b8`, rebased/integrated `12924aa`; actual 04 trace reconciled |
+| 07 | Integrated delivery | Complete; tested content `98b76bf`, evidence tip `e2bc624`; 12 stops and 14 spoken sections reconciled |
 
 Human language receipts remain pending unless genuine review is supplied. Automated/model review cannot create them. Distinguish final product acceptance from local integration and report the actual gate diagnostics.
 
@@ -44,3 +44,32 @@ Baseline pass does not establish correctness of future edits. Final integrated c
 Root independently checked the pinned quota cap, same-domain final-unfix boost, zone-adjustment order, private selection predicates and protected candidate scan. A separate ordered-chain calculation reproduced ticket04's corrected endpoints: retention removes C32267/C32266, displacement removes H1/C32267; total32768 conserved, H2 remains LRU1. The provisional per-list16384 was rejected before authoring; final quota5000 gives250/250 protected thresholds. This is source/arithmetic review, not runtime evidence.
 
 Root resolved the01/02 browser-file conflict by retaining both complete appended tests; no behavior was selected away. On integrated `f33de53`, opening, concurrency and corrected textbook progression tests all pass (4 tests). Final integrated testing remains required after later tickets.
+
+## Final review and technical verification
+
+The [AC-by-AC report](first-time-participant-revision-checks.md) and its linked raw receipts describe exact content `98b76bf5e00ed6d2cf1f35610d0f2696c5b27ed3`. Evidence-only follow-up `e2bc624` adds the final report, logs and screenshots. Root verified their counts and source-commit attribution after the server restart. One report label was corrected: the recorded `e1c79…` hash identifies the English itinerary, not the Korean itinerary; the content and observed hash are unchanged.
+
+### Standards review
+
+Independent agent `review_standards` reported zero unresolved findings at `98b76bf`, against fixed base `c9c6183`. Participant/presenter separation, bilingual assumptions and qualifications, source-pinned policy, explicit scenario resets, deferred durability and newer-main exact-LRU coverage conform to the documented standards. No actionable code-smell finding. Screen-cue order was corrected before that verdict.
+
+### Spec review
+
+Independent agent `review_spec` reported zero remaining content findings at `98b76bf`. Its independent pinned-source calculation confirmed quota, population, demotion, candidate selection and both residency endpoints. Hidden prediction premises and reversed spoken cues were corrected. The subsequent AC19 receipt is now present: root checked the exact-content declaration, all 19 dispositions and raw results. Human language acceptance remains explicitly open.
+
+### Final checks
+
+- Headless browser suites: 36/36 pass, zero skips, both contributor and independent root runs.
+- Validator suites: 59/59 pass; root independently repeated the changed guide-validator suite, 23/23 pass.
+- Guide source/links/assets/English and served checks: 43 pages, 66 SVGs, zero orphaned assets; 109 HTTP resources and 43 DOM pages pass.
+- Bilingual served checks: 277 HTTP resources and 109 DOM pages pass. The unwaived all-gates invocation exits 1 for exactly 152 review-only diagnostics, with no non-review failures. Genuine human receipts remain pending for 54 pairs.
+- Existing IDs remain across all 108 participant files and newer-main F1 sections. Standalone script cues, heading semantics, reading/presentation, keyboard, no-JavaScript and mobile behavior were explicitly checked.
+- Root source-checked 16 changed author Markdown files and resolved their relative links. The final report and this record were checked again after evidence edits.
+
+## Destination divergence and merge readiness
+
+During execution, another local task advanced main from `783110c` to `5e1c02f281954fbacdd29498ceed51ad3b4a3645`. Ticket 07 incorporated that commit through merge `293a5a6`, preserving every ticket branch tip, the new exact-LRU sections/SVGs and validator changes. Their interaction and added spoken coverage were reviewed and tested. All ticket rebases retained both sides of browser-test append conflicts; no whole-file ours/theirs resolution was used.
+
+The session-supplied global AGENTS worktree rule 6 requires: “If the destination has diverged, integrate it into the task branch, resolve conflicts, rerun relevant checks, and present the updated committed result for renewed approval before merging.” The updated result is technically ready and the destination is clean at `5e1c02f`. Local main merge and merged-task cleanup await that renewed approval. This is a destination-divergence requirement, not a new publication request or a claim that human language acceptance is complete.
+
+At this preparation point all seven ticket worktrees and the integration worktree are retained for review. Once the reviewed integration commit is approved, recheck main, fast-forward it, verify each task tip is an ancestor and each worktree contains no valuable tracked/untracked/ignored output, then remove only the seven ticket worktrees/branches and the integration worktree/branch without force. Keep the separate critique untouched. Original design tip `bac6e8b` is not an ancestor after the plans were rebased; preserve its worktree and branch. No push or external publication has occurred.
