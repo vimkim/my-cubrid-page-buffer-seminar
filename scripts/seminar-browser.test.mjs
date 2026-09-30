@@ -546,6 +546,7 @@ test('ticket04 common checkpoint resets both residency predictions in EN and KO'
       for (const id of ['session-retention', 'session-displacement']) {
         await page.locator('#session-branch-checkpoint a[href="#' + id + '"]').click();
         await page.locator('#' + id).waitFor({ state: 'visible' });
+        assert.equal(await page.locator('#' + id).getByRole('heading', { level: 2 }).count(), 1);
         const answer = page.locator('#' + id + ' > details');
         assert.equal(await answer.getAttribute('open'), null);
         assert.equal(await answer.locator('p').first().isVisible(), false);
