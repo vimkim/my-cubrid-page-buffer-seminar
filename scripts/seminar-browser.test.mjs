@@ -521,6 +521,9 @@ test('ticket02 concurrent-use assumptions precede concealed keyboard answers in 
         if (javaScriptEnabled) {
           await page.locator('[data-section-next]').click();
           assert.equal(await page.locator('#session-writer').isVisible(), true);
+          await page.locator('[data-section-previous]').click();
+          assert.equal(await answer.getAttribute('open'), null);
+          await page.locator('[data-section-next]').click();
         }
         const writer = page.locator('#session-writer [data-session-answer]');
         assert.equal(await writer.getAttribute('open'), null);
