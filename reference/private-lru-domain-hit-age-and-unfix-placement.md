@@ -222,6 +222,9 @@ owns the numeric example, integer division, changing population and lock scope.
 [age predicate](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1052-L1058),
 [top/middle tick updates](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9694-L9830)
 
+For the counter/modulo algorithm and the 32-list example, see
+[choosing the shared destination](../advanced/replacement-progress.md#choosing-the-shared-destination-counter-modulo-shared-list-count).
+
 The migration helper removes the BCB under the source private-LRU mutex,
 releases that mutex, chooses a shared index, and then inserts under the
 destination mutex. It does not hold two LRU mutexes simultaneously. The outer

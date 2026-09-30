@@ -447,6 +447,39 @@ case excluding mutex wait.
 
 Source: `src/storage/page_buffer.c:6713-7040,9695-10417`.
 
+### Choosing the shared destination: counter modulo shared-list count
+
+**Verified mechanism / Implementation policy at f799e05:** migration moves one
+BCB; the source private LRU remains private. The destination comes from
+`pgbuf_get_shared_lru_index_for_add()`, which uses the pool-wide atomic
+`quota.add_shared_lru_idx` counter. With `S = PGBUF_SHARED_LRU_COUNT`, its
+selection step is:
+
+```text
+n = atomic_increment(quota.add_shared_lru_idx)
+periodically refresh quota.avoid_shared_lru_idx from shared-list sizes
+destination = n % S
+if destination == quota.avoid_shared_lru_idx:
+    n = atomic_increment(quota.add_shared_lru_idx)
+    destination = n % S
+```
+
+This is round-robin selection with an adjustment for an oversized shared list.
+The periodic scan identifies a list to avoid when shared occupancy and imbalance
+pass the source thresholds; the selection performs one extra increment when its
+candidate matches that index. Other shared admissions use the same counter, so
+private-to-shared migrations do not have their own sequence.
+
+In the earlier **32-shared-list example**, the formula is `n % 32`: counter
+values 63, 64, and 65 select indexes 31, 0, and 1 before the avoidance adjustment.
+The divisor is the actual shared-list count, not a hard-coded 32. Neither the
+private-list index nor the page's VPID is the modulo input, so there is no fixed
+private-list-to-shared-list mapping. Once selected, the destination receives the
+BCB at LRU2 middle through the protected remove/add sequence above.
+
+Source: [shared destination selector](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8987-L9063),
+[migration helper](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10332-L10353).
+
 ## Saved ticks and a protected boost
 
 **Verified mechanism:** the old-enough test uses
