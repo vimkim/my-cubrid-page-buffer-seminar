@@ -18,13 +18,13 @@ All seven branches start from the committed authoring contract atop the common c
 
 | Ticket | Ownership | State |
 | --- | --- | --- |
-| 01 | Request, objects, opening | Assigned; no dependency |
-| 02 | Concurrent use | Assigned; reconcile 01 vocabulary |
-| 03 | Admission, domains, zones | Assigned; reconcile 02 final unfix |
+| 01 | Request, objects, opening | Reviewed; original tip `3b35a3e`, rebased/integrated `143df30`; scoped browser pass |
+| 02 | Concurrent use | Reviewed; original `ba960b6`, rebased/integrated `e5e8638`; append-only browser conflict preserved both tests; scoped browser pass |
+| 03 | Admission, domains, zones | Reviewed; original `ca22ff9`, rebased/integrated `f33de53`; source policy reconciled with 02/04 |
 | 04 | Branch outcomes, safe reuse | Assigned; reconcile 03 policy |
 | 05 | Background progress | Assigned; reconcile 04 outcome |
 | 06 | Engine comparison, closing | Assigned; reconcile 04 outcome |
-| 07 | Integrated delivery | Queued for available agent slot; requires actual 01–06 artifacts |
+| 07 | Integrated delivery | Owner started after 02 slot released; preparing actual contribution map, waits for 01–06 integration before shared edits |
 
 Human language receipts remain pending unless genuine review is supplied. Automated/model review cannot create them. Distinguish final product acceptance from local integration and report the actual gate diagnostics.
 
@@ -38,3 +38,9 @@ At content commit `c9c6183626469c18640497c9755066120e246c88`, Copyparty served t
 - Playwright module: `/home/vimkim/temp/volmap/web/node_modules/@playwright/test/index.mjs`; headless Chromium. No GUI browser launched.
 
 Baseline pass does not establish correctness of future edits. Final integrated content is retested.
+
+## Integration review findings
+
+Root independently checked the pinned quota cap, same-domain final-unfix boost, zone-adjustment order, private selection predicates and protected candidate scan. A separate ordered-chain calculation reproduced ticket04's corrected endpoints: retention removes C32267/C32266, displacement removes H1/C32267; total32768 conserved, H2 remains LRU1. The provisional per-list16384 was rejected before authoring; final quota5000 gives250/250 protected thresholds. This is source/arithmetic review, not runtime evidence.
+
+Root resolved the01/02 browser-file conflict by retaining both complete appended tests; no behavior was selected away. On integrated `f33de53`, opening, concurrency and corrected textbook progression tests all pass (4 tests). Final integrated testing remains required after later tickets.
