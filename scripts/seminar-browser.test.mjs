@@ -708,6 +708,7 @@ test('ticket07 integrated itinerary and every Korean script cue resolve to the e
     for (const section of await page.locator('main > section').all()) {
       assert.equal(await section.locator(':scope > h2').count(), 1);
     }
+    assert.deepEqual(await page.locator('[data-script-stop]').evaluateAll(nodes => nodes.map(node => node.dataset.scriptStop)), ['opening', 'objects', 'textbook', 'concurrent', 'policy', 'outcomes', 'branches', 'reuse', 'background', 'handoff', 'pacing', 'comparison']);
     const scriptLinks = await page.locator('a[href]').evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
     for (const href of scriptLinks) {
       if (href.startsWith('#')) { assert.equal(await page.locator(href).count(), 1, href); continue; }
