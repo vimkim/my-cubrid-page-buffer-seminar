@@ -645,3 +645,49 @@ test('ticket06 comparison and closing read without JavaScript at mobile width', 
     }
   } finally { await context.close(); }
 });
+
+// Ticket 05: the scoped background route keeps predictions usable without
+// requiring the later write-protocol sections.
+test('selected background handoff and pacing preserve disclosure and session exits', { skip: unavailable }, async () => {
+  const stops = [
+    ['0006b-follow-page-flush-handoff.html', 'session-handoff-check', 'handoff-session-exit', '0006c-follow-maintenance-and-pacing.html#first-principles'],
+    ['0006c-follow-maintenance-and-pacing.html', 'session-pacing-check', 'pacing-session-exit', '../reference/first-principles-route.html'],
+  ];
+  for (const language of ['en', 'ko']) {
+    for (const javaScriptEnabled of [true, false]) {
+      const context = await browser.newContext({ javaScriptEnabled, viewport: javaScriptEnabled ? { width: 1440, height: 1000 } : { width: 390, height: 844 } });
+      const page = await context.newPage();
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      try {
+        for (const [file, checkpoint, exit, next] of stops) {
+          await page.goto(`${base}${language}/lessons/${file}${javaScriptEnabled ? '?present=1' : ''}#${checkpoint}`);
+          const section = page.locator('#' + checkpoint);
+          assert.equal(await section.isVisible(), true);
+          const answer = section.locator('details');
+          assert.equal(await answer.getAttribute('open'), null);
+          assert.equal(await answer.locator('p').isVisible(), false);
+          await answer.locator('summary').focus();
+          await page.keyboard.press('Enter');
+          assert.equal(await answer.locator('p').isVisible(), true);
+          if (javaScriptEnabled) {
+            await page.locator('[data-section-next]').click();
+            assert.equal(await page.locator('#' + exit).isVisible(), true);
+            await page.locator('[data-section-previous]').click();
+            assert.equal(await section.isVisible(), true);
+            assert.equal(await answer.getAttribute('open'), null);
+            await page.locator('[data-section-next]').click();
+          }
+          const link = page.locator(`#${exit} a[href="${next}"]`);
+          assert.equal(await link.count(), 1);
+          await link.focus();
+          await page.keyboard.press('Enter');
+          await page.waitForURL(url => url.pathname.endsWith(next.split('#')[0].replace('../', '')));
+          if (next.includes('#')) assert.equal(await page.locator('#first-principles').isVisible(), true);
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2), true);
+        }
+        assert.deepEqual(errors, []);
+      } finally { await context.close(); }
+    }
+  }
+});

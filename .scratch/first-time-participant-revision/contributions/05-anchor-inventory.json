@@ -1,0 +1,50 @@
+[
+  {
+    "path": "en/lessons/0006a-understand-page-buffer-daemons.html",
+    "retained": 14,
+    "added": [
+      "background-session-exit",
+      "deferred-write-protocol"
+    ]
+  },
+  {
+    "path": "en/lessons/0006b-follow-page-flush-handoff.html",
+    "retained": 12,
+    "added": [
+      "handoff-session-exit",
+      "session-handoff-check"
+    ]
+  },
+  {
+    "path": "en/lessons/0006c-follow-maintenance-and-pacing.html",
+    "retained": 12,
+    "added": [
+      "pacing-session-exit",
+      "session-pacing-check"
+    ]
+  },
+  {
+    "path": "ko/lessons/0006a-understand-page-buffer-daemons.html",
+    "retained": 14,
+    "added": [
+      "background-session-exit",
+      "deferred-write-protocol"
+    ]
+  },
+  {
+    "path": "ko/lessons/0006b-follow-page-flush-handoff.html",
+    "retained": 12,
+    "added": [
+      "handoff-session-exit",
+      "session-handoff-check"
+    ]
+  },
+  {
+    "path": "ko/lessons/0006c-follow-maintenance-and-pacing.html",
+    "retained": 12,
+    "added": [
+      "pacing-session-exit",
+      "session-pacing-check"
+    ]
+  }
+]

@@ -20,62 +20,59 @@
   <div class="lesson-grid">
     <article class="lesson-main">
 <section class="section" id="first-principles"><h2>What if a new page needs a frame, but every frame is occupied?</h2>
+<p>The preceding replacement timeline separated a preferred candidate from permission to reuse it. Now suppose candidate checks leave the request waiting. The close-up below keeps contexts A/B and the scan-page names, but starts a new constructed state; it does not continue or change the preceding branch ledger.</p>
 
 <p><a href="../reference/first-principles-route.html">Presentation route ↑</a></p>
-<p>A request thread needs page E. E is absent from memory, and every page-buffer frame is occupied. <strong>A frame is a memory slot for one page.</strong> An existing page must leave before E can occupy its slot.</p>
-<p>This small constructed example retains only the states needed for reasoning. It does not reproduce the size or LRU order of a real CUBRID pool.</p>
-<div class="table-scroll"><table><thead><tr><th>Resident page</th><th>Current state</th><th>Can E overwrite it immediately?</th></tr></thead><tbody>
-<tr><td>A</td><td>Another thread is using it: fixed</td><td>No. That would take memory away from its current user.</td></tr>
-<tr><td>B</td><td>No longer in use, but modified: dirty</td><td>No. Its changes need a safe write path first.</td></tr>
-<tr><td>C</td><td>No longer in use, but modified: dirty</td><td>It needs the same preparation as B.</td></tr>
-<tr><td>D</td><td>Another thread is using it: fixed</td><td>It cannot be reused while that ownership remains.</td></tr>
+<p>Execution context B now needs scan page S3. S3 is absent from memory, and every page-buffer frame is occupied. <strong>A frame is a memory slot for one page.</strong> An existing page must leave before S3 can occupy its slot.</p>
+<p>This constructed close-up shows four resident pages in a full pool. Assume the other frames currently offer no eligible candidate. It does not reproduce the preceding full-pool counts or LRU order.</p>
+<div class="table-scroll"><table><thead><tr><th>Resident page</th><th>Current state</th><th>Can S3 overwrite it immediately?</th></tr></thead><tbody>
+<tr><td>H1</td><td>Another thread is using it: fixed</td><td>No. That would take memory away from its current user.</td></tr>
+<tr><td>S4</td><td>No longer in use, but modified: dirty</td><td>No. Its changes need a safe write path first.</td></tr>
+<tr><td>S5</td><td>No longer in use, but modified: dirty</td><td>It needs the same preparation as S4.</td></tr>
+<tr><td>H2</td><td>Another thread is using it: fixed</td><td>It cannot be reused while that ownership remains.</td></tr>
 </tbody></table></div>
-<p><strong>Question: B has not been used recently. Can we overwrite it with E now?</strong> Being old explains why we prefer B. It does not establish that reuse is safe. Its changes must be handled first.</p>
+<p><strong>Question: S4 has not been used recently. Can we overwrite it with S3 now?</strong> Being old explains why we prefer S4. It does not establish that reuse is safe. Its changes must be handled first.</p>
 <p>Four problems emerge: <strong>prepare reusable candidates, finish state changes after submission, adapt retention policy to changing work, and pace writes.</strong> The four daemons divide these different responsibilities.</p>
 </section>
 
 <section class="section" id="why-background"><h2>Could the request thread do everything itself?</h2>
 
-<p>It could. But if reading E also requires writing B first, E pays for another page’s preparation before its own read can proceed. A separate thread can prepare candidates ahead of demand. The performance benefit depends on workload and I/O conditions.</p>
-<ol><li><strong>Prepare on demand:</strong> request E → find no free slot → handle B’s write → recheck reuse safety → read E.</li><li><strong>If a candidate was prepared earlier:</strong> another thread handles B’s write → E arrives later → recheck safety → reuse the frame.</li></ol>
+<p>It could. But if reading S3 also requires writing S4 first, context B pays for another page’s preparation before its own read can proceed. A separate thread can prepare candidates ahead of demand. The performance benefit depends on workload and I/O conditions.</p>
+<ol><li><strong>Prepare on demand:</strong> request S3 → find no free slot → handle S4’s write → recheck reuse safety → read S3.</li><li><strong>If a candidate was prepared earlier:</strong> another thread handles S4’s write → the request for S3 arrives later → recheck safety → reuse the frame.</li></ol>
 <p>A background thread that repeatedly performs and waits for such work is a <strong>daemon</strong> here. It runs inside the DB server, not as a separate server process. Foreground means the request thread; background describes execution separate from that request.</p>
 <p><strong>Question: could one daemon do all the work in sequence?</strong> That is a possible design. CUBRID separates four responsibilities with different work triggers and waiting conditions. They are not four stages that every page traverses. In particular, maintenance and flush-control do not pass pages to the next worker.</p>
 </section>
 
 <section class="section" id="page-flush-purpose"><h2>1. Page-flush — who prepares replacement candidates ahead of demand?</h2>
 
-<p><strong>Question: if dirty B repeatedly makes requests wait, what work can happen earlier?</strong> Find cold dirty pages and submit copies of their changes to the write path. This is the job of <code>pgbuf-page-flush</code>.</p>
-<ol><li>Find cold dirty pages in the replacement-candidate zone.</li><li>Recheck page identity, ownership, an existing flush, and other eligibility conditions.</li><li>For an eligible page, take a safe copy and submit it with the required WAL ordering. WAL requires the recovery log to be written before the corresponding data.</li><li>If no newer change appears and the remaining reuse conditions hold, its frame can become a candidate for a later request.</li></ol>
-<p><strong>Question: does flushing B remove it from memory?</strong> No. Flush handles recording changes; eviction removes a resident page so its frame can be reused. While B remains resident, a later B request can still use it.</p>
-<div class="callout"><strong>Without it?</strong> This background preparation path disappears. If nobody else performs the work, dirty candidates can remain and frame acquisition can be delayed. Checkpoint and explicit flush paths also exist, so this alone does not imply that all writing stops or data is immediately corrupted. Stand-alone mode has a path where the requester performs victim flushing synchronously.</div>
-<p>If the write path uses DWB (the double-write buffer), successful submission need not mean that the original data-file location has already been written. If B is modified or fixed again while the copy is being submitted, it cannot immediately be reused.</p>
-<pre><code>pgbuf_page_flush_daemon_task::execute
-  → pgbuf_flush_victim_candidates
-    → pgbuf_bcb_flush_with_wal</code></pre>
-<p>This is the branch without neighbor flushing. A candidate whose WAL is not ready can be skipped while log flushing is requested.</p>
+<p><strong>Question: if dirty S4 repeatedly makes requests wait, what work can happen earlier?</strong> Find cold dirty pages and submit copies of their changes to the write path. This is the job of <code>pgbuf-page-flush</code>.</p>
+<ol><li>Find cold dirty pages in the replacement-candidate zone.</li><li>Recheck page identity, ownership, an existing flush, and other eligibility conditions.</li><li>For an eligible page, preserve its changes through the established safe write path. Submission alone does not certify that the current frame is reusable or that all persistence work has finished.</li><li>If no newer change appears and the remaining reuse conditions hold, its frame can become a candidate for a later request.</li></ol>
+<p><strong>Question: does flushing S4 remove it from memory?</strong> No. Flush handles recording changes; eviction removes a resident page so its frame can be reused. While S4 remains resident, a later S4 request can still use it.</p>
+<div class="callout"><strong>Without it?</strong> This background preparation path disappears. If nobody else performs the work, dirty candidates can remain and frame acquisition can be delayed. Other explicit and foreground flush paths also exist, so this alone does not imply that all writing stops or data is immediately corrupted. Stand-alone mode has a path where the requester performs victim flushing synchronously.</div>
+<p>If S4 becomes dirty or fixed again, current-state checks can reject immediate reuse. We keep the preservation requirement here; the write-ordering and persistence protocol are next-session material.</p>
 <p><a href="0006b-follow-page-flush-handoff.html#selection">Inspect candidate selection and the write path →</a></p>
 </section>
 
 <section class="section" id="post-flush-purpose"><h2>2. Post-flush — does a waiting request learn about completion automatically?</h2>
 
-<p><strong>Question: B’s copy has been submitted. How does another thread learn that its flush processing is finished?</strong> Someone must update memory-side state and wake relevant waiters. The per-page management object holding such state is the <strong>BCB (Buffer Control Block)</strong>. Page contents and BCB management state are different things.</p>
+<p><strong>Question: S4’s copy has been submitted. How does another thread learn that its flush processing is finished?</strong> Someone must update memory-side state and wake relevant waiters. The per-page management object holding such state is the <strong>BCB (Buffer Control Block)</strong>. Page contents and BCB management state are different things.</p>
 <p>The flushing thread can normally finish this work itself. Under frame-allocation pressure, a busy page-flush thread can delegate the remaining work and move on to another candidate. This is the role of <code>pgbuf-page-post-flush</code>.</p>
 <ol><li>When the delegation conditions hold, page-flush puts the <strong>BCB pointer</strong> into the <code>flushed_bcbs</code> queue. It does not send the page copy.</li><li>Post-flush removes the BCB, locks it, and checks its current state. A new dirty change or fix prevents direct frame assignment.</li><li>If safety conditions and policy permit, it can assign the frame directly to a waiting request. Whether or not assignment succeeds, it finishes flush-state bookkeeping and wakes flush waiters.</li></ol>
 <div class="callout"><strong>Without it?</strong> If the post-flush daemon is absent from the outset, or enqueue fails, the existing path finishes BCB state processing inline. This separate thread is therefore not a mandatory stage of every flush. But if producers keep enqueuing while only the consumer stops, delegated BCB completion and waiter wakeups can remain pending.</div>
-<p><strong>Question: does post-flush write B a second time?</strong> No. It handles the delegated management state. Nor does it assign every submitted page unconditionally: current state can have changed since submission.</p>
-<pre><code>pgbuf_bcb_flush_with_wal
+<p><strong>Question: does post-flush write S4 a second time?</strong> No. It handles the delegated management state. Nor does it assign every submitted page unconditionally: current state can have changed since submission.</p>
+<pre><code>page-flush: submission completed
   → flushed_bcbs queue: PGBUF_BCB pointer
   ⇢ pgbuf_page_post_flush_execute
     → pgbuf_assign_flushed_pages</code></pre>
-<p>The dashed direction (⇢) means another thread consumes the queue later. This is not one synchronous call stack. <a href="0006b-follow-page-flush-handoff.html#handoff">Delegation conditions and inline completion →</a></p>
+<p>The dashed direction (⇢) means another thread consumes the queue later. This is not one synchronous call stack. <a href="0006b-follow-page-flush-handoff.html#first-principles">Delegation conditions and inline completion →</a></p>
 </section>
 
-<section class="section" id="maintenance-purpose"><h2>3. Maintenance — should yesterday’s busy work keep the same preference today?</h2>
+<section class="section" id="maintenance-purpose"><p>For this separate policy illustration, contexts A and B use different private lists. This is not the earlier branch checkpoint where they shared one private index; quota belongs to a list, not independently to each user of that list.</p><h2>3. Maintenance — should yesterday’s busy work keep the same preference today?</h2>
 
-<p><strong>Question: X was busy in the morning, but now X is quiet and Y is busy. Should retention policy stay unchanged?</strong> Targets based on earlier activity may no longer fit the pages currently in use.</p>
+<p><strong>Question: A was busy in the morning, but now A is quiet and B is busy. Should retention policy stay unchanged?</strong> Targets based on earlier activity may no longer fit the pages currently in use.</p>
 <p>CUBRID organizes pages in private/shared LRU lists. A <strong>quota is a retention target for a private list</strong>, not an exclusively reserved slice of memory. A <strong>zone separates more protected pages from replacement candidates within a list</strong>. A page does not belong to multiple zones simultaneously.</p>
 <ol><li>Ordinary page-use paths collect activity samples.</li><li><code>pgbuf-maintain</code> periodically attempts adjustment. When internal time and activity conditions admit the pass, it uses the samples to update quotas and zone boundaries.</li><li>Subsequent replacement and list management use the updated policy. Maintenance neither writes page contents nor creates extra memory.</li></ol>
-<p>For example, fewer activity samples for X and more for Y give the policy a chance to adapt. This does not mean “take exactly two frames from X and immediately give them to Y.”</p>
+<p>For example, fewer activity samples for A and more for B give the policy a chance to adapt. This does not mean “take exactly two frames from A and immediately give them to B.”</p>
 <div class="callout"><strong>Without it?</strong> This periodic policy adjustment disappears. Other quota-adjustment calls on private-LRU acquisition and release remain, but losing recurring opportunities to reflect recent activity can make adaptation harder. It does not immediately stop ordinary fix/unfix or all replacement. Recomputing shared activity on every request is another conceivable design, but puts that adjustment cost onto the request path.</div>
 <pre><code>pgbuf_page_maintenance_execute
   → pgbuf_adjust_quotas</code></pre>
@@ -100,7 +97,7 @@ fileio_write: successful OS write
 </section>
 
 <section class="section" id="cadence"><h2>Four questions distinguish the responsibilities</h2>
-<div class="journey"><article><strong>Page-flush</strong><h3>Prepare candidates</h3><p>B: dirty → safe copy submitted</p></article><article><strong>Post-flush</strong><h3>Finish completion</h3><p>BCB pointer → recheck state and wake waiters</p></article><article><strong>Maintenance</strong><h3>Adapt policy</h3><p>Activity samples → quotas and zones</p></article><article><strong>Flush-control</strong><h3>Pace progress</h3><p>Written page count ↔ credit balance</p></article></div>
+<div class="journey"><article><strong>Page-flush</strong><h3>Prepare candidates</h3><p>S4: dirty → safe copy submitted</p></article><article><strong>Post-flush</strong><h3>Finish completion</h3><p>BCB pointer → recheck state and wake waiters</p></article><article><strong>Maintenance</strong><h3>Adapt policy</h3><p>Activity samples → quotas and zones</p></article><article><strong>Flush-control</strong><h3>Pace progress</h3><p>Written page count ↔ credit balance</p></article></div>
 <div class="table-scroll"><table><thead><tr><th>Daemon</th><th>Question answered</th><th>Page writes</th></tr></thead><tbody><tr><td>Page-flush</td><td>Who prepares dirty replacement candidates ahead of demand?</td><td>Yes</td></tr><tr><td>Post-flush</td><td>Who finishes state processing and wakeups after submission?</td><td>No new write</td></tr><tr><td>Maintenance</td><td>Who adapts retention targets to currently active work?</td><td>No</td></tr><tr><td>Flush-control</td><td>How quickly should writers keep progressing?</td><td>No</td></tr></tbody></table></div><p>Timers and wakeups provide an opportunity to check for work. Useful work still depends on the boot gate, queues, replacement pressure and other current conditions.</p><details class="technical-detail"><summary>Timing and wakeup details</summary>
 
 
@@ -119,6 +116,15 @@ fileio_write: successful OS write
 
 </details>
 </section>
+
+<section class="section" id="background-session-exit"><h2>Session boundary: carry four responsibilities onward</h2><p>Page-flush prepares candidates; post-flush finishes delegated BCB state; maintenance adapts policy; flush-control refreshes post-write credits. None promises immediate reuse or fairness.</p><p>Continue with <a href="0006b-follow-page-flush-handoff.html#first-principles">the selected handoff explanation</a>. The lifecycle and detailed write protocol below remain full-curriculum reading for a later session, including WAL, LSA, DWB and copied-generation reasoning.</p></section>
+
+<section class="section" id="deferred-write-protocol"><h2>Later session: the write protocol behind candidate preparation</h2><p>If the write path uses DWB (the double-write buffer), successful submission need not mean that the original data-file location has already been written. If S4 is modified or fixed again while the copy is being submitted, it cannot immediately be reused.</p>
+<pre><code>pgbuf_page_flush_daemon_task::execute
+  → pgbuf_flush_victim_candidates
+    → pgbuf_bcb_flush_with_wal</code></pre>
+<p>This is the branch without neighbor flushing. A candidate whose WAL is not ready can be skipped while log flushing is requested.</p>
+<p>The safe-copy submission obeys WAL ordering: the recovery log precedes the corresponding data write.</p></section>
 
 <section class="section" id="plain-language-bridge" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-post-flush-payload="PGBUF_BCB-pointer" data-post-flush-new-io="none">
 
@@ -171,7 +177,7 @@ fileio_write: successful OS write
 
 </section>
 
-<section class="section" id="retrieval"><h2>Who is needed in each situation?</h2><div class="quiz" data-audience-checkpoint><p><strong>1. Another thread modifies B while its copy is submitted. May post-flush immediately give that frame to E?</strong></p><details class="answer-disclosure"><summary>Predict, then reveal the explanation</summary><p>No. The submitted copy and current memory contents now differ. Completing the earlier flush must preserve the newer DIRTY state, and current reuse conditions must be checked.</p></details></div><div class="quiz" data-audience-checkpoint><p><strong>2. If the caller finishes completion inline when post-flush is absent, must completion always have its own thread?</strong></p><details class="answer-disclosure"><summary>Predict, then reveal the explanation</summary><p>No. Required completion work is distinct from the decision to delegate it to another thread. However, once work has been delegated to a queue, someone must consume that queue.</p></details></div><div class="quiz" data-audience-checkpoint><p><strong>3. X becomes quiet and Y becomes busy. Will waking page-flush more often adapt their retention targets?</strong></p><details class="answer-disclosure"><summary>Predict, then reveal the explanation</summary><p>Page-flush records candidate changes. Maintenance is responsible for reflecting activity samples in quotas and zones. Write volume and retention policy are different problems.</p></details></div><div class="quiz" data-audience-checkpoint><p><strong>4. The credit balance is zero, but a writer just wrote one page. Has it violated the flush-control rule?</strong></p><details class="answer-disclosure"><summary>Predict, then reveal the explanation</summary><p>No. Participating paths consume credits after successful OS writes. They may delay subsequent progress; they do not undo the write that already happened.</p></details></div></section>
+<section class="section" id="retrieval"><p>The following older exercises use a separate local reset: B is a page and E is the waiting request, not execution context B from the selected session.</p><h2>Who is needed in each situation?</h2><div class="quiz" data-audience-checkpoint><p><strong>1. Another thread modifies B while its copy is submitted. May post-flush immediately give that frame to E?</strong></p><details class="answer-disclosure"><summary>Predict, then reveal the explanation</summary><p>No. The submitted copy and current memory contents now differ. Completing the earlier flush must preserve the newer DIRTY state, and current reuse conditions must be checked.</p></details></div><div class="quiz" data-audience-checkpoint><p><strong>2. If the caller finishes completion inline when post-flush is absent, must completion always have its own thread?</strong></p><details class="answer-disclosure"><summary>Predict, then reveal the explanation</summary><p>No. Required completion work is distinct from the decision to delegate it to another thread. However, once work has been delegated to a queue, someone must consume that queue.</p></details></div><div class="quiz" data-audience-checkpoint><p><strong>3. X becomes quiet and Y becomes busy. Will waking page-flush more often adapt their retention targets?</strong></p><details class="answer-disclosure"><summary>Predict, then reveal the explanation</summary><p>Page-flush records candidate changes. Maintenance is responsible for reflecting activity samples in quotas and zones. Write volume and retention policy are different problems.</p></details></div><div class="quiz" data-audience-checkpoint><p><strong>4. The credit balance is zero, but a writer just wrote one page. Has it violated the flush-control rule?</strong></p><details class="answer-disclosure"><summary>Predict, then reveal the explanation</summary><p>No. Participating paths consume credits after successful OS writes. They may delay subsequent progress; they do not undo the write that already happened.</p></details></div></section>
 
 <section class="section" id="primary-reading">
 <h2>References</h2>
