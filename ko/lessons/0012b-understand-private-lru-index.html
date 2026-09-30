@@ -127,18 +127,77 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
 </details>
 </section>
 
-      <section class="section" id="activity">
+<section class="section" id="activity">
 <h2>Quota는 재사용 활동의 표본을 바탕으로 조정한다</h2>
-<p>접근이 활발한 영역과 덜 활발한 영역의 경쟁을 조정합니다. 활동량은 정확한 hit 수나 session 수가 아니며, timer가 실행될 때마다 quota가 바뀌는 것도 아닙니다.</p>
-<details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
-        <p><a href="0012-prove-replacement-progress.html#lru-conditional-movement">먼저 Lecture 12에서 exact recency, 리스트 이벤트 age, quota epoch를 구분합니다.</a> 각 필드는 서로 다른 정책 판단에 쓰이며 전체 page의 마지막 접근 시각을 뜻하지 않습니다.</p>
+<p>접근이 활발한 영역과 덜 활발한 영역의 경쟁을 두 단계로 조정합니다. 집계 가능한 final unfix에서 표본을 모으고, 조건을 통과한 <code>pgbuf_adjust_quotas()</code>가 표본을 소비하여 activity와 quota를 갱신합니다. Activity는 정확한 cache-hit 횟수나 session 수가 아닙니다.</p>
+<pre>eligible final unfix → per-BCB epoch check → lru_hits[current LRU]++
+accepted adjustment → consume/reset hits → rate → smoothed activity → quota</pre>
+<p>Quota epoch는 <a href="0012-prove-replacement-progress.html#lru-conditional-movement">위치와 승격 판단에 쓰는 리스트 이벤트 tick</a>과 별개입니다. 아래 순차 예제는 counter 순환이나 동시 조정이 없다고 가정합니다. 기준 버전의 정책을 설명하는 예이며 실행 측정값은 아닙니다.</p>
+</section>
+<section class="section" id="activity-dedup">
+<h2>1. BCB 하나는 한 epoch에 최대 한 번 집계한다</h2>
+<div class="table-scroll"><table><thead><tr><th>필드</th><th>의미</th></tr></thead><tbody>
+<tr><td><code>quota.adjust_age</code></td><td>풀 전체의 현재 집계 epoch</td></tr>
+<tr><td><code>bcb.hit_age</code></td><td>이 BCB가 마지막으로 표본을 더한 epoch</td></tr>
+<tr><td><code>monitor.lru_hits[i]</code></td><td>LRU i에 누적된 표본 수</td></tr>
+</tbody></table></div>
+<p><code>pgbuf_bcb_register_hit_for_lru()</code>는 BCB의 정수 하나로 검사합니다. 최근 사용한 페이지의 집합이나 hash를 별도로 만들지 않습니다.</p>
+<pre>if bcb.hit_age &lt; quota.adjust_age:
+    monitor.lru_hits[bcb.current_lru_index]++
+    bcb.hit_age = quota.adjust_age</pre>
+<div class="table-scroll"><table><thead><tr><th>집계 가능한 사건</th><th>이전 hit_age</th><th>결과</th></tr></thead><tbody>
+<tr><td>Epoch 42에서 BCB P의 첫 unfix</td><td>41</td><td>hit +1, hit_age = 42</td></tr>
+<tr><td>P를 다시 fix/unfix</td><td>42</td><td>추가 집계 없음</td></tr>
+<tr><td>다른 스레드가 P를 fix/unfix</td><td>42</td><td>추가 집계 없음</td></tr>
+<tr><td>Epoch가 43으로 바뀐 뒤 P를 fix/unfix</td><td>42</td><td>hit +1, hit_age = 43</td></tr>
+</tbody></table></div>
+<p>중복 제거의 단위는 스레드나 VPID가 아니라 <strong>BCB</strong>입니다. 이미 집계한 BCB가 같은 epoch에서 private → shared로 이동해도 shared에 다시 hit를 더하지 않습니다. 이동이 그 epoch의 첫 집계 가능한 사건이라면 삽입 후 등록하므로 shared 목적지에 집계합니다.</p>
+</section>
+<section class="section" id="activity-events">
+<h2>2. 어떤 사용을 표본으로 모을까?</h2>
+<p>일반 정책은 global <code>fcnt</code>를 0으로 만드는 마지막 unfix에서 수행합니다. 다른 fix가 남아 있으면 해당 unfix는 이 정책에 진입하지 않습니다. 대기 중인 reader/writer가 있으면 정책 처리를 미루는 분기가 있고, vacuum과 일부 temporary-page 경로는 hit를 의도적으로 무시합니다. 새로 적재한 페이지의 집계 가능한 최초 LRU 배치에서도 hit를 등록합니다.</p>
+<p>따라서 sampled hit는 전체 fix/unfix 호출 횟수도, cache-hit 횟수도 아닙니다. 같은 페이지를 반복 사용하면 조정 허용 여부를 판단하는 별도의 final-unfix 카운터는 커질 수 있지만, 그 BCB가 한 epoch에서 만드는 표본은 여전히 최대 하나입니다.</p>
+</section>
+<section class="section" id="activity-cadence">
+<h2>3. 100 ms마다 시도해도 매번 갱신하지는 않는다</h2>
+<p>Maintenance daemon은 flush daemon을 사용할 수 있을 때 100 ms마다 quota 조정을 시도합니다. Private LRU 배정과 마지막 연결 해제에서도 호출할 수 있습니다. 다음은 조정 허용 조건을 요약한 의사 코드이며, 읽기 쉽도록 시간을 ms로 표시했습니다.</p>
+<pre>if private_quota_disabled or adjustment_marked_active: return
+if elapsed_ms &lt; 1: return
+if counted_final_unfix_events &lt; num_buffers / 4 and elapsed_ms &lt; 500: return
 
-
-        <p>Ordinary final unfix 때 <code>pgbuf_bcb_register_hit_for_lru()</code>는 accepted adjustment epoch 하나에서 BCB 하나가 최대 hit 하나만 기여하게 합니다. Accepted <code>pgbuf_adjust_quotas()</code>만 <code>adjust_age</code>를 increment합니다. Daemon이 100 ms마다 시도해도 guard가 early return할 수 있으므로 반드시 increment되는 것은 아닙니다.</p>
-        <p>Accepted pass는 <code>ATOMIC_TAS_32</code>로 각 LRU의 <code>lru_hits</code>를 가져오면서 0으로 reset하고, hit를 초당 rate로 바꾼 뒤 private activity를 10초에 걸쳐 smoothing합니다. 그다음 activity share로 quota를 조정합니다. Lock wait를 제외한 structural work는 O(T + L + D)입니다.</p>
-        <p>이 값은 CPU time도, 연결된 session 수도, resident BCB 수도, 정확한 fix count도 아닙니다. Assignment는 zero-session descriptor가 없을 때만 fallback 기준으로 이 값을 봅니다.</p>
-        <p class="source-note"><strong>소스:</strong> <code>page_buffer.c:14251–14511,16580–16610,16994–17009,17146–17161</code>.</p>
-
+// accepted adjustment
+reset_unfix_counters()
+last_adjust_time = now
+adjust_age++
+consume_hits_and_update_activity_and_quota()</pre>
+<div class="table-scroll"><table><thead><tr><th>지난 조정 이후 상태</th><th>다른 조건도 통과한다는 전제의 동작</th></tr></thead><tbody>
+<tr><td>1 ms 미만</td><td>건너뜀</td></tr>
+<tr><td>집계된 unfix가 num_buffers / 4 미만이고 500 ms 미만</td><td>건너뜀</td></tr>
+<tr><td>집계된 unfix가 num_buffers / 4 이상이고 1 ms 이상</td><td>조정 가능</td></tr>
+<tr><td>500 ms 이상이면 집계된 unfix가 적어도</td><td>조정 가능</td></tr>
+</tbody></table></div>
+<p>Daemon 호출만 보면 활동량이 충분할 때는 약 100 ms마다, 부족할 때는 보통 500 ms 이후 첫 tick에서 조정할 수 있습니다. 스케줄링과 다른 조건 때문에 엄격한 실시간 주기는 아닙니다. 조건을 통과한 조정만 <code>adjust_age</code>를 증가시킵니다. 허용 여부를 판단하는 카운터는 집계 가능한 final-unfix 사건 수이며, BCB별 중복을 제거한 <code>lru_hits</code>와 별개입니다.</p>
+<p>Daemon 실행과 소스의 오래된 5분 주석은 <a href="0006c-follow-maintenance-and-pacing.html">maintenance와 pacing 설명</a>에서 확인할 수 있습니다.</p>
+</section>
+<section class="section" id="activity-calculation">
+<h2>4. 누적 hit를 activity와 quota로 바꾼다</h2>
+<p>조건을 통과한 조정은 <code>ATOMIC_TAS_32</code>로 각 <code>lru_hits[i]</code>를 가져오면서 0으로 초기화합니다. 해당 구간의 표본 수를 초당 비율로 바꾼 뒤 각 private 리스트의 activity를 갱신합니다.</p>
+<pre>rate = int(1,000,000 × sampled_hits / elapsed_usec)
+elapsed &lt; 10 seconds:
+  activity_new = int(((10 seconds − elapsed) × activity_old
+                      + elapsed × rate) / 10 seconds)
+elapsed ≥ 10 seconds:
+  activity_new = rate</pre>
+<p><strong>계산 예:</strong> 0.5초 동안 모은 표본이 20개면 rate는 초당 40개입니다. 이전 activity가 100이면 새 값은 <code>int((9.5 × 100 + 0.5 × 40) / 10) = 97</code>입니다. 소스는 rate와 activity를 정수로 절삭합니다. 이것은 경과 시간에 따라 가중치를 주는 10초 척도의 평활화입니다. 최근 10초의 사건을 보관하여 구하는 정확한 이동평균은 아닙니다.</p>
+<p>전체 private 목표량은 private/shared 비율, 저활동 정책, 평활화한 private-page 비율로 별도 계산합니다. 그 목표량을 각 private 리스트의 activity 비중으로 나눕니다.</p>
+<pre>private_target = int((num_buffers − invalid_count) × private_pages_ratio)
+quota[i] = min(int(private_target × activity[i] / sum_private_activity),
+               5,000, num_buffers / 2)</pre>
+<p>예를 들어 이미 계산한 private 목표량이 BCB 4,000개이고 전체 버퍼가 32,768개라고 합시다. 이 리스트의 activity가 97, 나머지 private 리스트의 합이 291이면 비중은 <code>97 / 388 = 25%</code>이고 quota는 1,000입니다. 두 상한에도 걸리지 않습니다. LRU1과 LRU2의 threshold는 각각 <code>int(1,000 × 0.05) = 50</code>입니다. 전체 private activity가 0이면 나눗셈 대신 private quota와 두 threshold를 0으로 설정합니다. Quota는 정책상 목표량이며 프레임 예약이 아닙니다.</p>
+<details class="technical-detail"><summary>소스와 표본 집계의 한계</summary>
+<p>Lock wait를 제외한 structural work는 O(T + L + D)입니다. T는 관리하는 thread-counter entry 수, L은 LRU descriptor 수, D는 실제 zone demotion 수입니다. Private 배정은 연결된 session이 없는 descriptor를 찾지 못했을 때 activity를 fallback 기준으로 봅니다.</p>
+<p>기준 버전의 카운터는 근사값입니다. 등록은 일반 증가 연산을, 소비는 atomic exchange를 사용합니다. 일반적인 BCB 재사용은 hit_age를 초기화하지 않으며 epoch 순환도 명시적으로 처리하지 않습니다. 이는 소스에서 확인한 한계와 점검 항목이지 재현된 장애 주장은 아닙니다. <a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md">집계 근거와 제한 사항</a>, <a href="../../unresolved-or-version-sensitive-findings.md">VS-21 불확실성 기록</a>을 참고하세요.</p>
+<p class="source-note">소스: <a href="../../advanced/replacement-progress.md#what-private-lru-activity-means">activity의 기준 설명</a>; <code>page_buffer.c:6713–7038,14251–14624,16595–16610,16994–17009,17146–17161</code>, 기준 버전 <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>.</p>
 </details>
 </section>
 
@@ -201,6 +260,10 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       <a href="#assignment">Session을 기존 private 리스트에 연결한다</a>
       <a href="#first-placement">첫 배치는 마지막 unfix 시점에 정한다</a>
       <a href="#activity">Quota는 재사용 활동의 표본을 바탕으로 조정한다</a>
+      <a href="#activity-dedup">BCB epoch 중복 검사</a>
+      <a href="#activity-events">집계 대상</a>
+      <a href="#activity-cadence">조정 주기</a>
+      <a href="#activity-calculation">Activity 계산</a>
       <a href="#movement">Private에서 shared로 옮겨도 frame은 같다</a>
       <a href="#victim-search">먼저 list를 고르고 그다음 eligible BCB를 살핍니다</a>
       <a href="#practice">Session이 끝나면 리스트와 페이지는 어떻게 될까?</a>

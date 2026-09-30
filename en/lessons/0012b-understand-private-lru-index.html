@@ -127,18 +127,77 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
 </details>
 </section>
 
-      <section class="section" id="activity">
+<section class="section" id="activity">
 <h2>Quotas use sampled reuse activity</h2>
-<p>The policy adjusts competition between more and less active domains. Activity is neither an exact hit count nor a session count, and a timer pass does not necessarily change quotas.</p>
-<details class="technical-detail"><summary>Expand implementation details and sources</summary>
-        <p><a href="0012-prove-replacement-progress.html#lru-conditional-movement">First distinguish exact recency, list-event age and quota epochs in Lecture 12.</a> These fields serve different policy decisions; none is a global last-access timestamp.</p>
+<p>The policy adjusts competition between more and less active domains in two stages: eligible final unfixes collect samples; an accepted <code>pgbuf_adjust_quotas()</code> pass consumes them and updates activity and quota. Activity is neither an exact cache-hit count nor a session count.</p>
+<pre>eligible final unfix → per-BCB epoch check → lru_hits[current LRU]++
+accepted adjustment → consume/reset hits → rate → smoothed activity → quota</pre>
+<p>The quota epoch is separate from the <a href="0012-prove-replacement-progress.html#lru-conditional-movement">list-event ticks used for position and promotion</a>. The following sequential examples assume no counter wrap or concurrent adjustment; they illustrate the pinned policy, not a runtime measurement.</p>
+</section>
+<section class="section" id="activity-dedup">
+<h2>1. One BCB contributes at most once per epoch</h2>
+<div class="table-scroll"><table><thead><tr><th>Field</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><code>quota.adjust_age</code></td><td>Current pool-wide sampling epoch</td></tr>
+<tr><td><code>bcb.hit_age</code></td><td>Epoch in which this BCB last contributed a sample</td></tr>
+<tr><td><code>monitor.lru_hits[i]</code></td><td>Samples accumulated for LRU i</td></tr>
+</tbody></table></div>
+<p><code>pgbuf_bcb_register_hit_for_lru()</code> uses one integer in the BCB; it does not build a set or hash of recently used pages.</p>
+<pre>if bcb.hit_age &lt; quota.adjust_age:
+    monitor.lru_hits[bcb.current_lru_index]++
+    bcb.hit_age = quota.adjust_age</pre>
+<div class="table-scroll"><table><thead><tr><th>Eligible event</th><th>Previous hit_age</th><th>Result</th></tr></thead><tbody>
+<tr><td>First unfix of BCB P in epoch 42</td><td>41</td><td>+1 hit; hit_age = 42</td></tr>
+<tr><td>P is fixed/unfixed again</td><td>42</td><td>No additional hit</td></tr>
+<tr><td>Another thread fixes/unfixes P</td><td>42</td><td>No additional hit</td></tr>
+<tr><td>P is fixed/unfixed after epoch advances to 43</td><td>42</td><td>+1 hit; hit_age = 43</td></tr>
+</tbody></table></div>
+<p>The deduplication unit is the <strong>BCB</strong>, not the thread or VPID. If a counted BCB moves from private to shared in the same epoch, it adds no shared hit. If migration is its first eligible event in that epoch, registration happens after insertion and charges the shared destination.</p>
+</section>
+<section class="section" id="activity-events">
+<h2>2. Which uses become samples?</h2>
+<p>Ordinary policy runs on the final unfix that makes global <code>fcnt</code> zero. An unfix that leaves another fix outstanding does not enter this policy. Queued reader/writer waiters can defer policy; vacuum and some temporary-page paths deliberately ignore hits. Eligible first LRU placement of a newly loaded page also registers a hit.</p>
+<p>Consequently, sampled hits are neither all fix/unfix calls nor cache hits. Repeating one page many times can raise the separate counted-final-unfix counter used to admit an adjustment, while that BCB still contributes at most one sampled hit during the epoch.</p>
+</section>
+<section class="section" id="activity-cadence">
+<h2>3. A 100 ms attempt is not a 100 ms update</h2>
+<p>The maintenance daemon attempts quota work every 100 ms when the flush daemon is available. Private-LRU assignment and release of the last association can also call it. The admission logic is summarized below; milliseconds are used for readability.</p>
+<pre>if private_quota_disabled or adjustment_marked_active: return
+if elapsed_ms &lt; 1: return
+if counted_final_unfix_events &lt; num_buffers / 4 and elapsed_ms &lt; 500: return
 
-
-        <p>On an ordinary final unfix, <code>pgbuf_bcb_register_hit_for_lru()</code> lets one BCB contribute at most one hit in one accepted adjustment epoch. Only an accepted <code>pgbuf_adjust_quotas()</code> increments <code>adjust_age</code>; a daemon attempt every 100 ms does not necessarily increment it because guards may return early.</p>
-        <p>An accepted pass uses <code>ATOMIC_TAS_32</code> to take and reset each LRU's <code>lru_hits</code>, converts hits to a per-second rate, and smooths private activity over ten seconds. It then uses the activity shares to adjust quotas. The structural work is O(T + L + D), excluding lock wait.</p>
-        <p>This number is neither CPU time, number of associated sessions, resident BCB count, nor exact fix count. Assignment consults it only as the fallback when no zero-session descriptor is available.</p>
-        <p class="source-note"><strong>Source:</strong> <code>page_buffer.c:14251–14511,16580–16610,16994–17009,17146–17161</code>.</p>
-
+// accepted adjustment
+reset_unfix_counters()
+last_adjust_time = now
+adjust_age++
+consume_hits_and_update_activity_and_quota()</pre>
+<div class="table-scroll"><table><thead><tr><th>Since the last accepted pass</th><th>Admission, assuming other guards pass</th></tr></thead><tbody>
+<tr><td>Less than 1 ms</td><td>Skip</td></tr>
+<tr><td>Fewer than num_buffers / 4 counted unfixes and less than 500 ms</td><td>Skip</td></tr>
+<tr><td>At least num_buffers / 4 counted unfixes and at least 1 ms</td><td>May adjust</td></tr>
+<tr><td>At least 500 ms, even with few counted unfixes</td><td>May adjust</td></tr>
+</tbody></table></div>
+<p>With daemon calls alone, sufficient activity can admit roughly 100 ms updates; insufficient activity normally waits for the first tick at or after 500 ms. Scheduling and other guards prevent a strict real-time guarantee. Only an accepted pass advances <code>adjust_age</code>. The admission counter counts eligible final-unfix events separately from the per-BCB <code>lru_hits</code> samples.</p>
+<p>See <a href="0006c-follow-maintenance-and-pacing.html">maintenance and pacing</a> for daemon execution and the stale five-minute source comment.</p>
+</section>
+<section class="section" id="activity-calculation">
+<h2>4. From sampled hits to activity and quota</h2>
+<p>An accepted pass uses <code>ATOMIC_TAS_32</code> to take each <code>lru_hits[i]</code> and reset it to zero. It converts that interval's samples to a per-second rate, then updates each private list's activity:</p>
+<pre>rate = int(1,000,000 × sampled_hits / elapsed_usec)
+elapsed &lt; 10 seconds:
+  activity_new = int(((10 seconds − elapsed) × activity_old
+                      + elapsed × rate) / 10 seconds)
+elapsed ≥ 10 seconds:
+  activity_new = rate</pre>
+<p><strong>Constructed example:</strong> 20 samples in 0.5 seconds produce a rate of 40 samples/second. If old activity is 100, the new value is <code>int((9.5 × 100 + 0.5 × 40) / 10) = 97</code>. The source truncates the rate and activity to integers. This is elapsed-time-weighted smoothing with a ten-second scale, not an exact moving average backed by the last ten seconds of events.</p>
+<p>The overall private target is calculated separately from private/shared rates, low-activity policy and a smoothed private-page ratio. Given that target, each private list receives its share of total private activity:</p>
+<pre>private_target = int((num_buffers − invalid_count) × private_pages_ratio)
+quota[i] = min(int(private_target × activity[i] / sum_private_activity),
+               5,000, num_buffers / 2)</pre>
+<p>For example, assume the already calculated private target is 4,000 BCBs and the pool contains 32,768 buffers. If this list has activity 97 and all other private lists together have 291, its share is <code>97 / 388 = 25%</code> and its quota is 1,000. Both caps leave it unchanged. Its LRU1 and LRU2 thresholds are each <code>int(1,000 × 0.05) = 50</code>. If total private activity is zero, private quotas and both thresholds become zero instead of dividing by zero. A quota is a policy target, not reserved frames.</p>
+<details class="technical-detail"><summary>Sources and sampling limits</summary>
+<p>The structural work is O(T + L + D): managed thread-counter entries, LRU descriptors and actual zone demotions, excluding lock waits. Private assignment consults activity as a fallback when no zero-session descriptor is available.</p>
+<p>The pinned counter is approximate: registration uses plain increments while consumption uses atomic exchange. BCB reuse does not normally reset hit_age, and epoch wrap has no explicit handling. These are source-level limitations and audit questions, not reproduced failure claims. See the <a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md">sampling evidence and qualifications</a> and <a href="../../unresolved-or-version-sensitive-findings.md">VS-21 uncertainty record</a>.</p>
+<p class="source-note">Source: <a href="../../advanced/replacement-progress.md#what-private-lru-activity-means">canonical activity explanation</a>; <code>page_buffer.c:6713–7038,14251–14624,16595–16610,16994–17009,17146–17161</code>, pinned to <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code>.</p>
 </details>
 </section>
 
@@ -201,6 +260,10 @@ private list S+p, LRU1 top          selected shared LRU, LRU2 middle</pre>
       <a href="#assignment">Associate a session with an existing private list</a>
       <a href="#first-placement">First placement is chosen at final unfix</a>
       <a href="#activity">Quotas use sampled reuse activity</a>
+      <a href="#activity-dedup">BCB epoch gate</a>
+      <a href="#activity-events">Eligible events</a>
+      <a href="#activity-cadence">Adjustment cadence</a>
+      <a href="#activity-calculation">Activity calculation</a>
       <a href="#movement">Migration changes the list, not the frame</a>
       <a href="#victim-search">Choose a list first; inspect eligible BCBs second</a>
       <a href="#practice">What happens to the list and pages when a session ends?</a>
