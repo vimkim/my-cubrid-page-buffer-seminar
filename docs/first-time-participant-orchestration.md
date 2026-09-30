@@ -27,3 +27,14 @@ All seven branches start from the committed authoring contract atop the common c
 | 07 | Integrated delivery | Queued for available agent slot; requires actual 01–06 artifacts |
 
 Human language receipts remain pending unless genuine review is supplied. Automated/model review cannot create them. Distinguish final product acceptance from local integration and report the actual gate diagnostics.
+
+## Baseline verification (before implementation)
+
+At content commit `c9c6183626469c18640497c9755066120e246c88`, Copyparty served this integration worktree at `http://127.0.0.1:8910`. The opening page response matched disk SHA-256 `7f4acf4e858496f1449d33439ae7196a6dcd82c40ef9ef088392e825f0d235b0`. Before-ID inventory covers 108 EN/KO HTML files (root temporary capture retained for final comparison).
+
+- Guide aggregate: source/link/assets/English pass, 43 pages, 64 displayed SVGs, zero orphans; served 107 resources and 43 live-DOM pages pass.
+- Bilingual aggregate: 162 diagnostics, exclusively missing human receipts/stale fingerprints across 54 pairs. Served gate separately passes 274 resources and 109 live-DOM pages.
+- Existing seminar browser suite: 17 pass, one existing failure. The foundations test expects FIFO's next section to be OPT, while actual order leads to LRU. The historical replacement-socratic checks document the same failure. Ticket 01 will check the intended progression and repair the stale expectation if warranted.
+- Playwright module: `/home/vimkim/temp/volmap/web/node_modules/@playwright/test/index.mjs`; headless Chromium. No GUI browser launched.
+
+Baseline pass does not establish correctness of future edits. Final integrated content is retested.
