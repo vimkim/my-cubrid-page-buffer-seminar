@@ -10,6 +10,15 @@ Ask participants to distinguish what the source establishes from what requires a
 
 Before presenting, open the exact served URL and check the intended viewport, diagrams, disclosure controls, source links, and language switch. Keep reading mode available if a projected section needs more context. Consult the coverage audit for remaining editorial or human language-review work.
 
+
+## Current first-time participant session
+
+The current companion is [my-presentation-script.html](my-presentation-script.html). Its opening, objects and textbook sections are complete; the remaining full spoken segments are being integrated from the committed ticket contributions. Do not treat the shell as a finished full-session script. The previous companion remains in Git history and is superseded for this session.
+
+Start at Lecture 1 `#session-request`, exit `#session-opening-end`; then Lecture 2 `#session-objects`, exit `#session-objects-end`. The object exit states the P/R/S/T/U to H1/H2/S1/S2/S3 role mapping and resets model state. Open F1 `#first-principles` through `#exercise`, then jump to Lecture 4 `#session-concurrency`. Do not continue F1 into its full-curriculum database/durability bridge during this session. The script repeats each screen cue, explanation, pause and reveal.
+
+The session itinerary is independent of the full lecture navigation. At an explicit end-of-stop, follow the cue link rather than section-next. WAL, recovery, LSA, DWB internals and copied-generation detail are next-session material; older full-curriculum facilitation below still applies only when delivering that wider curriculum. No fixed total duration or participant-mastery claim is attached to this route.
+
 ## Integrated replacement itinerary
 
 Lecture12 now owns the explicit textbook-versus-CUBRID comparison at `#textbook-vs-cubrid`, following the membership-state explanation. Use its R/P checkpoint before the complete BCB trip: distinguish access ordering from ownership, then conditional unfix movement, list selection and protected reuse. Ask which stated condition would invalidate the keep result. Retain the exact-LRU MRU-on-left convention used there; it intentionally differs from the oldest-first metadata in F1. The visible performance discussion separates source intent/structural work from measured benefit. JavaScript presentation controls remain available; script-disabled reading is a fallback, not a ban on interactions.

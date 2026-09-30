@@ -303,7 +303,7 @@ test('replacement foundations supports prediction, deliberate steps, and languag
       assert.equal(await answer.getAttribute('open'), '');
       assert.match(await answer.innerText(), /R \/ U \/ P/);
       await page.locator('[data-section-next]').click();
-      assert.equal(new URL(page.url()).hash, '#opt');
+      assert.equal(new URL(page.url()).hash, '#lru');
       await page.locator('[data-section-previous]').click();
       assert.equal(new URL(page.url()).hash, '#fifo');
       await page.keyboard.press('Escape');
@@ -447,4 +447,54 @@ test('each quick-checkpoint answer is hidden until its own disclosure is opened'
       }
     }
   } finally { await page.close(); }
+});
+
+test('ticket01 bounded opening preserves objects, projection exits and script cues', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      await page.goto(base + language + '/lessons/0001-present-the-page-journey.html?present=1#session-request');
+      assert.equal(await page.locator('#session-request').isVisible(), true);
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#session-opening-end');
+      await page.locator('#session-opening-end a').click();
+      await page.locator('#session-objects').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#session-objects tbody tr').count(), 3);
+      const detail = page.locator('#session-objects details');
+      await detail.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.notEqual(await detail.getAttribute('open'), null);
+      await page.locator('[data-presentation-toggle]').click();
+      await page.goto(base + language + '/lessons/0002-separate-objects-from-state.html?present=1#session-objects');
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#session-objects-end');
+      assert.match(await page.locator('#session-objects-end').innerText(), /P → H1/);
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#why-bcb').isVisible(), true);
+    } finally { await page.close(); }
+  }
+});
+
+test('ticket01 opening is complete in mobile no-script reading', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      for (const [file, entry, exit] of [
+        ['0001-present-the-page-journey.html', 'session-request', 'session-opening-end'],
+        ['0002-separate-objects-from-state.html', 'session-objects', 'session-objects-end']
+      ]) {
+        await page.goto(base + language + '/lessons/' + file);
+        assert.equal(await page.locator('#' + entry).isVisible(), true);
+        assert.equal(await page.locator('#' + exit).isVisible(), true);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      }
+    }
+    await page.goto(base + 'my-presentation-script.html');
+    const cues = await page.locator('a[href^="ko/"]').evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
+    for (const href of cues.filter(href => !href.includes('0004-'))) {
+      await page.goto(base + href);
+      assert.equal(await page.locator(new URL(page.url()).hash).count(), 1, href);
+    }
+  } finally { await context.close(); }
 });

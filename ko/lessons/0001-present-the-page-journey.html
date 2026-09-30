@@ -18,6 +18,12 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+<section class="section" id="session-request"><h2>“이 레코드를 찾아줘”에서 “이 페이지를 빌려줘”까지</h2>
+<p>실행 문맥 A가 고객 레코드를 찾는다고 해 봅시다. 저장 계층의 호출자는 접근 경로를 따라 필요한 페이지의 <code>VPID</code>를 알아내고, page buffer에 그 페이지를 잠시 사용할 수 있게 해 달라고 요청합니다. 레코드 하나를 찾으면서 인덱스 페이지와 데이터 페이지 여러 개를 방문할 수 있고, 한 페이지에는 여러 레코드가 들어갈 수 있습니다. 요청 하나가 페이지 하나와 대응하는 것은 아닙니다.</p>
+<figure class="source-call-path"><ol><li>A: 레코드 찾기</li><li>호출자가 페이지 H1의 VPID를 결정</li><li>page buffer가 H1을 찾거나 읽어 옴</li><li>fix 성공으로 바이트 사용 권한을 빌림</li><li>호출자가 레코드를 해석하고, 대응하는 unfix로 사용 종료</li></ol><figcaption>책임의 흐름을 그린 개념도이며 SQL 전체의 호출 스택은 아닙니다. H1은 페이지의 이름이지 레코드나 프레임 번호가 아닙니다.</figcaption></figure>
+<p>필요한 페이지를 고르고 내부 형식을 해석하는 일은 호출자의 책임입니다. page buffer는 메모리 슬롯을 찾거나 확보하고 임시 사용을 조정합니다. 페이지 사용에 성공했다고 해서 찾던 레코드가 존재하거나 호출자의 논리적 작업 전체가 올바르다는 뜻은 아닙니다.</p>
+<p>이후 A와 B는 실행 문맥, H1/H2는 반복해서 요청하는 페이지, S1/S2/...는 스캔으로 차례로 읽는 서로 다른 페이지를 가리킵니다. 스캔도 공간을 요구할 때 H1/H2가 메모리에 남는지가 오늘의 질문입니다.</p></section>
+<section class="section" id="session-opening-end"><h2>이번 시간에 연결할 질문</h2><p>요청과 메모리 객체에서 출발해 교과서 교체 정책, 동시 사용, CUBRID의 배치와 안전한 재사용, 백그라운드 작업, 다른 엔진과의 비교로 이어집니다. dirty는 재사용 전에 변경 내용을 보존하는 작업이 필요하다는 뜻입니다. 사용자가 0명이라는 사실만으로는 충분하지 않습니다.</p><p>WAL 순서, 복구, LSA, DWB 내부와 복사 세대의 상세한 변화는 다음 시간에 다룹니다. 이번 예측 문제는 이 지식을 전제로 하지 않습니다.</p><p><strong>도입 구간은 여기까지입니다.</strong> <a href="0002-separate-objects-from-state.html#session-objects">페이지·프레임·BCB</a>로 이어집니다. 아래의 전체 강의 내용은 그대로 읽을 수 있지만, 다음 절 버튼이 이번 시간의 이동 경로를 뜻하지는 않습니다.</p></section>
 <section class="section" id="first-principles">
 <h2>페이지를 메모리에 남겨 두는 이유</h2>
 <p><a href="../reference/first-principles-route.html">기초부터 이해하는 경로 ↑</a></p><p>데이터베이스는 데이터를 <strong>페이지(page)</strong> 단위로 읽고 씁니다. <strong>Frame</strong>은 페이지 하나를 담는 메모리 자리이고, <strong>page buffer</strong>는 이 자리들을 관리합니다. 한 번 읽은 페이지를 메모리에 남겨 두면 다음 요청에서 다시 사용할 수 있습니다.</p><p>예를 들어 페이지 P를 읽고, 다른 일을 한 뒤 P를 다시 읽습니다. P가 메모리에 남아 있으면 <strong>hit</strong>, 없으면 <strong>miss</strong>입니다. Miss에서는 P를 담을 frame을 확보해야 합니다. 빈 자리가 없다면 다른 페이지를 안전하게 내보내야 합니다.</p><div class="callout">Hit여도 다른 스레드의 latch를 기다릴 수 있습니다. Miss여도 OS cache 등 하위 계층이 읽기를 처리할 수 있어, 반드시 물리 디스크 I/O가 발생하는 것은 아닙니다.</div>
