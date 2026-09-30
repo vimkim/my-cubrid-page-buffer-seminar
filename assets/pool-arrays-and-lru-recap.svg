@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 850" role="img" aria-labelledby="title desc">
+<title id="title">One pool: arrays for storage, linked lists for replacement order</title>
+<desc id="desc">One pool per DB server process owns N BCB slots paired with N frame slots. A single LRU descriptor array has S shared and P private entries. Each descriptor anchors a doubly linked list of the same BCBs, in an order independent of their array indices. Example sizes are for Linux x86-64 SERVER_MODE Debug at f799e05.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#405b68"/></marker></defs>
+<style>text{font-family:Arial,sans-serif;fill:#173443;font-size:20px}.heading{font-size:26px;font-weight:700}.small{font-size:18px;fill:#405b68}.code{font-family:monospace;font-size:20px}.bcb{fill:#edf5ff;stroke:#2f6690;stroke-width:2}.frame{fill:#eaf4ed;stroke:#35734b;stroke-width:2}.lru{fill:#fff3df;stroke:#946323;stroke-width:2}.link{fill:none;stroke:#405b68;stroke-width:2;marker-end:url(#arrow)}.both{marker-start:url(#arrow)}</style>
+<rect width="1120" height="850" rx="16" fill="#f7fafb"/>
+<text x="28" y="40" class="heading">One DB server process → one pgbuf_Pool</text>
+<text x="28" y="72" class="small">Storage slots stay in place. List links change the replacement order.</text>
+<text x="28" y="122" class="code">BCB_table</text><text x="28" y="150" class="small">1 array × N slots</text><text x="28" y="177" class="small">144 B / slot*</text>
+<text x="28" y="270" class="code">iopage_table</text><text x="28" y="298" class="small">1 array × N slots</text><text x="28" y="325" class="small">≈ 16 KiB / slot**</text>
+
+<rect class="bcb" x="280" y="105" width="130" height="85"/><text x="345" y="140" text-anchor="middle">BCB 0</text><text x="345" y="170" text-anchor="middle" class="small">metadata</text>
+<path class="link both" d="M345 197V247"/>
+<rect class="frame" x="280" y="255" width="130" height="85"/><text x="345" y="290" text-anchor="middle">Frame 0</text><text x="345" y="320" text-anchor="middle" class="small">page bytes</text>
+<rect class="bcb" x="410" y="105" width="130" height="85"/><text x="475" y="140" text-anchor="middle">BCB 1</text><text x="475" y="170" text-anchor="middle" class="small">metadata</text>
+<path class="link both" d="M475 197V247"/>
+<rect class="frame" x="410" y="255" width="130" height="85"/><text x="475" y="290" text-anchor="middle">Frame 1</text><text x="475" y="320" text-anchor="middle" class="small">page bytes</text>
+<rect class="bcb" x="540" y="105" width="130" height="85"/><text x="605" y="140" text-anchor="middle">BCB 2</text><text x="605" y="170" text-anchor="middle" class="small">metadata</text>
+<path class="link both" d="M605 197V247"/>
+<rect class="frame" x="540" y="255" width="130" height="85"/><text x="605" y="290" text-anchor="middle">Frame 2</text><text x="605" y="320" text-anchor="middle" class="small">page bytes</text>
+<rect class="bcb" x="670" y="105" width="130" height="85"/><text x="735" y="140" text-anchor="middle">BCB 3</text><text x="735" y="170" text-anchor="middle" class="small">metadata</text>
+<path class="link both" d="M735 197V247"/>
+<rect class="frame" x="670" y="255" width="130" height="85"/><text x="735" y="290" text-anchor="middle">Frame 3</text><text x="735" y="320" text-anchor="middle" class="small">page bytes</text>
+<rect class="bcb" x="800" y="105" width="130" height="85"/><text x="865" y="140" text-anchor="middle">BCB …</text><text x="865" y="170" text-anchor="middle" class="small">metadata</text>
+<path class="link both" d="M865 197V247"/>
+<rect class="frame" x="800" y="255" width="130" height="85"/><text x="865" y="290" text-anchor="middle">Frame …</text><text x="865" y="320" text-anchor="middle" class="small">page bytes</text>
+<rect class="bcb" x="930" y="105" width="130" height="85"/><text x="995" y="140" text-anchor="middle">BCB N−1</text><text x="995" y="170" text-anchor="middle" class="small">metadata</text>
+<path class="link both" d="M995 197V247"/>
+<rect class="frame" x="930" y="255" width="130" height="85"/><text x="995" y="290" text-anchor="middle">Frame N−1</text><text x="995" y="320" text-anchor="middle" class="small">page bytes</text>
+<text x="28" y="224" class="small">Permanent 1:1 pairing →</text>
+<text x="28" y="390" class="heading">buf_LRU_list: 1 array × (S + P) descriptors</text>
+<text x="28" y="420" class="small">128 B / descriptor* · each stores top / bottom pointers, counters and a mutex</text>
+
+<rect class="lru" x="28" y="440" width="176" height="65"/><text x="116" y="467" text-anchor="middle">[0]</text><text x="116" y="493" class="small" text-anchor="middle">shared</text>
+<rect class="lru" x="204" y="440" width="176" height="65"/><text x="292" y="467" text-anchor="middle">[…]</text><text x="292" y="493" class="small" text-anchor="middle">shared</text>
+<rect class="lru" x="380" y="440" width="176" height="65"/><text x="468" y="467" text-anchor="middle">[S−1]</text><text x="468" y="493" class="small" text-anchor="middle">shared</text>
+<rect class="lru" x="556" y="440" width="176" height="65"/><text x="644" y="467" text-anchor="middle">[S]</text><text x="644" y="493" class="small" text-anchor="middle">private 0</text>
+<rect class="lru" x="732" y="440" width="176" height="65"/><text x="820" y="467" text-anchor="middle">[…]</text><text x="820" y="493" class="small" text-anchor="middle">private</text>
+<rect class="lru" x="908" y="440" width="176" height="65"/><text x="996" y="467" text-anchor="middle">[S+P−1]</text><text x="996" y="493" class="small" text-anchor="middle">private P−1</text>
+<path class="link" d="M116 505V547H330"/><text x="145" y="537" class="small">top</text>
+<path class="link" d="M644 505V515H225V627H330"/><text x="242" y="615" class="small">top</text>
+
+<rect class="bcb" x="340" y="525" width="180" height="48" rx="5"/><text x="430" y="556" text-anchor="middle">BCB 3</text>
+<rect class="bcb" x="590" y="525" width="180" height="48" rx="5"/><text x="680" y="556" text-anchor="middle">BCB 0</text>
+<path class="link both" d="M528 549H582"/><text x="790" y="556" class="small">← bottom</text>
+<rect class="bcb" x="340" y="605" width="180" height="48" rx="5"/><text x="430" y="636" text-anchor="middle">BCB 2</text>
+<rect class="bcb" x="590" y="605" width="180" height="48" rx="5"/><text x="680" y="636" text-anchor="middle">BCB 1</text>
+<path class="link both" d="M528 629H582"/><text x="790" y="636" class="small">← bottom</text>
+<text x="28" y="697" class="small">Arrows between BCBs: next_BCB / prev_BCB. These are the SAME array slots, not copies.</text>
+<text x="28" y="726" class="small">Illustrative links only; other lists and zones omitted. A BCB is not in two LRUs at once.</text>
+<text x="28" y="775" class="small">* Example ABI: Linux x86-64 SERVER_MODE Debug, f799e05; sizes vary by build.</text>
+<text x="28" y="805" class="small">** With IO_PAGESIZE = 16,384 B: page bytes + 8 B back-pointer + optional debug guard.</text>
+<text x="28" y="834" class="small">Default example: N = 32,768; S = 32; P = 152 (max_clients = 100, HA off, automatic LRUs).</text>
+</svg>

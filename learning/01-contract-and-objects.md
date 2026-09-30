@@ -72,6 +72,10 @@ Initialization links the invalid population from `BCB[0]` through increasing tab
 
 The one-to-one **BCB ↔ frame pointer pairing is stable for the pool lifetime**. What victimization replaces is the shorter-lived VPID identity and page bytes associated with that pair. At the first final unfix after materialization, the analyzed policy places the BCB at its assigned private LRU's top when such an assignment exists, otherwise at a selected shared LRU's middle. [Replacement Policy and Background Progress](../advanced/replacement-progress.md) owns that mutable membership policy.
 
+![Pool storage arrays and the LRU descriptor array linked to the same BCBs](../assets/pool-arrays-and-lru-recap.svg)
+
+**Verified mechanism:** one process-local `pgbuf_Pool` owns separate contiguous BCB and frame-slot allocations. Slot addressing uses `PGBUF_FIND_BCB_PTR(i)` and `PGBUF_FIND_IOPAGE_PTR(i)` with their respective strides. One `buf_LRU_list` descriptor array contains the shared prefix and private suffix; each descriptor anchors a doubly linked list through existing BCBs' `next_BCB`/`prev_BCB`. Reordering the list changes links, not physical array order. List lengths vary independently of descriptor counts. The diagram's byte sizes are a Linux x86-64 SERVER_MODE Debug example, not portable constants; see the [size receipt](../docs/structure-recap-validation.md). Source: `src/storage/page_buffer.c:110-139,511-625,845,1097-1105,5559-5660,5744-5807`. The [replacement reference](../advanced/replacement-progress.md) owns the default-count derivation.
+
 The BCB/frame array is only the storage core. These supporting structures make lookup, ownership, replacement, and background progress possible:
 
 | Structure | Purpose |
