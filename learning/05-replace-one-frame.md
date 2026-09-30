@@ -74,6 +74,52 @@ Imagine a scanner observes `fcnt == 0`, but the frame is `DIRTY`; reuse would di
 
 Victim selection is demand-driven by a miss that must materialize a page. `pgbuf_allocate_bcb()` first tries the invalid/free list. Only when that list returns no BCB does it call `pgbuf_get_victim()` and search the LRUs. “The pool is full” is a reasonable shorthand for “no identity-free pool slot is immediately available,” but it does not mean every slot is an ordinary LRU member: slots can be fixed, provisional, flushing, directly assigned, or in another transient state.
 
+### From a queued index to a victim hint and a protected victim
+
+**Verified mechanism at f799e05:** after `consume(lru_idx)`, the private/shared queue helper calls `pgbuf_get_victim_from_lru_list(thread_p, lru_idx)`. This selects `pgbuf_Pool.buf_LRU_list[lru_idx]`. An empty candidate count returns immediately; otherwise the helper locks the LRU, checks for LRU3, optionally adjusts private zones, and checks the count again. It starts at `victim_hint`, or `bottom` if the hint is null, and follows `prev_BCB` toward newer BCBs within LRU3. Before choosing that start, a clean bottom can reset the hint to bottom.
+
+`victim_hint` is a BCB pointer stored in each `PGBUF_LRU_LIST`, initially null. It remembers a useful search start to avoid repeatedly inspecting an unproductive older prefix. It neither reserves the BCB nor certifies that it can be reused. In particular, a hint can point to a fixed page. A newly counted candidate need not be a newly inserted page: clearing the last exclusion flag on a page already in LRU3 can make it a candidate without moving it.
+
+| Event | Position and hint update |
+|---|---|
+| Ordinary demotion into LRU3 | The LRU2 boundary BCB (or LRU1 boundary when LRU2 is empty) stays in place while the zone boundary changes. Unless directly assigned instead, it becomes the newest LRU3 entry with the current list tick. An existing older hint can remain. |
+| Insertion at LRU3 bottom | `pgbuf_lru_add_bcb_to_bottom()` connects directly after the saved bottom pointer and assigns a tick one step older than the old LRU3 bottom, with wrap handling. A flag-eligible new tail can replace the hint. There is no sorted-position search. |
+| An existing LRU3 page becomes eligible after flush | Its links and age stay unchanged. If older than the current hint, it can become the new hint in place. |
+| Any candidate addition | `pgbuf_lru_add_victim_candidate()` first compares wrap-aware ages: retain a current LRU3 hint if strictly older; otherwise attempt CAS to the added BCB, retrying on interference. Then increment the candidate count and attempt queue registration where policy permits. |
+| Scan or removal | A scan can remember the first fixed or try-lock-blocked candidate for a later attempt. Removing the hinted BCB advances the hint toward `prev_BCB`, or conditionally falls back to bottom/null. A failed scan with no remembered candidate can also reset it to bottom/null. |
+
+For example, read `A — H — X` from newer to older within LRU3. If H is the hint and dirty X becomes eligible after flush, only the hint changes to X. Conversely, demoting N gives `N — A — H — X`; N is newer, so an older H can remain the hint. These are constructed source-derived examples, not runtime observations. Linking one tail and comparing two ages require constant structural work; CAS retries and lock waits affect elapsed time. Demoting D boundary nodes costs O(D), and actual victim search remains a separate bounded walk.
+
+Candidate eligibility requires all four bits in `PGBUF_BCB_INVALID_VICTIM_CANDIDATE_MASK` to be clear:
+
+| Flag | Why ordinary candidate selection excludes it |
+|---|---|
+| `PGBUF_BCB_DIRTY_FLAG` | Modified bytes still require preservation. |
+| `PGBUF_BCB_FLUSHING_TO_DISK_FLAG` | A flush is still in progress. Clearing DIRTY alone does not finish it. |
+| `PGBUF_BCB_VICTIM_DIRECT_FLAG` | This BCB has been directly assigned to a waiting allocator; ordinary selection must not take the same assignment. |
+| `PGBUF_BCB_INVALIDATE_DIRECT_VICTIM_FLAG` | That assignment was invalidated, for example by fixing the page again. The direct consumer detects it, clears the invalidation flag, and rejects the assignment. |
+
+Thus a clean, non-flushing tail is not automatically the victim. Candidate counting does not require `fcnt == 0`. The scan rejects avoid-victim/fixed states, attempts `PGBUF_BCB_TRYLOCK`, and calls `pgbuf_is_bcb_victimizable(..., true)` to recheck current state, including waiters. On success it detaches the BCB, releases the LRU mutex, and returns with the BCB lock held. Without intervening changes, an eligible tail that passes every check and the try-lock is the first successful victim of that selected-list scan. Otherwise the scan continues or exits early; it stops at the LRU3 boundary, null, or 1,000 visits and returns null if unsuccessful. This does not promise that the allocator will select this LRU next.
+
+Source: [queue consumers](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16424-L16559), [scan and hint repair](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9324-L9538), [tail insertion](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9841-L9880), [demotion](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10059-L10121), [candidate and hint updates](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15674-L15776), [candidate mask](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L253-L263), [direct consumer](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15597-L15627).
+
+#### Direct-victim producers and the flush-completion exception
+
+In server mode, the common setter is `pgbuf_assign_direct_victim()`. Its caller holds the BCB mutex and establishes reusability: no dirty data, no fix ownership, and neither direct-assignment flag. It consumes a waiting-thread entry, locks it, and verifies `THREAD_ALLOC_BCB_SUSPENDED`. Under that thread-entry lock it marks the allocator resumed, sets `PGBUF_BCB_VICTIM_DIRECT_FLAG`, and publishes the BCB in `direct_victims.bcb_victims[waiter_thread->index]`. No actual waiter means no assignment; outside server mode the helper returns false.
+
+| Producer path | Opportunity to hand off a BCB |
+|---|---|
+| `pgbuf_assign_flushed_pages()` | Post-flush processing locks and rechecks a flushed BCB, including LRU3 membership and over-quota policy for private lists. |
+| Flush-candidate search | Can encounter a clean BCB and try direct assignment under a BCB try-lock and protected recheck. |
+| `pgbuf_lru_fall_bcb_to_zone_3()` | Can directly assign and detach before ordinary demotion, subject to the to-vacuum exception and protected eligibility. |
+| Vacuum unfix branches | Eligible LRU3 or VOID BCBs can feed waiting allocators instead of ordinary placement/promotion. |
+| `pgbuf_lru_add_new_bcb_to_bottom()` | Tries assignment before tail insertion and returns without insertion on success. |
+| `pgbuf_panic_assign_direct_victims_from_lru()` | Scans under pressure, try-locking and rechecking candidates. The separate maintenance backup retains the [VS-20 limitation](../unresolved-or-version-sensitive-findings.md). |
+
+These are verified source call paths, not runtime coverage claims. The flush-completion caller may still have `PGBUF_BCB_FLUSHING_TO_DISK_FLAG` set; the common setter clears it while setting the direct flag. This special completion transition does not authorize assignment during unfinished I/O. The consumer later rejects an invalidated assignment or clears the direct flag and rechecks victimizability before using it.
+
+Source: [setter and post-flush producer](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15421-L15567), [flush search](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3829-L3844), [vacuum unfix](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6817-L6937), [new bottom](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10276-L10302), [panic producer](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9549-L9598).
+
 ### Concrete structures and operation costs
 
 ![Invalid-list head pop, bounded LRU scan, and mapping replacement costs](../assets/replacement-data-structures.svg)
