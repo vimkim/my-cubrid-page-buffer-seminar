@@ -5,6 +5,22 @@
 Design accepted on 2026-09-30. The user confirmed the complete shared design and
 authorized implementation.
 
+## Lecture split (2026-09-30)
+
+The user requested a shorter Lecture 7 after its expansion to 38 sections. The
+causal sequence now spans two paired lecture pages: `0007-replace-one-frame.html`
+retains pool/list organization, admission, zones, movement and quota (18 sections);
+`0007a-select-and-reuse-frame.html` continues from list selection through victim
+queues, residency outcomes, safe reuse and progress (20 sections). This supersedes
+the single-page packaging and unchanged-navigation constraints below. Mechanism
+content, source evidence, examples and reset boundaries remain intact.
+
+The full curriculum places 7A immediately after 7. The bounded first-principles
+session retains its existing stop order and included sections; its policy exit at
+quota now coincides with the end of Lecture 7. The itinerary and current Korean
+script use direct links to 7A for selection and reuse. Old Lecture 7 fragment URLs
+retain explicit destination links outside the presentation section sequence.
+
 ## Accepted decisions
 
 - Assume participants understand page/frame/BCB distinctions and textbook LRU.

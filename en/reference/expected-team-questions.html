@@ -86,7 +86,7 @@
           <div class="model-answer">
             <p><strong>Model answer:</strong> The first lookup produces only a candidate. Before the thread obtains the protection needed to fix, release, remove, or reuse it, another thread may change the resident mapping. The protected identity check proves that the BCB still represents the expected VPID at the transition that matters.</p>
             <p><strong>Defend with:</strong> It is not checking whether the same BCB address still exists; it is checking whether that stable slot still has the same current identity.</p>
-            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once">Canonical answer and source anchors</a> · <a href="../lessons/0007-replace-one-frame.html">Lecture 7</a></p>
+            <p class="answer-route"><a href="../../questions/core-answers.md#pgbuf-qb-009-why-is-vpid-checked-more-than-once">Canonical answer and source anchors</a> · <a href="../lessons/0007a-select-and-reuse-frame.html#handoff-details">Lecture 7A</a></p>
           </div>
         </details>
       </article>
@@ -285,7 +285,7 @@
       </article>
 
       <article class="question-card" id="reader-q-03">
-        <div class="question-meta"><span>Pressure</span><span>Reader Q3</span><span>Lectures 7 and 12</span></div>
+        <div class="question-meta"><span>Pressure</span><span>Reader Q3</span><span>Lectures 7A and 12</span></div>
         <h3>3. What happens when the BCB pool is full?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -392,7 +392,7 @@
       </article>
 
       <article class="question-card" id="reader-q-11">
-        <div class="question-meta"><span>Replacement safety</span><span>Reader Q11</span><span>Lectures 7 and 12</span></div>
+        <div class="question-meta"><span>Replacement safety</span><span>Reader Q11</span><span>Lectures 7A and 12</span></div>
         <h3>11. Why does victim selection need a protected handoff?</h3>
         <details>
           <summary>Show direct answer</summary>
@@ -402,7 +402,7 @@
             <p><strong>Pressure:</strong> a nonresident materialization first tries the invalid list and searches victims only when no free slot exists. If every BCB is fixed, none is stolen: server mode waits for a future unfix or exits by timeout/interrupt/shutdown; the no-daemon path retries synchronously and fails if no victim appears.</p>
             <p><strong>One LRU:</strong> one BCB has one link pair and one encoded list index/zone. Private-to-shared movement removes it to VOID before adding it to the new list. LRU objects live for the pool; context assignments and BCB membership are shorter-lived.</p>
             <p><strong>Source:</strong> <code>src/storage/page_buffer.c:499-623,8181-8403,9265-9538,9695-10415,14513-14650,15900-16030</code></p>
-            <p class="answer-route"><a href="../lessons/0007-replace-one-frame.html#handoff-details">Bilingual protected-handoff explanation</a> · <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical LRU lifetime</a></p>
+            <p class="answer-route"><a href="../lessons/0007a-select-and-reuse-frame.html#handoff-details">Bilingual protected-handoff explanation</a> · <a href="../../advanced/replacement-progress.md#how-a-private-lru-index-is-assigned">Canonical LRU lifetime</a></p>
           </div>
         </details>
       </article>

@@ -2,6 +2,39 @@
 
 This author-only audit accompanies the [accepted design](seminar-curriculum-design.md). The public coverage-page URLs now redirect to the syllabus. Personal reading history and mastery state have been removed from the audience product; no participant completion is asserted here.
 
+## Lecture 7 split (2026-09-30)
+
+Lecture 7 now owns LRU organization, admission, zones, movement and quota.
+Lecture 7A owns victim selection, queue behavior, the independently reset
+residency outcomes, protected frame reuse and progress. All 38 original sections
+remain in both languages, split 18/20; existing source evidence and mechanism
+wording are retained. A short opening recap on 7A defines the scenario across the
+page boundary. The [updated design](replacement-socratic-design.md#lecture-split-2026-09-30)
+records the packaging change.
+
+Both landings, syllabi, full-curriculum previous/next links, manifest and lecture
+order include 7A. The first-principles session keeps all twelve stops and their
+included sections, with direct destination links in both itineraries and the
+current Korean script. Old fragments on Lecture 7 retain no-JavaScript destination
+links, including the nested `session-recheck` anchor. Human Korean-language and
+semantic review remains pending against updated fingerprints.
+
+Verification: all seven bilingual source gates pass for 56 pairs; the maintainer
+aggregate passes all 43 Markdown pages, relative links, 71 displayed SVGs with no
+orphans, English prose, and 114 Copyparty HTTP resources. The validator, curriculum
+contract and regression unit suites pass 59/59 checks. The seminar, admission and
+victim-queue browser suites pass their 38 existing checks; the two new split-page
+navigation checks pass after narrowing disclosure selectors to the intended
+answer. These checks cover both languages, projection, keyboard interaction,
+mobile/no-JavaScript access, old bookmarks and the exact served session/script
+links. Desktop, projector and mobile Korean screenshots were inspected.
+
+The full aggregate runs still fail on the pre-existing missing `/favicon.ico`
+resource and pending human language-review receipts/unrelated stale fingerprints;
+these are disclosed failures, not passed gates. Tests used this worktree mounted
+at `http://127.0.0.1:3949` with headless Chromium via `PLAYWRIGHT_MODULE`. No source
+mechanism, SVG, runtime evidence or engine behavior was changed.
+
 ## Worked-example split (2026-09-30)
 
 The paired `reference/lru-worked-example.html` pages now own admission, movement,

@@ -27,7 +27,7 @@ for (const language of ['en', 'ko']) {
         const page = await context.newPage();
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
-        const url = `${base}/${language}/lessons/0007-replace-one-frame.html`;
+        const url = `${base}/${language}/lessons/0007a-select-and-reuse-frame.html`;
         await page.goto(`${url}${mode === 'projection' ? '?present=1' : ''}#victim-queue-map`);
         for (const id of sections) {
           if (mode === 'projection') await page.goto(`${url}?present=1#${id}`);
