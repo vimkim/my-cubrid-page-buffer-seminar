@@ -1,8 +1,8 @@
-# First-time participant revision: proposed ticket breakdown
+# First-time participant revision: approved ticket breakdown
 
-Status: proposed; awaiting breakdown approval. No implementation tickets have been issued.
+Status: approved by the user on 2026-09-30. Seven local implementation tickets have been issued; implementation has not begun.
 
-Input: [implementation specification](../../docs/first-time-participant-revision-spec.md), repository commit `68120b2`. The [accepted design](../../docs/first-time-participant-revision-design.md) remains authoritative. Use the existing local Markdown tracker and `ready-for-agent` status after approval; no external issue publication, merge or push is authorized.
+Input: [implementation specification](../../docs/first-time-participant-revision-spec.md), repository commit `68120b2`. The [accepted design](../../docs/first-time-participant-revision-design.md) remains authoritative. Use the existing local Markdown tracker and `ready-for-agent` status; no external issue publication, merge or push is authorized.
 
 ## Slicing rule
 
@@ -133,8 +133,18 @@ The dependency graph is `01 → 02 → 03 → 04`, then `04 → 05` and `04 → 
 
 Only 01 is initially startable. After 04, 05 and 06 are logically independent. This does not mandate parallel agents: they share route/script artifacts, so sequential execution is straightforward unless editing ownership is explicitly coordinated.
 
-## Approval and local issuance
+## Local issue index
 
-Approve the granularity and blocking edges, or name tickets to merge/split. After approval, create one numbered `ready-for-agent` issue file per ticket in this feature's local issues directory, keeping the specification as the single owner of exact file paths and commands. Each issue repeats its user-visible outcome, blockers, relevant acceptance criteria and shared constraints so it can be implemented in a fresh context.
+The user approved this breakdown with “yes.” Each ticket is a separate local file with explicit blockers and `ready-for-agent` status. Readiness describes the ticket definition, not completion of its dependencies.
 
-Do not modify any parent issue. The current document is a reviewable proposal, not issued tickets or implementation completion.
+- [01: Follow a concrete request into the buffer](issues/01-request-and-buffer.md) — blocked by: None.
+- [02: Explain concurrent use before replacement](issues/02-concurrent-use.md) — blocked by: 01.
+- [03: Follow admission through domains, zones and quota](issues/03-admission-domains-zones.md) — blocked by: 02.
+- [04: Complete the two replacement outcomes and safe reuse](issues/04-replacement-outcomes.md) — blocked by: 03.
+- [05: Explain how background work supplies progress](issues/05-background-progress.md) — blocked by: 04.
+- [06: Compare engines and finish the page journey](issues/06-engine-comparison.md) — blocked by: 04.
+- [07: Deliver one coherent route and complete Korean script](issues/07-integrated-korean-delivery.md) — blocked by: 05, 06.
+
+Start with ticket 01 and work the frontier of completed blockers. After 04, tickets 05 and 06 can run in either order; coordinate shared route/script edits if using parallel work. Ticket 07 joins both paths.
+
+No parent issue was modified. Local issuance does not claim implementation completion or authorize merge, push, remote publication or deployment.
