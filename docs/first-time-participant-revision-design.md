@@ -4,7 +4,7 @@
 
 Design accepted on 2026-09-30. The user confirmed the consolidated scope and shared understanding with “yes.” The interview is complete. Presentation implementation has not begun. Work item: 241. Current review baseline: `fd44ccf` on `main`, inspected on 2026-09-30.
 
-Input: `critics.md` at commit `c421d40` on `docs/seminar-critique`, available in `/home/vimkim/gh/my-cubrid-page-buffer-seminar-critique/critics.md`. The critique describes baseline `c793ee6`; current main additionally clarifies private/shared zone placement and the always-promote alternative. The critique remains a set of proposals, not accepted requirements or observed participant feedback.
+Input: the [archived seminar critique](../critics.md), originally committed as `c421d40` on the former `docs/seminar-critique` branch. The critique describes baseline `c793ee6`; current main additionally clarifies private/shared zone placement and the always-promote alternative. The critique remains a set of proposals, not accepted requirements or observed participant feedback.
 
 ## Confirmed constraints
 
