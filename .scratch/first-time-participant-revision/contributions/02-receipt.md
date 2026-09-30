@@ -1,6 +1,6 @@
 # Ticket 02: concurrent-use delivery receipt
 
-Content commit: `b88f511612d1b9e6dc9ab762e555980a3ab6f1f7`. Worktree: `/home/vimkim/gh/my-cubrid-page-buffer-seminar-ticket-02`; branch: `docs/seminar-ticket-02`. Exact served root: `http://127.0.0.1:8912`, read-only Copyparty volume rooted at this worktree. HTTP bytes for the EN lecture were compared with the local file before browser checks.
+Content commit: `649b23e` (after initial content `b88f511612d1b9e6dc9ab762e555980a3ab6f1f7`). Worktree: `/home/vimkim/gh/my-cubrid-page-buffer-seminar-ticket-02`; branch: `docs/seminar-ticket-02`. Exact served root: `http://127.0.0.1:8912`, read-only Copyparty volume rooted at this worktree. HTTP bytes for the EN lecture were compared with the local file before browser checks.
 
 ## Route and dependency reconciliation
 
@@ -24,7 +24,7 @@ Pinned CUBRID revision: `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`, inspected in
 - `git diff --check`: PASS.
 - `node scripts/check-maintainer-guide.mjs`: PASS for source, all 43 pages, relative links, 64 SVGs and English prose; HTTP/DOM unavailable in the source-only invocation.
 - `node scripts/check-bilingual-teaching-site.mjs`: nonzero solely for 160 human-review/fingerprint diagnostics; no other diagnostics. Updated only this pair's computed fingerprints; review remains pending, with no manufactured reviewer receipt.
-- `PLAYWRIGHT_MODULE=/tmp/objects-playwright.mjs SEMINAR_URL=http://127.0.0.1:8912 node --test --test-name-pattern=ticket02 scripts/seminar-browser.test.mjs`: PASS, 1 focused test, no skips. Both languages, 1440×1000 presentation and 390×844 no-JavaScript reading; assumptions visible, outcomes initially concealed, Enter opens both answers, section advance reaches writer, exit link intact, no horizontal overflow or page errors.
+- `PLAYWRIGHT_MODULE=/tmp/objects-playwright.mjs SEMINAR_URL=http://127.0.0.1:8912 node --test --test-name-pattern=ticket02 scripts/seminar-browser.test.mjs`: PASS, 1 focused test, no skips. Both languages, 1440×1000 presentation and 390×844 no-JavaScript reading; assumptions visible, outcomes initially concealed, Enter opens both answers, section advance reaches writer, next/back resets the reader answer through existing `data-reset-answers` behavior, exit link intact, no horizontal overflow or page errors.
 - Korean reader prediction screenshot at 1440×1000 inspected headlessly: assumptions, numbered actors and closed disclosure fit the projected viewport; presentation controls and full-curriculum navigation remain usable. Screenshot is disposable `/tmp/ticket02-readers.png`.
 - `node scripts/check-maintainer-guide.mjs --copyparty-url http://127.0.0.1:8912` with the same Playwright module: source gates and HTTP PASS (107 resources); live DOM FAIL due to a 404 console resource on the Guide entry. A focused fresh-browser diagnostic identified the resource as `/favicon.ico`, outside the changed lecture. This failure is disclosed, not counted as a pass.
 - `node scripts/check-bilingual-teaching-site.mjs --gate served --copyparty-url http://127.0.0.1:8912` with the same Playwright module: FAIL on root `index.html` for the same fresh-browser missing favicon. Focused changed-page checks pass, but do not replace this aggregate result.
