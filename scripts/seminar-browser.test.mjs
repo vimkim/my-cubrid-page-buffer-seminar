@@ -537,3 +537,62 @@ test('ticket02 concurrent-use assumptions precede concealed keyboard answers in 
     } finally { await context.close(); }
   }
 });
+
+test('ticket04 common checkpoint resets both residency predictions in EN and KO', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      await page.goto(base + language + '/reference/lru-worked-example.html?present=1#session-branch-checkpoint');
+      for (const id of ['session-retention', 'session-displacement']) {
+        await page.locator('#session-branch-checkpoint a[href="#' + id + '"]').click();
+        await page.locator('#' + id).waitFor({ state: 'visible' });
+        const answer = page.locator('#' + id + ' > details');
+        assert.equal(await answer.getAttribute('open'), null);
+        assert.equal(await answer.locator('p').first().isVisible(), false);
+        await answer.locator('summary').focus();
+        await page.keyboard.press('Enter');
+        assert.equal(await answer.locator('p').first().isVisible(), true);
+        await page.locator('#' + id + ' a[href="#session-branch-checkpoint"]').click();
+        assert.equal(await answer.getAttribute('open'), null);
+      }
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#session-retention');
+      await page.locator('#session-retention summary').click();
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#session-displacement');
+      await page.locator('[data-section-previous]').click();
+      assert.equal(await page.locator('#session-retention details').getAttribute('open'), null);
+      await page.goto(base + language + '/lessons/0007-replace-one-frame.html?present=1#handoff-details');
+      const race = page.locator('#handoff-details');
+      assert.doesNotMatch(await race.locator('.replacement-map').innerText(), /Reject|제외|거부/);
+      await race.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      await page.locator('[data-section-next]').click();
+      assert.equal(new URL(page.url()).hash, '#slot');
+      assert.equal(await page.locator('#slot .replacement-map').isVisible(), false);
+      await page.locator('[data-section-previous]').click();
+      assert.equal(await race.locator('details').getAttribute('open'), null);
+    } finally { await page.close(); }
+  }
+});
+
+test('ticket04 branch explanations remain keyboard-readable without JavaScript on mobile', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/reference/lru-worked-example.html#session-branch-checkpoint');
+      for (const id of ['session-retention', 'session-displacement']) {
+        await page.locator('#' + id + ' summary').focus();
+        await page.keyboard.press('Enter');
+        assert.equal(await page.locator('#' + id + ' details > p').first().isVisible(), true);
+      }
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.goto(base + language + '/lessons/0007-replace-one-frame.html#handoff-details');
+      await page.locator('#handoff-details summary').focus();
+      await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#handoff-details details > p').first().isVisible(), true);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    }
+  } finally { await context.close(); }
+});
