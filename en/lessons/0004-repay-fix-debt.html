@@ -20,6 +20,9 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+<section class="section" id="session-concurrency"><h2>One resident page, several users</h2><p>A and B are execution contexts (threads in these timelines); H1 and H2 are page identities. H1's bytes occupy a frame, and its BCB records identity and use state. H2 is unchanged throughout this close-up. These are constructed schedules, not a runtime measurement.</p><p>A successful <strong>fix</strong> grants temporary use of the resident page and creates one matching <strong>unfix</strong> obligation. That outstanding use prevents ordinary reuse of its frame. A <strong>latch</strong> controls access to page bytes: READ permits reading; WRITE permits exclusive modification. Two readers can coexist, but a reader and an independent writer cannot use those bytes simultaneously. Neither permission establishes transaction correctness; no prior transaction-lock lesson is needed here.</p><p><strong>Dirty</strong> means the in-memory page contains changes that must be preserved before reuse. Releasing use does not itself clean the page. Today we track use, access and replacement eligibility; WAL, recovery, LSA, DWB and the copied-generation protocol belong to the next session.</p></section>
+<section class="section" id="session-readers"><h2>1. Can B read while A is reading?</h2><p><strong>Starting assumptions:</strong> H1 is clean and resident. There are no waiters, no other users and no background transition in this schedule. A has one granted READ fix: global <code>fcnt = 1</code>, A's holder <code>fix_count = 1</code>, B has no holder. A and B only read.</p><ol><li>A keeps using H1 under its READ grant.</li><li>B requests a READ fix of H1.</li></ol><p>Predict B's permission, both holder counts and whether H1's frame can be reused.</p><details class="answer-disclosure" data-session-answer><summary>Reveal the next state</summary><p>B's compatible READ fix succeeds. Global <code>fcnt = 2</code>; A and B each owe one unfix. Both may read H1, neither may modify it under READ, and its frame cannot be reused. Compatibility is not an unconditional promise that a new reader bypasses an existing wait queue: the no-waiter assumption matters.</p></details></section>
+<section class="section" id="session-writer"><h2>2. What if B needs to write?</h2><p><strong>Reset to the same starting checkpoint:</strong> H1 is clean and resident; A alone holds one READ fix, global <code>fcnt = 1</code>, B has no holder, and there are initially no waiters. This is an alternative to the two-reader result. B requests an unconditional WRITE fix; A continues reading. Assume no timeout, interruption, competing request or background transition.</p><ol><li>B requests WRITE while A still reads H1.</li><li>A performs its only unfix.</li><li>The waiting request is resumed and granted successfully.</li></ol><p>At which step may B change bytes? Does merely requesting WRITE add a granted fix debt?</p><details class="answer-disclosure" data-session-answer><summary>Reveal the next states</summary><p>At step 1, B waits: A's debt and global <code>fcnt</code> remain 1, while B has no granted use and cannot touch the bytes. At step 2 A's holder is removed and its contribution reaches zero; B is still not entitled to use the pointer until the grant. At step 3 B holds WRITE, global <code>fcnt = 1</code>, and B's holder count is 1. B may modify bytes under that grant; this is a new use, not a promise that a zero-count frame must be evicted between A and B. A's released pointer grants no further access.</p></details><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>pgbuf_latch_bcb_upon_fix()</code></a> checks compatible requests and routes conflicts to waiting; a successful grant establishes the holder obligation.</p></section>
       <section class="section" id="rule">
         <div class="eyebrow">01 · Count successful grants</div>
         <h2>Only successful acquisition creates fix debt</h2>
@@ -45,6 +48,7 @@
       </section>
 
       <section class="section" id="predict">
+<p>This is a separate closed READ-only demonstration on H1, initially with no granted fixes or waiters. All three requests below succeed; no other actors or background transitions occur.</p>
         <div class="eyebrow">03 · Predict before feedback</div>
         <h2>One page, three successful calls</h2>
         <p>Start at global <code>fcnt = 0</code>. Predict all six rows before using the simulator:</p>
@@ -81,7 +85,7 @@
             <tbody data-ledger-log></tbody>
           </table></div>
         </div>
-        <div class="callout"><strong>Expected sequence:</strong> global counts are 1, 2, 3, 2, 1, 0. A's holder is 1, 2, 2, 1, 1, removed; B's is removed, removed, 1, 1, removed, removed.</div>
+<details class="answer-disclosure"><summary>Reveal the complete ledger</summary>        <div class="callout"><strong>Expected sequence:</strong> global counts are 1, 2, 3, 2, 1, 0. A's holder is 1, 2, 2, 1, 1, removed; B's is removed, removed, 1, 1, removed, removed.</div></details>
       </section>
 
       <section class="section" id="pointers">
@@ -101,6 +105,7 @@
         <p class="source-note"><strong>Verified mechanism:</strong> holder decrement is at <code>page_buffer.c:6128–6184</code>; global decrement and possible idle transition are at <code>6636–6703</code>; the caller-facing unfix route is at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3062-L3201"><code>3062–3201</code></a>.</p>
       </section>
 
+<section class="section" id="session-release-boundary"><h2>From final unfix to replacement policy</h2><p>A context's <strong>final unfix</strong> repays its last outstanding fix and removes its holder. It does not imply that all other contexts have released H1. Only when all granted uses end does global <code>fcnt</code> reach zero. For the next policy example, assume both A and B have released every fix and no waiter takes over.</p><p>H1 may still be resident, and its BCB and frame still exist. A clean, unused page is a possible candidate, not an instruction to evict it. Dirty state, an in-progress flush, waiting users, zone membership and a protected current-state recheck still constrain ordinary reuse. A write completing is not permission to skip that recheck, and flushing is not transaction commit.</p><p><a href="0007-replace-one-frame.html#first-principles">Session policy example: admission and final-unfix placement</a></p></section>
       <section class="section" id="retrieval">
         <div class="eyebrow">07 · Pause and reason</div>
         <h2>Defend the ledger without the simulator</h2>
@@ -128,6 +133,7 @@
 
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lecture map</strong>
+      <a href="#session-concurrency">Session: concurrent use</a>
       <a href="#rule">1. Debt boundary</a>
       <a href="#ledgers">2. Two ledgers</a>
       <a href="#predict">3. Predict sequence</a>

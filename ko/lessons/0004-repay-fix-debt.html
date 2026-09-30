@@ -20,6 +20,9 @@
 
   <div class="lesson-grid">
     <article class="lesson-main">
+<section class="section" id="session-concurrency"><h2>메모리의 한 페이지를 여러 사용자가 함께 쓰려면</h2><p>A와 B는 실행 문맥이며, 이 타임라인에서는 각각 스레드입니다. H1과 H2는 페이지 식별자입니다. H1의 바이트는 프레임에 있고, BCB는 그 페이지의 식별자와 사용 상태를 기록합니다. 여기서 H1을 확대해 보는 동안 H2는 바뀌지 않습니다. 소스의 동작을 설명하기 위해 구성한 순서이며 실행 측정 결과가 아닙니다.</p><p><strong>fix</strong>가 성공하면 메모리에 있는 페이지를 임시로 사용할 권한과 짝이 되는 <strong>unfix</strong> 한 번의 의무가 생깁니다. 사용이 남아 있으면 일반적인 교체 경로에서 프레임을 다른 페이지로 재사용할 수 없습니다. <strong>latch</strong>는 페이지 바이트에 대한 접근을 조절합니다. READ는 읽기를, WRITE는 배타적인 수정을 허용합니다. 읽는 두 사용자는 함께 접근할 수 있지만, 읽는 사용자와 별도의 쓰는 사용자가 동시에 같은 바이트를 사용해서는 안 됩니다. 이 권한만으로 트랜잭션 전체의 정합성이 보장되지는 않습니다. 앞선 트랜잭션 잠금 강의를 들었다고 가정하지 않습니다.</p><p><strong>dirty</strong>는 메모리의 페이지에 재사용 전에 보존해야 할 변경이 있다는 뜻입니다. 사용을 끝냈다고 페이지가 저절로 clean이 되지는 않습니다. 이번에는 사용 수명, 접근 권한, 교체 가능 조건을 구분합니다. WAL, 복구, LSA, DWB와 복사한 세대의 세부 프로토콜은 다음 세션에서 다룹니다.</p></section>
+<section class="section" id="session-readers"><h2>1. A가 읽는 동안 B도 읽을 수 있을까?</h2><p><strong>시작 조건:</strong> H1은 clean이며 메모리에 있습니다. 대기자와 다른 사용자가 없고, 이 순서에는 백그라운드 상태 전이가 없습니다. A만 READ fix를 한 번 승인받았습니다. 전역 <code>fcnt = 1</code>, A의 holder <code>fix_count = 1</code>이고 B의 holder는 없습니다. A와 B는 읽기만 합니다.</p><ol><li>A가 READ 권한으로 H1을 계속 읽습니다.</li><li>B가 H1의 READ fix를 요청합니다.</li></ol><p>B의 접근 권한, 각 holder의 개수, H1 프레임의 재사용 가능 여부를 예측해 보세요.</p><details class="answer-disclosure" data-session-answer><summary>다음 상태 펼치기</summary><p>B의 READ 요청은 호환되므로 성공합니다. 전역 <code>fcnt = 2</code>이며 A와 B는 각각 unfix 한 번을 해야 합니다. 둘 다 H1을 읽을 수 있지만 READ 권한으로 수정할 수는 없고, 프레임도 재사용할 수 없습니다. 호환된다고 새 reader가 기존 대기열을 무조건 건너뛸 수 있다는 뜻은 아닙니다. 대기자가 없다는 시작 조건이 중요합니다.</p></details></section>
+<section class="section" id="session-writer"><h2>2. B가 수정하려면 어디서 기다릴까?</h2><p><strong>같은 시작점으로 되돌립니다:</strong> H1은 clean이며 메모리에 있고, A만 READ fix 한 번을 보유합니다. 전역 <code>fcnt = 1</code>, B의 holder는 없으며 처음에는 대기자도 없습니다. 두 reader가 된 결과에서 이어지는 순서가 아닙니다. B는 unconditional WRITE fix를 요청하고 A는 계속 읽습니다. timeout, interrupt, 경쟁 요청과 백그라운드 상태 전이는 없다고 가정합니다.</p><ol><li>A가 H1을 읽는 중에 B가 WRITE를 요청합니다.</li><li>A가 자신에게 남은 유일한 unfix를 수행합니다.</li><li>대기하던 요청이 재개되어 성공적으로 승인됩니다.</li></ol><p>B가 바이트를 수정할 수 있는 단계는 어디인가요? WRITE를 요청하기만 해도 승인된 fix 의무가 늘어날까요?</p><details class="answer-disclosure" data-session-answer><summary>다음 상태들 펼치기</summary><p>1단계에서 B는 기다립니다. A의 의무와 전역 <code>fcnt</code>는 1이고, B는 아직 사용을 승인받지 않았으므로 바이트에 접근할 수 없습니다. 2단계에서는 A의 holder가 제거되고 A의 기여분이 0이 됩니다. 그래도 B는 승인 전까지 포인터를 사용할 수 없습니다. 3단계에서 B가 WRITE를 보유하며 전역 <code>fcnt = 1</code>, B의 holder 개수도 1이 됩니다. 이제 B는 그 권한으로 수정할 수 있습니다. 새 사용이 시작된 것이며, A와 B 사이에 개수가 0이 되었다고 반드시 퇴출해야 하는 것은 아닙니다. A가 반납한 포인터에는 더 이상 접근 권한이 없습니다.</p></details><p class="source-note">Verified mechanism: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6277-L6634"><code>pgbuf_latch_bcb_upon_fix()</code></a>는 요청의 호환성을 검사하고 충돌하는 요청을 대기로 보냅니다. 성공적인 승인이 holder의 반납 의무를 만듭니다.</p></section>
       <section class="section" id="rule">
         <div class="eyebrow">01 · 성공한 grant 세기</div>
         <h2>성공한 acquisition만 fix debt를 만듭니다</h2>
@@ -45,6 +48,7 @@
       </section>
 
       <section class="section" id="predict">
+<p>H1을 대상으로 하는 별도의 READ 전용 시연입니다. 처음에는 승인된 fix와 대기자가 없습니다. 아래 세 요청은 모두 성공하며, 다른 사용자나 백그라운드 상태 전이는 없습니다.</p>
         <div class="eyebrow">03 · feedback 전에 예측하기</div>
         <h2>page 하나, 성공한 call 세 번</h2>
         <p>global <code>fcnt = 0</code>에서 시작합니다. simulator를 쓰기 전에 여섯 row를 모두 예측하세요.</p>
@@ -81,7 +85,7 @@
             <tbody data-ledger-log></tbody>
           </table></div>
         </div>
-        <div class="callout"><strong>예상 sequence:</strong> global count는 1, 2, 3, 2, 1, 0입니다. A holder는 1, 2, 2, 1, 1, 없음이고, B holder는 없음, 없음, 1, 1, 없음, 없음입니다.</div>
+<details class="answer-disclosure"><summary>전체 장부 결과 펼치기</summary>        <div class="callout"><strong>예상 sequence:</strong> global count는 1, 2, 3, 2, 1, 0입니다. A holder는 1, 2, 2, 1, 1, 없음이고, B holder는 없음, 없음, 1, 1, 없음, 없음입니다.</div></details>
       </section>
 
       <section class="section" id="pointers">
@@ -101,6 +105,7 @@
         <p class="source-note"><strong>Verified mechanism:</strong> holder decrement는 <code>page_buffer.c:6128–6184</code>, global decrement와 가능한 idle transition은 <code>6636–6703</code>, caller-facing unfix route는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3062-L3201"><code>3062–3201</code></a>에 있습니다.</p>
       </section>
 
+<section class="section" id="session-release-boundary"><h2>마지막 unfix에서 교체 정책으로</h2><p>한 실행 문맥의 <strong>마지막 unfix</strong>는 그 문맥에 남은 마지막 fix 의무를 갚고 holder를 제거합니다. 다른 문맥까지 H1 사용을 끝냈다는 뜻은 아닙니다. 승인된 사용이 모두 끝나야 전역 <code>fcnt</code>가 0이 됩니다. 다음 정책 예에서는 A와 B가 모든 fix를 반납했고 대기자가 사용을 이어받지 않는다고 가정합니다.</p><p>H1은 여전히 메모리에 있을 수 있고, BCB와 프레임도 그대로 있습니다. clean이며 사용자가 없는 페이지는 후보가 될 수 있지만 반드시 퇴출하라는 뜻은 아닙니다. dirty 상태, 진행 중인 flush, 대기자, zone 소속, 보호된 상태에서의 현재 조건 재검사가 일반적인 재사용을 계속 제한합니다. 쓰기가 완료되어도 재검사를 생략할 수 없으며, flush는 트랜잭션 commit과도 다릅니다.</p><p><a href="0007-replace-one-frame.html#first-principles">이번 세션의 정책 예: admission과 마지막 unfix의 배치</a></p></section>
       <section class="section" id="retrieval">
         <div class="eyebrow">07 · 함께 생각하기</div>
         <h2>ledger를 직접 설명합니다</h2>
@@ -128,6 +133,7 @@
 
     <nav class="lesson-nav" aria-label="강의 목차">
       <strong>강의 지도</strong>
+      <a href="#session-concurrency">이번 세션: 동시 사용</a>
       <a href="#rule">1. Debt boundary</a>
       <a href="#ledgers">2. 두 ledger</a>
       <a href="#predict">3. sequence 예측</a>

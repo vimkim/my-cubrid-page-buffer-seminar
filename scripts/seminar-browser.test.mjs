@@ -498,3 +498,39 @@ test('ticket01 opening is complete in mobile no-script reading', { skip: unavail
     }
   } finally { await context.close(); }
 });
+
+test('ticket02 concurrent-use assumptions precede concealed keyboard answers in both languages', { skip: unavailable }, async () => {
+  for (const javaScriptEnabled of [true, false]) {
+    const context = await browser.newContext({ javaScriptEnabled, viewport: javaScriptEnabled ? { width: 1440, height: 1000 } : { width: 390, height: 844 } });
+    try {
+      const page = await context.newPage();
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      for (const language of ['en', 'ko']) {
+        await page.goto(base + language + '/lessons/0004-repay-fix-debt.html' + (javaScriptEnabled ? '?present=1' : '') + '#session-readers');
+        const section = page.locator('#session-readers');
+        assert.equal(await section.isVisible(), true);
+        const answer = section.locator('[data-session-answer]');
+        assert.equal(await answer.getAttribute('open'), null);
+        assert.equal(await answer.locator('p').isVisible(), false);
+        assert.match(await section.locator(':scope > p').first().textContent(), /fcnt = 1/);
+        await answer.locator('summary').focus();
+        await page.keyboard.press('Enter');
+        assert.equal(await answer.locator('p').isVisible(), true);
+        assert.match(await answer.textContent(), /fcnt = 2/);
+        if (javaScriptEnabled) {
+          await page.locator('[data-section-next]').click();
+          assert.equal(await page.locator('#session-writer').isVisible(), true);
+        }
+        const writer = page.locator('#session-writer [data-session-answer]');
+        assert.equal(await writer.getAttribute('open'), null);
+        await writer.locator('summary').focus();
+        await page.keyboard.press('Enter');
+        assert.equal(await writer.locator('p').isVisible(), true);
+        assert.equal(await page.locator('#session-release-boundary a[href="0007-replace-one-frame.html#first-principles"]').count(), 1);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        assert.deepEqual(errors, []);
+      }
+    } finally { await context.close(); }
+  }
+});
