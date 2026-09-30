@@ -1,0 +1,68 @@
+./demos/lru-topology.sh "$@"
+Database: CBRD_27398_pgbuf_
+Evidence: /tmp/lru-demo-paced-1790735226717
+Samples are after SQL completion, not an atomic history. One query can fix a page multiple times.
+Persistent csql A PID=2284312; B PID=2284313
+
+1. A creates the target row
+Only A accesses this new table. B stays connected and idle.
+[Enter] continue, q quit:   Page 1:2241 -> shared list 31 / lru1 (fix_count=0, dirty=True)
+  Reused page is already shared; retaining it and trying another new table.
+  Page 1:2369 -> shared list 4 / lru1 (fix_count=0, dirty=True)
+  Reused page is already shared; retaining it and trying another new table.
+  Page 1:2497 -> shared list 0 / lru1 (fix_count=0, dirty=True)
+  Reused page is already shared; retaining it and trying another new table.
+  Page 1:2625 -> shared list 19 / lru1 (fix_count=0, dirty=True)
+  Reused page is already shared; retaining it and trying another new table.
+  Page 1:2753 -> shared list 10 / lru1 (fix_count=0, dirty=True)
+  Reused page is already shared; retaining it and trying another new table.
+  Page 1:2881 -> shared list 0 / lru1 (fix_count=0, dirty=True)
+  Reused page is already shared; retaining it and trying another new table.
+  Page 1:3009 -> shared list 24 / lru1 (fix_count=0, dirty=True)
+  Reused page is already shared; retaining it and trying another new table.
+  Page 1:3137 -> private list 57 / lru3 (fix_count=0, dirty=True)
+Watching the target table heap-header page 1:3137.
+Open http://192.168.4.2:7777/sector/1/49
+Page detail: http://192.168.4.2:7777/page/1/3137
+Click Enable observations; choose LRU topology. Keep the browser tab visible.
+
+2. A admits other pages
+A fills a separate table to age the target within its private list.
+[Enter] continue, q quit:   Page 1:3137 -> private list 57 / lru3 (fix_count=0, dirty=True)
+  No list/zone change in these two samples.
+
+3. A reads the same target (1/3)
+An old LRU2/LRU3 page can boost to LRU1. A page already in LRU1 can stay there.
+[Enter] continue, q quit:   A> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+  Page 1:3137 -> private list 57 / lru1 (fix_count=0, dirty=True)
+  Change: private[57]/lru3 -> private[57]/lru1
+
+4. A reads the same target (2/3)
+An old LRU2/LRU3 page can boost to LRU1. A page already in LRU1 can stay there.
+[Enter] continue, q quit:   A> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+  Page 1:3137 -> private list 57 / lru1 (fix_count=0, dirty=True)
+  No list/zone change in these two samples.
+
+5. A reads the same target (3/3)
+An old LRU2/LRU3 page can boost to LRU1. A page already in LRU1 can stay there.
+[Enter] continue, q quit:   A> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+  Page 1:3137 -> private list 57 / lru1 (fix_count=0, dirty=True)
+  No list/zone change in these two samples.
+
+6. B reads the very same target
+A remains connected. A different private domain should move the page to shared LRU at final unfix.
+[Enter] continue, q quit:   B> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+  Page 1:3137 -> shared list 11 / lru2 (fix_count=0, dirty=True)
+  Change: private[57]/lru1 -> shared[11]/lru2
+
+7. B reads it again
+Observe any shared-zone boost. Membership should stay shared.
+[Enter] continue, q quit:   B> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+  Page 1:3137 -> shared list 11 / lru1 (fix_count=0, dirty=True)
+  Change: shared[11]/lru2 -> shared[11]/lru1
+
+Verified: A retained private membership on repeated reads; B access changed the same page to shared.
+
+8. Finish
+Inspect the browser before continuing. Enter closes both sessions and drops only this run's fixture tables.
+[Enter] continue, q quit: Logs retained: /tmp/lru-demo-paced-1790735226717

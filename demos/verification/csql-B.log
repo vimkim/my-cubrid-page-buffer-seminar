@@ -1,0 +1,25 @@
+
+	CUBRID SQL Interpreter (version 11.5.0)
+
+
+Type ';help' for help messages, or ';exit' to quit.
+
+csql> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> bytes_read: 32
+
+1 row selected. (0.002302 sec) Committed. (0.000010 sec)
+
+1 command(s) successfully processed.
+csql> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> bytes_read: 32
+
+1 row selected. (0.002171 sec) Committed. (0.000015 sec)
+
+1 command(s) successfully processed.
+csql>

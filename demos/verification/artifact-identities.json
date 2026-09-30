@@ -1,0 +1,14 @@
+{
+  "cub_server": {
+    "path": "/home/vimkim/.cub/install/CBRD-27398-pgbuf-inspector-contract/debug_gcc/bin/cub_server",
+    "sha256": "f6327f6615fc0f159a4c210ced52e8c2674421b39f162c0c657ca6ff7b202e9d"
+  },
+  "volmap": {
+    "path": "/home/vimkim/temp/volmap/target/x86_64-unknown-linux-musl/debug/volmap",
+    "sha256": "9e4a818bc88d444b9639e5da38e030f183a028d8032805521a2ed39410ebdfc2"
+  },
+  "inspector_helper": {
+    "path": "/home/vimkim/temp/volmap/examples/pgbuf_socket.py",
+    "sha256": "89444ff84ec5cdbb9d6dd8951e48db1dae1ebcc7cba4f9fb76271302003ba648"
+  }
+}

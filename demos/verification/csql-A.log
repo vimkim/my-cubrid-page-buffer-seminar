@@ -1,0 +1,302 @@
+
+	CUBRID SQL Interpreter (version 11.5.0)
+
+
+Type ';help' for help messages, or ';exit' to quit.
+
+csql> create table lru_demo_b11b3cc6ba_0 (id int primary key, payload char(32));
+Execute OK. (0.012083 sec) Committed. (0.000407 sec)
+
+1 command(s) successfully processed.
+csql> insert into lru_demo_b11b3cc6ba_0 values (1, 'LRU demo');
+1 row affected. (0.001843 sec) Committed. (0.000006 sec)
+
+1 command(s) successfully processed.
+csql> show heap header of lru_demo_b11b3cc6ba_0;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name    : 'dba.lru_demo_b11b3cc6ba_0'
+        Class_oid     : '(0|208|39)'
+        Volume_id     : 1
+        File_id       : 2240
+        Header_page_id: 2241
+        Overflow_vfid : '(-1|-1)'
+        Next_vpid     : '(1|2242)'
+        Last_vpid     : '(1|2242)'
+        Unfill_space  : 1634
+        Num_pages     : 1
+        Num_recs      : 0
+        Avg_rec_len   : 0
+
+1 row selected. (0.000765 sec) Committed. (0.000005 sec)
+
+1 command(s) successfully processed.
+csql> create table lru_demo_b11b3cc6ba_1 (id int primary key, payload char(32));
+Execute OK. (0.011108 sec) Committed. (0.000423 sec)
+
+1 command(s) successfully processed.
+csql> insert into lru_demo_b11b3cc6ba_1 values (1, 'LRU demo');
+1 row affected. (0.001798 sec) Committed. (0.000007 sec)
+
+1 command(s) successfully processed.
+csql> show heap header of lru_demo_b11b3cc6ba_1;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name    : 'dba.lru_demo_b11b3cc6ba_1'
+        Class_oid     : '(0|208|40)'
+        Volume_id     : 1
+        File_id       : 2368
+        Header_page_id: 2369
+        Overflow_vfid : '(-1|-1)'
+        Next_vpid     : '(1|2370)'
+        Last_vpid     : '(1|2370)'
+        Unfill_space  : 1634
+        Num_pages     : 1
+        Num_recs      : 0
+        Avg_rec_len   : 0
+
+1 row selected. (0.000732 sec) Committed. (0.000006 sec)
+
+1 command(s) successfully processed.
+csql> create table lru_demo_b11b3cc6ba_2 (id int primary key, payload char(32));
+Execute OK. (0.011196 sec) Committed. (0.000429 sec)
+
+1 command(s) successfully processed.
+csql> insert into lru_demo_b11b3cc6ba_2 values (1, 'LRU demo');
+1 row affected. (0.001881 sec) Committed. (0.000006 sec)
+
+1 command(s) successfully processed.
+csql> show heap header of lru_demo_b11b3cc6ba_2;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name    : 'dba.lru_demo_b11b3cc6ba_2'
+        Class_oid     : '(0|208|41)'
+        Volume_id     : 1
+        File_id       : 2496
+        Header_page_id: 2497
+        Overflow_vfid : '(-1|-1)'
+        Next_vpid     : '(1|2498)'
+        Last_vpid     : '(1|2498)'
+        Unfill_space  : 1634
+        Num_pages     : 1
+        Num_recs      : 0
+        Avg_rec_len   : 0
+
+1 row selected. (0.000713 sec) Committed. (0.000005 sec)
+
+1 command(s) successfully processed.
+csql> create table lru_demo_b11b3cc6ba_3 (id int primary key, payload char(32));
+Execute OK. (0.010733 sec) Committed. (0.000653 sec)
+
+1 command(s) successfully processed.
+csql> insert into lru_demo_b11b3cc6ba_3 values (1, 'LRU demo');
+1 row affected. (0.001782 sec) Committed. (0.000007 sec)
+
+1 command(s) successfully processed.
+csql> show heap header of lru_demo_b11b3cc6ba_3;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name    : 'dba.lru_demo_b11b3cc6ba_3'
+        Class_oid     : '(0|208|42)'
+        Volume_id     : 1
+        File_id       : 2624
+        Header_page_id: 2625
+        Overflow_vfid : '(-1|-1)'
+        Next_vpid     : '(1|2626)'
+        Last_vpid     : '(1|2626)'
+        Unfill_space  : 1634
+        Num_pages     : 1
+        Num_recs      : 0
+        Avg_rec_len   : 0
+
+1 row selected. (0.000695 sec) Committed. (0.000007 sec)
+
+1 command(s) successfully processed.
+csql> create table lru_demo_b11b3cc6ba_4 (id int primary key, payload char(32));
+Execute OK. (0.011294 sec) Committed. (0.000651 sec)
+
+1 command(s) successfully processed.
+csql> insert into lru_demo_b11b3cc6ba_4 values (1, 'LRU demo');
+1 row affected. (0.001791 sec) Committed. (0.000008 sec)
+
+1 command(s) successfully processed.
+csql> show heap header of lru_demo_b11b3cc6ba_4;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name    : 'dba.lru_demo_b11b3cc6ba_4'
+        Class_oid     : '(0|208|43)'
+        Volume_id     : 1
+        File_id       : 2752
+        Header_page_id: 2753
+        Overflow_vfid : '(-1|-1)'
+        Next_vpid     : '(1|2754)'
+        Last_vpid     : '(1|2754)'
+        Unfill_space  : 1634
+        Num_pages     : 1
+        Num_recs      : 0
+        Avg_rec_len   : 0
+
+1 row selected. (0.000735 sec) Committed. (0.000006 sec)
+
+1 command(s) successfully processed.
+csql> create table lru_demo_b11b3cc6ba_5 (id int primary key, payload char(32));
+Execute OK. (0.011079 sec) Committed. (0.000427 sec)
+
+1 command(s) successfully processed.
+csql> insert into lru_demo_b11b3cc6ba_5 values (1, 'LRU demo');
+1 row affected. (0.001711 sec) Committed. (0.000012 sec)
+
+1 command(s) successfully processed.
+csql> show heap header of lru_demo_b11b3cc6ba_5;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name    : 'dba.lru_demo_b11b3cc6ba_5'
+        Class_oid     : '(0|208|44)'
+        Volume_id     : 1
+        File_id       : 2880
+        Header_page_id: 2881
+        Overflow_vfid : '(-1|-1)'
+        Next_vpid     : '(1|2882)'
+        Last_vpid     : '(1|2882)'
+        Unfill_space  : 1634
+        Num_pages     : 1
+        Num_recs      : 0
+        Avg_rec_len   : 0
+
+1 row selected. (0.000675 sec) Committed. (0.000005 sec)
+
+1 command(s) successfully processed.
+csql> create table lru_demo_b11b3cc6ba_6 (id int primary key, payload char(32));
+Execute OK. (0.011458 sec) Committed. (0.000480 sec)
+
+1 command(s) successfully processed.
+csql> insert into lru_demo_b11b3cc6ba_6 values (1, 'LRU demo');
+1 row affected. (0.001816 sec) Committed. (0.000008 sec)
+
+1 command(s) successfully processed.
+csql> show heap header of lru_demo_b11b3cc6ba_6;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name    : 'dba.lru_demo_b11b3cc6ba_6'
+        Class_oid     : '(0|208|45)'
+        Volume_id     : 1
+        File_id       : 3008
+        Header_page_id: 3009
+        Overflow_vfid : '(-1|-1)'
+        Next_vpid     : '(1|3010)'
+        Last_vpid     : '(1|3010)'
+        Unfill_space  : 1634
+        Num_pages     : 1
+        Num_recs      : 0
+        Avg_rec_len   : 0
+
+1 row selected. (0.000685 sec) Committed. (0.000006 sec)
+
+1 command(s) successfully processed.
+csql> create table lru_demo_b11b3cc6ba_7 (id int primary key, payload char(32));
+Execute OK. (0.011341 sec) Committed. (0.000711 sec)
+
+1 command(s) successfully processed.
+csql> insert into lru_demo_b11b3cc6ba_7 values (1, 'LRU demo');
+1 row affected. (0.001826 sec) Committed. (0.000007 sec)
+
+1 command(s) successfully processed.
+csql> show heap header of lru_demo_b11b3cc6ba_7;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> Table_name    : 'dba.lru_demo_b11b3cc6ba_7'
+        Class_oid     : '(0|208|46)'
+        Volume_id     : 1
+        File_id       : 3136
+        Header_page_id: 3137
+        Overflow_vfid : '(-1|-1)'
+        Next_vpid     : '(1|3138)'
+        Last_vpid     : '(1|3138)'
+        Unfill_space  : 1634
+        Num_pages     : 1
+        Num_recs      : 0
+        Avg_rec_len   : 0
+
+1 row selected. (0.000697 sec) Committed. (0.000006 sec)
+
+1 command(s) successfully processed.
+csql> create table lru_fill_b11b3cc6ba (id int, payload char(2000));
+Execute OK. (0.009402 sec) Committed. (0.000427 sec)
+
+1 command(s) successfully processed.
+csql> insert into lru_fill_b11b3cc6ba select rownum, repeat('x', 2000) from db_class a, db_class b limit 4096;
+4096 rows affected. (0.237195 sec) Committed. (0.000145 sec)
+
+1 command(s) successfully processed.
+csql> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> bytes_read: 32
+
+1 row selected. (0.002707 sec) Committed. (0.000011 sec)
+
+1 command(s) successfully processed.
+csql> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> bytes_read: 32
+
+1 row selected. (0.001546 sec) Committed. (0.000011 sec)
+
+1 command(s) successfully processed.
+csql> select length(payload) as bytes_read from lru_demo_b11b3cc6ba_7 where id=1;
+
+=== <Result of SELECT Command in Line 1> ===
+
+<00001> bytes_read: 32
+
+1 row selected. (0.001897 sec) Committed. (0.000012 sec)
+
+1 command(s) successfully processed.
+csql> drop table lru_fill_b11b3cc6ba;
+Execute OK. (0.008127 sec) Committed. (0.001042 sec)
+
+1 command(s) successfully processed.
+csql> drop table lru_demo_b11b3cc6ba_7;
+Execute OK. (0.008149 sec) Committed. (0.000824 sec)
+
+1 command(s) successfully processed.
+csql> drop table lru_demo_b11b3cc6ba_6;
+Execute OK. (0.007962 sec) Committed. (0.000755 sec)
+
+1 command(s) successfully processed.
+csql> drop table lru_demo_b11b3cc6ba_5;
+Execute OK. (0.007834 sec) Committed. (0.000843 sec)
+
+1 command(s) successfully processed.
+csql> drop table lru_demo_b11b3cc6ba_4;
+Execute OK. (0.007837 sec) Committed. (0.000723 sec)
+
+1 command(s) successfully processed.
+csql> drop table lru_demo_b11b3cc6ba_3;
+Execute OK. (0.007802 sec) Committed. (0.000812 sec)
+
+1 command(s) successfully processed.
+csql> drop table lru_demo_b11b3cc6ba_2;
+Execute OK. (0.007996 sec) Committed. (0.000785 sec)
+
+1 command(s) successfully processed.
+csql> drop table lru_demo_b11b3cc6ba_1;
+Execute OK. (0.008224 sec) Committed. (0.000946 sec)
+
+1 command(s) successfully processed.
+csql> drop table lru_demo_b11b3cc6ba_0;
+Execute OK. (0.008165 sec) Committed. (0.000955 sec)
+
+1 command(s) successfully processed.
+csql>

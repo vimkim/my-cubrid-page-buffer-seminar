@@ -1,0 +1,13 @@
+{
+  "database": "CBRD_27398_pgbuf_",
+  "registry": "/home/vimkim/.cub/db/4a8d6850/commondb/databases.txt",
+  "cubrid": "/home/vimkim/.cub/install/CBRD-27398-pgbuf-inspector-contract/debug_gcc",
+  "socket": "/home/vimkim/.cub/runtime/4a8d6850/tmp/pgbuf-inspector/0625c42f6289420d9c22892621eb61a1.sock",
+  "volmap_url": "http://192.168.4.2:7777",
+  "incarnation": "a5a5b6b989962990e9ec42fec2f7b405",
+  "sessions": {
+    "A": 2284312,
+    "B": 2284313
+  },
+  "started_unix_seconds": 1790735226.9544938
+}

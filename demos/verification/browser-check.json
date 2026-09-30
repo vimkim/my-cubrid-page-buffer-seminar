@@ -1,0 +1,36 @@
+{
+  "code": 0,
+  "url": "http://192.168.4.2:7777/sector/1/49",
+  "target": "1:3137",
+  "states": [
+    {
+      "step": "initial",
+      "class": "page focus-page unreserved runtime-resident runtime-dirty runtime-lru zone-lru3 lru-private"
+    },
+    {
+      "step": 2,
+      "class": "page focus-page unreserved runtime-resident runtime-dirty runtime-lru zone-lru3 lru-private"
+    },
+    {
+      "step": 3,
+      "class": "page focus-page unreserved runtime-resident runtime-dirty runtime-lru zone-lru3 lru-private"
+    },
+    {
+      "step": 4,
+      "class": "page focus-page unreserved runtime-resident runtime-dirty runtime-lru zone-lru3 lru-private"
+    },
+    {
+      "step": 5,
+      "class": "page focus-page unreserved runtime-resident runtime-dirty runtime-lru zone-lru3 lru-private"
+    },
+    {
+      "step": 6,
+      "class": "page focus-page unreserved runtime-resident runtime-dirty runtime-lru zone-lru2"
+    },
+    {
+      "step": 7,
+      "class": "page focus-page unreserved runtime-resident runtime-dirty runtime-lru zone-lru2"
+    }
+  ],
+  "errors": []
+}
