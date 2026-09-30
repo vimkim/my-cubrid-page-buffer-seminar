@@ -173,3 +173,10 @@ CUBRID-relative advantages and disadvantages, and a conclusion. The full lecture
 exceeds the former 15-minute comparison scope. The integrated first-principles
 route is now untimed, following the replacement lecture revision. No revised
 fixed total duration is asserted. See [the confirmed design](comparison-clarity-design.md).
+
+
+## Self-contained replacement session (2026-09-30)
+
+The [accepted revision specification](first-time-participant-revision-spec.md) governs the current first-principles session. A concrete request and object model precede textbook policy; compatible use, conflicting access and nested fix debt precede admission, final unfix, age, zones, quota and protected reuse. The exact itinerary selects bounded sections from existing lectures and keeps their full-curriculum navigation and deeper material. Background roles end at named session boundaries; detailed WAL, recovery, LSA, DWB and copied-generation reasoning is deferred to the next session.
+
+The session finishes with engine comparison and a page-journey recap, without a final diagnostic workshop. This changes neither the full curriculum's phases nor its required Core/Advanced and applied evidence. The [current Korean script](../my-presentation-script.html) contains all spoken segments and exact screen cues, remains outside participant navigation, and supersedes the older script preserved in history. The [constructed branch ledger](first-time-participant-revision-trace.md) and [integrated check record](first-time-participant-revision-checks.md) retain evidence limits and open human review.

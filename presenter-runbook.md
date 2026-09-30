@@ -13,11 +13,15 @@ Before presenting, open the exact served URL and check the intended viewport, di
 
 ## Current first-time participant session
 
-The current companion is [my-presentation-script.html](my-presentation-script.html). Its opening, objects and textbook sections are complete; the remaining full spoken segments are being integrated from the committed ticket contributions. Do not treat the shell as a finished full-session script. The previous companion remains in Git history and is superseded for this session.
+Use the [complete Korean spoken script](my-presentation-script.html) as the one current companion. It contains actual explanations, transitions, diagram cues, prediction pauses and reveal explanations for every selected stop. The previous script is superseded for this session and preserved in Git history. Ticket contribution fragments are author evidence, not additional current companions.
 
-Start at Lecture 1 `#session-request`, exit `#session-opening-end`; then Lecture 2 `#session-objects`, exit `#session-objects-end`. The object exit states the P/R/S/T/U to H1/H2/S1/S2/S3 role mapping and resets model state. Open F1 `#first-principles` through `#exercise`, then jump to Lecture 4 `#session-concurrency`. Do not continue F1 into its full-curriculum database/durability bridge during this session. The script repeats each screen cue, explanation, pause and reveal.
+The [Korean itinerary](ko/reference/first-principles-route.html#session-itinerary) and [English itinerary](en/reference/first-principles-route.html#session-itinerary) state exact entry, included sections, final included section and next stop. The script repeats the entire screen sequence. Its coverage table links every stop to its spoken segment. At an explicit exit, follow the next session cue rather than full-curriculum or section-next navigation.
 
-The session itinerary is independent of the full lecture navigation. At an explicit end-of-stop, follow the cue link rather than section-next. WAL, recovery, LSA, DWB internals and copied-generation detail are next-session material; older full-curriculum facilitation below still applies only when delivering that wider curriculum. No fixed total duration or participant-mastery claim is attached to this route.
+Start with the concrete request and objects, then F1 through `#exercise`, concurrent use, admission/final unfix and domain/age/zone/quota policy. List choice precedes the common branch checkpoint. Read both branches from that checkpoint independently; a resume of A's H1/H2 reads before B's S1/S2 scan is the only changed input. Continue through protected recheck and safe reuse, four background roles, handoff, post-write pacing, comparison and the page-journey recap. End at Lecture 18A `#session-page-journey`; there is no final diagnostic workshop in this session.
+
+WAL, LSA, recovery, DWB internals and copied-generation detail belong to the next session. Dirty changes still require preservation before possible reuse; successful write/completion does not waive current-state checks. No prior transaction-lock seminar is assumed. The older full-curriculum facilitation below remains available for that broader curriculum only, including F02 and detailed dirty-generation exercises. This session is untimed and does not replace Core/Advanced completion evidence.
+
+Close native outcomes before a new prediction. In presentation mode the opted-in sections reset answers on navigation; without JavaScript, close them manually. A displayed worked example may show its result; an unseen prediction must not. Formal Korean-language and EN/KO semantic human review remains pending; agent review and browser passes are not human acceptance or participant mastery.
 
 ## Integrated replacement itinerary
 

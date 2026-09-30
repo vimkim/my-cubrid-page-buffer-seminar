@@ -31,3 +31,10 @@ for the outcome and explanation. Treat simplified alternatives as teaching
 models; distinguish policy trade-offs from correctness failures. Existing deeper
 lectures remain supporting references, and the Markdown guide keeps technical
 authority. Update English and Korean together.
+
+
+## Self-contained first-time participant session
+
+The accepted [first-time participant specification](docs/first-time-participant-revision-spec.md) narrows one session without reducing the full curriculum. Preserve its exact request → objects → textbook → concurrency → admission/policy → branch outcomes/reuse → background → comparison/recap order. The paired first-principles itinerary owns entry, included blocks, exit and next-stop links; the [one current Korean script](my-presentation-script.html) repeats them outside participant navigation. At a selected exit, do not route section stepping into deferred detail without a visible boundary.
+
+Detailed WAL, LSA, recovery, DWB and copied-generation reasoning belongs to the next session. Preserve its full-curriculum pages and anchors. Keep dirty preservation and protected current-state rechecks visible. The two constructed residency branches reset at the same checkpoint; their source/arithmetic ledger is [author evidence](docs/first-time-participant-revision-trace.md), not a runtime observation. Adding prose invalidates prior language receipts; record current fingerprints without fabricating a reviewer. The [integration checks](docs/first-time-participant-revision-checks.md) distinguish technical results from pending human acceptance.

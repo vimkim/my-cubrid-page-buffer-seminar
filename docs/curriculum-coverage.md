@@ -190,3 +190,10 @@ All affected wording remains pending genuine human Korean-naturalness and semant
 The collection now contains 53 registered page pairs. Added `reference/new-page-vs-old-page.html` in English/Korean with a stable root redirect, a Topic-library entry, and links from the Lecture 3 fetch-mode table and the Lecture 5 `NEW_PAGE` section. It follows the pinned source one level below Lecture 5: the single miss branch, the header bootstrap, residual frame bytes, format metadata that bounds reads, publication order in overflow insertion, and stale-VPID safety as a caller protocol tracked as `VS-22`. Three new diagrams live in `assets/`.
 
 Lecture 5 remains the canonical owner of the allocation-to-buffer contract. The canonical audit gains a short "Why residual frame bytes are harmless" section. The new pair is pending genuine human Korean-naturalness and semantic-parity review.
+
+
+## First-time participant session reconciliation (2026-09-30)
+
+The inventory remains 54 registered EN/KO pairs; this revision adds no participant page pair. Existing lecture URLs, compatibility routes, Core/Advanced phases and deep content remain available. The paired first-principles itinerary selects request/objects, F1 through exercise, concurrent use, admission/policy, source-derived residency branches, protected reuse, 6A/6B/6C background stops and 18A comparison/recap. It does not require the deferred WAL/recovery/LSA/DWB/copied-generation material, and does not replace full-curriculum completion.
+
+The [one current Korean script](../my-presentation-script.html) integrates the committed 01–06 spoken contributions with exact entry/included/exit/next cues; the runbook distinguishes this session from older full-curriculum facilitation. The old companion remains in Git history. The [trace ledger](first-time-participant-revision-trace.md) is constructed pinned-source evidence, not a new experiment. The [AC01–AC19 check record](first-time-participant-revision-checks.md) records route-to-script coverage, content revision and genuine gate outcomes. Human Korean-naturalness and EN/KO semantic review remains pending.

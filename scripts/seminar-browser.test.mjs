@@ -691,3 +691,109 @@ test('selected background handoff and pacing preserve disclosure and session exi
     }
   }
 });
+
+test('ticket07 integrated itinerary and every Korean script cue resolve to the exact served checkout', { skip: unavailable }, async () => {
+  const { readFile } = await import('node:fs/promises');
+  const pages = new Map();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  try {
+    const scriptResponse = await page.goto(base + 'my-presentation-script.html');
+    assert.equal(scriptResponse.status(), 200);
+    assert.equal(await scriptResponse.text(), await readFile('my-presentation-script.html', 'utf8'));
+    assert.equal(await page.locator('html').getAttribute('lang'), 'ko');
+    assert.equal(await page.locator('main > section:not(#script-itinerary)').count(), 14);
+    assert.equal(await page.locator('h').count(), 0);
+    for (const section of await page.locator('main > section').all()) {
+      assert.equal(await section.locator(':scope > h2').count(), 1);
+    }
+    const scriptLinks = await page.locator('a[href]').evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
+    for (const href of scriptLinks) {
+      if (href.startsWith('#')) { assert.equal(await page.locator(href).count(), 1, href); continue; }
+      const [file, fragment] = href.split('#');
+      assert.ok(file.startsWith('ko/'), href);
+      if (!pages.has(file)) pages.set(file, new Set());
+      pages.get(file).add(fragment);
+    }
+    const routeOrders = [];
+    for (const language of ['en', 'ko']) {
+      const file = language + '/reference/first-principles-route.html';
+      const response = await page.goto(base + file);
+      assert.equal(await response.text(), await readFile(file, 'utf8'));
+      assert.equal(await page.locator('[data-session-stop]').count(), 12);
+      routeOrders.push(await page.locator('[data-session-stop]').evaluateAll(nodes => nodes.map(node => node.dataset.sessionStop)));
+      for (const stop of await page.locator('[data-session-stop]').all()) {
+        assert.equal(await stop.locator('[data-session-entry]').count(), 1);
+        assert.equal(await stop.locator('[data-session-exit]').count(), 1);
+      }
+      const links = await page.locator('#session-itinerary a').evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
+      for (const href of links) {
+        const url = new URL(href, base + file);
+        const target = url.pathname.replace(/^\//, '');
+        if (!pages.has(target)) pages.set(target, new Set());
+        pages.get(target).add(url.hash.slice(1));
+      }
+      assert.equal(await page.locator('a[href*="my-presentation-script"]').count(), 0);
+    }
+    assert.deepEqual(routeOrders[0], routeOrders[1]);
+    for (const [file, fragments] of pages) {
+      const response = await page.goto(base + file);
+      assert.equal(response.status(), 200, file);
+      const html = await response.text();
+      assert.equal(html, await readFile(file, 'utf8'), file);
+      assert.doesNotMatch(html, /<\/?h\s+[1-6]\b/i, file);
+      assert.equal(await page.locator('h').count(), 0, file);
+      for (const fragment of fragments) {
+        const section = page.locator('#' + fragment);
+        assert.equal(await section.count(), 1, file + '#' + fragment);
+        assert.equal(await section.isVisible(), true, file + '#' + fragment);
+        assert.equal(await section.locator(':scope > h2').count(), 1, file + '#' + fragment);
+      }
+      for (const img of await page.locator('img').all()) {
+        assert.ok(await img.evaluate(node => node.complete && node.naturalWidth > 0 && node.naturalHeight > 0), file);
+      }
+    }
+    assert.deepEqual(errors, []);
+  } finally { await page.close(); }
+});
+
+test('ticket07 Korean companion and complete itinerary remain readable without scripts on mobile', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const file of ['my-presentation-script.html', 'en/reference/first-principles-route.html', 'ko/reference/first-principles-route.html']) {
+      await page.goto(base + file);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), file);
+      const target = file.startsWith('my-') ? '#script-closing' : '#session-stop-comparison';
+      await page.locator(target).scrollIntoViewIfNeeded();
+      assert.equal(await page.locator(target).isVisible(), true);
+    }
+    await page.goto(base + 'my-presentation-script.html#script-opening');
+    await page.screenshot({ path: '/tmp/seminar07-script-mobile.png' });
+  } finally { await context.close(); }
+});
+
+test('ticket07 zone and protected-recheck assumptions precede concealed outcomes in both languages', { skip: unavailable }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/lessons/0007-replace-one-frame.html?present=1#zones');
+      const zone = page.locator('#zones');
+      const premise = zone.locator(':scope > p').filter({ hasText: language === 'en' ? 'Assume H1' : 'H1이 뒤쪽' });
+      assert.equal(await premise.isVisible(), true);
+      assert.equal(await zone.locator('details[open]').count(), 0);
+      await page.goto(base + language + '/lessons/0007-replace-one-frame.html?present=1#handoff-details');
+      const race = page.locator('#handoff-details');
+      assert.equal(await race.locator(':scope > p').filter({ hasText: language === 'en' ? 'no intervening unfix' : '그 사이에 unfix는 없습니다' }).isVisible(), true);
+      const answer = race.locator('details');
+      assert.equal(await answer.getAttribute('open'), null);
+      await answer.locator('summary').focus(); await page.keyboard.press('Enter');
+      assert.notEqual(await answer.getAttribute('open'), null);
+      await page.locator('[data-section-next]').click();
+      await page.locator('[data-section-previous]').click();
+      assert.equal(await answer.getAttribute('open'), null);
+      if (language === 'ko') await page.screenshot({ path: '/tmp/seminar07-recheck-projection.png' });
+    }
+  } finally { await page.close(); }
+});
