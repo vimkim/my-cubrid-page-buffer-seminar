@@ -14,6 +14,7 @@
     <div class="eyebrow">LECTURE 12A / Replacement</div>
     <h1>Dormant AOUT admission history</h1>
     <p>AOUT retains ghost admission metadata in the source, while pinned parameter tuning disables its operation.</p>
+    <p>Bonus: what AOUT could have contributed</p>
     <div class="pills"><span class="pill">Ghost metadata</span><span class="pill">No frame</span><span class="pill">Admission only</span><span class="pill">Forced off</span></div>
   </header>
   <div class="lesson-grid">
@@ -24,6 +25,11 @@
         <p>The data structures remain in source, but startup forces <code>data_aout_ratio = 0.0</code>. Initialization allocates no ghost nodes, and add/lookup helpers return immediately. Active replacement is the INVALID/VOID/private/shared three-zone LRU path from Lecture 12.</p>
         <p class="big-claim">AOUT is retained, disabled admission-history code. It neither stores page bytes nor chooses a victim in the pinned build.</p>
       </section>
+      <section class="section" id="purpose"><h2>Why remember a page after evicting it?</h2>
+<p><strong>Inferred role:</strong> distinguish a stream of one-time scan pages from pages requested again soon after eviction. Both requests miss the resident buffer, but the second suggests that keeping the page longer could have avoided a miss. AOUT would use that feedback to choose how much initial protection a reloaded page receives.</p>
+<ul><li><strong>Sequential scan:</strong> S1, S2, S3, … arrive once. Their later eviction records receive no matching request.</li><li><strong>Repeated use:</strong> H1 is evicted, then requested while its ghost record still exists. The buffer misses, but AOUT remembers H1.</li></ul>
+<p>This is a plausible purpose derived from the retained branches, not proof of the original designers’ intent or a measured improvement. An absent record means “not remembered,” not “never reused.” The bounded FIFO measures recency through retained eviction records, not a wall-clock deadline.</p>
+</section>
       <section class="section" id="entry">
         <div class="eyebrow">02 · One ghost entry</div>
         <h2>A VPID and former LRU index are enough to remember a past eviction</h2>
@@ -37,7 +43,8 @@ hash tables = max(floor(A / 1,000), 1)</pre>
       <section class="section" id="effect">
         <div class="eyebrow">03 · Retained design</div>
         <h2>A ghost hit would change first placement after reload</h2>
-        <div class="table-scroll"><table>
+        <p><strong>Decision point:</strong> the ordinary final unfix that reduces the global <code>fcnt</code> to zero and places a loaded <code>VOID</code> BCB. The table describes insertion before zone-boundary adjustment; special vacuum/direct-victim paths are outside this example. The private assignment is the final-unfix context’s assignment.</p>
+<div class="table-scroll"><table>
           <thead><tr><th>Reload context</th><th>Retained placement branch</th></tr></thead>
           <tbody>
             <tr><td>Enabled private-LRU assignment; same-private ghost hit</td><td>Current private LRU1 top</td></tr>
@@ -52,6 +59,7 @@ hash tables = max(floor(A / 1,000), 1)</pre>
 <p><strong>Hypothesis, with AOUT enabled:</strong> B reloads two pages under the same private assignment PB. H1 still has a ghost record from PB; S1 has none. Before boundary adjustment, H1 enters PB/LRU1 while S1 enters PB/LRU2. With AOUT off, both ordinary admissions enter PB/LRU1. No page bytes are cached in either ghost case: the miss and reload have already happened.</p>
 <details class="answer-disclosure"><summary>Expected trade-off, not a measured improvement</summary><p>Admitting unremembered scan pages below LRU1 could reduce their interference with reused pages. A same-domain ghost hit can regain stronger initial protection. But a reused page whose ghost has expired is also a miss in that history, and a saved index can outlive the session that used it. A different former index routes the reload to shared LRU2, not to a private owner. These cases can change hit rate and competition in either direction.</p><p>The private/shared same-list reuse rules still apply afterward: LRU1 keeps, LRU2 tests age, LRU3 normally boosts, subject to migration and special unfix. AOUT changes admission evidence; it supplies no new guarantee of fairness, safe reuse or performance.</p></details>
 </section>
+      <section class="section" id="reload-walkthrough"><h2>If AOUT were active: follow H1 once</h2><ol><li>H1 leaves private list PB through eviction. Its frame becomes reusable; AOUT retains only <code>{ H1, PB }</code> and queue links.</li><li>H1 is requested again while that record survives. It is a buffer miss: bytes must be loaded into a frame before the page can be used.</li><li>At ordinary final unfix, <code>pgbuf_unlatch_void_zone_bcb()</code> calls <code>pgbuf_remove_vpid_from_aout_list()</code>. A hit returns PB and consumes the record, returning its node to the free list.</li><li>With current assignment PB, H1 enters private LRU1 top. Without the record it would enter PB/LRU2 middle; with a different former index it would enter shared LRU2 middle.</li></ol><p><strong>What this could change:</strong> stronger protection now may prevent a later miss. It cannot undo the reload that already happened, promise residency, or make an unsafe victim reusable.</p></section>
       <section class="section" id="boundary">
         <div class="eyebrow">04 · Evidence boundary</div>
         <h2>Reviving AOUT requires a new engineering review</h2>
@@ -76,8 +84,10 @@ hash tables = max(floor(A / 1,000), 1)</pre>
     <nav class="lesson-nav" aria-label="Lesson contents">
       <strong>Lecture map</strong>
       <a href="#answer">1. Active status</a>
+      <a href="#purpose">Why remember a page after evicting it?</a>
       <a href="#entry">2. Ghost entry</a>
       <a href="#effect">3. Admission effect</a>
+      <a href="#reload-walkthrough">Reload walkthrough</a>
       <a href="#boundary">4. Revival boundary</a>
       <a href="#primary-reading">Primary reading</a>
       <hr>
