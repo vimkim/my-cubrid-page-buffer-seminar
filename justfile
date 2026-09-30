@@ -22,15 +22,15 @@ serve port="" host="192.168.4.2":
     echo "  English: http://{{host}}:$port/en/index.html"
     exec copyparty -i 0.0.0.0 -p "$port" -v .::r -q
 
-# Serve the site on all IPv4 interfaces without request logging. Requires copyparty on PATH.
-# Without a port, use the first free port at or above 3935.
+# Serve the site like serve, but on a fixed port (default 3935) without probing for a free one.
 serve-3935 port="3935" host="192.168.4.2":
     #!/usr/bin/env bash
+    set -euo pipefail
     port="{{port}}"
     echo "Serving on http://{{host}}:$port/"
     echo "  Korean: http://{{host}}:$port/ko/index.html"
     echo "  English: http://{{host}}:$port/en/index.html"
-    exec copyparty -i 0.0.0.0 -p 3935 -v .::r -q
+    exec copyparty -i 0.0.0.0 -p "$port" -v .::r -q
 
 # Walk through private LRU reuse and cross-session sharing; press Enter per step.
 [positional-arguments]
