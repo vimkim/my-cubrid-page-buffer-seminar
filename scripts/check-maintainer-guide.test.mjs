@@ -563,3 +563,31 @@ test("a failed Copyparty request fails the aggregate command", async () => {
     );
   }
 });
+
+
+test("manifest-listed seminar images share SVG ownership and safety checks", async () => {
+  const root = await createValidDocumentSet();
+  await write(root, "teaching-pages.json", JSON.stringify({ pages: [{
+    en: "en/lesson.html", ko: "ko/lesson.html"
+  }] }));
+  await write(root, "en/lesson.html", '<img src="../assets/seminar.svg" alt="LRU">');
+  await write(root, "ko/lesson.html", '<img src="../assets/seminar.svg" alt="LRU">');
+  await write(root, "assets/seminar.svg", '<svg viewBox="0 0 100 20"><text>LRU</text></svg>');
+  const result = await runValidator(root);
+  assert.match(result.stdout, /SVG assets: PASS \(2 displayed, 0 orphaned\)/);
+
+  await write(root, "assets/seminar.svg", '<svg viewBox="0 0 100 20"><script>bad()</script></svg>');
+  await assert.rejects(runValidator(root), error => {
+    assert.match(error.stderr, /seminar\.svg: contains active content/);
+    return true;
+  });
+
+  await write(root, "assets/seminar.svg", '<svg viewBox="0 0 100 20"/>');
+  await write(root, "en/lesson.html", '<a href="../assets/seminar.svg">Link only</a>');
+  await write(root, "ko/lesson.html", '<p>No image</p>');
+  await write(root, "unlisted.html", '<img src="assets/seminar.svg" alt="LRU">');
+  await assert.rejects(runValidator(root), error => {
+    assert.match(error.stderr, /seminar\.svg: orphan SVG/);
+    return true;
+  });
+});

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" role="img" aria-labelledby="title desc">
+<style>text{font-family:system-ui,sans-serif;fill:#243e36;font-size:20px}.small{font-size:17px}.heading{font-size:24px;font-weight:700}.node{fill:#f1f5f1;stroke:#80968c;stroke-width:2}.hot{fill:#e0f0e9;stroke:#176b52;stroke-width:3}.line{stroke:#176b52;stroke-width:2;fill:none}</style>
+<rect width="800" height="480" rx="8" fill="#fffefa"/>
+<title id="title">Exact LRU: direct lookup and move to MRU</title><desc id="desc">Request 5 in the three-frame trace. Hash table lookup finds P in the middle. Order S P R becomes P S R without moving page bytes.</desc><text x="30" y="42" class="heading">Request 5: P hits in F0</text>
+<text x="30" y="85" class="small">MRU at left · LRU at right · next → / ← prev</text>
+<text x="30" y="155" class="">Before</text>
+<rect x="210" y="120" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="255" y="153" class="">S</text>
+<text x="315" y="153" class="">⇄</text>
+<rect x="355" y="120" width="90" height="50" rx="5" class="hot"/><text text-anchor="middle" x="400" y="153" class="">P</text>
+<text x="460" y="153" class="">⇄</text>
+<rect x="500" y="120" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="545" y="153" class="">R</text>
+<rect x="290" y="210" width="225" height="50" rx="5" class="hot"/><text x="310" y="242" class="">table[P] → P node</text>
+<path d="M400 210 V177" class="line"/><text x="530" y="243" class="small">Direct node lookup</text>
+<text x="30" y="330" class="">After</text>
+<rect x="210" y="295" width="90" height="50" rx="5" class="hot"/><text text-anchor="middle" x="255" y="328" class="">P</text>
+<text x="315" y="328" class="">⇄</text>
+<rect x="355" y="295" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="400" y="328" class="">S</text>
+<text x="460" y="328" class="">⇄</text>
+<rect x="500" y="295" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="545" y="328" class="">R</text>
+<text x="30" y="407" class="">Unlink P; prepend the same node. R is still the LRU victim.</text>
+<text x="30" y="445" class="small">Frames stay F0=P, F1=R, F2=S. Only metadata links change.</text>
+</svg>

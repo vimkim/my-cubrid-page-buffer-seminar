@@ -277,14 +277,31 @@ function isInside(parent, child) {
 function validateAssets(root, pages, pageMarkdown, failures) {
   const assetRoot = path.resolve(root, "assets");
   const displayedAssets = new Set();
+  // The bilingual seminar shares assets/ with the Markdown guide. Only actual
+  // image references in manifest-listed pages establish seminar ownership.
+  const assetPages = new Map(pageMarkdown);
+  const manifestPath = path.join(root, "teaching-pages.json");
+  if (fs.existsSync(manifestPath)) {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    for (const pair of manifest.pages) {
+      for (const language of ["en", "ko"]) {
+        const page = path.resolve(root, pair[language]);
+        if (!isInside(root, page) || !fs.existsSync(page)) {
+          failures.push(`${pair[language]}: seminar asset owner is missing or outside the site`);
+          continue;
+        }
+        assetPages.set(page, fs.readFileSync(page, "utf8"));
+      }
+    }
+  }
 
-  for (const page of pages) {
-    if (/<svg\b/i.test(markdownOutsideCode(pageMarkdown.get(page)))) {
+  for (const [page, content] of assetPages) {
+    if (/<svg\b/i.test(markdownOutsideCode(content))) {
       failures.push(
         `${path.relative(root, page)}: inline SVG is outside the root asset seam`,
       );
     }
-    for (const image of extractMarkdownTargets(pageMarkdown.get(page))) {
+    for (const image of extractMarkdownTargets(content)) {
       if (!image.image) {
         continue;
       }
@@ -346,7 +363,7 @@ function validateAssets(root, pages, pageMarkdown, failures) {
     : [];
   const orphanAssets = ownedAssets.filter((asset) => !displayedAssets.has(asset));
   for (const orphan of orphanAssets) {
-    failures.push(`${path.relative(root, orphan)}: orphan SVG is not displayed by a guide page`);
+    failures.push(`${path.relative(root, orphan)}: orphan SVG is not displayed by a guide or manifest-listed seminar page`);
   }
 
   return {

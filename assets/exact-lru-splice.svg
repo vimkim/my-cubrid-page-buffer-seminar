@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" role="img" aria-labelledby="title desc">
+<style>text{font-family:system-ui,sans-serif;fill:#243e36;font-size:20px}.small{font-size:17px}.heading{font-size:24px;font-weight:700}.node{fill:#f1f5f1;stroke:#80968c;stroke-width:2}.hot{fill:#e0f0e9;stroke:#176b52;stroke-width:3}.line{stroke:#176b52;stroke-width:2;fill:none}</style>
+<rect width="800" height="480" rx="8" fill="#fffefa"/>
+<title id="title">Detach and prepend with sentinel nodes</title><desc id="desc">Start H S P R Z. Connect S and R to detach P, then insert P after H to obtain H P S R Z. H and Z are dummy boundary nodes.</desc><text x="30" y="40" class="heading">Splice a known node: constant pointer work</text>
+<text x="30" y="76" class="small">H / Z = sentinels · H.next = MRU · Z.prev = LRU</text>
+<rect x="65" y="95" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="110" y="128" class="">H</text>
+<text x="170" y="128" class="">⇄</text>
+<rect x="210" y="95" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="255" y="128" class="">S</text>
+<text x="315" y="128" class="">⇄</text>
+<rect x="355" y="95" width="90" height="50" rx="5" class="hot"/><text text-anchor="middle" x="400" y="128" class="">P</text>
+<text x="460" y="128" class="">⇄</text>
+<rect x="500" y="95" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="545" y="128" class="">R</text>
+<text x="605" y="128" class="">⇄</text>
+<rect x="645" y="95" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="690" y="128" class="">Z</text>
+<text x="30" y="188" class="heading">1  Detach P: connect its neighbors</text>
+<text x="55" y="222" class="small">S.next = R; R.prev = S</text>
+<text x="30" y="269" class="heading">2  Insert P between H and S</text>
+<text x="55" y="303" class="small">P.prev = H; P.next = S; S.prev = P; H.next = P</text>
+<rect x="65" y="330" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="110" y="363" class="">H</text>
+<text x="170" y="363" class="">⇄</text>
+<rect x="210" y="330" width="90" height="50" rx="5" class="hot"/><text text-anchor="middle" x="255" y="363" class="">P</text>
+<text x="315" y="363" class="">⇄</text>
+<rect x="355" y="330" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="400" y="363" class="">S</text>
+<text x="460" y="363" class="">⇄</text>
+<rect x="500" y="330" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="545" y="363" class="">R</text>
+<text x="605" y="363" class="">⇄</text>
+<rect x="645" y="330" width="90" height="50" rx="5" class="node"/><text text-anchor="middle" x="690" y="363" class="">Z</text>
+<text x="30" y="430" class="">After: every neighbor pair links in both directions.</text>
+<text x="30" y="461" class="small">Keep the table entry: P is still the same node.</text>
+</svg>
