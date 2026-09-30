@@ -1,0 +1,50 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>06 비교와 마무리 — 통합용 한국어 발화 원고</title></head><body><main>
+<h1>06 · 엔진 비교와 페이지 여정 마무리</h1>
+<p>통합 원고에 넣을 완성 발화 구간입니다. 이 파일 자체가 전체 세션 원고는 아닙니다. 아래 상대 링크는 이 기여 파일의 위치 기준입니다. 통합할 때 최종 원고 위치에 맞춰 경로를 조정합니다.</p>
+<section id="script-comparison-entry"><h2>같은 질문으로 세 엔진 보기</h2>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#first-principles">18A · 공통 문제</a>. H1/H2와 S1/S2 흐름을 가리킨다.</p>
+<p>이제 다른 엔진을 볼 텐데 새 이야기를 시작할 필요는 없습니다. 우리가 반복해서 읽던 H1과 H2, 그리고 한 번씩 지나가는 S1, S2를 그대로 떠올려 보세요. 질문도 같습니다. 스캔이 끝난 뒤 H1과 H2가 남아 있을까요? 새로 들어온 페이지를 모두 강하게 보호하면 나중에 다시 필요한 페이지가 밀려날 수 있습니다. 그 현상을 캐시 오염이라고 부릅니다.</p>
+<p>지금부터 보는 그림은 세 엔진의 성능 측정이 아닙니다. 같은 요청을 어떤 정보로 판단하는지 비교하는 그림입니다. 별도 설명이 없으면 페이지는 clean이고, 사용 중인 프레임은 교체할 수 없다고 가정합니다. 새 페이지의 진입 위치, 보호를 얻는 조건, 보호가 줄어드는 조건, 후보를 찾는 위치, 이 네 가지를 따라가겠습니다.</p>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#cubrid">CUBRID 복습</a>.</p>
+<p>CUBRID에서는 먼저 어느 private 또는 shared 목록에서 경쟁할지 봤습니다. Private라는 이름이 페이지를 한 실행 주체만 읽는다는 뜻은 아니었죠. 하나의 상주 페이지가 정책상 어느 목록에 놓이는지를 말합니다. 그 목록 안의 LRU1, LRU2, LRU3가 보호 정도와 후보 위치를 나눕니다. 일반적인 마지막 unfix에서 정책을 갱신하고, LRU1 재사용은 매번 맨 앞으로 이동시키지 않습니다. LRU2에는 목록의 age 조건이 있고, LRU3 재사용은 LRU1으로 올릴 수 있습니다. 목록에서 이동해도 프레임의 메모리 주소를 옮기는 것은 아닙니다.</p>
+<p>앞의 두 갈래에서는 A와 B가 같은 private 도메인을 썼습니다. B의 S1/S2 스캔 전에 A가 H1/H2 읽기를 재개하면 둘 다 남았습니다. 같은 체크포인트에서 A가 멈춰 있으면 S1이 H1을 대체했고 H2만 남았습니다. 바꾼 입력은 A가 그때 읽기를 재개하는지였습니다. 이 짧은 스캔의 결과가 도메인의 격리나 더 긴 스캔까지 보장하는 것은 아닙니다. 그리고 후보가 됐다는 것과 안전하게 다른 페이지를 담을 수 있다는 것은 끝까지 별개입니다. 이제 이 두 질문을 PostgreSQL과 InnoDB에 적용해 보겠습니다.</p>
+</section>
+<section id="script-postgres"><h2>PostgreSQL: 기회와 ring</h2>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#postgres-model">descriptor와 clock</a>, 이어서 <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#postgres-credit">크레딧 그림</a>.</p>
+<p>PostgreSQL의 buffer descriptor는 CUBRID BCB처럼 프레임의 상태를 기록합니다. Descriptor 배열을 clock hand가 순환합니다. 페이지를 배열 안에서 옮기는 대신, 다음에 어느 항목을 볼지를 바꾸는 겁니다. 각 페이지에는 usage_count라는 작은 크레딧이 있고 상한은 5입니다. Pin은 호출자가 쓰는 동안 프레임의 교체를 막습니다. 이것도 내용의 동시 접근을 보호하는 잠금과는 다릅니다.</p>
+<p>H1이 처음 들어와 크레딧이 1이라고 합시다. 같은 backend가 이전 pin을 완전히 풀고 나중에 다시 pin하면 기본 전략에서 크레딧이 늘 수 있습니다. 그림의 1, 2, 3은 이런 별도 접근이고, 그 사이에 clock의 차감은 없다고 가정했습니다. Pin을 잡은 채 중첩해서 pin한다고 shared 크레딧이 계속 늘지는 않습니다. 재사용 없이 hand가 방문하면 양수 크레딧을 하나씩 줄입니다. 1에서 0으로 만든 그 방문에 바로 가져가는 것이 아니라 계속 진행하고, 이후 0인 상태로 만나면서 unpinned여야 후보로 확보합니다. 시간 몇 초가 지났다는 뜻이 아닙니다.</p>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#postgres-ring">ring 그림</a>.</p>
+<p>Clock만으로 모든 스캔을 알아내지는 못합니다. 그래서 해당 전략을 쓰는 대량 작업은 shared frame ID를 담은 작은 ring을 돌려 쓸 수 있습니다. 새 S 페이지가 이전 S 페이지의 프레임을 재사용하면 스캔이 계속 풀 전체를 넓게 차지하는 일을 줄일 수 있죠. 그림의 슬롯 세 개는 설명용이지 실제 ring 크기를 설정한 값이 아닙니다. 다른 사용자가 pin했거나 usage_count가 1보다 크면 ring 재사용에서 제외합니다. 실패하면 전역 후보 선택으로 갈 수 있습니다. 그러니 이것은 별도의 전용 풀도, 모든 스캔을 자동 보호하는 장치도 아닙니다.</p>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#postgres-first-trace">후보 탐색 예시</a>. 이어지는 소스 체크리스트는 필요할 때만 펼친다.</p>
+<p>여기서는 동시 변경이 없고 ring 경로를 쓰지 않는다고 합시다. 첫 descriptor의 크레딧이 2면 1로 줄이고 지나갑니다. 다음 것이 pin되어 있으면 크레딧이 0이어도 건너뜁니다. 그다음 clean이고 unpinned이며 크레딧 0인 것을 후보로 확보합니다. 실제 이전 페이지의 연결을 없앨 때도 상태 검사가 남습니다. 크레딧은 우선순위를 정할 뿐 사용자 보호를 대신하지 않습니다.</p>
+</section>
+<section id="script-innodb"><h2>InnoDB: 진입 후 재사용을 관찰한다</h2>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#innodb-model">old/young 그림</a>.</p>
+<p>InnoDB는 MySQL의 스토리지 엔진입니다. Buffer-pool instance마다 목록이 있고 페이지 ID가 어느 instance에 들어갈지 정합니다. Young과 old는 하나의 상주 LRU 목록을 나눈 영역입니다. Old도 메모리에 남아 있는 페이지입니다. 이 그림은 항목이 512개보다 많고 old 영역이 이미 형성된 목록을 가정합니다. 디스크에서 읽은 S 페이지는 young 맨 앞이 아니라 old 경계 바로 뒤로 들어갑니다. 기본 old 목표는 37퍼센트입니다. Midpoint라는 이름 때문에 정확히 반으로 나눈다고 생각하면 안 됩니다. 짧은 목록은 head 삽입이고, 메모리에서 새로 만든 페이지도 young으로 들어가므로 모든 진입이 같지는 않습니다.</p>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#innodb-promotion">0 / 200 / 1,200ms 그림</a>.</p>
+<p>스캔이 한 페이지의 여러 행을 읽으면 짧은 시간에 같은 페이지를 여러 번 만집니다. 이 즉시 재접근을 모두 장기적인 유용함으로 보면 스캔 페이지도 강한 보호를 받겠죠. 기본 시간 조건은 첫 접근에서 적어도 1,000밀리초가 지난 뒤의 적격 접근을 요구합니다. 그림에서는 0에 처음 접근하고 200에 다시 접근해도 old입니다. 1,200에 다시 접근하면 young으로 갈 자격이 생깁니다. 시간만 지나면 저절로 올라가는 것은 아닙니다. 페이지가 계속 old에 상주하고, eviction이 시작됐으며, 우선순위를 갱신하는 일반 접근이라는 전제도 있습니다. 특수 SCAN이나 PEEK_IF_IN_POOL 경로는 이 younging을 우회합니다. 그전에 퇴출됐으면 다시 적재해야 합니다.</p>
+<p>CUBRID의 LRU2 age는 목록의 tick과 페이지 수였고 여기서는 첫 접근 뒤의 실제 시간입니다. 둘 다 재사용을 걸러 내지만 같은 나이를 재는 것은 아닙니다. 빠른 스캔 접근을 걸러 내는 장점이 있고, 새로 유용해진 페이지도 기다리는 동안 밀릴 수 있다는 비용이 있습니다.</p>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#innodb-first-trace">old tail 후보 탐색</a>.</p>
+<p>이제 free list가 비었고 압축 페이지의 다른 경로도 없으며 동시 경쟁은 없다고 합시다. Tail에서 사용 중인 것은 건너뛰고, dirty인 것도 즉시 clean 교체 대상으로는 쓰지 못합니다. Clean이고 이동 가능한 페이지를 퇴출한 뒤에는 free list로 돌아가 블록을 얻습니다. 실제 동시 실행에서는 다른 주체가 그 블록을 먼저 가져갈 수도 있습니다. 이 역시 정책에서 차갑게 보인다는 사실만으로 다음 요청의 성공까지 예약한 것은 아닙니다.</p>
+</section>
+<section id="script-tradeoffs"><h2>이점과 비용, 그리고 용량의 한계</h2>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#dirty">dirty 후보 표</a>, <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#postgres-tradeoffs">PostgreSQL 비교</a>, <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#innodb-tradeoffs">InnoDB 비교</a>.</p>
+<p>Dirty 페이지의 변경은 버리면 안 됩니다. CUBRID는 일반 detach에 clean을 요구하고 page-flush와 post-flush가 진행을 도울 수 있습니다. PostgreSQL은 dirty 후보를 선택한 backend가 쓰기와 재검사를 수행할 수 있습니다. InnoDB도 즉시 교체에는 clean이 필요하고, 압력을 받는 요청이 쓰기를 하고 free list를 재시도할 수 있습니다. 자세한 보존 순서는 다음 세션의 주제입니다. 지금 기억할 것은 쓰기가 끝났다는 말만으로 현재 사용자와 대기자, 페이지 ID 검사를 생략할 수 없다는 점입니다.</p>
+<p>PostgreSQL은 일반 버퍼의 최근 순서 목록을 유지하지 않아도 됩니다. 대신 작은 크레딧만으로는 같은 크레딧의 두 페이지 중 누가 더 최근인지 모르고, hand를 여러 번 돌려야 할 수 있습니다. Ring은 해당 작업의 스캔 공간을 제한할 수 있지만 모든 스캔이 그 전략을 쓰지는 않습니다. CUBRID도 hot LRU1을 매 hit마다 옮기는 것은 아니므로, 목록이 있다는 이유만으로 비용 순위를 정할 수는 없습니다.</p>
+<p>InnoDB는 old 진입과 시간 조건으로 빠른 스캔을 걸러 냅니다. 하지만 느린 스캔도 시간 조건을 만족할 수 있고, 진짜로 유용한 새 페이지가 보호받기 전에 사라질 수도 있습니다. Instance별 경쟁 범위와 CUBRID의 private/shared quota 도메인도 다릅니다. 두 엔진 모두 후보를 찾는 작업, cleaning과 재시도 비용을 부담하지만 그 비용이 생기는 위치가 다릅니다.</p>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#map">비교 지도</a>, <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#misreadings">이름 주의</a>, <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#retrieval">짧은 질문</a>.</p>
+<p>표를 세 가지 기억 방식으로 읽어 보세요. CUBRID는 도메인과 zone, PostgreSQL은 크레딧, InnoDB는 young/old 위치와 재접근 조건입니다. 최근에 사용했다는 말만으로 교체 후보가 절대 되지 않는다고 할 수 있을까요? 잠시 생각해 보겠습니다.</p>
+<p class="cue">잠시 멈춘 뒤 retrieval의 설명을 연다.</p>
+<p>최근 사용을 어떻게 기억하고 보호하는지가 서로 다릅니다. 그 정책상 선호와 실제 재사용 안전 조건은 또 별개입니다. InnoDB old를 CUBRID LRU3와 동일하게 부르거나 ring을 private LRU라고 부르면 진입과 승격, 경쟁 범위를 놓칩니다.</p>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#session-capacity">용량 질문</a>. 답은 닫아 둔다.</p>
+<p>마지막으로 용량 문제를 분리하겠습니다. 교과서 모델로 초기화해서 빈 프레임 세 개에 A, B, C, D를 세 번 반복합니다. 여기 A와 B는 실행 주체가 아니라 교과서 페이지 이름입니다. Clean이며 교체 가능하고, miss마다 적재하며 미리 읽기와 우회는 없습니다. 네 페이지를 동시에 담을 수 없으니 어느 정책이든 열두 번 모두 miss일까요? 답을 열기 전에 용량이 보장하는 사실이 정확히 어디까지인지 생각해 보세요.</p>
+<p class="cue">잠시 멈춘 뒤 session-capacity의 정책 반례를 연다.</p>
+<p>모두 miss일 필요는 없습니다. 기존 trace에서 LRU는 12번이지만 MRU와 OPT는 6번입니다. 동시에 전부 담을 수 없다는 사실은 이후의 모든 접근이 miss라는 뜻이 아닙니다. MRU가 항상 낫다는 뜻도 아니죠. A, B를 한 번 읽고 C, D만 다섯 번 반복하면 LRU는 4번, MRU는 12번 miss입니다. 실제 CUBRID 순환 실험에서 관찰된 all-miss도 그 설정과 요청 순서의 결과입니다. 교과서 모델의 작은 용량과 수치를 세 DB의 실행 결과로 옮겨 말하지 않겠습니다.</p>
+</section>
+<section id="script-closing"><h2>페이지 여정 마무리</h2>
+<p class="cue">화면: <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#conclusion">세 방식의 결론</a>, 마지막으로 <a href="../../../ko/lessons/0018a-compare-replacement-policies.html#session-page-journey">여정 마무리</a>. 이 절에서 세션을 끝낸다.</p>
+<p>CUBRID는 어느 그룹과 zone인지 묻고, PostgreSQL은 재사용 기회가 얼마나 남았는지 묻고, InnoDB는 새로 읽은 페이지가 더 강한 보호를 얻을 만큼 다시 쓰였는지 묻습니다. 유용한 페이지를 남기는 일과 지금 재사용할 수 있는 프레임을 만드는 일은 별개의 책임입니다. 어느 방식이 빠른지는 요청과 설정을 통제한 측정이 있어야 답할 수 있습니다.</p>
+<p>처음의 레코드 요청으로 돌아갑시다. 호출자가 필요한 페이지를 찾고, 하나의 작업에서 여러 페이지를 방문할 수도 있습니다. 버퍼는 페이지 ID에 대응하는 프레임과 BCB를 찾습니다. 없으면 적재할 공간이 필요하죠. Fix로 사용하는 기간을 보호하고, 호환되는 latch로 바이트 접근을 허용받았습니다. 사용이 끝나면 대응하는 unfix를 해야 했고, 중첩 사용이면 남은 빚이 0인지 봐야 했습니다.</p>
+<p>일반적인 마지막 unfix는 진입이나 재사용 정책을 갱신하는 계기가 됩니다. 다른 요청에 공간이 필요하면 목록과 후보를 고르지만, 그 후보에 누가 다시 접근했는지 보호 아래 재검사합니다. Dirty 데이터는 보존해야 하고 background 작업은 진행을 도울 수 있습니다. 그래도 즉시 재사용이나 정해진 시간 안의 성공을 보장하지는 않습니다. 안전하게 분리하고 이전 매핑을 없앤 뒤에 같은 프레임이 다른 페이지 ID를 담습니다. 주소가 같다고 같은 페이지인 것은 아니었습니다.</p>
+<p>이것으로 요청에서 재사용까지 한 바퀴를 마쳤습니다. H1/H2가 남거나 밀려나는 이유를 정책 상태와 재사용 순서로 설명하고, 선택된 후보를 왜 다시 확인하는지도 연결했습니다. 오늘 마무리는 새 진단 문제가 아닙니다. 상세한 durability 순서와 recovery는 다음 세션에 이어서 다루겠습니다.</p>
+</section></main></body></html>

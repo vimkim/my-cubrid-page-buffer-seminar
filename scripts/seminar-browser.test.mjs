@@ -597,3 +597,51 @@ test('ticket04 branch explanations remain keyboard-readable without JavaScript o
     }
   } finally { await context.close(); }
 });
+
+test('ticket06 capacity prediction and page journey preserve presentation, keyboard and result routes', { skip: unavailable }, async () => {
+  for (const language of ['en', 'ko']) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      await page.goto(base + language + '/lessons/0018a-compare-replacement-policies.html?present=1#session-capacity');
+      const section = page.locator('#session-capacity');
+      const answer = section.locator('details');
+      assert.equal(await answer.getAttribute('open'), null);
+      assert.equal(await answer.locator('p').first().isVisible(), false);
+      assert.match(await section.locator(':scope > p').first().textContent(), /A B C D/);
+      await answer.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.equal(await answer.locator('p').first().isVisible(), true);
+      assert.match(await answer.textContent(), /12/);
+      assert.match(await answer.textContent(), /6/);
+      await page.locator('[data-section-next]').click();
+      await page.locator('#conclusion').waitFor({ state: 'visible' });
+      await page.locator('[data-section-next]').click();
+      await page.locator('#session-page-journey').waitFor({ state: 'visible' });
+      await page.locator('[data-section-previous]').click();
+      await page.locator('#conclusion').waitFor({ state: 'visible' });
+      await page.locator('[data-section-previous]').click();
+      await section.waitFor({ state: 'visible' });
+      assert.equal(await answer.getAttribute('open'), null);
+      await section.locator('a[href="../reference/replacement-lab.html#results"]').click();
+      await page.waitForURL('**/replacement-lab.html#results');
+      assert.match(await page.locator('#results').textContent(), /12 \/ 9/);
+    } finally { await page.close(); }
+  }
+});
+
+test('ticket06 comparison and closing read without JavaScript at mobile width', { skip: unavailable }, async () => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  try {
+    const page = await context.newPage();
+    for (const language of ['en', 'ko']) {
+      await page.goto(base + language + '/lessons/0018a-compare-replacement-policies.html');
+      for (const id of ['postgres-model', 'innodb-model', 'session-capacity', 'session-page-journey']) assert.equal(await page.locator('#' + id).isVisible(), true);
+      const answer = page.locator('#session-capacity details');
+      assert.equal(await answer.getAttribute('open'), null);
+      await answer.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      assert.equal(await answer.locator('p').first().isVisible(), true);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    }
+  } finally { await context.close(); }
+});

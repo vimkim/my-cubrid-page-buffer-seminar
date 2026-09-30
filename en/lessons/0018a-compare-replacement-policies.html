@@ -31,7 +31,7 @@
 <p>A <strong>domain</strong> here means one private or shared LRU list that groups resident pages for replacement decisions. It is not a separate copy of the page buffer or an exclusive reservation of frames. A page belongs to one such list at a time.</p>
 <div class="comparison-flow" role="group" aria-label="CUBRID replacement stages"><div><strong>Choose a list</strong><p>Private / shared</p><span>Which group competes?</span></div><div><strong>Use its zones</strong><p>LRU1 → LRU2 → LRU3</p><span>Boundary pressure ages pages</span></div><div><strong>Check LRU3</strong><p>Candidate → safety checks</p><span>Cold does not mean reusable</span></div></div>
 <p>Ordinary final-unfix transitions update this policy. LRU1 protects hot pages; LRU2 gives an intermediate chance; LRU3 supplies candidates. Ordinary reuse in LRU1 leaves the page in place. LRU2 promotion has a list-age test, while ordinary LRU3 reuse returns the page to LRU1. Zone movement changes metadata, not the frame's physical location.</p>
-<p>For H1/H2 and the scan, the result depends on domain assignment, admission, reuse and quota pressure. A private domain does not guarantee isolation from every other access stream. Reusing the frame for a different page requires clean state and protected checks of users, waiters and other state. AOUT is disabled at this revision.</p><details class="technical-detail"><summary>Expand implementation details and sources</summary>
+<p>For H1/H2 and the scan, the result depends on domain assignment, admission, reuse and quota pressure. A private domain does not guarantee isolation from every other access stream. Reusing the frame for a different page requires clean state and protected checks of users, waiters and other state. AOUT is disabled at this revision.</p><p>In the preceding constructed CUBRID branches, A and B shared one private domain. When A resumed H1/H2 reads before B scanned S1/S2, both hot pages remained; with A paused, S1 replaced H1 while H2 remained. Reuse timing was the changed input. This bounded result does not promise isolation for private domains or immunity to longer scans.</p><details class="technical-detail"><summary>Expand implementation details and sources</summary>
 
 
         <ol>
@@ -74,7 +74,7 @@
 
 <section class="section" id="postgresql">
 <h2>PostgreSQL: the clock reduces reuse credits</h2>
-<p>Instead of an exact recency rank, it uses a bounded usage count. The clock skips pinned buffers, decrements positive counts, and claims an unpinned zero-count candidate. Dirty candidates may require flushing and revalidation.</p>
+<p>PostgreSQL remembers bounded reuse credit, aged by clock visits rather than a recency list. The <a href="#postgres-credit">credit example</a> shows the transitions; the source checklist follows.</p>
 <details class="technical-detail"><summary>Expand implementation details and sources</summary>
 
 
@@ -113,7 +113,7 @@
 
 <section class="section" id="innodb">
 <h2>InnoDB: admit into old and observe reuse</h2>
-<p>In a list with an old region, disk-read pages enter at the old boundary. A qualifying later access can promote them to young. Newly created pages and short lists have different admission rules. Time passing alone does not promote a page.</p>
+<p>InnoDB filters disk-read admission through old placement and qualifying later reuse into young. The <a href="#innodb-promotion">promotion example</a> states the time and residency assumptions; the source checklist follows.</p>
 <details class="technical-detail"><summary>Expand implementation details and sources</summary>
 
 
@@ -135,12 +135,12 @@
         <div class="table-scroll"><table>
           <thead><tr><th>Engine</th><th>When the candidate is dirty</th><th>Background help</th></tr></thead>
           <tbody>
-            <tr><td>CUBRID</td><td>Ordinary detach requires clean. Dirty LRU3 stays resident until generation-aware flush makes it clean.</td><td>Page-flush and post-flush/direct-victim progress cooperate with waiting allocators.</td></tr>
+            <tr><td>CUBRID</td><td>Ordinary detach requires clean. Dirty LRU3 needs preservation work before it can become clean; a completed write alone does not authorize reuse.</td><td>Page-flush and post-flush/direct-victim progress cooperate with waiting allocators.</td></tr>
             <tr><td>PostgreSQL</td><td>The clock may select a dirty unpinned buffer. The allocating backend can conditionally lock, flush, and revalidate it.</td><td>The background writer cleans likely near-future victims ahead of demand.</td></tr>
-            <tr><td>InnoDB</td><td>Immediate replacement needs clean. Foreground pressure may flush one dirty tail page and retry the free list.</td><td>Page cleaners pursue both LRU-tail free-page targets and redo/flush-list targets.</td></tr>
+            <tr><td>InnoDB</td><td>Immediate replacement needs clean. Foreground pressure may flush one dirty tail page and retry the free list.</td><td>Page cleaners help produce free space near the LRU tail and also service a separate list of dirty pages.</td></tr>
           </tbody>
         </table></div>
-        <p class="big-claim">“Cold” answers where to look. “Clean and unowned” answers whether reuse can proceed now.</p>
+        <p class="big-claim">“Cold” answers where to look. Clean state and protected checks of current users, waiters and identity decide whether reuse can proceed.</p>
       </section>
 
 <section class="section" id="postgres-tradeoffs">
@@ -202,12 +202,27 @@
 <div class="quiz" data-audience-checkpoint><p>Can a recently used page become a replacement candidate? Separate reuse information from safety conditions in each engine.</p><details class="answer-disclosure"><summary>Show explanation</summary><p>CUBRID uses domains and zones, PostgreSQL uses usage credits, and InnoDB uses young/old placement. Candidate preference is separate from actual frame reuse, which also needs protection of active users and dirty handling. Policy names alone do not establish a performance winner.</p></details></div>
 </section>
 
+<section class="section" id="session-capacity" data-audience-checkpoint data-reset-answers>
+<h2>More distinct pages than frames: must every request miss?</h2>
+<p>Reset to the textbook model: three initially empty frames, clean eligible pages, demand loading on every miss, no prefetch or bypass. Read <code>(A B C D) × 3</code>. These A/B/C/D are textbook page names, not execution contexts A/B in the CUBRID story. Four distinct pages cannot all remain in three frames. Does that force all twelve requests to miss under every policy?</p>
+<details class="answer-disclosure"><summary>Show the policy counterexample</summary><p>No. The existing finite trace gives LRU 12 misses, but MRU and OPT 6 each. Capacity limits simultaneous residency; policy and request order determine which later accesses hit. MRU is not universally better: on <code>A B (C D) × 5</code>, LRU has 4 misses and MRU 12. These model counts do not predict CUBRID, PostgreSQL or InnoDB hit counts.</p>
+<p>The recorded oversized cyclic CUBRID run observed all misses under its stated setup. It does not turn a capacity inequality into a universal all-miss law. For H1/H2 plus a scan, compare the actual reuse schedule and policy state, not just the total distinct-page count.</p></details>
+<p><a href="../reference/replacement-lab.html#results">Existing model results and assumptions</a> · <a href="../reference/replacement-lab.html#native">Separate native CUBRID receipt</a></p>
+</section>
+
 <section class="section" id="conclusion">
 <h2>Conclusion: three ways to decide what deserves another chance</h2>
 <ol><li><strong>CUBRID asks “which group and which zone?”</strong> It gains domain/zone control and avoids moving already-hot LRU1 pages. It pays for quota, migration, candidate-discovery and progress coordination.</li><li><strong>PostgreSQL asks “how much reuse credit remains?”</strong> It avoids recency-list maintenance and can contain bulk operations with rings. It gives up fine recency order and can spend more visits aging candidates.</li><li><strong>InnoDB asks “has this new read earned young placement?”</strong> It filters rapid scan touches through admission and a time gate. That gate can delay protection for genuinely useful new pages.</li></ol>
 <p class="big-claim">Protecting useful pages and producing a reusable frame are separate jobs. All three need both.</p>
 <p>For the H1/H2-plus-scan story, ask whether the policy preserves the hot set, how much work it performs to find space, and who waits for dirty pages. A policy can improve one of these and worsen another. There is no performance winner established by this source comparison.</p>
 <details class="technical-detail"><summary>What might CUBRID learn? Questions to test</summary><p>Would an explicit scan hint reduce interference? Would a different admission or promotion gate retain a newly hot set better? These are hypotheses, not proposed fixes. Compare the current policy and any prototype under controlled hot-set-plus-scan, changing-hot-set and dirty-pressure workloads. Measure misses, candidate visits, policy-update cost and foreground stalls while preserving correctness. Cross-engine timings also depend on page layout, effective pool size, I/O and durability settings.</p></details>
+</section>
+
+<section class="section" id="session-page-journey">
+<h2>Close the journey: one request, a reusable frame, another identity</h2>
+<ol><li>A caller finds the page needed for a record operation. One operation may visit several pages.</li><li>The buffer resolves the page identity to a frame and BCB, loading on a miss. Fix protects its use lifetime; a compatible latch grants access to its bytes.</li><li>Matching unfixes repay use debt. Ordinary final unfix can update admission or reuse policy; it does not promise eviction.</li><li>Replacement chooses a domain and candidate, then rechecks current safety under protection. Dirty data must be preserved, and background work can help without guaranteeing an immediately reusable frame.</li><li>Only after safe detachment and old mapping removal can the same frame carry a new page identity. Its stable address does not preserve the old identity.</li></ol>
+<p>H1/H2 survival depends on the established reuse schedule and policy state. The comparison showed other ways to remember reuse, with different costs; it established no speed ranking.</p>
+<p class="callout"><strong>End of this session.</strong> This completes the request-to-reuse story. Detailed durability ordering and recovery belong to the next session. <a href="../reference/first-principles-route.html">Return to the session itinerary</a>. The full curriculum and source references remain available separately.</p>
 </section>
 
 <section class="section" id="primary-reading">
@@ -235,7 +250,9 @@
 <a href="#map">What each engine remembers and how it finds candidates</a>
 <a href="#misreadings">Similar names do not imply identical behavior</a>
 <a href="#retrieval">Compare candidate selection, not names</a>
+<a href="#session-capacity">Capacity and policy counterexample</a>
 <a href="#conclusion">Conclusion: three ways to decide what deserves another chance</a>
+<a href="#session-page-journey">Complete the page journey</a>
 <a href="#primary-reading">References</a>
 <hr>
       <a href="0018-compare-three-buffer-pools.html">Simple comparison</a>
