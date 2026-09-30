@@ -41,6 +41,15 @@ demo-restart-db database="CBRD_27398_pgbuf_":
     "$CUBRID/bin/cubrid" server restart "$1"
     echo "Database restarted. Reload Volmap, enable observations, then run just demo-lru."
 
+# Reset the demo's buffer/LRU state, preserving disk data; finish active demos first.
+[positional-arguments]
+demo-csql database="CBRD_27398_pgbuf_":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source "${LRU_DEMO_ENV:-/home/vimkim/.local/state/cubrid-worktree-guard/worktrees/4a8d6850bca24b59/env.sh}"
+    "$CUBRID/bin/csql" -udba "$1"
+    echo "Database restarted. Reload Volmap, enable observations, then run just demo-lru."
+
 # Serve the demo database with real inspector observations; Ctrl-C stops Volmap.
 # Stop an existing Volmap on this address first. Open the printed URL locally.
 [positional-arguments]
