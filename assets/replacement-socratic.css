@@ -37,3 +37,12 @@
 .lesson-main p { word-break: keep-all; }
 .replacement-call-path { padding-left: 2em; }
 .replacement-call-path li { padding: 8px 0; }
+.replacement-call-path li:not(:last-child)::after {
+  content: "↓";
+  display: block;
+  margin-top: 8px;
+  color: var(--teal);
+  font-size: 1.4em;
+  line-height: 1;
+}
+.replacement-call-path code { overflow-wrap: anywhere; }
