@@ -1,0 +1,44 @@
+✔ en: Clock inspection, replacement, reset and presentation preserve request 7 (612.847434ms)
+✔ en: all diagrams and Clock states are readable without JavaScript on mobile (175.997707ms)
+✔ ko: Clock inspection, replacement, reset and presentation preserve request 7 (431.992829ms)
+✔ ko: all diagrams and Clock states are readable without JavaScript on mobile (207.790887ms)
+✔ en: request comparison preserves slots, diverges at T, and supports back/reset (417.527166ms)
+✔ ko: request comparison preserves slots, diverges at T, and supports back/reset (467.148648ms)
+✔ ticket03 admission precedes age/zone rules and survives presentation and no-JS mobile reading (1300.658258ms)
+✔ main lecture compares exact LRU with CUBRID through keyboard prediction and source-trace navigation (1027.583112ms)
+✔ syllabus reaches the main LRU comparison and its native answer without scripts on mobile (362.662779ms)
+✔ integrated replacement route is reachable from library and syllabus without JavaScript (542.861475ms)
+✔ reuse schedules reset answers across branch switches and forward/backward navigation (926.197525ms)
+✔ reuse alternatives retain all histories and native answers without JavaScript (354.138526ms)
+✔ policy defense reveals a reset comparison and returns to the final defense route (13768.937599ms)
+✔ policy counterexample and human rubric are reachable without scripts on mobile (337.387206ms)
+✔ LRU continuation reveals cooling and preserves the route into migration (610.534165ms)
+✔ LRU pressure baseline and selection answers remain readable without scripts (345.685908ms)
+✔ database bridge preserves branch starts, reveals safety reasoning, and connects the required route (785.230363ms)
+✔ database bridge resets remain readable without scripts at mobile width (585.735342ms)
+✔ replacement foundations supports prediction, deliberate steps, and language transfer (582.59241ms)
+✔ replacement foundations retains every trace and exercise without scripts at mobile width (818.302888ms)
+✔ LRU trace lets participants predict admission and revisit an unchanged resident position (823.101ms)
+✔ LRU trace remains readable without JavaScript and links to its language counterpart (440.277785ms)
+✔ all Lecture 8 continuation links lead to the next integration lecture (266.995454ms)
+✔ presentation shortcuts work after a real toolbar click in both languages (451.294711ms)
+✔ each quick-checkpoint answer is hidden until its own disclosure is opened (494.694182ms)
+✔ ticket01 bounded opening preserves objects, projection exits and script cues (698.203324ms)
+✔ ticket01 opening is complete in mobile no-script reading (1971.330283ms)
+✔ ticket02 concurrent-use assumptions precede concealed keyboard answers in both languages (645.447973ms)
+✔ ticket04 common checkpoint resets both residency predictions in EN and KO (2014.604134ms)
+✔ ticket04 branch explanations remain keyboard-readable without JavaScript on mobile (378.922124ms)
+✔ ticket06 capacity prediction and page journey preserve presentation, keyboard and result routes (822.751735ms)
+✔ ticket06 comparison and closing read without JavaScript at mobile width (248.274362ms)
+✔ selected background handoff and pacing preserve disclosure and session exits (1420.744846ms)
+✔ ticket07 integrated itinerary and every Korean script cue resolve to the exact served checkout (3192.22097ms)
+✔ ticket07 Korean companion and complete itinerary remain readable without scripts on mobile (591.996943ms)
+✔ ticket07 zone and protected-recheck assumptions precede concealed outcomes in both languages (512.641483ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 36568.988921
