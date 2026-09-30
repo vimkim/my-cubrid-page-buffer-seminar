@@ -1,12 +1,12 @@
 {
-  "sourceBase": "5e1c02f",
+  "sourceBase": "f5c3f60",
   "engine": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
   "browser": "151.0.7922.34",
   "hashes": {
-    "en/lessons/0007-replace-one-frame.html": "81e0160daf87ec2191ddcadb8b4be12d0b99c9abc4aacc9745efb7dd995fdbca",
+    "en/lessons/0007-replace-one-frame.html": "378b66b7680d1ad67bdb2dc69bb0405a2648c04896759720dd05683fb53ba01b",
     "en/lessons/0012-prove-replacement-progress.html": "b068f186071dc029756411d9835d57444eb8f3a8048c731af4e0bdfaa401af74",
     "en/lessons/0012a-understand-aout-ghost-history.html": "d11a60a9fa9d5c13aadc212107f5ba8262338a5e7e6f1745ac011ab1815242a6",
-    "ko/lessons/0007-replace-one-frame.html": "fbc02e76a37f8f4a60850abca37b78412da6c2efe8373e4850339850d70ec72d",
+    "ko/lessons/0007-replace-one-frame.html": "eb9c49299099a298c3ee0098ba0e8a40a41c8bd8e4866a7a4205c558257e60d7",
     "ko/lessons/0012-prove-replacement-progress.html": "fdb34c70e5fc53379c275aacf725c663de353104626e743930a92a8ead544573",
     "ko/lessons/0012a-understand-aout-ghost-history.html": "8d30c57af79b82ba8d252a4583fccf8f9cd943c90f41b1029692fdb01566870c"
   },

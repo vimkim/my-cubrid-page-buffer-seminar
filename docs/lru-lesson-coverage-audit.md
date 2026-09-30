@@ -22,7 +22,7 @@ searched for keywords. Existing adequate explanations remain in place.
 | 7. Private-index assignment | Sufficient: zero-session/fewest-page priority, activity fallback, reuse by sessions, not per fix | Retained Lecture 0012B `assignment`: [EN](../en/lessons/0012b-understand-private-lru-index.html#assignment), [KO](../ko/lessons/0012b-understand-private-lru-index.html#assignment). No duplicate added. |
 | 8. LRU1 overflow after LRU2 promotion | General aging present; exact promotion/boundary example missing | Added positive-threshold 2/2 → 3/1 → 2/2 example in Lecture 0007 `boost-boundary`: [EN](../en/lessons/0007-replace-one-frame.html#boost-boundary), [KO](../ko/lessons/0007-replace-one-frame.html#boost-boundary). One linked list; demotion changes metadata without relinking S1. |
 | 9. Mutex scope and demoted BCB flags | Missing as an explicit worked protocol | Added caller-held H1 BCB mutex, continuous list mutex across remove/insert/adjust/sanity, unlocked adjustment helper, CAS flags and no separate S1 BCB lock in `boost-boundary`. Distinguishes LRU2 boost from LRU3 adjustment and states `min_one` scope. |
-| 10. Private/shared rules and hypothetical AOUT | Active/dormant admission table sufficient; concrete expected trade-offs and revival tasks too terse | Retained Lecture 0007 `admission` comparison. Extended Lecture 0012A `effect` and `boundary`: [EN](../en/lessons/0012a-understand-aout-ghost-history.html#effect), [KO](../ko/lessons/0012a-understand-aout-ghost-history.html#effect). Added same-domain ghost-hit/miss example, history expiration/index reuse limits, and concurrency/memory/policy/measurement tasks. Forced-zero behavior and unknown historical root cause remain explicit. |
+| 10. Private/shared rules and hypothetical AOUT | Active/dormant admission table sufficient; concrete expected trade-offs and revival tasks too terse | Retained Lecture 0007 rule comparison (moved from `admission` to `quota` by the new main). Extended Lecture 0012A `effect` and `boundary`: [EN](../en/lessons/0012a-understand-aout-ghost-history.html#effect), [KO](../ko/lessons/0012a-understand-aout-ghost-history.html#effect). Added same-domain ghost-hit/miss example, history expiration/index reuse limits, and concurrency/memory/policy/measurement tasks. Forced-zero behavior and unknown historical root cause remain explicit. |
 
 ## Source verification
 
@@ -51,7 +51,7 @@ Historical AOUT status remains owned by
 [the existing source/history audit](../reference/victim-scan-cap-and-aout-evidence.md)
 and [uncertainty registry](../unresolved-or-version-sensitive-findings.md).
 
-## Verification
+## Original verification before rebase
 
 The task worktree was served at `http://127.0.0.1:3941`, with headless Chromium
 through `/home/vimkim/temp/volmap/web/node_modules/@playwright/test/index.mjs`.
@@ -105,3 +105,29 @@ SEMINAR_URL=http://127.0.0.1:3941 node --test scripts/seminar-browser.test.mjs
 No engine experiment, AOUT enablement, performance result, merge or publication
 is part of this change. Technical examples remain pinned to the verified source;
 final human translation acceptance is still open.
+
+## Rebase verification on current main
+
+The user explicitly requested rebase and merge after reviewing `212bb02`.
+Rebased onto `f5c3f60`; conflicts were limited to the paired Lecture 0007 quota
+section and contents navigation. Resolution preserves main's admission-first
+order, new `session-age` block, and detailed admission/zone comparison relocated
+to `quota`, while retaining this task's queue explanation and new tick/mutex
+sections. All pre-existing section ordering is unchanged after filtering out the
+two new sections. The `admission`, `session-age` and `zones` blocks are identical
+to the destination versions.
+
+After rebase, the maintainer aggregate again passed all source, HTTP and live-DOM
+gates (43 pages, 66 SVGs, 109 resources). The full bilingual aggregate reported
+only 154 human-review receipt/fingerprint messages; it did not report technical,
+link, audience, HTTP or DOM failures. The separate served gate passed 278 HTTP
+resources and 109 live-DOM pages. Human acceptance remains separately open.
+All 57 tests selected by `scripts/seminar*test.mjs` plus the three focused
+replacement/field/AOUT suites passed with headless Chromium and no skips.
+The former foundations `#lru`/`#opt` test failure is fixed in the new main and
+no longer reproduces in the combined tree.
+
+The 24 focused section/mode observations were rerun. Their six page hashes and
+two screenshots now describe the rebased tree, with `sourceBase = f5c3f60` in the
+observation file. The earlier verification section is historical evidence for
+the original base, not the current integrated test verdict.
