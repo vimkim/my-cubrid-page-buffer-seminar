@@ -46,3 +46,16 @@
   line-height: 1;
 }
 .replacement-call-path code { overflow-wrap: anywhere; }
+
+/* Lecture 7: pointer fields stay readable even without JavaScript. */
+.lru-pointer-chain { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: .5rem; align-items: center; margin: 1rem 0; }
+.lru-pointer-chain .map-card { padding: .75rem; }
+.lru-pointer-chain code { font-size: .8rem; }
+.lru-vertical { display: none; }
+.lru-pointer-map figcaption { margin-top: 1rem; }
+@media (max-width: 800px) {
+  .lru-pointer-chain { grid-template-columns: 1fr; }
+  .lru-pointer-arrows { text-align: center; }
+  .lru-horizontal { display: none; }
+  .lru-vertical { display: inline; }
+}
