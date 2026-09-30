@@ -6,7 +6,7 @@ Participant entry is `lessons/0007-replace-one-frame.html#first-principles` in e
 
 The admission worked example is a separate, explicitly labeled state: B carries PB; an ordinary clean S1 becomes resident in VOID while fixed, then enters PB top/LRU1 at eligible BCB-wide final unfix. Positive thresholds have room; no waiters, special path, quota adjustment or waiting allocator intervenes. Immediate same-context fix/unfix with registered-fix count below hot threshold keeps S1 at the same position, clean, resident, `fcnt = 0`, same identity/BCB/frame. It predicts no victim and no timing/performance result.
 
-Ticket 02 vocabulary received and applied: a context's last release and BCB-wide zero crossing are different. Ordinary placement is subject to additional branch conditions; zero does not imply flush, eviction or commit. Exact producer commit will be recorded in the checks receipt once delivered.
+Ticket 02 vocabulary received and applied: a context's last release and BCB-wide zero crossing are different. Ordinary placement is subject to additional branch conditions; zero does not imply flush, eviction or commit. Producer content `b88f511612d1b9e6dc9ab762e555980a3ab6f1f7` was inspected directly with Git and reconciled before final acceptance; its `session-release-boundary` links to 0007 `first-principles`.
 
 The local PA/PB migration example explicitly uses different domains. Ticket 04's full-pool branch deliberately resets assignments so A and B share private index 32. Multiple contexts sharing one private list is valid; neither example makes private membership an access prohibition. No branch outcome is inferred from the earlier isolated admission arithmetic.
 
