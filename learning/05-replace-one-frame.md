@@ -187,6 +187,35 @@ After the selected-list scan, successful early big publication suppresses any se
 
 Source: [selection order and call-site conditions](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9216), [private consumer](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16424-L16505), [shared consumer](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16516-L16578).
 
+#### Why two private queues, and what changes if the big queue is removed?
+
+**Verified mechanism / Implementation policy.** The ordinary `private_lrus_with_victims` queue advertises over-quota private lists with candidates. `big_private_lrus_with_victims` gives priority to substantially over-quota lists. “Big” describes the list's total page count relative to quota, not the size of a page. Both queues contain integer list indices, not pages or reserved victims.
+
+In a constructed example with quota 100, a list of 120 pages with candidates can be registered in the ordinary queue. A list of 300 pages with at least two candidates can be promoted to the big queue when a consumer encounters it. Promotion requires all three strict conditions: size > 100, size > 2 × quota, and candidate count > 1. Initial publication still goes through the ordinary queue; becoming large does not by itself insert an index directly into the big queue. Queue entries can become stale, so these registration conditions are not a guarantee about the list's state when later consumed.
+
+The separate queue supports three behaviors:
+
+| Behavior | Why the distinction matters |
+|---|---|
+| Search big donors first | The helper tries the big queue before the ordinary queue, favoring substantially over-quota lists as reclamation sources. |
+| Keep a donor route for restricted callers | After a failed own-list search, a sufficiently over-quota, non-exempt requester can be restricted from consuming the ordinary queue. It may still consume the big queue. Shared search remains available afterward. |
+| Publish a large donor before scanning it | Another consumer can discover the same list while the first searches. Ordinary requeue happens after scanning. Overlapping discovery does not reserve frames or bypass protected victim checks. |
+
+**Inference.** This policy favors reclaiming excess holdings while limiting an already over-quota requester's access to ordinary private donors. It does not establish workload fairness or a measured performance benefit.
+
+Suppose a coherent implementation change removes the big queue and routes its donors through the ordinary queue. The consequences depend on the replacement policy:
+
+| Change | Consequence |
+|---|---|
+| Keep the ordinary-queue restriction | Restricted callers lose this other-private discovery route; later shared search still exists. |
+| Let restricted callers consume the ordinary queue | They can now search donors that are only slightly above quota, changing quota policy. |
+| Use ordinary queue order without equivalent prioritization | Substantially over-quota donors no longer receive the explicit first-search preference. |
+| Requeue every donor only after its scan | Its index is absent from queue discovery during that scan, losing the early-publication behavior. |
+
+A single queue could implement equivalent selection and early-publication rules with additional logic. Simply removing the big queue does not preserve those rules. These are policy and discovery changes, not evidence that a carefully redesigned single queue would violate page safety; existing ownership, dirty/flushing, locking and final eligibility checks must remain. Latency, throughput and fairness effects require controlled measurement.
+
+Source: [private selection and requeue](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16424-L16505), [caller restriction and shared fallback](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9115-L9216).
+
 #### Why own-list reuse leaves the queued number
 
 Own-list selection calls `pgbuf_get_victim_from_lru_list()` directly with its index, without consuming the queue. Successful detach changes the BCB to VOID and decreases the list's candidate count. Other candidates may remain, so removing one page does not invalidate the whole advertisement.
