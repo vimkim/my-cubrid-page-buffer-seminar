@@ -10,6 +10,8 @@ The [accepted design](docs/seminar-curriculum-design.md) and [ADR 0005](docs/adr
 
 Use the [Seminar delivery record](README.md#seminar-delivery) for the three-session format, completed coverage, and remaining agenda. It takes precedence over earlier provisional timing and session-route plans when preparing the remaining session. Retain the broader curriculum as supporting material for deeper study.
 
+Session 3 is the final live session, with flexible duration. Use its [preparation plan](docs/final-session-preparation.md) and [Korean spoken script](my-presentation-script-session-3.html) for the detailed daemon/PostgreSQL route and closing workshop. Keep these presenter materials outside participant navigation. The earlier first-time participant script remains a reference for completed material.
+
 ## Editing a page
 
 1. Update English and Korean together. Korean sentences should read naturally while retaining established database terminology, evidence labels, and exact source identifiers. Preserve qualifications beside their claims.

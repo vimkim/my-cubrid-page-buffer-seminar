@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>페이지 버퍼 세미나 3회차 · 마지막 세션 발표 대본</title>
+  <style>
+    :root { color-scheme: light; --ink: #19313e; --muted: #566773; --navy: #12364a; --teal: #087c78; --line: #d7e1e5; --paper: #f3f6f7; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 18px; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 18px/1.85 "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+    a { color: #006b72; text-underline-offset: 3px; overflow-wrap: anywhere; }
+    a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid #c35c12; outline-offset: 4px; }
+    code { font: 0.89em ui-monospace, "SFMono-Regular", Consolas, monospace; overflow-wrap: anywhere; }
+    h1, h2, h3 { line-height: 1.4; letter-spacing: -0.035em; }
+    h1 { font-size: clamp(2rem, 5vw, 3.1rem); }
+    h2 { margin: 0 0 22px; font-size: 1.6rem; }
+    h3 { margin: 28px 0 10px; font-size: 1.12rem; }
+    p { margin: 0 0 17px; }
+    li + li { margin-top: 8px; }
+    .shell { width: min(1040px, calc(100% - 32px)); margin: auto; padding: 24px 0 72px; }
+    .skip { position: absolute; left: 12px; top: -70px; background: white; padding: 8px 14px; z-index: 10; }
+    .skip:focus { top: 10px; }
+    .hero { background: var(--navy); color: white; border-radius: 22px; padding: clamp(24px, 5vw, 52px); }
+    .hero a { color: #c2f1ec; }
+    .eyebrow { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.09em; }
+    .route, .run-sheet { margin-top: 24px; padding: clamp(22px, 4vw, 40px); border: 1px solid var(--line); border-radius: 18px; background: white; }
+    .route ol { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 30px; margin-bottom: 0; }
+    .cue { padding: 14px 18px; border-left: 4px solid var(--teal); background: #edf7f5; font-size: 0.93rem; }
+    .boundary { padding: 14px 18px; background: #fff6e8; border-left: 4px solid #bc7d24; font-size: 0.93rem; }
+    .prompt { margin: 24px 0; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: #f7fafb; }
+    details { margin: 14px 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; }
+    summary { cursor: pointer; font-weight: 800; color: var(--navy); }
+    details[open] summary { margin-bottom: 16px; }
+    .table-wrap { max-width: 100%; overflow-x: auto; margin: 20px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+    th, td { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+    th { background: #eaf1f4; }
+    .source { font-size: 0.88rem; color: var(--muted); }
+    .back { display: block; margin-top: 24px; font-size: 0.88rem; }
+    @media (max-width: 650px) { body { font-size: 17px; } .route ol { grid-template-columns: 1fr; } .shell { width: calc(100% - 20px); } th, td { padding: 10px; } }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print { body { background: white; font-size: 11pt; } .shell { width: 100%; padding: 0; } .hero { color: var(--ink); background: white; } .hero a { color: var(--ink); } .run-sheet { break-before: page; border: 0; } .back, .skip { display: none; } }
+  </style>
+</head>
+<body>
+<a class="skip" href="#opening">대본 본문으로 이동</a>
+<main class="shell">
+  <header class="hero">
+    <p class="eyebrow">PAGE BUFFER · SESSION 3 / FINAL · n HOURS</p>
+    <h1>더러운 페이지에서<br>안전한 frame 재사용까지</h1>
+    <p>페이지 버퍼 daemon 상세 동작 · PostgreSQL buffer 전략 · 세미나 마무리</p>
+    <p>앞선 3시간, 4시간 세션은 완료했습니다. 이번 세션은 마지막 페이지 버퍼 세미나이며, 설명과 질문에 맞춰 n시간으로 진행합니다.</p>
+    <p><a href="docs/final-session-preparation.md?v">준비 계획과 소스 경로</a> · <a href="presenter-runbook.md?v">발표자 runbook</a></p>
+  </header>
+
+  <nav class="route" id="route" aria-label="발표 순서">
+    <h2>오늘의 질문: 누가 재사용 가능한 frame을 만드는가?</h2>
+    <p>발표자용 대본입니다. 초록색 화면 큐로 기존 강의의 정확한 절을 열고, 예측 질문에서는 답을 닫은 상태로 기다립니다. 대본의 구성 사례는 실행 캡처가 아닙니다.</p>
+    <ol>
+      <li><a href="#opening">앞선 두 세션 연결</a></li>
+      <li><a href="#generation">한 페이지, 두 generation</a></li>
+      <li><a href="#daemons">서로 다른 네 daemon</a></li>
+      <li><a href="#page-flush">Page-flush: 후보와 WAL</a></li>
+      <li><a href="#post-flush">Post-flush: 완료와 배정</a></li>
+      <li><a href="#maintenance">Maintenance: quota와 구역</a></li>
+      <li><a href="#pacing">Flush-control: write 이후 pacing</a></li>
+      <li><a href="#postgres-model">PostgreSQL의 객체와 pin</a></li>
+      <li><a href="#postgres-clock">Clock sweep 직접 따라가기</a></li>
+      <li><a href="#postgres-ring">작업별 access-strategy ring</a></li>
+      <li><a href="#postgres-writeback">누가 dirty victim을 쓰는가?</a></li>
+      <li><a href="#closing">새 사례로 연결하고 마무리</a></li>
+    </ol>
+    <p class="source">CUBRID 기준: <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code><br>PostgreSQL 기준: <code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code> (개발 revision). 수치와 정책은 이 소스 기준입니다.</p>
+  </nav>
+
+  <section class="run-sheet" id="opening">
+    <p class="eyebrow">01 · CONNECTION</p><h2>앞선 두 세션에서 오늘로</h2>
+    <p class="cue">화면: <a href="ko/lessons/0001-present-the-page-journey.html#journey">한 페이지의 여정</a>. 요청 → fix → 사용 → unfix까지만 먼저 짚습니다.</p>
+    <p>앞선 두 번의 세미나에서는 페이지 버퍼가 왜 필요한지, 페이지 ID와 메모리 frame이 어떻게 다른지, BCB가 무엇을 기록하는지, private/shared LRU가 어떻게 resident 페이지를 관리하는지 살펴봤습니다. 오늘은 그 모델을 완성하겠습니다. 빈 frame이 없을 때 누가 다음 요청을 도와주는지, 그리고 PostgreSQL은 같은 문제를 어떻게 풀고 있는지가 남았습니다.</p>
+    <p>우선 기억을 하나씩 복원해 보겠습니다. 페이지를 unfix해도 페이지가 resident로 남을 수 있습니다. 사용자가 모두 반납해도 dirty 상태는 남을 수 있습니다. LRU3에 있다고 해서 지금 바로 덮어쓸 수 있는 것은 아닙니다. 페이지 ID, 사용 중인 fix, 바이트 접근 보호, 아직 보존해야 하는 변경을 각각 봐야 합니다.</p>
+    <div class="prompt"><p><strong>먼저 질문:</strong> pool에 빈 frame이 없고, cold 페이지 P는 unfixed지만 dirty입니다. 새 페이지 Q를 요청하면 어떤 일을 끝내야 P의 frame을 재사용할 수 있을까요?</p>
+      <details class="answer"><summary>예측 후 발표자 답 보기</summary><p>P의 변경을 필요한 로그 순서와 write 경로에 맞춰 보존해야 합니다. 그 작업 이후에도 P가 다시 fixed되거나 dirty가 되었는지, 정책상 후보로 남았는지 확인해야 합니다. “cold다”, “unfixed다”, “한 번 썼다”는 각각 다른 사실입니다.</p></details>
+    </div>
+    <p>이 질문을 붙잡고 daemon들을 만나겠습니다. 그 전에 “dirty를 쓴다”가 어느 시점의 바이트를 뜻하는지부터 정리하겠습니다.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="generation">
+    <p class="eyebrow">02 · FLUSH BRIDGE</p><h2>한 페이지, 두 generation</h2>
+    <p class="cue">화면 순서: <a href="ko/lessons/0006-flush-one-generation.html#flush-purpose">DIRTY</a> → <a href="ko/lessons/0006-flush-one-generation.html#generation-meaning">사본이 필요한 이유</a> → <a href="ko/lessons/0006-flush-one-generation.html#moments">로그와 페이지의 경계</a> → <a href="ko/lessons/0006-flush-one-generation.html#generation">generation 단계</a> → <a href="ko/lessons/0006-flush-one-generation.html#copy-versus-dwb">DWB 경로</a> → <a href="ko/lessons/0006-flush-one-generation.html#redirty">다시 dirty가 된 경우</a>.</p>
+    <p>저장된 페이지의 값이 10이라고 하겠습니다. 메모리에서 11로 바꾸면 저장된 이미지와 메모리 사이에 간격이 생깁니다. DIRTY는 이 resident 이미지에 아직 전달해야 할 변경이 있다는 기록입니다. Unfix는 사용을 끝내지만 그 전달 의무를 없애지는 않습니다.</p>
+    <p>WAL은 변경을 설명하는 로그가 관련 데이터 페이지보다 먼저 durable해져야 한다는 순서입니다. 페이지 LSA는 이 페이지 이미지가 어느 로그 위치까지의 변경을 반영하는지 연결합니다. 이번에는 로그를 먼저 보존한 뒤 페이지 이미지를 전달해야 한다는 인과관계를 잡겠습니다. Commit, page write, unfix는 서로 다른 완료입니다.</p>
+    <p>Flush하는 동안 다른 요청도 진행해야 합니다. 그래서 안정된 이미지 11을 확보한 뒤 그 이미지의 전달을 진행하는 동안 resident 페이지는 12로 다시 바뀔 수 있습니다. 대본에서는 사본 11을 G, 이후 변경을 G+1이라고 부르겠습니다. 이 이름은 설명용이며 저장된 generation 번호라는 뜻은 아닙니다.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="두 generation의 시작 상태"><table><thead><tr><th>사건</th><th>resident 값</th><th>전달할 사본</th><th>기억해야 할 작업</th></tr></thead><tbody><tr><td>10 → 11 변경</td><td>11</td><td>아직 없음</td><td>11의 dirty 변경</td></tr><tr><td>안정된 사본 확보</td><td>11</td><td>G = 11</td><td>G의 flush 진행</td></tr><tr><td>다른 사용자가 12로 변경</td><td>12</td><td>G = 11</td><td>G 진행 + G+1 dirty 변경</td></tr></tbody></table></div>
+    <div class="prompt"><p><strong>예측:</strong> 사본 G의 제출이 성공했습니다. 현재 메모리 값은 무엇이며, 어떤 dirty 작업을 남겨야 할까요?</p>
+      <details class="answer"><summary>예측 후 답 보기</summary><p>메모리는 12입니다. 제출된 이미지는 11이고, 12를 반영하는 G+1의 dirty 작업은 남아야 합니다. G의 FLUSHING 상태를 마치는 것과 현재 DIRTY를 없애는 것을 하나의 사건으로 합치면 안 됩니다.</p></details>
+    </div>
+    <p>DWB를 쓰는 경로에서는 안정된 페이지 이미지를 DWB가 받아들인 시점과 home volume에 실제로 쓰는 시점도 구분해야 합니다. DWB는 페이지 write가 부분적으로 남을 수 있는 문제를 다루는 별도의 write 경로입니다. Page-flush의 성공 반환을 모든 저장 경로의 마지막 durable 완료라고 설명하지 않겠습니다.</p>
+    <p>이제 질문을 조금 더 정확하게 바꿀 수 있습니다. 누가 G의 전달을 시작하고, 누가 G의 완료 상태를 정리하며, 누가 지금 resident 상태가 재사용 가능한지 검사할까요?</p>
+    <p class="source">근거: <a href="learning/04-flush-one-generation.md?v">canonical flush 설명</a>. 자세한 소스 위치는 <a href="docs/final-session-preparation.md?v#bounded-source-traces">준비 계획의 source trace</a>에 있습니다.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="daemons">
+    <p class="eyebrow">03 · FOUR LOOPS</p><h2>네 daemon은 서로 다른 일을 한다</h2>
+    <p class="cue">화면: <a href="ko/lessons/0006a-understand-page-buffer-daemons.html#cadence">네 가지 책임</a> → <a href="ko/lessons/0006a-understand-page-buffer-daemons.html#daemon">실행과 대기</a> → <a href="ko/lessons/0006a-understand-page-buffer-daemons.html#lifecycle">시작과 종료</a>.</p>
+    <p>Daemon은 백그라운드에서 자기 task를 실행하고 기다리는 실행 주체입니다. CUBRID 서버의 page-buffer daemon들은 공통 thread manager를 이용하지만, 같은 일을 나눠 처리하는 worker 네 개가 아닙니다. 각각 독립적인 task, 기다림 방식, 공유 상태가 있습니다.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="네 daemon의 책임과 대기"><table><thead><tr><th>이름</th><th>유용한 결과</th><th>기준 소스의 대기 방식</th></tr></thead><tbody><tr><td><code>pgbuf-page-flush</code></td><td>Cold dirty 페이지의 이미지 전달</td><td>기본 1,000 ms timer와 frame 부족 wake. Interval 0은 wake-only.</td></tr><tr><td><code>pgbuf-page-post-flush</code></td><td>BCB 완료 정리, 조건부 direct-victim 배정</td><td>유휴 상태에서 1 → 10 → 100 ms, 이후 wake-only</td></tr><tr><td><code>pgbuf-maintain</code></td><td>활동량에 맞는 quota와 LRU 구역</td><td>100 ms 목표 주기로 task 시도</td></tr><tr><td><code>pgbuf-flush-control</code></td><td>Writer가 소비할 새 pacing allowance</td><td>50 ms 목표 주기</td></tr></tbody></table></div>
+    <p>숫자는 정확한 실행 빈도를 보장하지 않습니다. Generic daemon은 task를 한 번 실행한 뒤 기다리고, period에서 직전 task 실행 시간을 뺍니다. Scheduler 지연이나 I/O 시간이 더해질 수도 있습니다. Timer가 끝났다는 사실과 유용한 일을 했다는 사실도 다릅니다.</p>
+    <p>Wakeup은 별도의 중요한 경계가 있습니다. 이 waiter는 지금 SLEEPING인 경우를 깨웁니다. 이미 RUNNING이면 다음 번을 위한 wake 횟수를 쌓아 두지 않습니다. 따라서 task는 공유된 pressure 조건이나 queue를 보고 실제 일을 판단해야 합니다. Wake-only 설정에서는 새 작업 신호가 언제 생기는지도 함께 따라봐야 합니다.</p>
+    <p>Thread가 만들어지는 시점과 실제 flush 작업이 허용되는 시점도 다릅니다. 이 daemon들은 recovery 전에 만들어지지만, task는 boot gate가 닫혀 있으면 반환합니다. Recovery 이후 gate가 열립니다. 종료할 때는 stop → wake → join을 마친 다음 사용하는 자원을 해제해야 합니다. Stand-alone 빌드에는 이 네 daemon이 없습니다.</p>
+    <div class="prompt"><p><strong>질문:</strong> Thread 목록에서 page-flush가 보인다는 사실만으로 recovery 중 페이지 write가 가능하다고 말할 수 있을까요? Timer가 한 번 끝났다면 quota도 반드시 바뀌었을까요?</p>
+      <details class="answer"><summary>예측 후 답 보기</summary><p>첫 질문에는 boot gate를 확인해야 합니다. 두 번째에는 해당 task와 accepted-pass 조건을 확인해야 합니다. 객체 존재, 실행 기회, 유용한 결과는 각각 구분합니다.</p></details>
+    </div>
+    <p class="source">근거: <a href="reference/page-buffer-daemon-lifecycle-audit.md?v">daemon lifecycle audit</a>.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="page-flush">
+    <p class="eyebrow">04 · CREATE CLEAN SUPPLY</p><h2>Page-flush: 기억한 후보를 다시 검사한다</h2>
+    <p class="cue">화면: <a href="ko/lessons/0006b-follow-page-flush-handoff.html#first-code-path">submission 호출 경로</a> → <a href="ko/lessons/0006b-follow-page-flush-handoff.html#trigger">timer와 pressure</a> → <a href="ko/lessons/0006b-follow-page-flush-handoff.html#selection">후보 수집과 재검사</a>.</p>
+    <p>새 페이지가 필요한 allocator가 invalid frame도, 바로 쓸 clean victim도 찾지 못했다고 하겠습니다. Page-flush는 cold dirty 페이지를 골라 깨끗한 후보가 생기도록 돕습니다. 모든 dirty 페이지를 timer마다 한 번씩 쓰는 방식은 아닙니다. Timer 이후에는 allocation waiter나 낮은 hit-ratio 조건을 보고 계속할 일을 판단합니다. 관측된 demand wake는 최소 한 번의 후보 flush 호출을 유도합니다.</p>
+    <p>핵심 호출은 <code>pgbuf_flush_victim_candidates()</code>입니다. 먼저 LRU mutex 아래에서 cold 후보의 BCB 포인터와 VPID를 기억합니다. 그다음 list lock을 놓고 각 BCB를 검사합니다. 이 사이에 다른 thread가 실행할 수 있습니다. 그래서 BCB mutex를 잡은 뒤 같은 VPID인지, 지금 dirty인지, 이미 flushing인지, 아직 cold이고 unfixed인지 다시 확인합니다.</p>
+    <p>페이지 이미지가 요구하는 WAL이 아직 durable하지 않으면 이 후보를 당장 제출할 수 없습니다. Log-flush를 깨우거나 pressure 경로의 필요한 로그 처리 후 다시 시도합니다. 순서가 허용된 이미지에 대해 안정된 사본을 만들고 공통 flush 경로로 전달합니다. 화면의 짧은 source trace는 non-neighbor, non-DWB 분기 하나를 보여줍니다. WAL helper와 page writer는 공통 helper 안의 순서가 있는 작업입니다.</p>
+    <div class="prompt"><p><strong>예측:</strong> 후보를 수집할 때 BCB는 P를 가리켰습니다. List lock을 놓은 뒤 다른 실행에서 identity가 Q로 바뀌었습니다. 같은 BCB 주소를 기억하고 있으니 P를 flush했다고 처리해도 될까요?</p>
+      <details class="answer"><summary>예측 후 답 보기</summary><p>그 후보의 VPID 재검사에서 제외해야 합니다. BCB 저장 공간이 오래 살아 있어도 그 공간이 나타내는 페이지 identity는 달라질 수 있습니다. Pointer를 기억하는 것과 현재 페이지를 확인하는 것은 다른 작업입니다.</p></details>
+    </div>
+    <p>이제 이미지 제출이 성공했습니다. 남은 BCB 완료 처리를 같은 thread가 할 수도 있고 post-flush에 넘길 수도 있습니다. 다음 블록에서는 그 선택 조건을 보겠습니다.</p>
+    <p class="source">근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3780-L4165">후보 선택과 검사</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17012-L17067">daemon 실행 조건</a>.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="post-flush">
+    <p class="eyebrow">05 · COMPLETE AND REVALIDATE</p><h2>Post-flush: 완료 처리와 frame 배정은 다르다</h2>
+    <p class="cue">화면: <a href="ko/lessons/0006b-follow-page-flush-handoff.html#handoff">queue handoff</a> → <a href="ko/lessons/0006b-follow-page-flush-handoff.html#post-flush-code-path">consumer 호출 경로</a> → <a href="ko/lessons/0006b-follow-page-flush-handoff.html#post">현재 상태 검사</a> → <a href="ko/lessons/0006b-follow-page-flush-handoff.html#audience-checkpoint">다시 dirty가 된 BCB</a>.</p>
+    <p>Queue에는 페이지 내용이나 “이 frame은 안전하다”는 인증서가 들어가지 않습니다. <code>PGBUF_BCB *</code>가 들어갑니다. 이미지 제출을 성공한 page-flush thread이고, post-flush daemon이 존재하고, direct victim을 기다리는 allocator가 있고, bounded queue 삽입까지 성공해야 이 handoff를 선택합니다. 이 조건이 맞지 않으면 page-flush thread가 BCB를 다시 잠그고 완료 처리를 합니다.</p>
+    <p>Consumer는 포인터를 꺼내 BCB mutex를 잡습니다. 현재 invalidating flag, fix 상태, LRU3 여부, private list의 over-quota 여부를 검사합니다. 아직 조건이 맞으면 살아 있는 allocation waiter에게 direct victim을 배정하고 깨울 수 있습니다. Reader나 writer가 그 사이에 페이지를 다시 사용했다면 배정을 거절합니다.</p>
+    <p>배정을 거절하더라도 끝난 G의 FLUSHING 상태는 마쳐야 합니다. 해당 flush를 기다리는 thread도 깨워야 합니다. 반면 새 frame을 기다리는 allocator는 다른 조건을 기다리고 있습니다. 두 wait queue를 하나로 말하면 “flush가 끝났는데 allocator가 왜 아직 기다리지?”라는 질문을 잘못 풀게 됩니다.</p>
+    <div class="prompt"><p><strong>새 일정:</strong> G의 제출 성공 → BCB 포인터 enqueue → reader A가 P를 READ fix하고 계속 사용 → post-flush가 dequeue. 여기서 끝낼 일과 보류할 일은 각각 무엇일까요?</p>
+      <details class="answer"><summary>예측 후 답 보기</summary><p>G의 완료 상태를 정리하고 flush waiters를 깨우는 일은 진행합니다. A의 현재 fix가 P의 frame을 보호하므로 allocator에게 재사용 frame으로 배정하지 않습니다. Queued pointer가 만들어진 시점보다 지금의 보호 상태가 우선합니다.</p></details>
+    </div>
+    <p>Reader가 나중에 unfix했다고 이 queue로 자동 배정되는 것도 아닙니다. 일반 LRU3 final unfix는 승격이나 이동을 할 수 있고, clean unfix의 직접 배정은 조건별 별도 경로입니다. Direct-victim offer를 받은 allocator도 사용하기 전에 다시 검사합니다.</p>
+    <p class="boundary">여기서 한 번 쉬어도 좋습니다. 다시 시작할 때 “사본 제출, BCB 완료, frame 배정” 세 경계를 참가자가 설명하게 합니다.</p>
+    <p class="source">근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">handoff 조건</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15556">consumer 검사와 완료</a> · <a href="ko/lessons/0006b-follow-page-flush-handoff.html#clean-unfix-handoff">clean unfix의 공급 경로</a>.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="maintenance">
+    <p class="eyebrow">06 · POLICY ADAPTATION</p><h2>Maintenance: 100 ms 시도와 quota 갱신</h2>
+    <p class="cue">화면: <a href="ko/lessons/0006c-follow-maintenance-and-pacing.html#first-code-path">정책 호출 경로</a> → <a href="ko/lessons/0006c-follow-maintenance-and-pacing.html#maintain">quota와 구역</a> → <a href="ko/lessons/0006c-follow-maintenance-and-pacing.html#maintenance-boundary">source 제한</a>.</p>
+    <p>앞선 세션의 private/shared LRU를 이제 움직이는 정책으로 보겠습니다. 처음에 정한 quota가 계속 적절할까요? 최근 unfix 활동과 LRU hit 샘플을 읽고 각 private list의 quota, private/shared 비율, 구역 threshold를 조정해야 합니다. 새 threshold를 넘는 protected 구역은 demotion이 필요할 수 있습니다. 이 일이 maintenance의 정책 작업입니다.</p>
+    <p>100 ms는 task를 시도하는 목표 주기입니다. <code>pgbuf_adjust_quotas()</code>는 quota 비활성화, 다른 adjustment 진행 중, 너무 짧은 시간 간격, 낮은 활동과 아직 충분하지 않은 경과 시간 등을 보고 반환할 수 있습니다. Accepted pass에서만 epoch가 진행되고 샘플과 quota를 처리합니다. “Thread가 실행됐다”에서 “quota가 달라졌다”로 바로 건너뛰지 않겠습니다.</p>
+    <p>코드를 읽는 중요한 예외도 하나 있습니다. Maintenance의 direct-victim backup은 comment에 목적이 적혀 있지만, 이 pinned revision에서는 시작 index와 비교 조건 때문에 두 loop body에 진입하지 않습니다. VS-20이 이 source anomaly를 추적합니다. Quota 작업은 이 문제와 별개로 읽어야 하고, 다른 producer들을 함께 보지 않고 전체 allocator progress가 멈춘다고 결론 내릴 수도 없습니다.</p>
+    <div class="prompt"><p><strong>질문:</strong> 100 ms가 지났고 daemon task가 호출됐습니다. Quota가 그대로라면 처음 확인할 predicate는 무엇일까요? Backup comment만 보고 “반드시 waiter를 구제한다”고 설명해도 될까요?</p>
+      <details class="answer"><summary>예측 후 답 보기</summary><p>Adjustment enable/in-progress 상태와 경과 시간·활동량 guard를 확인합니다. Backup의 실행 가능한 loop 조건과 registry의 증거 수준을 확인해야 합니다. 갱신하지 않은 한 번의 관찰을 곧바로 고장으로 분류하지 않습니다.</p></details>
+    </div>
+    <p class="source">근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14294-L14340">accepted-pass guard</a> · <a href="unresolved-or-version-sensitive-findings.md?v">VS-20 / VS-21 registry</a>.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="pacing">
+    <p class="eyebrow">07 · POST-WRITE PACING</p><h2>Flush-control: write 이후의 진행을 조절한다</h2>
+    <p class="cue">화면: <a href="ko/lessons/0006c-follow-maintenance-and-pacing.html#credit-code-path">credit 호출 경로</a> → <a href="ko/lessons/0006c-follow-maintenance-and-pacing.html#control">write 후 token 소비</a> → <a href="ko/lessons/0006c-follow-maintenance-and-pacing.html#soft">soft pacing</a> → <a href="ko/lessons/0006c-follow-maintenance-and-pacing.html#outside">별도 actor</a>.</p>
+    <p>이번 daemon의 이름을 보고 “다른 flusher가 언제 어떤 페이지를 쓸지 지시한다”고 생각하기 쉽습니다. 실제로는 <code>file_io.c</code>의 공유 token budget을 갱신합니다. OS write가 성공한 다음 compensation 경로에서 token을 소비하거나 기다립니다. 기다림으로 이후 작업의 진행을 조절하는 구조입니다.</p>
+    <p>50 ms 목표 주기로 새 allowance를 계산하고 기존 token 값을 교체하며 writer들을 깨웁니다. 이 allowance는 올바른 페이지를 선택했다는 허가가 아닙니다. WAL 순서와 BCB 보호는 각 write 경로가 지켜야 합니다. Log critical section을 가진 caller는 부족한 token 때문에 같은 방식으로 기다리지 않고, 일반 token wait에도 반복 제한이 있습니다. 따라서 strict I/O 상한이라고 해석할 수도 없습니다.</p>
+    <div class="prompt"><p><strong>예측:</strong> Writer가 OS write를 성공한 뒤 token을 기다립니다. “Token이 없어 이 페이지 write가 아직 시작되지 않았다”는 해석은 맞을까요? 기다리는 동안 어떤 진행을 늦추고 있을까요?</p>
+      <details class="answer"><summary>예측 후 답 보기</summary><p>이 경로의 OS write는 이미 성공했습니다. Caller가 그 이후 경로와 다음 작업으로 진행하는 속도를 늦춥니다. 이 사건만으로 fsync나 전체 durability 완료까지 주장하지 않습니다.</p></details>
+    </div>
+    <p>또한 log-flush는 로그를, checkpoint는 checkpoint 경계의 작업을, DWB daemon은 DWB의 downstream write 경로를 맡습니다. 이들은 page-buffer의 네 daemon과 구분합니다. 같은 write helper에 도달하는 caller가 여러 명일 수 있으므로 dirty를 만든 사람이 항상 page-flush에게 queue job을 넣는다고 설명하지 않겠습니다.</p>
+    <p>여기까지 네 가지 출력이 갖춰졌습니다. 이미지 제출, BCB 완료와 배정, quota 조정, writer pacing입니다. 이제 이 역할 질문을 PostgreSQL에 가져가겠습니다.</p>
+    <p class="source">근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L4122-L4204">post-write 호출</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L751-L891">token 소비, 대기, 갱신</a>.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="postgres-model">
+    <p class="eyebrow">08 · TRANSFER THE MODEL</p><h2>PostgreSQL: pin과 credit을 먼저 나눈다</h2>
+    <p class="cue">화면: <a href="ko/lessons/0018a-compare-replacement-policies.html#postgres-model">descriptor 모델</a> → <a href="ko/lessons/0018a-compare-replacement-policies.html#postgres-credit">credit이 변하는 경우</a>. InnoDB 절로 이어가지 않고 다음 clock 큐로 이동합니다.</p>
+    <p>PostgreSQL에서도 resident 페이지 바이트와 그것을 관리하는 descriptor가 있습니다. 여기서는 backend라는 실행 주체가 페이지를 pin합니다. Pin은 다른 identity로 frame을 재사용하지 못하게 하는 보호입니다. 바이트를 읽거나 바꾸는 content 보호는 별도로 봅니다. CUBRID의 fix와 latch에서 배운 책임 구분을 가져오되, 두 엔진의 호출 Interface를 동일하다고 두지는 않겠습니다.</p>
+    <p>Replacement를 위한 기억도 따로 있습니다. PostgreSQL의 <code>usage_count</code>는 bounded reuse credit입니다. 현재 누가 사용하는지를 나타내는 refcount와 다른 값입니다. 시간 stamp나 LRU 위치도 아닙니다. 이 revision에서는 최대 5입니다.</p>
+    <p>기본 strategy에서 한 backend가 새로 pin하는 첫 경로는 shared refcount와 usage credit을 올립니다. 이미 같은 backend가 pin한 페이지를 중첩 pin하는 경우에는 private refcount를 늘립니다. 따라서 중첩 호출 횟수를 그대로 global credit에 더하지 않습니다. Ring strategy의 pin은 zero credit을 one으로 올릴 수 있지만 높은 기존 credit을 계속 올리지는 않습니다.</p>
+    <div class="prompt"><p><strong>질문:</strong> usage_count가 0이고 다른 backend가 pin 중입니다. “credit이 없으니 바로 victim으로 고르면 된다”는 추론에서 빠진 조건은 무엇일까요?</p>
+      <details class="answer"><summary>예측 후 답 보기</summary><p>현재 pin이 없어야 합니다. Credit은 retention 정책의 값이고 pin은 현재 사용 보호입니다. 같은 descriptor에 두 값이 함께 있어도 책임은 다릅니다.</p></details>
+    </div>
+    <p class="source">근거: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3386">PinBuffer</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L136-L147">최대 credit</a>.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="postgres-clock">
+    <p class="eyebrow">09 · CLOCK TRACE</p><h2>Clock sweep: hand가 무엇을 바꾸는가?</h2>
+    <p class="cue">화면: <a href="ko/lessons/0018a-compare-replacement-policies.html#postgres-first-trace">clock 구성 사례</a> → <a href="ko/lessons/0018a-compare-replacement-policies.html#postgresql">소스 mechanism</a>. 다음 새 예측은 이 대본의 표로 진행합니다.</p>
+    <p>PostgreSQL의 기본 replacement는 shared descriptor 배열을 전진하는 clock hand로 봅니다. Pinned면 건너뜁니다. Unpinned지만 credit이 양수면 하나를 깎고 다음 descriptor로 갑니다. Unpinned이고 zero credit이면 CAS로 자신의 pin을 얻어 후보를 반환합니다. 여기까지는 descriptor 선택입니다. Dirty image의 write나 기존 identity 제거는 이후 caller의 작업입니다.</p>
+    <p>이제 이전 화면과 독립된 새 모델로 예측해 보겠습니다. 네 descriptor만 있는 단일 실행 teaching model이고 실제 PostgreSQL pool 설정이나 캡처가 아닙니다. Hand는 F0부터, 순서는 F0 → F1 → F2 → F3입니다. 표의 refcount는 이 allocator가 선택하기 전 다른 사용의 shared pin 수이며, 동시 변경은 없고 모두 clean이라고 가정합니다.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="clock 예측의 시작 상태"><table><thead><tr><th>Descriptor</th><th>Identity</th><th>Refcount</th><th>Usage credit</th></tr></thead><tbody><tr><td>F0</td><td>H1</td><td>0</td><td>2</td></tr><tr><td>F1</td><td>S1</td><td>1</td><td>0</td></tr><tr><td>F2</td><td>S2</td><td>0</td><td>1</td></tr><tr><td>F3</td><td>S3</td><td>0</td><td>0</td></tr></tbody></table></div>
+    <div class="prompt"><p><strong>예측:</strong> 처음 반환하는 descriptor는 무엇인가요? 각 방문 후 credit과 선택된 descriptor의 refcount를 적어 보세요. F2의 credit을 0으로 깎은 그 방문에서 바로 선택하나요?</p>
+      <details class="answer"><summary>예측 후 순서 보기</summary><ol><li>F0: credit 2 → 1, 다음으로 이동합니다.</li><li>F1: pinned이므로 건너뛰고 credit 0을 유지합니다.</li><li>F2: credit 1 → 0, 다음으로 이동합니다. 이 방문에서는 선택하지 않습니다.</li><li>F3: zero credit, unpinned 상태를 CAS로 자신의 pin 1로 바꾸고 반환합니다. 새로운 identity를 읽은 결과를 뜻하지는 않습니다.</li></ol></details>
+    </div>
+    <div class="prompt"><p><strong>다른 시작 상태로 reset:</strong> 나머지는 같고 F3의 초기 credit만 1입니다. 처음 반환하는 descriptor를 다시 구하세요.</p>
+      <details class="answer"><summary>다시 예측 후 답 보기</summary><p>첫 순회에서 F0는 1, F2와 F3는 0이 됩니다. 다음 순회에서 F0를 1 → 0으로 깎고 F1을 건너뛴 뒤 F2를 pin하고 반환합니다. 첫 사례의 수정된 상태에서 출발하지 않습니다.</p></details>
+    </div>
+    <p>이 모델은 exact LRU의 순위를 복원하지 않습니다. 어떤 페이지가 더 최근에 읽혔는지 전체 순서를 유지하는 대신 제한된 credit을 줍니다. Metadata 작업과 선택 비용의 구조를 비교할 수 있지만, 이 trace만으로 throughput 우위를 정하지는 못합니다.</p>
+    <p class="source">근거: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L171-L295">StrategyGetBuffer</a>.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="postgres-ring">
+    <p class="eyebrow">10 · WORKLOAD STRATEGIES</p><h2>Ring: shared frame의 ID를 작업별로 기억한다</h2>
+    <p class="cue">화면: <a href="ko/lessons/0018a-compare-replacement-policies.html#postgres-ring">access-strategy ring</a>. Source factory 크기 계산은 질문이 있을 때 펼칩니다.</p>
+    <p>H1, H2를 반복해서 읽는 작업 옆에서 긴 scan이 S1, S2, S3를 한 번씩 읽는다고 하겠습니다. Scan의 모든 miss를 global replacement에 그대로 맡기면 반복 사용하는 페이지에 pressure를 줄 수 있습니다. PostgreSQL은 이런 bulk 작업에 buffer access strategy를 전달할 수 있습니다.</p>
+    <p>Ring은 backend-local 객체의 작은 배열입니다. 배열에 shared buffer ID를 저장합니다. 다음 slot을 방문해 그 frame이 unpinned이고 credit이 0 또는 1이면 재사용을 시도합니다. 비어 있거나 사용할 수 없는 slot이면 global clock에서 선택하고 새 ID로 그 slot을 채웁니다. Ring의 backend-local이라는 말은 그 frame을 다른 backend가 못 쓴다는 뜻이 아닙니다.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="buffer access strategy 종류"><table><thead><tr><th>Strategy</th><th>이번 세션에서 기억할 점</th></tr></thead><tbody><tr><td><code>BAS_NORMAL</code></td><td>기본 clock 경로, custom ring 객체 없음</td></tr><tr><td><code>BAS_BULKREAD</code></td><td>대량 읽기의 재사용 공간. Ring의 permanent dirty 후보가 WAL flush를 요구하면 제거하고 다른 후보를 구할 수 있음.</td></tr><tr><td><code>BAS_BULKWRITE</code></td><td>Bulk write의 재사용 공간. Bulk-read와 동일한 dirty/WAL rejection 정책을 적용하지 않음.</td></tr><tr><td><code>BAS_VACUUM</code></td><td>Vacuum 작업의 재사용 공간. 필요한 dirty write/WAL 작업을 수행할 수 있음.</td></tr></tbody></table></div>
+    <p class="boundary">Factory 수치는 revision과 호출 경로에 묶여 있습니다. 이 source의 bulk-read 기본 계산은 256 KiB에 AIO allowance를 반영하고 pin limit을 고려합니다. Bulk-write factory는 16 MiB, vacuum factory는 2 MiB이며, 공통 크기 경로에서 shared buffer 수의 1/8로 cap합니다. 실제 caller가 지정하는 크기도 확인해야 합니다. 아래 두 slot은 설명용 모델입니다.</p>
+    <div class="prompt"><p><strong>새 ring 일정:</strong> slot 0은 F4를, slot 1은 F5를 가리킵니다. 다음 방문은 slot 0입니다. F4는 clean, refcount 0, credit 1이고 F5는 clean, refcount 0, credit 2입니다. 동시 변경 없이 차례로 두 miss를 처리하고 첫 pin은 다음 miss 전에 반납합니다. 두 번째 miss의 global fallback은 clean zero-credit F6을 선택한다고 가정합니다. 두 slot은 어떻게 바뀔까요?</p>
+      <details class="answer"><summary>예측 후 답 보기</summary><p>첫 miss는 F4를 pin해 재사용할 수 있고 slot 0의 ID는 F4로 유지됩니다. 두 번째 miss는 F5의 credit 2 때문에 ring에서 재사용하지 않고 global 경로로 갑니다. 선택된 F6의 ID를 slot 1에 기록합니다. F5는 shared pool에 남고 ring slot에서만 빠집니다. 이 모델에서도 identity 교체는 선택 이후의 보호된 작업입니다.</p></details>
+    </div>
+    <p>CUBRID private LRU와 연결해 보면 둘 다 bulk 작업의 pressure를 생각하게 하지만 구조가 다릅니다. CUBRID private LRU는 pool이 관리하는 resident BCB의 정책 domain과 quota를 가집니다. PostgreSQL ring은 backend-local한 shared buffer ID 참조 배열입니다. 같은 “private”라는 말로 독립 pool처럼 설명하면 중요한 상태를 놓칩니다.</p>
+    <p class="source">근거: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L420-L540">strategy factory</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L615-L705">ring reuse와 slot 교체</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L741-L770">bulk-read rejection</a>.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="postgres-writeback">
+    <p class="eyebrow">11 · WRITEBACK OWNERS</p><h2>Clock이 dirty를 골랐다면 누가 쓰는가?</h2>
+    <p class="cue">화면: <a href="ko/lessons/0018a-compare-replacement-policies.html#dirty">dirty-page progress</a> → <a href="ko/lessons/0018a-compare-replacement-policies.html#postgres-tradeoffs">PostgreSQL과 CUBRID의 tradeoff</a>. 더 자세한 writer 구분은 아래 표와 pinned source를 사용합니다.</p>
+    <p>Clock은 dirty라는 이유만으로 descriptor를 제외하지 않습니다. Unpinned, zero-credit 후보를 자신의 pin으로 얻은 다음 allocating backend가 dirty write를 처리할 수 있습니다. 이때 conditional content lock을 시도하고, 필요한 WAL을 먼저 보존하며 page write를 수행합니다. Lock을 얻지 못하거나 다른 사용 때문에 identity를 제거할 수 없으면 후보를 놓고 다시 시도합니다.</p>
+    <p>이 경로에서 “선택 당시 다른 pin이 없었다”는 사실은 이후에도 혼자만 사용한다는 보장이 아닙니다. 다른 backend가 pin하거나 다시 dirty로 만들 수 있습니다. <code>InvalidateVictimBuffer()</code>는 mapping과 header를 보호하고 현재 refcount가 자기 pin 하나뿐이며 dirty가 아닌지 확인합니다.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="PostgreSQL writeback 주체"><table><thead><tr><th>주체</th><th>목적</th><th>따라볼 경로</th></tr></thead><tbody><tr><td>Allocating backend</td><td>자신의 miss를 진행하기 위해 dirty victim을 처리</td><td><code>GetVictimBuffer</code>가 dirty 분기에서 <code>FlushBuffer</code>를 호출한 뒤 <code>InvalidateVictimBuffer</code>를 호출</td></tr><tr><td>Background writer</td><td>앞으로 쓸 가능성이 있는 clean 후보를 미리 확보</td><td><code>BgBufferSync → SyncOneBuffer</code>, 현재 pin/credit 조건을 고려</td></tr><tr><td>Checkpointer</td><td>Checkpoint 경계의 dirty work와 저장 경로 진행</td><td><code>BufferSync</code>와 checkpoint 처리. Cold zero-credit victim만을 위한 선택이 아님.</td></tr></tbody></table></div>
+    <p>그러므로 background writer가 있다고 foreground write가 사라지는 것은 아닙니다. Checkpointer를 replacement worker라고 부르기도 어렵습니다. 앞에서 CUBRID의 page-flush, log-flush, checkpoint, DWB를 나눈 것처럼, PostgreSQL에서도 이름보다 목적과 완료 경계를 나누면 이해할 수 있습니다.</p>
+    <div class="prompt"><p><strong>예측:</strong> Backend A가 dirty victim을 flush했습니다. Identity invalidation 직전에 B가 같은 페이지를 pin했습니다. A가 이미 write했으니 frame을 다른 페이지로 바꿔도 될까요?</p>
+      <details class="answer"><summary>예측 후 답 보기</summary><p>현재 shared refcount가 A의 pin 하나만이 아니므로 invalidation을 거절하고 다시 선택해야 합니다. Write 완료는 현재 사용자를 제거하지 않습니다. B가 다시 dirty로 만든 경우에도 현재 dirty 검사에서 재사용을 거절합니다.</p></details>
+    </div>
+    <p>설계 비교는 조건을 붙여 말하겠습니다. CUBRID은 LRU domain과 zone, quota로 유지와 pressure를 다룹니다. PostgreSQL은 bounded credit과 clock, 작업별 ring으로 다룹니다. 전자는 list와 quota 작업을, 후자는 sweep과 credit·pin 상태 작업을 살펴볼 수 있습니다. Hot set과 scan, dirty 생성률, pin 길이, 저장장치에 따라 결과가 달라질 수 있으므로 이 소스 설명을 성능 순위로 바꾸지는 않겠습니다.</p>
+    <p class="source">근거: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2673">foreground write</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2471-L2511">invalidation 재검사</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3854-L4211">background cleaning</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3575-L3615">checkpoint selection</a>.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+
+  <section class="run-sheet" id="closing">
+    <p class="eyebrow">12 · FINAL WORKSHOP</p><h2>새 일정으로 연결하고, 페이지 버퍼 세미나를 마친다</h2>
+    <p class="cue">화면: 먼저 이 절의 두 새 질문을 사용합니다. 답을 논의한 뒤 <a href="ko/lessons/0018a-compare-replacement-policies.html#session-page-journey">전체 page journey</a>를 열어 마무리합니다.</p>
+    <p>이제 이름을 기억하는 대신 새 일정에 적용해 보겠습니다. 각각 시작 상태, 한 사건, 그 이후 상태, controlling predicate, 다음에 볼 증거를 적어 주세요. 설명에 필요한 source는 사용할 수 있지만 model answer는 먼저 열지 않습니다.</p>
+    <div class="prompt" id="final-cubrid"><h3>사례 A · Flush count는 늘었는데 allocator가 기다린다</h3><p>CUBRID pool에 invalid frame이 없습니다. Allocator B가 direct victim을 기다립니다. Cold dirty P의 G 제출이 성공하고 post-flush queue 삽입도 성공했습니다. Consumer가 실행되기 전에 writer A가 P를 fix하고 G+1 변경을 만들었으며 아직 반납하지 않았습니다. Consumer는 실행되어 해당 BCB를 꺼냈습니다.</p><p>왜 이 사건으로 B를 바로 진행시킬 수 없을까요? G의 어떤 처리는 마쳐야 하나요? “Post-flush가 실행되지 않았다”와 “실행했지만 배정을 거절했다”를 구분하려면 무엇을 관찰할까요?</p>
+      <details class="answer"><summary>논의 후 model explanation</summary><p>A의 현재 fix와 새 DIRTY가 재사용을 막습니다. G의 완료 상태와 flush waiters는 정리하되, G+1 dirty 작업과 현재 fix 보호를 유지합니다. Consumer task의 실행/queue consume, BCB flags와 fix 상태, 현재 zone/quota, direct-victim waiter와 assignment 여부를 시간 순서로 봅니다. Flush count 증가만으로 소비 여부나 배정 성공을 판단할 수 없습니다. 이 사례는 특정 버그나 starvation의 runtime 입증이 아닙니다.</p></details>
+    </div>
+    <div class="prompt" id="final-postgres"><h3>사례 B · Ring이 있어도 scan이 global clock에 간다</h3><p>PostgreSQL bulk-read strategy의 다음 ring slot은 permanent dirty 페이지 R입니다. R은 처음 선택할 때 unpinned이며 credit 1이고, conditional content lock도 성공했습니다. R의 page LSN까지 WAL flush가 아직 필요합니다. 같은 시간에 별도의 hot 페이지 H는 다른 backend가 pin하고 있습니다.</p><p>R과 ring slot은 어떻게 처리할 수 있을까요? Global fallback이 가능하다는 사실이 H의 pin 보호를 없애나요? 어느 두 source 경계를 찾아보면 될까요?</p>
+      <details class="answer"><summary>논의 후 model explanation</summary><p>이 조건의 BAS_BULKREAD ring 후보는 StrategyRejectBuffer에서 slot을 InvalidBuffer로 비우고 pin/lock을 반납한 뒤 다른 후보를 구할 수 있습니다. R 자체의 resident identity를 이 rejection만으로 제거하지는 않습니다. Global clock도 pinned H를 건너뜁니다. GetVictimBuffer의 permanent/from_ring/WAL 조건과 StrategyRejectBuffer의 bulk-read 조건, 그리고 StrategyGetBuffer의 refcount guard를 함께 읽습니다. Ring의 fallback은 protected hot frame을 덮어쓸 허가가 아닙니다.</p></details>
+    </div>
+    <h3>마지막 연결 질문</h3>
+    <p>한 페이지를 요청한 순간부터 다른 identity로 frame을 재사용할 때까지를 설명해 보겠습니다. Identity를 찾고, resident 저장을 마련하고, 사용 보호와 바이트 접근을 얻습니다. 변경한 caller는 필요한 로그와 dirty 작업을 기록합니다. 사용은 반납하지만 resident와 dirty 상태는 별도로 남습니다. 정책이나 caller가 한 이미지를 전달하고, 완료 상태를 정리합니다. 마지막에 지금의 보호와 재사용 조건을 다시 확인한 뒤 identity를 바꿉니다.</p>
+    <p>Daemon 이름이나 정책 이름이 바뀌어도 이 질문은 유지됩니다. 지금 어느 identity인가? 누가 사용하는가? 어떤 이미지가 보존됐는가? 누가 다음 진행을 소유하는가? 어떤 guard를 통과했는가? CUBRID과 PostgreSQL의 차이는 이 공통 질문에 답하는 구체적인 상태와 경로에서 찾을 수 있습니다.</p>
+    <p>이것으로 세 번의 페이지 버퍼 세미나를 마치겠습니다. 이후 실제 변경이나 장애를 만날 때는 오늘의 소유자와 predicate를 기준으로 소스를 찾아가면 됩니다. 모든 세부사항을 한 번에 기억하는 대신, 근거를 찾아 자신의 설명을 검증하는 경로를 남기겠습니다.</p>
+    <p class="cue">마무리 링크: <a href="playbooks/debug-by-symptom.md?v">증상별 진단</a> · <a href="reference/source-map.md?v">source map</a> · <a href="page-buffer-teaching-material.md?v">Maintainer Guide</a>. 마지막 질문을 받은 뒤 종료합니다.</p>
+    <p class="source">발표 준비와 headless checks는 technical delivery 근거입니다. 실제 참가자 이해도와 한국어 구두 전달의 자연스러움은 사람이 확인합니다.</p>
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+  </section>
+</main>
+</body>
+</html>

@@ -10,17 +10,19 @@ Page buffer is independently versioned. The user will later add this repository 
 
 ## Seminar delivery
 
-The live seminar has three sessions: **3 hours + 4 hours + n hours**, with the third session's duration still to be determined.
+The live seminar has three sessions: **3 hours + 4 hours + n hours**, with the third and final session's duration flexible.
 
 | Session | Duration | Status |
 | --- | --- | --- |
 | 1 | 3 hours | Completed |
 | 2 | 4 hours | Completed |
-| 3 | n hours (to be determined) | Remaining |
+| 3 (final) | n hours (flexible) | Remaining |
 
 Together, the first two sessions covered page-buffer basics, Buffer Control Blocks (BCBs), and private/shared LRU organization. The remaining session covers page-buffer daemon details and PostgreSQL buffer-management and replacement strategies.
 
 The delivered sessions and remaining agenda govern current seminar preparation. The broader curriculum and Maintainer Guide remain available for deeper study.
+
+Prepare the final session with the [Session 3 preparation plan](docs/final-session-preparation.md) and [Korean spoken script](my-presentation-script-session-3.html).
 
 ## Authoring and checks
 
