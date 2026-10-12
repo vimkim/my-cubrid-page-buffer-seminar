@@ -12,8 +12,10 @@
 | 준비 기준 대본 SHA-256 | `8825c97e33d97d3e4fb97b5ee2dbe052fe9831834e788f0fbd6a15ce761becc9` |
 | 편집 입력 커밋 | CSS 적용 커밋 `328ee39d1b258cf7caed984f7b7ced4ff4247274` |
 | 편집 입력 대본 SHA-256 | `b70d1673e9786ede67ae9662b39b2e0675d60abe9a5fa792e1c168d55f360445` |
+| 후속 명확화 검토 기준 커밋 | `d2181f519eccaae4e9426a6da52f6acd432f8f65` |
+| 후속 명확화 검토 기준 대본 SHA-256 | `9b9cb0c504838fca6cdb6a8bc88f4b8c84e1d39575283043e782712840c0fb33` |
 | 편집 후 검토 대본 | [my-presentation-script-session-3.html](my-presentation-script-session-3.html) |
-| 편집 후 대본 SHA-256 | `9b9cb0c504838fca6cdb6a8bc88f4b8c84e1d39575283043e782712840c0fb33` |
+| 편집 후 대본 SHA-256 | `c2bf881dbdbd1891efbfe2c825b2a7b7837e2d7cda057efab0aac97f49ed4ef3` |
 | 기술 기준 | CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`, PostgreSQL `fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc` |
 | 검토일 | 2026-10-12 |
 
@@ -28,6 +30,7 @@ P1은 설명을 듣는 동안 의미를 놓치거나 증거 수준을 오해할 
 | P1 · 언어 | [세대 설명](my-presentation-script-session-3.html#generation), [마지막 연결](my-presentation-script-session-3.html#closing) | `resident 저장`, `전달 의무`, `dirty 작업`처럼 상태·공간·남은 작업을 한꺼번에 압축한 명사구가 들으면서 이해하기 어려움. | 메모리 공간, 이미지 전달, 남아 있는 dirty 상태를 문장 안에서 구분함. G/G+1은 설명용 세대 이름임을 먼저 정의함. |
 | P1 · 언어·수업 | [Post-flush](my-presentation-script-session-3.html#post-flush), [마지막 사례 A](my-presentation-script-session-3.html#final-cubrid) | `완료 상태와 flush waiters를 정리`라는 표현이 flag 처리와 대기자 깨우기를 같은 동작으로 들리게 함. | FLUSHING 해제와 flush 대기자 깨우기를 각각 말하고, allocator가 기다리는 frame 배정과 구분함. |
 | P1 · 기술 표현 | [Page-flush](my-presentation-script-session-3.html#page-flush) | `관측된 demand wake`가 소스 조건인지 실제 실행 관찰인지 불분명함. | Boot gate를 통과한 실행에서 daemon이 wakeup을 확인하는 조건으로 서술하고 소스 근거임을 명시함. 아래 기술 명확화 항목에서 별도로 기록함. |
+| P1 · 기술 표현 | [Post-flush 인계 조건](my-presentation-script-session-3.html#post-flush) | 인계 조건이 맞지 않을 때의 완료 주체를 page-flush thread로만 서술하면, 다른 제출 caller도 들어오는 공통 flush 경로를 놓침. | 완료 처리의 주체를 `이미지를 제출한 thread`로 바로잡음. |
 | P2 · 언어 | [Daemon](my-presentation-script-session-3.html#daemons), [Maintenance](my-presentation-script-session-3.html#maintenance), [Flush-control](my-presentation-script-session-3.html#pacing) | `accepted pass`, `allowance`, `guard`, `task 시도` 등이 한국어 서술 중 잦은 용어 전환을 만듦. | 갱신 조건을 통과한 실행, token 예산, 검사 조건, 작업 시도로 풀어 씀. 소스 식별자와 필요한 전문 용어는 유지함. |
 | P2 · 수업 | [Maintenance](my-presentation-script-session-3.html#maintenance) | `epoch`가 한 번 등장하지만 그 자리에서 뜻을 설명하지 않음. | `갱신 회차를 나타내는 epoch`라는 짧은 정의를 붙임. |
 | P2 · 언어 | [PostgreSQL 모델](my-presentation-script-session-3.html#postgres-model), [Clock](my-presentation-script-session-3.html#postgres-clock), [Ring](my-presentation-script-session-3.html#postgres-ring) | `bounded reuse credit`, `zero credit`, `teaching model`, `reset` 같은 설명구가 정의보다 먼저 나오거나 문장 흐름을 끊음. | Credit의 뜻을 먼저 설명하고 0·상한·초기 상태를 직접 서술함. Pin, descriptor, clock, ring, refcount는 유지함. |
@@ -53,13 +56,14 @@ P1은 설명을 듣는 동안 의미를 놓치거나 증거 수준을 오해할 
 
 ## 소스 확인을 거친 기술적 명확화
 
-다음 네 항목은 문체 수정과 별개로 확인했습니다. 메커니즘을 새로 정의하거나 실행 결과를 추가한 것이 아니라, 기존 설명의 적용 조건과 검사 대상을 분명히 한 것입니다. 기준 설명과 [소스 목록](source-inventory.md), [불확실성 목록](unresolved-or-version-sensitive-findings.md)을 먼저 확인하고 고정 소스의 해당 분기를 읽었습니다.
+다음 다섯 항목은 문체 수정과 별개로 확인했습니다. 메커니즘을 새로 정의하거나 실행 결과를 추가한 것이 아니라, 기존 설명의 적용 조건과 검사 대상, 완료 처리의 주체를 분명히 한 것입니다. 기준 설명과 [소스 목록](source-inventory.md), [불확실성 목록](unresolved-or-version-sensitive-findings.md)을 먼저 확인하고 고정 소스의 해당 분기를 읽었습니다.
 
 | 항목 | 명확하게 한 내용 | 기준 설명과 고정 소스 |
 | --- | --- | --- |
 | [WAL](my-presentation-script-session-3.html#generation) | 로그 선행 순서에 `로그가 필요한 영구 페이지`라는 범위를 붙임. 임시 페이지나 로그가 필요 없는 경로까지 동일한 WAL 강제를 한다는 인상을 줄임. | [Flush 기준 설명](learning/04-flush-one-generation.md#one-flush-generation-timeline), CUBRID [`pgbuf_bcb_flush_with_wal`](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10855) |
 | [Wakeup 처리](my-presentation-script-session-3.html#page-flush) | Boot gate 이후 `was_woken_up()`으로 확인된 wakeup은 최소 한 번의 후보 flush 호출을 유도한다고 서술함. 소스에서 확인한 동작이며 runtime 관찰이라고 부르지 않음. | [Daemon 실행 경계 분석](reference/page-buffer-daemon-lifecycle-audit.md), CUBRID [page-flush 작업](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17012-L17067) |
 | [Post-flush 검사](my-presentation-script-session-3.html#post-flush) | 후보 자격을 막는 flag 검사에 DIRTY가 포함됨을 명시함. Fix 검사와 별도로 새 dirty 상태가 배정을 막는다는 설명을 드러냄. | [Flush 기준 설명](learning/04-flush-one-generation.md#concurrent-re-dirty-is-generation-g1), CUBRID [후보 mask](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L258-L265)와 [queue 소비자](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15556) |
+| [인계하지 않을 때의 완료 주체](my-presentation-script-session-3.html#post-flush) | 네 인계 조건 중 하나라도 맞지 않으면 이미지를 제출한 caller thread가 BCB를 다시 잠그고 완료 처리함. 제출 주체가 page-flush가 아닌 경우에도 이 일반 분기를 사용하므로 완료 주체를 page-flush로 한정하지 않음. | [공통 flush 완료 설명](learning/04-flush-one-generation.md#one-flush-generation-timeline), CUBRID [인계 조건과 일반 완료 분기](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952) |
 | [Usage credit 상한](my-presentation-script-session-3.html#postgres-model) | 기본 strategy의 해당 backend 첫 pin에서 credit은 상한 5에 도달하지 않았을 때 증가한다고 명시함. 중첩 pin은 private refcount만 늘리는 구분을 유지함. | [PostgreSQL pin·교체 설명](reference/cross-database-replacement-policy-comparison.md#hit-and-eviction-behavior), PostgreSQL [`PinBuffer`](https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3386) |
 
 PostgreSQL의 permanent 표현은 [기존 후보 거절 분기](https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2616-L2633)에 있는 `BM_PERMANENT` 조건을 유지한 용어 정리입니다. 모든 디스크 기반 페이지로 범위를 넓히지 않았습니다.
@@ -88,9 +92,9 @@ CSS 커밋의 외부 stylesheet 연결과 루트 class, 기존 ID, 화면 안내
 
 ## 검증 기록과 한계
 
-검증은 편집 후 위 SHA-256의 대본을 기준으로 수행합니다. 언어 검토는 에이전트가 문장과 인과관계를 읽은 결과이며, 사람의 구두 수용성 검토는 열린 상태입니다. 엔진 runtime 실험, 참가자 관찰, 교차 엔진 benchmark는 수행하지 않았습니다.
+소스·링크·served 바이트 검사는 편집 후 위 SHA-256의 대본을 기준으로 수행했습니다. 아래 headless DOM 검사는 후속 명확화 직전의 `d2181f5` 대본에 대한 기록입니다. 이번 후속 수정에서는 인계하지 않을 때의 주체만 바로잡았으며, 최종 통합 화면은 주 작업자가 확인합니다. 언어 검토는 에이전트가 문장과 인과관계를 읽은 결과이며, 사람의 구두 수용성 검토는 열린 상태입니다. 엔진 runtime 실험, 참가자 관찰, 교차 엔진 benchmark는 수행하지 않았습니다.
 
-- Copyparty Markdown 소스 검사를 통과했습니다. 대본과 보고서의 상대 파일·fragment 링크 106개가 해석되며, 고정 GitHub 소스 참조 24개의 파일·리비전·줄 범위가 로컬 고정 소스와 일치합니다.
+- Copyparty Markdown 소스 검사를 통과했습니다. 대본과 보고서의 상대 파일·fragment 링크 109개가 해석되며, 고정 GitHub 소스 참조 25개의 파일·리비전·줄 범위가 로컬 고정 소스와 일치합니다.
 - CSS 입력본과 비교해 모든 기존 ID와 링크 목적지·순서, head의 stylesheet 연결, section 및 details 속성이 유지됩니다. 12개 설명 블록과 14개 답 disclosure가 있고, 답은 모두 처음에 닫혀 있습니다.
 - 로컬 Copyparty에서 받은 대본의 바이트와 파일이 정확히 일치하며, SHA-256은 위의 편집 후 식별값과 같습니다.
 - Headless Chromium에서 1440 px와 390 px 너비로 JavaScript를 끄고 확인했습니다. 가로 방향 본문 유실이 없고, 키보드로 답을 열고 닫을 수 있으며, 마지막 절로 이동합니다. 관련 console/page 오류는 없었습니다.
