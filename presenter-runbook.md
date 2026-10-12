@@ -10,6 +10,8 @@ Use the [Session 3 preparation plan](docs/final-session-preparation.md) and [Kor
 
 ## Shared facilitation
 
+For intensive design questioning, follow the [six-screen defense route](docs/final-session-preparation.md#intensive-defense-route) within the twelve existing script blocks. Preserve Q01–Q24, then use D25–D33 to challenge removal premises and alternatives. Distinguish an inferred functional rationale from historical intent; distinguish a safe policy shift from a broken ownership/recovery invariant. The new seven comparison traces reset independently. Complete D32/D33 before the final page-journey recap and farewell.
+
 Use Korean as the default live edition. Begin in reading mode to show the lecture's scope, then use presentation mode when focusing a section. PageUp/PageDown move between sections; Escape returns to reading. Open a model explanation after participants have considered the scenario. No participant responses are stored by the site.
 
 Keep the final session's duration flexible. Use the preparation plan's essential blocks and prediction pauses, expanding source traces as questions require. Revisit a prerequisite when an ownership, guard, lifetime, or evidence boundary is unclear. Finish with the closing exercise and leave deeper study accessible through the Maintainer Guide and Topic library.

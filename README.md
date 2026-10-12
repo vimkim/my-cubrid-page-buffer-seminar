@@ -24,6 +24,8 @@ The delivered sessions and remaining agenda govern current seminar preparation. 
 
 Prepare the final session with the [Session 3 preparation plan](docs/final-session-preparation.md) and [Korean spoken script](my-presentation-script-session-3.html).
 
+The expanded defense route begins at [Korean stable-image reasoning](ko/reference/defense-generations.html#problem) or its [English counterpart](en/reference/defense-generations.html#problem). Seven linked pages explain necessity, invariants, removal schedules, alternatives, costs and proof limits, with nine additional defense questions and a complete seminar ending.
+
 ## Authoring and checks
 
 Read [AGENTS.md](AGENTS.md), [seminar authoring notes](NOTES.md), and [guide authoring notes](maintainer-guide-notes.md) before editing. Existing personal validation dependencies remain intentional: Node.js, Python, the configured Copyparty Markdown checker, Copyparty, and Playwright with Chromium for browser checks. The checker supports `COPYPARTY_MARKDOWN_CHECKER`; browser checks support `PLAYWRIGHT_MODULE`.

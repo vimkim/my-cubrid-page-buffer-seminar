@@ -28,6 +28,8 @@ All worked schedules in the script are constructed reasoning examples. They are 
 
 ## Essential screen route
 
+The existing explanation/trace stops below supply context. The **intensive defense route** following this table is also essential: use its six screens for each major mechanism and the script's matching spoken expansion. The session retains twelve overview blocks and no fixed duration.
+
 | Block / script | Exact Korean screen route | Participant work and stopping point |
 | --- | --- | --- |
 | 1. [Opening](../my-presentation-script-session-3.html#opening) | [Page journey](../ko/lessons/0001-present-the-page-journey.html#journey) | Reconstruct identity, ownership, byte access, and propagation. Finish at the full-pool question. |
@@ -44,6 +46,26 @@ All worked schedules in the script are constructed reasoning examples. They are 
 | 12. [Final workshop and closure](../my-presentation-script-session-3.html#closing) | [Projected CUBRID case](../ko/lessons/0018a-compare-replacement-policies.html#final-cubrid) → [projected PostgreSQL case](../ko/lessons/0018a-compare-replacement-policies.html#final-postgres) → [complete page journey](../ko/lessons/0018a-compare-replacement-policies.html#session-page-journey) | The script retains both fresh scenarios. Discuss Q23/Q24, then reconstruct the complete journey. Close the page-buffer seminar here. |
 
 Use the matching `en/` paths when participants want English wording. The PostgreSQL section selects the PostgreSQL parts of Lecture 18A; its InnoDB sections remain optional library material.
+
+## Intensive defense route
+
+Each linked page provides six separately projected screens in this exact order: `#problem` → `#mechanism` → `#removal` → `#alternatives` → `#boundaries` → `#defense`. Main explanations keep rationale, assumptions, invariants and outcomes visible; native defense answers start closed. Page Next/Previous, direct language counterparts, the seven-page argument menu and Return to topic support entry and return without replacing any earlier URL. Reading and no-JavaScript modes expose the complete history.
+
+| Script block | Paired entry, then all six screens | Research claims / new defense | Comparison trace |
+| --- | --- | --- | --- |
+| 2 · Generation | [KO](../ko/reference/defense-generations.html#problem) / [EN](../en/reference/defense-generations.html#problem) | G1–G5; D25 | copied-image/debt removal versus serialization |
+| 3 · Daemons | [KO](../ko/reference/defense-daemons.html#problem) / [EN](../en/reference/defense-daemons.html#problem) | D1–D4; D26 | wake hint versus durable work and joined lifetime |
+| 4/5 · Page-/post-flush | [KO](../ko/reference/defense-handoff.html#problem) / [EN](../en/reference/defense-handoff.html#problem) | H1–H5; D27 | stale offer versus receiver check or continuous reservation |
+| 6/7 · Maintenance/control | [KO](../ko/reference/defense-pacing.html#problem) / [EN](../en/reference/defense-pacing.html#problem) | P1–P5; D28 | interval replacement versus accumulated/absent allowance |
+| 8/9 · PostgreSQL pins/clock | [KO](../ko/reference/defense-clock.html#problem) / [EN](../en/reference/defense-clock.html#problem) | K1–K5; D29 | shared lifetime protection versus its removal/per-pin accounting |
+| 10/11 · Rings/writeback | [KO](../ko/reference/defense-rings.html#problem) / [EN](../en/reference/defense-rings.html#problem) | R1–R5; D30/D31 | re-dirty retirement rejection versus omission/stronger exclusion |
+| 12 · Closure | [KO](../ko/reference/defense-synthesis.html#problem) / [EN](../en/reference/defense-synthesis.html#problem) | S1–S3; D32/D33 | old completion versus current dirty debt and typed evidence |
+
+Block 1 introduces the synthesis problem only; block 12 completes its full argument after the preserved Q23/Q24 cases and before the existing farewell. Blocks 4/5, 6/7, 8/9 and 10/11 divide a page's argument between neighboring spoken blocks. The script lists every exact EN/KO cue. When using the continuous seven-page presentation route, complete all six screens before its Next argument link.
+
+The [primary-source research ledger](final-session-defense-research.md) and [application record](final-session-report-application.md#intensive-defense-expansion-work-item-323) map evidence to delivery. Functional rationale remains Inference unless explicit source evidence records intent. Every removal experiment names what remains; policy changes are not automatically corruption. Structural cost and quiet-schedule visit bounds do not prove concurrent latency.
+
+For projection, start with one trace step, ask for the predicted branch outcomes, then advance and reset its own scenario. These seven new comparison traces are independent of the retained fifteen; Q01–Q24 remain and D25–D33 add follow-up defense. Prefer shortening raw source catalogs over omitting counterfactuals, alternatives or the final closure.
 
 ## What to emphasize
 

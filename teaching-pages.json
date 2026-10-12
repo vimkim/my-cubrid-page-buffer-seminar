@@ -1,9 +1,16 @@
 {
   "version": 1,
-  "expectedPageCount": 58,
+  "expectedPageCount": 65,
   "canonicalLanguage": "en",
   "legacyRedirectMinimumDays": 90,
   "pages": [
+    {"path": "reference/defense-generations.html", "en": "en/reference/defense-generations.html", "ko": "ko/reference/defense-generations.html", "review": {"state": "pending"}, "fingerprints": {}},
+    {"path": "reference/defense-daemons.html", "en": "en/reference/defense-daemons.html", "ko": "ko/reference/defense-daemons.html", "review": {"state": "pending"}, "fingerprints": {}},
+    {"path": "reference/defense-handoff.html", "en": "en/reference/defense-handoff.html", "ko": "ko/reference/defense-handoff.html", "review": {"state": "pending"}, "fingerprints": {}},
+    {"path": "reference/defense-pacing.html", "en": "en/reference/defense-pacing.html", "ko": "ko/reference/defense-pacing.html", "review": {"state": "pending"}, "fingerprints": {}},
+    {"path": "reference/defense-clock.html", "en": "en/reference/defense-clock.html", "ko": "ko/reference/defense-clock.html", "review": {"state": "pending"}, "fingerprints": {}},
+    {"path": "reference/defense-rings.html", "en": "en/reference/defense-rings.html", "ko": "ko/reference/defense-rings.html", "review": {"state": "pending"}, "fingerprints": {}},
+    {"path": "reference/defense-synthesis.html", "en": "en/reference/defense-synthesis.html", "ko": "ko/reference/defense-synthesis.html", "review": {"state": "pending"}, "fingerprints": {}},
     { "path": "reference/replacement-lab.html", "en": "en/reference/replacement-lab.html", "ko": "ko/reference/replacement-lab.html", "review": { "state": "pending" }, "fingerprints": {} },
     {"path": "reference/first-principles-route.html", "en": "en/reference/first-principles-route.html", "ko": "ko/reference/first-principles-route.html", "review": {"state": "pending"}, "fingerprints": {"en": "sha256:ac02c08e7af84702826b688cafcc2f85d43dbefa13b66e403dec6e28cc9f5b4c", "ko": "sha256:f10876f068950a074cc5f329ccdc46f1195fb0bcd357899274b7c0a1172e233b"}},
     { "path": "lessons/0000a-database-bridge.html", "en": "en/lessons/0000a-database-bridge.html", "ko": "ko/lessons/0000a-database-bridge.html", "review": { "state": "pending" }, "fingerprints": {} },

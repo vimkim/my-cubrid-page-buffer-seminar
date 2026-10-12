@@ -22,7 +22,7 @@
 
   <nav class="route" id="route" aria-label="발표 순서">
     <h2>오늘의 질문: 누가 재사용 가능한 frame을 만드는가?</h2>
-    <p>발표자용 대본입니다. 초록색 화면 안내에 따라 기존 강의의 해당 절을 엽니다. 예측 질문에서는 답을 닫아 두고 참가자가 생각할 시간을 줍니다. 대본의 사례는 추론을 위해 구성했으며, 실제 실행을 캡처한 기록이 아닙니다.</p>
+    <p>발표자용 대본입니다. 초록색 화면 안내에 따라 기존 강의와 일곱 논증 페이지의 해당 절을 엽니다. 각 논증 페이지에는 여섯 개의 독립 발표 화면이 있습니다. 예측 질문에서는 답을 닫아 두고 참가자가 생각할 시간을 줍니다. 대본의 사례는 추론을 위해 구성했으며, 실제 실행을 캡처한 기록이 아닙니다.</p>
     <ol>
       <li><a href="#opening">앞선 두 세션 연결</a></li>
       <li><a href="#generation">한 페이지, 두 세대</a></li>
@@ -56,7 +56,12 @@
 <p><strong>예측 질문:</strong> 이 승인 규칙을 검토할 수 있는 가장 작은 반례는 어떤 실행 순서일까요?</p>
 <details class="answer answer-disclosure"><summary>논의 후 설명 보기</summary><p>Writer가 변경을 기록하고 P를 dirty 상태로 만든 뒤 마지막 unfix를 합니다. fcnt는 0이지만 보존할 변경은 남아 있습니다. 이때 identity를 바꾸면 그 변경을 잃습니다. 실제 재사용은 보호 아래 현재 flag, identity, 대기자와 정책 조건도 확인해야 합니다. Unfix는 사용을 끝내고, 이미지 전달은 별도의 보존 작업을 끝냅니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 그 반례에서 사용을 끝내는 사건과 보존 의무를 끝내는 사건은 각각 무엇인가요?</p></details>
 </div>
-<a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
+<h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-synthesis.html#problem">문제·불변식</a> (<a href="en/reference/defense-synthesis.html#problem" hreflang="en">EN</a>)</p>
+<p>오늘은 각 메커니즘을 설계 심사에서 방어해 보겠습니다. 무엇을 해결하는지뿐 아니라 정확히 무엇을 제거했을 때 어떤 실행 순서가 달라지는지 따지겠습니다. 대안이 안전하게 같은 요구를 충족할 수도 있습니다. 그때는 추가 상태와 동기화, 대기 비용이 어디로 옮겨가는지를 설명해야 합니다.</p>
+<p>안전성과 진행, 정책 품질, 성능은 별도 주장입니다. 안전하게 거절한 요청은 계속 기다릴 수 있습니다. 소스가 보여 주는 기능적 이유는 Inference이며 원저자의 역사적 의도를 자동으로 증명하지 않습니다. 오늘 사례는 구성한 순서이고 성능 측정이나 crash 실험은 아닙니다.</p>
+
+    <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
   <section class="run-sheet" id="generation">
@@ -91,6 +96,12 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0006-flush-one-generation.html#flush-state-trace">한 frame, 안정된 사본, 두 보존 작업</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="learning/04-flush-one-generation.md?v">flush의 기준 설명</a>. 자세한 소스 위치는 <a href="docs/final-session-preparation.md?v#bounded-source-traces">준비 계획의 소스 추적 경로</a>에 있습니다.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-generations.html#problem">문제·불변식</a> (<a href="en/reference/defense-generations.html#problem" hreflang="en">EN</a>) → <a href="ko/reference/defense-generations.html#mechanism">구현·근거</a> (<a href="en/reference/defense-generations.html#mechanism" hreflang="en">EN</a>) → <a href="ko/reference/defense-generations.html#removal">제거 순서</a> (<a href="en/reference/defense-generations.html#removal" hreflang="en">EN</a>) → <a href="ko/reference/defense-generations.html#alternatives">대안·비용</a> (<a href="en/reference/defense-generations.html#alternatives" hreflang="en">EN</a>) → <a href="ko/reference/defense-generations.html#boundaries">동시성·실패 경계</a> (<a href="en/reference/defense-generations.html#boundaries" hreflang="en">EN</a>) → <a href="ko/reference/defense-generations.html#defense">방어 질문</a> (<a href="en/reference/defense-generations.html#defense" hreflang="en">EN</a>)</p>
+<p>첫 화면에서는 왜 사본이 필요한지 조건부터 정합니다. 느린 write 중에도 writer를 허용하려면 제출할 바이트와 LSA가 함께 고정돼야 합니다. BCB mutex만으로 다른 WRITE owner를 막는 것은 아닙니다. Caller가 먼저 적합한 소유권과 latch 조건을 확보해야 합니다.</p>
+<p>제거 화면은 같은 시작 상태를 세 경로로 나눕니다. 사본과 WAL은 유지하되 새 dirty 의무를 구분하지 않으면 G 완료가 G+1 작업까지 지울 수 있습니다. 반면 write 내내 writer를 배제하는 대안은 안전할 수 있습니다. 대신 저장장치 지연이 writer의 대기로 옮겨갑니다. 다음 단계에서 바뀐 필드와 결과를 확인한 뒤 초기화합니다.</p>
+<p>사본도 WAL도 torn page의 완전한 해결책은 아닙니다. DWB는 staging write와 동기화를 home write보다 먼저 수행하고 유효한 사본을 복구에 사용합니다. 수락만으로 그 단계가 끝난 것은 아닙니다. 두 사본의 동시 손실과 무효한 storage sync는 별도 경계입니다. D25에서는 값이 같아도 header와 로그 이력, dirty 의무가 같지 않다는 점을 방어합니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
@@ -119,6 +130,12 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0006a-understand-page-buffer-daemons.html#daemon-state-trace">Thread의 존재, gate, 받아들인 wake, join한 종료</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="reference/page-buffer-daemon-lifecycle-audit.md?v">daemon의 수명과 실행 주기 분석</a>.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-daemons.html#problem">문제·불변식</a> (<a href="en/reference/defense-daemons.html#problem" hreflang="en">EN</a>) → <a href="ko/reference/defense-daemons.html#mechanism">구현·근거</a> (<a href="en/reference/defense-daemons.html#mechanism" hreflang="en">EN</a>) → <a href="ko/reference/defense-daemons.html#removal">제거 순서</a> (<a href="en/reference/defense-daemons.html#removal" hreflang="en">EN</a>) → <a href="ko/reference/defense-daemons.html#alternatives">대안·비용</a> (<a href="en/reference/defense-daemons.html#alternatives" hreflang="en">EN</a>) → <a href="ko/reference/defense-daemons.html#boundaries">동시성·실패 경계</a> (<a href="en/reference/defense-daemons.html#boundaries" hreflang="en">EN</a>) → <a href="ko/reference/defense-daemons.html#defense">방어 질문</a> (<a href="en/reference/defense-daemons.html#defense" hreflang="en">EN</a>)</p>
+<p>네 역할을 하나의 pipeline으로 보지 않겠습니다. Page-flush는 이미지 공급, post-flush는 CPU 정리와 조건부 offer, maintenance는 retention 조정, control은 write 이후 pacing 예산을 담당합니다. 역할을 foreground나 단일 worker로 옮기는 대안도 가능하지만 I/O가 다른 책임을 지연시키지 않는 실행 구조가 필요합니다.</p>
+<p>Wake가 저장된 사건이라고 가정하면 RUNNING 중 알림에서 반례가 생깁니다. 공유 queue는 작업을 보존하지만 그 자체로 다음 실행 시각을 보장하지 않습니다. 작업 상태와 waiter 상태의 조건이 다릅니다. Timer가 실행 기회를 주더라도 gate와 scheduling, lock과 I/O 조건은 남습니다.</p>
+<p>종료에서 stop은 취소도 join도 아닙니다. 실행 중 task가 반환하고 sleeper가 깨어나 thread를 join한 뒤 공유 자원을 해제해야 합니다. D26의 50 ms는 목표 주기이지 writer 완료 기한이 아닙니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
@@ -146,6 +163,11 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0006b-follow-page-flush-handoff.html#candidate-state-trace">기억한 포인터는 후보 관찰일 뿐</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3780-L4165">후보 선택과 검사</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17012-L17067">daemon 실행 조건</a>.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-handoff.html#problem">문제·불변식</a> (<a href="en/reference/defense-handoff.html#problem" hreflang="en">EN</a>) → <a href="ko/reference/defense-handoff.html#mechanism">구현·근거</a> (<a href="en/reference/defense-handoff.html#mechanism" hreflang="en">EN</a>) → <a href="ko/reference/defense-handoff.html#removal">제거 순서</a> (<a href="en/reference/defense-handoff.html#removal" hreflang="en">EN</a>) → <a href="ko/reference/defense-handoff.html#alternatives">대안·비용</a> (<a href="en/reference/defense-handoff.html#alternatives" hreflang="en">EN</a>)</p>
+<p>Pointer와 identity를 함께 저장하는 이유를 구분합니다. Pointer는 안정된 BCB 저장소를 찾고 VPID는 그 frame이 다른 페이지로 바뀌었는지 판단합니다. VPID 검사만 제거하고 다른 guard를 유지하면 Q를 잘못 선택해 flush할 수 있습니다. 그것만으로 손상을 증명하지는 않습니다.</p>
+<p>Identity가 같아도 새 fix와 DIRTY, FLUSHING, zone이 바뀔 수 있습니다. 이제 offer 게시 이후 reader가 같은 P를 다시 fix하는 새 trace를 봅니다. Receiver 검사 제거는 producer 검사를 지워서가 아니라 그 뒤 보호 공백을 무시해서 실패합니다. 연속 reservation으로 대체할 수 있으나 lookup, 취소, 버려진 waiter의 수명을 추가로 관리해야 합니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
@@ -184,6 +206,11 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0006b-follow-page-flush-handoff.html#offer-state-trace">Quota 거절과 독립적으로 초기화한 제안 취소</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">완료 처리 인계 조건</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15556">소비자의 검사와 완료 처리</a> · <a href="ko/lessons/0006b-follow-page-flush-handoff.html#clean-unfix-handoff">clean unfix의 공급 경로</a>.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-handoff.html#boundaries">동시성·실패 경계</a> (<a href="en/reference/defense-handoff.html#boundaries" hreflang="en">EN</a>) → <a href="ko/reference/defense-handoff.html#defense">방어 질문</a> (<a href="en/reference/defense-handoff.html#defense" hreflang="en">EN</a>)</p>
+<p>각 거절은 같은 실패가 아닙니다. Dirty와 현재 사용자는 안전성 조건이고, hot zone과 private quota는 retention 정책입니다. 살아 있는 waiter가 없으면 배정하지 않습니다. 어느 경우에도 이전 이미지의 완료 정리와 flush-waiter wake는 별도 작업입니다.</p>
+<p>Queue-full fallback은 producer에서 local completion을 합니다. 이미 queue에 넣은 작업의 consumer를 중지하는 경우와 같지 않습니다. D27에서는 clean-at-enqueue boolean을 제안한 reviewer에게 그 값이 보호하는 구간을 물어봅니다. 현재 상태의 권한으로 쓰려면 중간 변경을 배제하는 증명이 필요합니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
@@ -210,6 +237,11 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0006c-follow-maintenance-and-pacing.html#quota-state-trace">여섯 시도, 두 갱신 회차</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14294-L14340">quota 갱신을 허용하는 조건</a> · <a href="unresolved-or-version-sensitive-findings.md?v">불확실성 목록의 VS-20 / VS-21</a>.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-pacing.html#problem">문제·불변식</a> (<a href="en/reference/defense-pacing.html#problem" hreflang="en">EN</a>) → <a href="ko/reference/defense-pacing.html#mechanism">구현·근거</a> (<a href="en/reference/defense-pacing.html#mechanism" hreflang="en">EN</a>) → <a href="ko/reference/defense-pacing.html#boundaries">동시성·실패 경계</a> (<a href="en/reference/defense-pacing.html#boundaries" hreflang="en">EN</a>)</p>
+<p>활동이 A에서 B로 이동하는데 quota가 고정이면 retention이 workload를 따라가지 못할 수 있습니다. 이는 정책 품질의 문제이며 stale quota가 곧 페이지 손상은 아닙니다. 적합한 final unfix는 BCB의 hit_age와 수락된 adjust_age를 비교해 한 epoch의 반복 기여를 제한합니다.</p>
+<p>Quota 64가 다시 계산돼도 sample 소비와 epoch 진행은 끝났을 수 있습니다. 값이 같다고 epoch 증가를 생략하면 다음 sample도 억제할 수 있습니다. VS-21의 5분 주석과 실행 조건, sampling·reuse·wrap 불확실성은 별도로 보존합니다. VS-20은 backup loop body가 진입하지 않는 소스 사실이며 다른 producer가 남아 있어 starvation은 측정해야 합니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
@@ -237,6 +269,11 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0006c-follow-maintenance-and-pacing.html#token-state-trace">Write 이후 소비와 회차별 교체</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L4122-L4204">write 이후의 호출</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L751-L891">token 소비, 대기, 갱신</a>.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-pacing.html#removal">제거 순서</a> (<a href="en/reference/defense-pacing.html#removal" hreflang="en">EN</a>) → <a href="ko/reference/defense-pacing.html#alternatives">대안·비용</a> (<a href="en/reference/defense-pacing.html#alternatives" hreflang="en">EN</a>) → <a href="ko/reference/defense-pacing.html#defense">방어 질문</a> (<a href="en/reference/defense-pacing.html#defense" hreflang="en">EN</a>)</p>
+<p>이미 OS write가 끝난 뒤 token을 정산한다는 시작점을 유지합니다. 이전 token 2개와 새 token 3개에서 교체 경로는 3개, 누적 대안은 5개입니다. 둘의 차이는 burst 정책입니다. 이미 쓴 바이트의 안전성이나 WAL 허가는 달라지지 않습니다.</p>
+<p>열 번의 제한은 condition wait 반환 뒤 retry 횟수입니다. 첫 wait에도 timeout이 없으므로 500 ms 같은 시간 상한으로 읽으면 안 됩니다. Log-CS 보유자는 부족분을 기다리지 않습니다. Pre-write limiter 대안을 쓰려면 admission 위치와 capacity cap, log-holder 진행 조건을 새로 설계해야 합니다. D28에서 quota 값과 epoch, retry와 시간을 각각 분리합니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
@@ -263,6 +300,11 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0018a-compare-replacement-policies.html#pin-state-trace">A의 중첩과 공유 descriptor 보호</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3386">PinBuffer</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L136-L147">최대 credit</a>.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-clock.html#problem">문제·불변식</a> (<a href="en/reference/defense-clock.html#problem" hreflang="en">EN</a>) → <a href="ko/reference/defense-clock.html#mechanism">구현·근거</a> (<a href="en/reference/defense-clock.html#mechanism" hreflang="en">EN</a>) → <a href="ko/reference/defense-clock.html#removal">제거 순서</a> (<a href="en/reference/defense-clock.html#removal" hreflang="en">EN</a>)</p>
+<p>Private refcount는 이 backend의 nested 사용 의무이고 shared refcount는 backend의 수명 기여입니다. 첫 pin은 공유 상태를 바꾸지만 nested pin은 private 수치만 늘립니다. 마지막 반납까지 identity가 보호됩니다. Pin은 content 변경을 직렬화하지 않으며 usage_count는 소유권이 아닙니다.</p>
+<p>같은 backend가 H를 두 번 사용하는 동안 공유 수명 표시만 없애면 clock이 H를 잘못 claim할 수 있습니다. Content lock이 없는 접근 사이 구간도 pin이 보호해야 합니다. Nested pin을 모두 공유 count로 세는 대안은 대응한 반납이 있으면 안전하지만 공유 atomic 비용과 count 의미를 바꿉니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
@@ -293,6 +335,11 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0018a-compare-replacement-policies.html#clock-cas-trace">0을 읽는 것과 0에서 선택하는 것</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L171-L295">StrategyGetBuffer</a>.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-clock.html#alternatives">대안·비용</a> (<a href="en/reference/defense-clock.html#alternatives" hreflang="en">EN</a>) → <a href="ko/reference/defense-clock.html#boundaries">동시성·실패 경계</a> (<a href="en/reference/defense-clock.html#boundaries" hreflang="en">EN</a>) → <a href="ko/reference/defense-clock.html#defense">방어 질문</a> (<a href="en/reference/defense-clock.html#defense" hreflang="en">EN</a>)</p>
+<p>Exact LRU의 위치를 아는 splice는 O(1)입니다. Clock과의 차이는 hit에서 공유 순서를 갱신하는 동기화와 allocation에서 방문·aging하는 비용의 분배입니다. Credit만 제거해도 pin·WAL·mapping 규칙을 유지하면 안전한 정책 대안이 가능합니다.</p>
+<p>Credit 최대 5가 여섯 pass의 동시 실행 보장을 뜻하지는 않습니다. Allocator 하나, 고정 pin, 새 credit 없음, CAS 성공이라는 가정 아래의 방문 상한입니다. 다른 backend가 credit을 갱신하거나 pin하면 전제가 깨집니다. Trycounter도 감소 CAS 성공에 reset합니다. D29에서는 방문, 감소, claim, 간섭 retry를 따로 셉니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
@@ -323,6 +370,11 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0018a-compare-replacement-policies.html#ring-wal-trace">같은 dirty 후보, 세 독립 strategy</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L420-L540">strategy factory</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L615-L705">ring 재사용과 slot 교체</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L741-L770">bulk-read의 후보 거절</a>.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-rings.html#problem">문제·불변식</a> (<a href="en/reference/defense-rings.html#problem" hreflang="en">EN</a>) → <a href="ko/reference/defense-rings.html#mechanism">구현·근거</a> (<a href="en/reference/defense-rings.html#mechanism" hreflang="en">EN</a>) → <a href="ko/reference/defense-rings.html#alternatives">대안·비용</a> (<a href="en/reference/defense-rings.html#alternatives" hreflang="en">EN</a>) → <a href="ko/reference/defense-rings.html#defense">방어 질문</a> (<a href="en/reference/defense-rings.html#defense" hreflang="en">EN</a>)</p>
+<p>Ring은 scan이 선호하는 shared-frame ID의 범위입니다. 두 ring에 같은 F4가 있어도 소유권은 local하지 않습니다. Shared refcount와 credit을 검사하고 CAS로 pin해야 합니다. Credit이 높은 항목 거절은 retention 정책이고 pinned 검사 생략은 수명 오류입니다.</p>
+<p>Ring이 없으면 normal clock을 쓰면서 안전성을 유지할 수 있습니다. Scan pollution과 경쟁 비용이 어떻게 바뀌는지는 workload에 달렸습니다. 별도 private scan pool은 공간을 분리하지만 바이트 중복과 coherence를 추가합니다. BULKREAD의 WAL 거절은 자기 slot을 비우며 공유 dirty 페이지는 보존합니다. D30을 먼저 논의하고 D31은 다음 writeback 블록에서 이어갑니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
@@ -351,12 +403,17 @@
 
 <p class="cue">상태 변화 화면: <a href="ko/lessons/0018a-compare-replacement-policies.html#invalidation-state-trace">이전 write는 이후 변경까지 보존하지 않음</a>. 시작 상태를 확인하고 다음 단계에서 달라지는 필드를 예측합니다. 이 사례는 독립적으로 초기화합니다.</p>
 <p class="source">근거: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2673">요청 backend의 write</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2471-L2511">identity 제거 전 재검사</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3854-L4211">백그라운드의 clean 후보 준비</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3575-L3615">checkpoint의 선택 기준</a>.</p>
+    <h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-rings.html#removal">제거 순서</a> (<a href="en/reference/defense-rings.html#removal" hreflang="en">EN</a>) → <a href="ko/reference/defense-rings.html#boundaries">동시성·실패 경계</a> (<a href="en/reference/defense-rings.html#boundaries" hreflang="en">EN</a>)</p>
+<p>고정 PostgreSQL 리비전의 dirty victim은 conditional share-exclusive content lock을 요구합니다. 조건부 실패는 pin을 놓고 다시 선택해 source comment가 설명하는 wait cycle을 피합니다. 예전 shared-lock 요약을 이 리비전의 실행 사실로 옮기지 않습니다.</p>
+<p>A가 write를 마치고 content lock을 푼 뒤 B가 re-dirty하고 unpin하는 순서를 보겠습니다. Shared count가 다시 1이어도 BM_DIRTY가 남으므로 이전 mapping을 제거할 수 없습니다. Backend의 victim write, background writer의 clean 공급, checkpoint의 복구 경계 작업은 다른 의무입니다. D31에서는 새 pin의 반납이 새 dirty 작업의 완료가 아님을 방어합니다.</p>
+
     <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
   </section>
 
   <section class="run-sheet" id="closing">
     <p class="eyebrow">12 · FINAL WORKSHOP</p><h2>새 실행 순서에 적용하고, 페이지 버퍼 세미나를 마친다</h2>
-    <p class="cue">화면: 먼저 이 절의 두 새 질문을 사용합니다. 답을 논의한 뒤 <a href="ko/lessons/0018a-compare-replacement-policies.html#session-page-journey">한 페이지의 전체 여정</a>을 열어 마무리합니다.</p>
+    <p class="cue">화면: 먼저 이 절의 두 새 질문을 사용합니다. 답을 논의하고 아래 확장 논증과 D32/D33을 마친 뒤 <a href="ko/lessons/0018a-compare-replacement-policies.html#session-page-journey">한 페이지의 전체 여정</a>을 열어 마무리합니다.</p>
     <p>이제 배운 역할과 조건을 새로운 실행 순서에 적용해 보겠습니다. 각 사례에서 시작 상태, 사건 하나, 그 이후 상태를 적어 주세요. 이어서 전이를 결정하는 조건과 다음에 확인할 증거를 적어 주세요. 필요한 소스는 참고해도 좋습니다. 예시 답은 먼저 열지 않습니다.</p>
     <div class="prompt" id="final-cubrid"><h3>사례 A · Flush 횟수는 늘었는데 allocator가 기다린다</h3><p>CUBRID pool에 invalid frame이 없습니다. Allocator B는 direct victim을 기다립니다. Cold dirty 페이지 P의 G 제출에 성공했고, post-flush queue 삽입에도 성공했습니다. 소비자가 실행되기 전에 writer A가 P를 fix하고 G+1의 변경을 만들었습니다. A는 아직 fix를 반납하지 않았습니다. 이후 소비자가 실행되어 해당 BCB를 꺼냈습니다.</p><p>왜 이 사건만으로 B를 바로 진행시킬 수 없을까요? G의 어떤 처리는 마쳐야 할까요? “Post-flush가 실행되지 않았다”와 “실행했지만 배정을 거절했다”를 구분하려면 무엇을 관찰할까요?</p>
       <details class="answer"><summary>논의 후 예시 답 보기</summary><p>A의 현재 fix와 새 DIRTY가 재사용을 막습니다. G의 FLUSHING 상태를 해제하고 flush를 기다리는 thread는 깨웁니다. 하지만 G+1의 dirty 상태와 현재 fix의 보호는 유지해야 합니다. 소비자의 실행과 queue 소비, BCB의 flag와 fix 상태, 현재 zone과 quota, direct-victim 대기 요청과 배정 여부를 시간 순서대로 봅니다. Flush 횟수 증가만으로 queue 소비나 배정 성공을 판단할 수는 없습니다. 이 사례는 특정 버그나 starvation을 실제 실행에서 입증한 기록이 아닙니다.</p></details>
@@ -376,6 +433,12 @@
 <p><strong>예측 질문:</strong> 이 문서로 한 페이지의 안전한 재사용을 설명하려면 어떤 전이 계약을 먼저 명확하게 해야 할까요?</p>
 <details class="answer answer-disclosure"><summary>논의 후 설명 보기</summary><p>Acquire/Release의 identity 연결과 사용 수명, Submit/Complete의 안정된 이미지와 보존 경계, Offer의 취소 가능 여부와 소유권을 정의합니다. Retag에는 보호된 현재 상태의 재사용 조건과 이전 mapping 제거를 넣고 각 전이의 실패·정리 책임도 명시합니다. CUBRID와 PostgreSQL은 다른 필드와 호출 경로로 이 책임을 충족합니다. API 이름만으로 보장 범위를 정할 수는 없습니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 앞서 검토한 CUBRID와 PostgreSQL에서 그 계약의 근거를 찾는 방법은 어떻게 달랐나요?</p></details>
 </div>
+<h3>설계 논증 이어가기</h3>
+<p class="cue">확장 화면 순서: <a href="ko/reference/defense-synthesis.html#problem">문제·불변식</a> (<a href="en/reference/defense-synthesis.html#problem" hreflang="en">EN</a>) → <a href="ko/reference/defense-synthesis.html#mechanism">구현·근거</a> (<a href="en/reference/defense-synthesis.html#mechanism" hreflang="en">EN</a>) → <a href="ko/reference/defense-synthesis.html#removal">제거 순서</a> (<a href="en/reference/defense-synthesis.html#removal" hreflang="en">EN</a>) → <a href="ko/reference/defense-synthesis.html#alternatives">대안·비용</a> (<a href="en/reference/defense-synthesis.html#alternatives" hreflang="en">EN</a>) → <a href="ko/reference/defense-synthesis.html#boundaries">동시성·실패 경계</a> (<a href="en/reference/defense-synthesis.html#boundaries" hreflang="en">EN</a>) → <a href="ko/reference/defense-synthesis.html#defense">방어 질문</a> (<a href="en/reference/defense-synthesis.html#defense" hreflang="en">EN</a>)</p>
+<p>기존 Q23/Q24의 새 사례를 마친 뒤 더 강한 질문으로 연결합니다. G 완료 counter가 증가하고 post-flush heartbeat가 정상이어도 새 DIRTY 때문에 offer가 없거나 zone·quota 정책에서 거절할 수 있습니다. D32는 보호된 현재 상태와 이유별 counter로 두 원인을 구별하는 관측을 요구합니다.</p>
+<p>D33에서는 검사 하나를 없앤 변경을 방어합니다. 어떤 구간을 제거했고 어떤 actor가 그 사이 조건을 바꿀 수 있는지, 대체 보호와 실패·취소 정리가 무엇인지 설명해야 합니다. 연속 reservation과 재검사는 비용을 다른 곳에 씁니다. 측정 없이 빠르다고 결론 내리지 않습니다.</p>
+<p>마지막에는 요청부터 identity·수명, 바이트 보호, 변경·WAL, 반납, 이미지 전달, 현재 적합성, 이전 identity 제거, 재사용까지 다시 말해 봅니다. 거절된 생략 하나와 안전한 대안 하나를 넣어 전체 논증을 완성합니다. 이 지점에서 마지막 세미나를 종료하고 유지보수 자료로 연결합니다.</p>
+
 <h3>마지막 연결 질문</h3>
     <p>한 페이지를 요청한 순간부터 같은 frame을 다른 페이지 identity로 재사용할 때까지의 여정을 설명해 보겠습니다. 먼저 identity를 찾고, 메모리에 페이지를 담을 공간을 마련합니다. 사용을 보호할 fix나 pin을 얻고, 바이트 접근에 필요한 보호도 얻습니다. 페이지를 변경한 caller는 필요한 로그를 남기고 dirty 상태를 기록합니다. 사용을 반납한 뒤에도 페이지는 메모리에 남을 수 있고, dirty 상태도 별도로 남습니다. 이후 정책이나 caller에 따라 이미지 전달을 시작하고 완료 상태를 정리합니다. 마지막으로 현재의 보호 상태와 재사용 조건을 다시 확인한 뒤 identity를 바꿉니다.</p>
     <p>Daemon이나 정책의 이름이 바뀌어도 확인할 질문은 같습니다. 지금 어느 페이지를 나타내고 있을까요? 누가 사용하고 있을까요? 어느 시점의 이미지가 보존됐을까요? 다음 단계를 진행할 책임은 누구에게 있고, 어떤 조건을 통과해야 할까요? CUBRID와 PostgreSQL의 차이는 이 질문에 답하는 구체적인 상태와 경로에서 찾을 수 있습니다.</p>

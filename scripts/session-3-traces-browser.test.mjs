@@ -10,13 +10,16 @@ const base = process.env.SEMINAR_URL || 'http://127.0.0.1:3935';
 const lectures = ['0001-present-the-page-journey', '0006-flush-one-generation',
   '0006a-understand-page-buffer-daemons', '0006b-follow-page-flush-handoff',
   '0006c-follow-maintenance-and-pacing', '0018a-compare-replacement-policies'];
+const defenseTopics = ['generations', 'daemons', 'handoff', 'pacing', 'clock', 'rings', 'synthesis'];
+const pages = [...lectures.map(name => `lessons/${name}.html`),
+  ...defenseTopics.map(name => `reference/defense-${name}.html`)];
 let browser;
 async function activate(locator, page) { await locator.focus(); await page.keyboard.press('Enter'); }
 before(async () => { if (chromium) browser = await chromium.launch({ headless: true }); });
 after(async () => { await browser?.close(); });
 
 for (const lang of ['en', 'ko']) {
-  test(`${lang}: all 24 questions and authored traces are delivered and keyboard reversible`, { skip: unavailable }, async () => {
+  test(`${lang}: Q01–Q24, D25–D33 and all 22 traces are delivered and keyboard reversible`, { skip: unavailable }, async () => {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1080 }, reducedMotion: 'reduce' });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -24,8 +27,8 @@ for (const lang of ['en', 'ko']) {
     const questions = [];
     let traceCount = 0;
     try {
-      for (const lecture of lectures) {
-        const file = `${lang}/lessons/${lecture}.html`;
+      for (const route of pages) {
+        const file = `${lang}/${route}`;
         const response = await fetch(`${base}/${file}`);
         assert.deepEqual(Buffer.from(await response.arrayBuffer()), await fs.readFile(file), 'exact served HTML');
         await page.goto(`${base}/${file}`);
@@ -64,8 +67,10 @@ for (const lang of ['en', 'ko']) {
           assert.equal(await trace.locator('li:visible').innerText(), initial);
         }
       }
-      assert.deepEqual(questions.sort(), Array.from({ length: 24 }, (_, i) => `Q${String(i + 1).padStart(2, '0')}`));
-      assert.equal(traceCount, 15);
+      assert.deepEqual(questions.sort(), [
+        ...Array.from({ length: 9 }, (_, i) => `D${i + 25}`),
+        ...Array.from({ length: 24 }, (_, i) => `Q${String(i + 1).padStart(2, '0')}`)]);
+      assert.equal(traceCount, 22);
       assert.deepEqual(errors, []);
     } finally { await page.close(); }
   });
@@ -100,17 +105,78 @@ for (const lang of ['en', 'ko']) {
     } finally { await page.close(); }
   });
 
+  test(`${lang}: six-screen defense routes, language pairs and answer resets work by keyboard`, { skip: unavailable }, async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1080 }, reducedMotion: 'reduce' });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+    try {
+      for (const [i, topic] of defenseTopics.entries()) {
+        await page.goto(`${base}/${lang}/reference/defense-${topic}.html?present=1#problem`);
+        for (const id of ['problem', 'mechanism', 'removal', 'alternatives', 'boundaries', 'defense']) {
+          assert.equal(await page.locator('section.section:visible').getAttribute('id'), id);
+          assert.equal(await page.locator('section.section:visible h2').count(), 1);
+          if (id !== 'defense') await activate(page.locator('[data-section-next]'), page);
+        }
+        const answer = page.locator('#defense details').first();
+        await activate(answer.locator('summary'), page);
+        assert.equal(await answer.getAttribute('open'), '');
+        await activate(page.locator('[data-section-previous]'), page);
+        await activate(page.locator('[data-section-next]'), page);
+        assert.equal(await answer.getAttribute('open'), null, 'moving screens resets prediction answers');
+        const other = lang === 'en' ? 'ko' : 'en';
+        const counterpart = page.locator(`[data-language-switcher] a[hreflang="${other}"]`);
+        assert.ok((await counterpart.getAttribute('href')).endsWith(`/${other}/reference/defense-${topic}.html`));
+        const next = page.locator('[data-lecture-nav] a[rel="next"]');
+        if (i < defenseTopics.length - 1) {
+          const href = await next.getAttribute('href');
+          const destination = new URL(href, page.url());
+          assert.ok(destination.pathname.endsWith(`defense-${defenseTopics[i+1]}.html`));
+          assert.equal(destination.searchParams.get('present'), '1');
+          assert.equal(destination.hash, '#problem');
+        } else {
+          assert.equal(await next.count(), 0);
+          assert.ok(await page.locator('[data-lecture-nav] a[href*="session-page-journey"]').count());
+        }
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('section.section:visible').count(), 6);
+      }
+      assert.deepEqual(errors, []);
+    } finally { await page.close(); }
+  });
+
+  test(`${lang}: removal traces distinguish safety, policy and authorization outcomes`, { skip: unavailable }, async () => {
+    const page = await browser.newPage();
+    const expected = {
+      generations: ['D=1; F=0', 'D=0; newer debt lost', 'G done; writer may now run', 'G remains 11 @120'],
+      daemons: ['drain F when loop checks queue', 'cannot discover F', 'claim pending under protocol', 'later sleep needs producer/check coordination'],
+      handoff: ['lock; reject; retry', "retag despite A's use", 'claim under retained exclusion', 'P retained by safe path'],
+      pacing: ['consume 3; deficit 1; wait/retry', 'consume 4; tokens=1', 'continue immediately', 'four pages already written'],
+      clock: ['private=1; shared=1', 'identity no longer protected', 'private ledger=1; shared=1', 'one outstanding use remains'],
+      rings: ['lock; dirty rejects; retry', 'ref=1 trusted; drop R debt', 'retire under exclusion', 'R must survive in implemented path'],
+      synthesis: ['clear FLUSHING; refuse dirty offer', 'done=true; unsafe retag', 'G receipt valid; reuse request rejected', 'Q still needs eligible frame']
+    };
+    try {
+      for (const topic of defenseTopics) {
+        await page.goto(`${base}/${lang}/reference/defense-${topic}.html?present=1#removal`);
+        const trace = page.locator(`#${topic}-defense-trace`);
+        await activate(trace.locator('[data-trace-all]'), page);
+        assert.deepEqual(await trace.locator('li').last().locator('dd').allTextContents(), expected[topic]);
+      }
+    } finally { await page.close(); }
+  });
+
   for (const width of [390, 320]) {
     test(`${lang}: ${width}px no-JavaScript reading exposes all snapshots and native answers`, { skip: unavailable }, async () => {
       const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width, height: 844 } });
       try {
         const page = await context.newPage();
-        for (const lecture of lectures) {
-          await page.goto(`${base}/${lang}/lessons/${lecture}.html`);
+        for (const route of pages) {
+          await page.goto(`${base}/${lang}/${route}`);
           assert.equal(await page.locator('.trace-steps > li:visible').count(), await page.locator('.trace-steps > li').count());
           assert.equal(await page.locator('.trace-controls:visible').count(), 0);
           assert.equal(await page.locator('.session-question details[open]').count(), 0);
-          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), lecture);
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route);
           assert.ok(await page.locator('img').evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0)));
         }
       } finally { await context.close(); }

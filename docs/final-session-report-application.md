@@ -97,3 +97,27 @@ Each snapshot preserves lane order and labels changed fields in prose as well as
 | Cross-engine metadata/writeback advantage | Mechanism comparison only; a controlled benchmark remains outside this phase. |
 
 The bilingual review registry is unchanged. Editing six pairs invalidates their current fingerprints; genuine historical receipts remain intact. The new verification receipt attributes review-only deltas separately from technical failures. Automated language parity and render checks are not human Korean acceptance or participant mastery.
+
+## Intensive defense expansion: work item 323
+
+This phase adds seven paired participant pages with six projected screens each, using the same shared CSS and trace behavior loaded by the current seminar. The earlier Q01–Q24 dispositions and fifteen traces remain intact. The [research ledger](final-session-defense-research.md) owns exact primary evidence and inferred rationale; the [preparation route](final-session-preparation.md#intensive-defense-route) and Korean script deliver it.
+
+| Participant page | Delivered evidence and comparison | Added defense |
+| --- | --- | --- |
+| [EN](../en/reference/defense-generations.html#mechanism) / [KO](../ko/reference/defense-generations.html#mechanism) | G1–G5: copied-image/debt removal versus serialization; removal trace `generations-defense-trace` | D25 |
+| [EN](../en/reference/defense-daemons.html#mechanism) / [KO](../ko/reference/defense-daemons.html#mechanism) | D1–D4: wake hint versus durable work and joined lifetime; removal trace `daemons-defense-trace` | D26 |
+| [EN](../en/reference/defense-handoff.html#mechanism) / [KO](../ko/reference/defense-handoff.html#mechanism) | H1–H5: stale offer versus receiver check or continuous reservation; removal trace `handoff-defense-trace` | D27 |
+| [EN](../en/reference/defense-pacing.html#mechanism) / [KO](../ko/reference/defense-pacing.html#mechanism) | P1–P5: interval replacement versus accumulated/absent allowance; removal trace `pacing-defense-trace` | D28 |
+| [EN](../en/reference/defense-clock.html#mechanism) / [KO](../ko/reference/defense-clock.html#mechanism) | K1–K5: shared lifetime protection versus its removal/per-pin accounting; removal trace `clock-defense-trace` | D29 |
+| [EN](../en/reference/defense-rings.html#mechanism) / [KO](../ko/reference/defense-rings.html#mechanism) | R1–R5: re-dirty retirement rejection versus omission/stronger exclusion; removal trace `rings-defense-trace` | D30/D31 |
+| [EN](../en/reference/defense-synthesis.html#mechanism) / [KO](../ko/reference/defense-synthesis.html#mechanism) | S1–S3: old completion versus current dirty debt and typed evidence; removal trace `synthesis-defense-trace` | D32/D33 |
+
+Every page exposes the problem/property, bounded source mechanism, exact removal and preserved premises, a coherent alternative, structural costs with variables, concurrency/failure limits and a falsifiable defense answer. Seven new three-step traces compare implemented behavior with removal and/or safe replacement from the same premises. Changed fields are labeled; actors/lanes retain their positions; stepping and reset stay local; full snapshots remain readable without JavaScript.
+
+The site manifest now contains 65 pairs. The language landing pages expose all seven additions; five existing paired lectures provide visible entry links. New pages return to their original topic/trace anchors and provide a matched page sequence, including the final journey. Unprefixed reference redirects follow the existing inventory contract. No old anchor was retired or existing lecture sequence replaced.
+
+The twelve Korean spoken blocks add exact paired cues and source-bounded arguments. D30's ring defense is discussed before D31's retirement defense; D32/D33 follow the preserved closing cases and precede the existing farewell. The final seminar still closes here, with flexible duration.
+
+Technical clarification delivered visibly: a BCB mutex needs caller/latch eligibility to stabilize bytes; VPID-only check removal proves wrong selection attribution rather than universal corruption; condition retries do not bound elapsed time; PostgreSQL uses pinned share-exclusive content protection and concurrency-dependent bulk-read ring sizing; clock trycounter resets; refcount-one plus new DIRTY rejects retirement. VS-12/20/21 retain their canonical uncertainty owner and unmeasured operational limits.
+
+Verification for this phase is recorded separately in [the defense checks](final-session-defense-checks.md). Prior phase receipts above remain historical; no human Korean review, spoken rehearsal, participant outcome, engine crash test or performance benchmark is supplied by automation.
