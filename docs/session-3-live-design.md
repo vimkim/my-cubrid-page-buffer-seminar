@@ -1,6 +1,6 @@
 # Session 3 live seminar design
 
-This author record captures decisions accepted during the `grill-with-docs` interview for the final page-buffer seminar on 2026-10-13. It refines the dedicated participant presentation required by the handoff. All six design decisions are settled; final shared-understanding confirmation is pending. This document does not report implemented HTML or completed seminar delivery.
+This author record captures decisions accepted during the `grill-with-docs` interview for the final page-buffer seminar on 2026-10-13. It refines the dedicated participant presentation required by the handoff. All six design decisions are settled, and the user confirmed shared understanding in Q7 on 2026-10-12. This document does not report implemented HTML or completed seminar delivery.
 
 Work item 328 owns this design interview. Work item 327 owns the separate presentation implementation. The starting repository commit is `1bba3a1f43e2085cc8507d1040f3ee8bd620627e`. The input is `handoff-page-buffer-session-3-live-seminar-toc-20261012.md`, SHA-256 `17e5854778a19d560dab0cffbfccd278cd7c043d646f230c3aeb1bdc0715c8fe`.
 
@@ -50,7 +50,7 @@ All implementation-specific material must be rechecked during work item 327. Thi
 
 ## Decision tree and current frontier
 
-The root is the already requested self-contained final-session participant presentation. Every design branch visited in the two rounds is settled. The design frontier is empty; only the explicit final confirmation required by the grilling workflow remains.
+The root is the already requested self-contained final-session participant presentation. Every design branch visited in the two rounds is settled. The design frontier is empty, and Q7 supplies the final shared-understanding confirmation required by the grilling workflow.
 
 | Branch | Prerequisite | State | Result |
 | --- | --- | --- | --- |
@@ -63,8 +63,8 @@ The root is the already requested self-contained final-session participant prese
 
 No additional ADR is recorded: these are reversible editorial choices within the existing architecture. Implementation details such as screen counts, exact example values, and the representative alternatives are resolved by authors within the handoff's named coverage, source constraints, and accepted choices.
 
-Final confirmation has not yet been received. Local documentation integration has not yet been approved or performed. Neither is implied by the user's acceptance of Q1-Q6.
+In Q7 the user explicitly confirmed shared understanding and approved rebasing and fast-forward merging the completed design-document changes into local `main`. This approval applies to the documentation integration.
 
 ## Documentation and implementation boundary
 
-Capture resolved terminology and decisions as the interview proceeds. Finish the interview only after its decision frontier is empty and the user confirms shared understanding, following the invoked grilling workflow. The HTML implementation remains work item 327. Local integration of these design documents follows the repository's separate rebase and fast-forward approval workflow.
+The design interview is complete: its decision frontier is empty, terminology and decisions are recorded, and the user has confirmed shared understanding. Work item 327 owns HTML implementation, using this accepted design together with the original handoff. Its completed presentation will require its own review and local integration approval under the established Git workflow.
