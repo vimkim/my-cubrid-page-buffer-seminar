@@ -76,6 +76,10 @@ _Avoid_: Shared engine simulation, continuous runtime trace
 An audience-facing plan for testing one seminar claim, stating its hypothesis, conditions, changed variable, observations, and falsification criterion. It is a proposal rather than evidence that the experiment was executed.
 _Avoid_: Runtime receipt, measured result
 
+**Staged diagnostic case**:
+A final-session exercise with explicit starting premises and subsequent evidence revealed after participants choose an observation. Its conclusion may identify a cause or state precisely what remains unresolved and which observation would distinguish the remaining explanations.
+_Avoid_: Hidden-premise puzzle, single-answer diagnosis
+
 **Audience checkpoint**:
 An optional pause in the seminar material that asks participants to reason about a transition or scenario before revealing an explanation. It supports discussion and does not score mastery or control progression.
 _Avoid_: Teach-back, mastery check, retrieval gate
