@@ -4,6 +4,8 @@ This is the **third and final page-buffer seminar session**, lasting **n hours**
 
 The [delivery record](../README.md#seminar-delivery) owns session status. The [Korean spoken script](../my-presentation-script-session-3.html) is the presenter companion for this session. The earlier script remains a reference for the completed material.
 
+The [agent editorial feedback](../feedback.md) and [Socratic discussion route](../socratic-questions.md) are author-only companions. Use the feedback for revision review and select questions from the discussion route for rehearsal or live discussion; keep both reports outside participant navigation and the Maintainer Guide topology.
+
 ## What participants should be able to explain at the end
 
 - Follow one dirty CUBRID page through generation capture, WAL gating, submission, BCB completion, and possible direct-victim assignment.
@@ -91,3 +93,20 @@ If time is tight, shorten raw source reading and factory arithmetic first. Keep 
 - The required Maintainer Guide aggregate passes: 43 pages, 71 displayed SVGs, zero orphaned SVGs, 114 HTTP resources, and 43 live-DOM pages.
 - The bilingual aggregate retains its existing review-only failures: 58 missing human Korean review receipts and 78 stale fingerprints. Existing audience HTML and its manifest are unchanged. This preparation does not supply those receipts or human acceptance of the new spoken script.
 - Source reasoning and constructed schedules were reviewed; no new engine runtime experiment, observed participant session, or cross-engine benchmark was performed.
+
+## Polish checks (2026-10-12)
+
+These checks apply to the final script SHA-256 `c2bf881dbdbd1891efbfe2c825b2a7b7837e2d7cda057efab0aac97f49ed4ef3`. The preparation checks above describe the earlier `38749d1` revision. The [machine-readable receipt](session-3-polish/check-results.json) records final artifact digests and focused browser results.
+
+Three agents completed sequential write phases: presenter CSS (`328ee39`), Korean editing (`d2181f5`, followed by the caller clarification in `ecf60bb`), and the question route (`00c509c`). The dedicated stylesheet narrows spoken prose to 672 px on desktop and preserves readable table columns through keyboard-accessible scrolling on mobile. The script's 12 blocks now use consistent professional Korean and explicit causal transitions. The editorial report records five source-backed clarifications; the question route has 24 main questions and 24 optional follow-ups with fresh constructed premises and exact script anchors.
+
+The question author's transfer review found that local completion was described too narrowly as page-flush work. The final script identifies the submitting thread as the owner when any post-flush handoff condition fails, matching the pinned common-helper branch. The report records this correction separately from language edits. No engine code was changed.
+
+- Copyparty Markdown source checks pass for all six changed Markdown files. Relative files and fragments resolve, and all 28 distinct pinned GitHub source-file/line targets resolve against the local pinned repositories. The question route covers all 12 blocks, the closing section, and both final-case anchors.
+- Served script and stylesheet bytes match the local files. Headless Chromium checks pass at 1440, 390, and 320 px with JavaScript disabled: 12 visible blocks, 14 initially closed answers, keyboard open/close for every answer, all 12 section links, the skip link, keyboard scrolling for all five narrow tables, and no document overflow or relevant runtime error.
+- All 66 EN/KO script HTML fragment destinations render against exact served files, including the clean-unfix source route. Ten representative presentation-mode destinations pass. All six changed Markdown files render without relevant errors.
+- The Maintainer Guide aggregate passes: 43 source pages, 71 displayed SVGs, zero orphaned SVGs, 114 HTTP resources, and 43 live-DOM pages.
+- The full bilingual aggregate's diagnostic set exactly matches the pre-polish baseline: 58 missing human Korean review receipts and 78 stale fingerprints, with no new failure. Its served gate separately passes 295 HTTP resources and 117 live-DOM pages. Human spoken-language acceptance of this script remains open; the two agent-authored reports do not supply a human review receipt.
+- The orchestrator inspected the committed CSS, editorial, and question changes against the repository rules and this session's scope. `git diff --check` passes. Source scenarios remain constructed examples; no engine runtime experiment, participant observation, or cross-engine benchmark was added.
+
+The final screenshots were refreshed after Korean editing and inspected. Compare the complete flush-generation section at [desktop before](session-3-polish/desktop-before.png) / [desktop final](session-3-polish/desktop-final.png) and [mobile before](session-3-polish/mobile-before.png) / [mobile final](session-3-polish/mobile-final.png). The [desktop daemon view](session-3-polish/desktop-daemons-final.png) and [mobile daemon view](session-3-polish/mobile-daemons-final.png) provide additional typography and table evidence. The CSS agent also verified that Chromium 151 print output includes initially closed answers; that print check belongs to the CSS phase, before the later wording revisions.

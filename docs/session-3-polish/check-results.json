@@ -1,0 +1,78 @@
+{
+  "checkedAt": "2026-10-12T07:36:50.359Z",
+  "scriptSha256": "c2bf881dbdbd1891efbfe2c825b2a7b7837e2d7cda057efab0aac97f49ed4ef3",
+  "files": {
+    "README.md": "14284cbcbc48d74948506be97363b4a10f9861142d0da9cc16e11917ff63689b",
+    "NOTES.md": "6b07947e2f06af36c0945ee6114c4cb8238d0285f6c20c9b76f7e3cff975e03c",
+    "presenter-runbook.md": "b1522c9188f3804656b99b4b56d8f6dcb5bb1c6d321596f2704ec71703f66fae",
+    "feedback.md": "49f5088cf502fa9d61459f40dce931331feaadda4a8aa386710c766a8af0728f",
+    "socratic-questions.md": "2a49c1d3d48c8d146bbe56bc367c4ef4a703e729ae0fdc5b49327f847515be71",
+    "my-presentation-script-session-3.html": "c2bf881dbdbd1891efbfe2c825b2a7b7837e2d7cda057efab0aac97f49ed4ef3",
+    "assets/session-3-presentation.css": "41e518aba13cae576b1c8462fddca9d59c10b25d9c8dc84e675967e8d1cf9003"
+  },
+  "localReferences": 249,
+  "pinnedSourceTargets": 28,
+  "scriptViews": [
+    {
+      "width": 1440,
+      "javaScript": false,
+      "sections": 12,
+      "initiallyClosedAnswers": 14,
+      "keyboardDisclosures": 14,
+      "sectionLinks": 12,
+      "scrollableTables": 0
+    },
+    {
+      "width": 390,
+      "javaScript": false,
+      "sections": 12,
+      "initiallyClosedAnswers": 14,
+      "keyboardDisclosures": 14,
+      "sectionLinks": 12,
+      "scrollableTables": 5
+    },
+    {
+      "width": 320,
+      "javaScript": false,
+      "sections": 12,
+      "initiallyClosedAnswers": 14,
+      "keyboardDisclosures": 14,
+      "sectionLinks": 12,
+      "scrollableTables": 5
+    }
+  ],
+  "cueTargets": 66,
+  "presentationTargets": 10,
+  "markdownViews": 6,
+  "runtimeErrors": [],
+  "screenshots": {
+    "docs/session-3-polish/desktop-before.png": "cb918617dec23b4bb886c2a472f9815e6731cbe6e156d10f208b6378aedfb96d",
+    "docs/session-3-polish/mobile-before.png": "7014c91e0039f9eb56b4c4f2dc512c8d5c4a6119683692ac66172d12d55ce29e",
+    "docs/session-3-polish/desktop-final.png": "c36a9b5371f9c4dbdb26e7c31fb276cc63124acd91f27621ba7dbcd9c95132a5",
+    "docs/session-3-polish/mobile-final.png": "e89ca8edb85f960432e7183a1a347b391b9fd4384cd83945d0e3312d58bb312f",
+    "docs/session-3-polish/desktop-daemons-final.png": "57bf1fb4934af9ce37fe056debaa81b39618f755e5f755108cd9bbc2c0d2bdc9",
+    "docs/session-3-polish/mobile-daemons-final.png": "b172b34ffdc2282fa7ab65f6203c4bffeb83602ef3ccdf3050452ef01154fd06"
+  },
+  "maintainerGuide": {
+    "status": "PASS",
+    "sourcePages": 43,
+    "displayedSvg": 71,
+    "httpResources": 114,
+    "liveDomPages": 43
+  },
+  "bilingual": {
+    "status": "FAIL",
+    "missingHumanReviewReceipts": 58,
+    "staleFingerprints": 78,
+    "newFailures": 0,
+    "diagnosticSetMatchesBaseline": true,
+    "httpStatus": "PASS",
+    "httpResources": 295,
+    "liveDomStatus": "PASS",
+    "liveDomPages": 117
+  },
+  "humanSpokenLanguageAcceptance": "open",
+  "cueScope": "All Korean script HTML fragment links and their English counterparts, including the clean-unfix source route",
+  "additionalCueCheckedAt": "2026-10-12T07:39:45.695Z",
+  "referenceScope": "Six changed Markdown files and final script, including links in the refreshed preparation receipt"
+}
