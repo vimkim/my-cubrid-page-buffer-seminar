@@ -59,7 +59,7 @@ test("the daemon visual shows triggers and boundaries without localized text", a
     "pgbuf-page-flush",
     "pgbuf-page-post-flush",
     "pgbuf-flush-control",
-    "Only daemon that submits a page flush",
+    "Starts page-image submission",
     "circular queue, capacity 8,192",
     "post-write soft-pacing budget",
   ]) assert.ok(svg.includes(label), label);
@@ -77,7 +77,10 @@ test("the lifecycle audit explains generic timing, gating, wake semantics, and a
   ]) assert.ok(markdown.includes(term), term);
   assert.match(markdown, /`wakeup\(\)` only\s+changes a waiter that is currently `SLEEPING`/s);
   assert.match(markdown, /Setting the Boolean gate does\s+not itself call each daemon's `wakeup\(\)`/s);
-  assert.match(markdown, /stop\s*(?:→|->)\s*wake(?:\s+sleeper)?\s*(?:→|->)\s*join/i);
+  const lifecycle = markdown.match(/```text\n([\s\S]*?set looper stop[\s\S]*?)```/)?.[1];
+  assert.ok(lifecycle, "the shared-state lifecycle must be explained visibly");
+  assert.match(lifecycle, /stop\s*->\s*wake sleeper\s*->\s*worker retires execution context\s*->\s*worker retires task\s*->\s*thread exits\s*->\s*join returns\s*->\s*pointer cleared/,
+    "join confirms worker retirement and thread exit before shared storage teardown");
   for (const asset of ["page-buffer-daemon-lifecycle.svg", "page-buffer-daemon-cadence.svg", "page-flush-post-flush-handoff.svg", "maintenance-and-pacing-control.svg"]) assert.ok(markdown.includes(`](../assets/${asset})`), asset);
 });
 

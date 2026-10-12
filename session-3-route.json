@@ -3,17 +3,65 @@
   "cubrid": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
   "postgres": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
   "chapters": [
-    {"file":"01-opening.html","en":"A full pool: who can authorize reuse?","ko":"가득 찬 풀: 누가 재사용을 승인하는가?"},
-    {"file":"02-flush-generations.html","en":"One page, two generations","ko":"한 페이지, 두 세대"},
-    {"file":"03-daemon-architecture.html","en":"Four roles, four progress obligations","ko":"네 역할, 네 진행 의무"},
-    {"file":"04-page-flush.html","en":"A remembered candidate needs a current check","ko":"기억한 후보를 현재 상태로 다시 검사하기"},
-    {"file":"05-post-flush.html","en":"Completion is followed by a revocable offer","ko":"완료 이후의 취소 가능한 제안"},
-    {"file":"06-maintenance.html","en":"Adapt retention without authorizing reuse","ko":"재사용 권한과 구별하는 보존 정책"},
-    {"file":"07-flush-control.html","en":"Pace work after the write","ko":"Write 이후의 속도 조절"},
-    {"file":"08-postgresql-buffers.html","en":"PostgreSQL: identity, pins, bytes and credit","ko":"PostgreSQL의 identity, pin, 바이트, credit"},
-    {"file":"09-clock-sweep.html","en":"Clock: inspect, age, skip, claim","ko":"Clock: 검사, 감소, 건너뛰기, 확보"},
-    {"file":"10-strategy-rings.html","en":"A scan ring names shared frames","ko":"스캔 ring이 가리키는 공유 frame"},
-    {"file":"11-writeback-and-reuse.html","en":"Writeback precedes protected identity retirement","ko":"Writeback 이후의 보호된 identity 해제"},
-    {"file":"12-final-defense.html","en":"Defend a protocol and diagnose a stall","ko":"프로토콜 방어와 정체 원인 진단"}
+    {
+      "file": "01-opening.html",
+      "en": "A full pool: who can authorize reuse?",
+      "ko": "가득 찬 풀: 누가 재사용을 승인하는가?"
+    },
+    {
+      "file": "02-flush-generations.html",
+      "en": "One page, two generations",
+      "ko": "한 페이지, 두 세대"
+    },
+    {
+      "file": "03-daemon-architecture.html",
+      "en": "Four background jobs help a full pool move",
+      "ko": "가득 찬 풀에서 요청 진행을 돕는 네 백그라운드 작업"
+    },
+    {
+      "file": "04-page-flush.html",
+      "en": "A remembered candidate needs a current check",
+      "ko": "기억한 후보를 현재 상태로 다시 검사하기"
+    },
+    {
+      "file": "05-post-flush.html",
+      "en": "Finishing a flush does not claim its frame",
+      "ko": "Flush 완료만으로 프레임을 확보할 수는 없다"
+    },
+    {
+      "file": "06-maintenance.html",
+      "en": "Adapt retention without authorizing reuse",
+      "ko": "보존 목표를 바꾸어도 재사용 조건은 지켜야 한다"
+    },
+    {
+      "file": "07-flush-control.html",
+      "en": "Pace work after the write",
+      "ko": "쓰기 이후의 속도 조절"
+    },
+    {
+      "file": "08-postgresql-buffers.html",
+      "en": "PostgreSQL: keep pages resident and protect their bytes",
+      "ko": "PostgreSQL: 페이지를 메모리에 유지하고 바이트 접근을 보호하기"
+    },
+    {
+      "file": "09-clock-sweep.html",
+      "en": "Clock: inspect, age, skip, claim",
+      "ko": "Clock: 검사, 감소, 건너뛰기, 확보"
+    },
+    {
+      "file": "10-strategy-rings.html",
+      "en": "A scan ring names shared frames",
+      "ko": "스캔 ring이 가리키는 공유 프레임"
+    },
+    {
+      "file": "11-writeback-and-reuse.html",
+      "en": "Writeback precedes protected identity retirement",
+      "ko": "페이지를 쓴 뒤에도 기존 페이지 연결을 보호 아래 검사해야 한다"
+    },
+    {
+      "file": "12-final-defense.html",
+      "en": "Defend a protocol and diagnose a stall",
+      "ko": "프로토콜 방어와 정체 원인 진단"
+    }
   ]
 }

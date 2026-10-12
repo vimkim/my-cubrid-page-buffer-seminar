@@ -62,8 +62,10 @@ test("the persistence boundary and evidence cards do not overclaim", async () =>
 test("the visual and exercise teach the same generation model", async () => {
   const [markdown, svg] = await Promise.all([readFile(page, "utf8"), readFile(visual, "utf8")]);
   assert.match(markdown, /!\[Durability responsibilities and concurrent re-dirty timeline\]\(\.\.\/assets\/durability-chain\.svg\)/);
+  const visibleLabels = [...svg.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g)]
+    .map(match => match[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()).join(" ");
   for (const label of ["WRITE PERMISSION", "RECOVERABILITY", "TRANSACTION DURABILITY", "PAGE PROPAGATION", "Generation G", "Re-dirty G+1", "G+1 stays DIRTY"]) {
-    assert.ok(svg.includes(label), label);
+    assert.ok(visibleLabels.includes(label), label);
   }
   assert.match(markdown, /## Understanding check: build the generation timeline/);
   assert.match(markdown, /### Model answer/);

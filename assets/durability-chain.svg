@@ -13,7 +13,7 @@
   <text x="45" y="135" class="title">RECOVERABILITY</text>
   <rect x="230" y="112" width="205" height="64" rx="13" class="amber"/><text x="333" y="139" text-anchor="middle" class="text">Append recovery log</text><text x="333" y="161" text-anchor="middle" class="small">advance page LSA</text>
   <path d="M435 144H500" class="line"/><rect x="502" y="112" width="225" height="64" rx="13" class="amber"/><text x="615" y="139" text-anchor="middle" class="text">Mark DIRTY</text><text x="615" y="161" text-anchor="middle" class="small">track lower bound</text>
-  <text x="45" y="218" class="title">TRANSACTION DURABILITY</text>
+  <text x="45" y="210" class="title"><tspan x="45">TRANSACTION</tspan> <tspan x="45" dy="22">DURABILITY</tspan></text>
   <rect x="230" y="195" width="255" height="64" rx="13" class="teal"/><text x="358" y="222" text-anchor="middle" class="text">Commit WAL durable</text><text x="358" y="244" text-anchor="middle" class="small">home page may remain dirty</text>
   <text x="45" y="301" class="title">PAGE PROPAGATION</text>
   <rect x="230" y="278" width="195" height="64" rx="13" class="blue"/><text x="328" y="305" text-anchor="middle" class="text">Snapshot G</text><text x="328" y="327" text-anchor="middle" class="small">FLUSHING; clear DIRTY</text>

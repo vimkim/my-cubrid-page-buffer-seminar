@@ -69,6 +69,8 @@ export const canonicalVisualOwners = Object.freeze({
   "unconditional-latch-scenarios.svg": "advanced/acquisition-concurrency.md",
   "unfix-lru-placement.svg": "advanced/replacement-progress.md",
   "victim-list-queue-map.svg": "learning/05-replace-one-frame.md",
+  "victim-queue-pop-flow.svg": "learning/05-replace-one-frame.md",
+  "victim-queue-registration-token.svg": "learning/05-replace-one-frame.md",
   "shared-victim-queue-registration.svg": "learning/05-replace-one-frame.md",
   "private-victim-queue-stale-index.svg": "learning/05-replace-one-frame.md",
   "victim-eligibility.svg": "learning/05-replace-one-frame.md",

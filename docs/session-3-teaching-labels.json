@@ -1,0 +1,263 @@
+{
+  "version": 1,
+  "purpose": "Registered audience teaching notation; actual visible section-local explanations are checked separately from semantic review.",
+  "pages": {
+    "toc.html": [],
+    "en/seminar-3/toc.html": [],
+    "en/seminar-3/01-opening.html": [
+      "P",
+      "Q"
+    ],
+    "en/seminar-3/02-flush-generations.html": [
+      "P",
+      "Q",
+      "G",
+      "G+1",
+      "A",
+      "B",
+      "C",
+      "D",
+      "F"
+    ],
+    "en/seminar-3/03-daemon-architecture.html": [
+      "S3",
+      "S4",
+      "VS-20",
+      "F"
+    ],
+    "en/seminar-3/04-page-flush.html": [
+      "P",
+      "F",
+      "A",
+      "Q",
+      "G",
+      "G+1",
+      "X",
+      "R"
+    ],
+    "en/seminar-3/05-post-flush.html": [
+      "P",
+      "G",
+      "B",
+      "A",
+      "G+1",
+      "F",
+      "Q",
+      "T",
+      "L",
+      "K",
+      "C",
+      "N",
+      "S",
+      "W"
+    ],
+    "en/seminar-3/06-maintenance.html": [
+      "VS-20",
+      "B",
+      "VS-21",
+      "T",
+      "L",
+      "D"
+    ],
+    "en/seminar-3/07-flush-control.html": [
+      "A",
+      "B"
+    ],
+    "en/seminar-3/08-postgresql-buffers.html": [
+      "D",
+      "A",
+      "B",
+      "H",
+      "u"
+    ],
+    "en/seminar-3/09-clock-sweep.html": [
+      "H1",
+      "H2",
+      "A",
+      "B",
+      "C",
+      "F0",
+      "F1",
+      "F2",
+      "F3",
+      "S1",
+      "S2",
+      "S3",
+      "D",
+      "V",
+      "R",
+      "N",
+      "U",
+      "F4"
+    ],
+    "en/seminar-3/10-strategy-rings.html": [
+      "17",
+      "42",
+      "81",
+      "A",
+      "B",
+      "D",
+      "F",
+      "R",
+      "S",
+      "F4",
+      "F5",
+      "F6",
+      "T",
+      "U",
+      "H",
+      "r",
+      "X"
+    ],
+    "en/seminar-3/11-writeback-and-reuse.html": [
+      "A",
+      "B",
+      "R",
+      "P",
+      "Q",
+      "H1",
+      "H2"
+    ],
+    "en/seminar-3/12-final-defense.html": [
+      "Q",
+      "F",
+      "P",
+      "G",
+      "G+1",
+      "H1",
+      "H2",
+      "A",
+      "B",
+      "R",
+      "H"
+    ],
+    "ko/seminar-3/toc.html": [],
+    "ko/seminar-3/01-opening.html": [
+      "P",
+      "Q"
+    ],
+    "ko/seminar-3/02-flush-generations.html": [
+      "P",
+      "Q",
+      "G",
+      "G+1",
+      "A",
+      "B",
+      "C",
+      "D",
+      "F"
+    ],
+    "ko/seminar-3/03-daemon-architecture.html": [
+      "S3",
+      "S4",
+      "VS-20",
+      "F"
+    ],
+    "ko/seminar-3/04-page-flush.html": [
+      "P",
+      "F",
+      "A",
+      "Q",
+      "G",
+      "G+1",
+      "X",
+      "R"
+    ],
+    "ko/seminar-3/05-post-flush.html": [
+      "P",
+      "G",
+      "B",
+      "A",
+      "G+1",
+      "F",
+      "Q",
+      "T",
+      "L",
+      "K",
+      "C",
+      "N",
+      "S",
+      "W"
+    ],
+    "ko/seminar-3/06-maintenance.html": [
+      "VS-20",
+      "B",
+      "VS-21",
+      "T",
+      "L",
+      "D"
+    ],
+    "ko/seminar-3/07-flush-control.html": [
+      "A",
+      "B"
+    ],
+    "ko/seminar-3/08-postgresql-buffers.html": [
+      "D",
+      "A",
+      "B",
+      "H",
+      "u"
+    ],
+    "ko/seminar-3/09-clock-sweep.html": [
+      "H1",
+      "H2",
+      "A",
+      "B",
+      "C",
+      "F0",
+      "F1",
+      "F2",
+      "F3",
+      "S1",
+      "S2",
+      "S3",
+      "D",
+      "V",
+      "R",
+      "N",
+      "U",
+      "F4"
+    ],
+    "ko/seminar-3/10-strategy-rings.html": [
+      "17",
+      "42",
+      "81",
+      "A",
+      "B",
+      "D",
+      "F",
+      "R",
+      "S",
+      "F4",
+      "F5",
+      "F6",
+      "T",
+      "U",
+      "H",
+      "r",
+      "X"
+    ],
+    "ko/seminar-3/11-writeback-and-reuse.html": [
+      "A",
+      "B",
+      "R",
+      "P",
+      "Q",
+      "H1",
+      "H2"
+    ],
+    "ko/seminar-3/12-final-defense.html": [
+      "Q",
+      "F",
+      "P",
+      "G",
+      "G+1",
+      "H1",
+      "H2",
+      "A",
+      "B",
+      "R",
+      "H"
+    ]
+  }
+}

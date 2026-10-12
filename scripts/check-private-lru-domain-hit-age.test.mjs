@@ -90,7 +90,8 @@ test("adjust_age has an explicit producer, gate, sampling purpose, and cost", as
 
   for (const text of [markdown, en]) {
     assert.match(text, /only .*pgbuf_adjust_quotas\(\).*increments.*adjust_age|only .*accepted.*pgbuf_adjust_quotas\(\).*increments/is);
-    assert.match(text, /100 ms.*does not.*increment|does not increment.*100 ms/is);
+    // Both explanations distinguish the timer attempt from an accepted update.
+    assert.match(text, /100 ms.*does not.*increment|does not increment.*100 ms|100 ms attempt is not a 100 ms update/is);
     assert.match(text, /one.*BCB.*one.*hit.*epoch/is);
     assert.match(text, /O\(T \+ L \+ D\)/);
     assert.match(text, /ATOMIC_TAS_32.*(?:list|LRU).*hits|lru_hits.*ATOMIC_TAS_32/is);

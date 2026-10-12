@@ -76,14 +76,16 @@ execute task -> pause by looper -> execute task -> ...
     |
     | destroy_daemon
     v
-set looper stop -> wake sleeper -> join OS thread
-    -> retire execution context -> retire task -> pointer cleared
+set looper stop -> wake sleeper
+    -> worker retires execution context -> worker retires task -> thread exits
+    -> join returns -> pointer cleared
 ```
 
 `manager::create_daemon()` reserves one managed thread entry for each daemon;
 the `daemon` constructor starts exactly one `std::thread`. Destruction sets the
-looper stop flag, wakes a sleeping waiter, joins the thread, and retires the
-execution context and task. [Manager create/destroy
+looper stop flag and wakes a sleeping waiter. The worker retires its execution
+context and task before exiting; join waits for that exit. A returning join
+therefore confirms that retirement has already finished. [Manager create/destroy
 paths](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_manager.cpp#L125-L153),
 [daemon construction and
 stop/join](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_daemon.cpp#L53-L105),
@@ -94,7 +96,10 @@ stop/join](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7c
 The waiter has `RUNNING`, `SLEEPING`, and `AWAKENING` states. `wakeup()` only
 changes a waiter that is currently `SLEEPING`; if the daemon task is already
 `RUNNING`, the call returns without latching a future event. A timed pause
-returns `true` when awakened before timeout and `false` on timeout. An infinite
+normally returns `true` when awakened before timeout and `false` on timeout.
+The zero-duration timed-wait branch instead returns `true` without sleeping or
+receiving an external signal. A task that already consumed its period can reach
+this branch, so `was_woken_up()` alone does not prove an external wake. An infinite
 pause returns only after a wake. [Waiter states and
 API](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_waiter.hpp#L56-L99),
 [wakeup early return and condition
@@ -112,10 +117,12 @@ drains the queue rather than trusting the wake count.
 
 The page-buffer pool and its LRU/monitor/direct-victim/`flushed_bcbs` structures
 exist before these daemons. Server restart first recovers DWB pages, then calls
-`pgbuf_daemons_init()`, then starts log initialization and recovery. The four OS
-threads therefore exist during recovery, but every task begins with
+`pgbuf_daemons_init()`, creates DWB helpers, then starts log initialization and
+recovery. It runs `boot_after_copydb()` before opening the gate. Successfully
+created daemon threads can therefore exist during recovery, but every task begins with
 `BO_IS_FLUSH_DAEMON_AVAILABLE()` and returns while the boot gate is closed. Boot
-sets the gate after `log_initialize()` completes. Setting the Boolean gate does
+sets the gate after the recovery and post-copy initialization sequence completes.
+Setting the Boolean gate does
 not itself call each daemon's `wakeup()`; fixed timers observe it on later
 iterations, while wake-only roles wait for their ordinary work trigger.
 [Pool before file-manager
@@ -143,6 +150,34 @@ flushing synchronously when no server daemon is available. [Server-only daemon
 creation/destruction](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17146-L17255),
 [stand-alone synchronous
 fallback](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11677-L11702).
+
+### Creation failures and configuration evidence
+
+The group attempts maintenance, page-flush, post-flush, then flush-control
+creation, and destroys pointers in that same order. This is role initialization
+order, not a page-processing pipeline. Returned pool-allocation errors call
+`pgbuf_finalize()`. Generic manager creation can return `NULL` when a managed
+entry is unavailable; the role initializers do not check that result or retire
+the then-unowned task. Allocation/thread-construction exceptions have no local
+recovery wrapper in these creation seams. Thus neither universal four-thread
+availability nor full unwind of every creation failure is established. These
+are source-visible cleanup boundaries, not observed failures or production
+leaks. Flush-control's explicit initializer-failure branch is separate from
+manager creation. [Group order and role
+initializers](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17146-L17255),
+[pool error
+finalize](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1901-L1917),
+[entry reservation and task
+ownership](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_manager.hpp#L425-L474).
+
+The [parameter audit](../docs/session-3-daemon-parameter-audit.md) owns the full
+registration, administrator mutation, units and consumption evidence. Online
+DBA changes require `USER_CHANGE` and server authorization; repeated reads and
+`RELOADABLE` alone do not establish that permission. Registry assignment does
+not persist `cubrid.conf`, wake an existing infinite interval wait, or rebuild
+cached pool/DWB resources. The local manual is revision 11.4 while this engine
+pin declares 11.5.0; implementation-specific behavior is established from the
+pin, not inferred from an unmatched manual's dynamic table.
 
 ## 1. `pgbuf-maintain`: update replacement policy
 
@@ -249,7 +284,9 @@ submission](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7
 ### Sleep, timeout, and demand wake
 
 At each pause, `pgbuf_get_page_flush_interval()` reads the configured
-`page_bg_flush_interval` value through its internal millisecond parameter. A
+`page_flush_interval` value through its internal millisecond parameter
+(the deprecated alias is `page_flush_interval_in_msecs`). The internal
+`PRM_ID_PAGE_BG_FLUSH_INTERVAL` spelling is not an operator setting name. A
 positive value creates a timed wait; zero creates an infinite, wake-only wait.
 The pinned default is 1,000 ms. [Dynamic pause
 selection](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16971-L16992),
@@ -272,12 +309,15 @@ wakes](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6
 [wake/fallback
 helper](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11677-L11702).
 
-When the daemon observes that its last pause ended by wake rather than timeout,
-it forces at least one call to `pgbuf_flush_victim_candidates()`. On a timer
+When the looper reports `was_woken_up()` as true, the task forces at least one
+call to `pgbuf_flush_victim_candidates()`. A sleeping waiter's accepted wake
+produces that result, but an exhausted period's zero-duration wait also returns
+true without an external wake. On a positive-duration timer
 timeout it enters the loop only while at least one direct-victim waiter exists
 or the measured hit ratio is below 99.9% after more than ten victim requests.
 After each flush call it checks the same predicate again and can continue
-without another sleep. A no-candidate result with a valid scan target sets
+without another sleep. A no-candidate result with positive checked budget and
+positive summed flush priority sets
 `stop_iteration`, deliberately breaking the daemon loop so allocator threads
 get a chance to run. [Task force/continue
 loop](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17012-L17067),
@@ -293,6 +333,16 @@ waiter* forces one call. A call to `wakeup()` while the daemon is already
 `RUNNING` is not stored for the next pause by the generic waiter. The shared
 pressure predicate is the steady-state safety net; the timer is another retry
 opportunity when configured positive.
+
+The task ignores the helper's error return and uses the stop hint/current
+pressure to decide whether to continue. The pressure loop has no looper-stop
+test. Helper entry or return therefore does not establish successful page
+submission or a finite shutdown delay. An internal forced `flush_ratio=0` yields
+zero search budget and no stop hint, unlike a valid positive-budget scan with
+no candidates; normal operator zero is rejected by the registered 0.01 minimum.
+[Budget and stop
+branches](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3928-L3989),
+[task continuation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17067).
 
 There is one scheduler-level corner case: when the previous task execution has
 already consumed the configured period, the looper passes a zero duration to
@@ -498,8 +548,15 @@ already crossed the OS write call. It never selects a dirty BCB, sets
 variable, zero-token bucket, and statistics. If initialization fails, it returns
 without creating this fourth daemon; the bucket pointer remains unavailable and
 token acquisition becomes a no-op. Page-buffer flushing itself still works.
+Mutex-init failure returns before bucket publication. Condition-init failure
+returns with the mutex already initialized and no local mutex destruction.
+The role initializer deletes its task without calling `retire()` on either
+explicit initialization error. This qualifies cleanup, rather than proving an
+observed leak. A successfully published bucket must remain valid while any
+writer uses it; joining the page-buffer daemon alone does not establish the
+lifetime of every file writer.
 [Token-bucket
-initialization](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L671-L712),
+initialization](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L678-L740),
 [optional daemon
 creation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17206-L17228),
 [null-bucket token
@@ -586,8 +643,9 @@ initialize zero-token bucket
        measure elapsed time
        replace token budget under mutex
        broadcast waiting post-write callers
-  -> destroy/join
-  -> task retire clears and destroys token bucket
+  -> destroy requests stop and wakes sleeper
+  -> worker retires task: clear and destroy token bucket
+  -> worker exits; join returns
 ```
 
 ## The only direct producer-consumer pair
@@ -741,7 +799,7 @@ wait](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d
 A suitable validation probe should timestamp queue publication, waiter status,
 wakeup return, next task entry, and shared-condition observation with:
 
-- `page_bg_flush_interval=0` and one allocator entering an otherwise quiescent
+- `page_flush_interval=0` and one allocator entering an otherwise quiescent
   direct-victim wait;
 - post-flush already at terminal backoff and a single final queue production;
 - forced scheduling gaps immediately before each daemon calls `pause()`.
@@ -754,6 +812,17 @@ part of the `pgbuf_fix()`/`pgbuf_unfix()` interface contract and must be
 reverified before carrying this lesson to another revision.
 
 ## Observability already exposed by the daemon framework
+
+Detailed retrieval requires the corresponding activation bits and active
+statistics collection. `extended_statistics_activation` defaults to 15, which
+excludes page-buffer victimization bit 16 and daemon bit 64. The initialization
+code caches this mask; it has no `USER_CHANGE` permission. The hidden startup
+`stats_on` option defaults to false and can enable always-watching collection,
+but a suitable runtime collection API/utility is another collection route.
+Neither route supplies missing per-BCB/gate/predicate timestamps. [Activation
+definitions](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/perf_monitor.h#L59-L74),
+[cached mask and collection
+input](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/perf_monitor.c#L3198-L3205).
 
 `pgbuf_daemons_get_stats()` exports framework statistics for page-flush,
 post-flush, flush-control, and maintenance in that order when each pointer is

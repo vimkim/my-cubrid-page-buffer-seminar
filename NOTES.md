@@ -20,6 +20,24 @@ Session 3 is the final live session, with flexible duration. Use its [preparatio
 4. Use shared layout A styles and presentation controls. Reading and no-JavaScript modes expose the complete explanation; presentation mode focuses one section without auto-advance. Native details work without application scripts. Preserve safety qualifications in the visible explanation.
 5. Review both pages against all six axes in the design. Run both aggregate validators and their tests when changing validation. Browser checks cover reading, projection, mobile width, answer disclosure, and no-JavaScript access. A missing browser gate is unavailable, not passed.
 
+Before a scenario label or indispensable term first appears in visible prose,
+diagrams, captions or tables, define its object/actor category and relevant state.
+Each direct-link screen carries the prerequisites for its own example. Moving a
+block means carrying its starting state and definitions with it: extracting the
+S3/S4 paragraph once left readers unaware that S3 was absent and S4 was an unused
+dirty resident candidate. State whether each schedule continues or resets.
+Mark actual visible definitions with `data-teaching-def`, register authored
+notation in `docs/session-3-teaching-labels.json`, and retain the definition/reset
+ledger in [the author review](docs/session-3-readability-review.md). The aggregate
+Session 3 check verifies registered text/order and disclosure visibility;
+editorial review still checks sufficient premises, causal meaning, diagram
+agreement and faithful translation. A machine pass supplies no human receipt.
+Keep contents and spoken screen maps in actual chapter order, with every screen’s
+current heading. The aggregate compares all three contents maps with the chapters;
+the browser suite checks the full Korean spoken map.
+Check generated trace status text too: controls repeat the active outcome above
+the snapshot, so labels printed there need visible definitions before controls.
+
 The teaching-pages.json manifest remains the pairing and human language-review registry. Editing wording invalidates old fingerprint receipts. Automation may print fingerprints and report checks, but only an actual Korean-capable review can supply a review receipt. Reading history, keyword matches, and prototype preference are not language review or participant mastery evidence.
 
 ## Curriculum maintenance

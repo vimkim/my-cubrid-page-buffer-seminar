@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test, { before, after } from 'node:test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { checkSessionChapter, validateSession3, requiresLegacyRedirect } from './session-3-contract.mjs';
+import { chapterScreens, checkSessionChapter, validateSession3, requiresLegacyRedirect } from './session-3-contract.mjs';
+import { checkTeachingDefinitions } from './session-3-definitions.mjs';
 
 const route = JSON.parse(await fs.readFile('session-3-route.json', 'utf8'));
 const dispositions = JSON.parse(await fs.readFile('docs/session-3-live-dispositions.json', 'utf8'));
@@ -36,6 +37,40 @@ before(async () => { if (chromium) browser = await chromium.launch({ headless: t
 after(async () => { await browser?.close(); });
 async function activate(locator, page) { await locator.focus(); await page.keyboard.press('Enter'); }
 
+test('every registered page exposes its real definitions before examples in the reading DOM', { skip: unavailable }, async () => {
+  const registry = JSON.parse(await fs.readFile('docs/session-3-teaching-labels.json', 'utf8'));
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  try {
+    for (const [file, labels] of Object.entries(registry.pages)) {
+      await page.goto(base + '/' + file);
+      assert.ok(await page.locator('img').evaluateAll(imgs => imgs.every(i => i.complete && i.naturalWidth > 0 && i.naturalHeight > 0)), file);
+      for (const width of [1920, 390, 320]) {
+        await page.setViewportSize({ width, height: 1080 });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${file}: reading width ${width}`);
+      }
+      await page.setViewportSize({ width: 1920, height: 1080 });
+      // A later trace step can introduce an independent reset and its actors.
+      // Inspect the complete reading order, as no-JavaScript mode also does,
+      // while keeping prediction answers closed.
+      for (const allSteps of await page.locator('[data-trace-all]').all()) await activate(allSteps, page);
+      assert.deepEqual(checkTeachingDefinitions(await page.content(), labels), [], file);
+      for (const definition of await page.locator('[data-teaching-def]').all()) {
+        assert.ok(await definition.isVisible(), `${file}: definition must remain visible outside answers`);
+        assert.equal(await definition.evaluate(node => Boolean(node.closest('details'))), false);
+      }
+      for (const trace of await page.locator('[data-state-trace]').all()) {
+        await activate(trace.locator('[data-trace-reset]'), page);
+        const count = await trace.locator('.trace-steps > li').count();
+        for (let step = 0; step < count; step++) {
+          if (step) await activate(trace.locator('[data-trace-next]'), page);
+          assert.deepEqual(checkTeachingDefinitions(await page.content(), labels, {}, { allowInactiveTraceDefinitions: true }), [], `${file}: ${await trace.getAttribute('id')} step ${step}`);
+        }
+        await activate(trace.locator('[data-trace-all]'), page);
+      }
+    }
+  } finally { await page.close(); }
+});
+
 test('root TOC opens the entire Korean journey and reaches closure', { skip: unavailable }, async () => {
   const page = await browser.newPage();
   try {
@@ -56,6 +91,51 @@ test('root TOC opens the entire Korean journey and reaches closure', { skip: una
     await activate(page.locator('[data-session-return]'), page);
     await page.waitForURL('**/ko/seminar-3/toc.html');
     assert.equal(new URL(page.url()).pathname, '/ko/seminar-3/toc.html');
+  } finally { await page.close(); }
+});
+
+test('every chapter supports fresh direct entry to each projected screen', { skip: unavailable }, async () => {
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  try {
+    for (const lang of ['en', 'ko']) for (const chapter of route.chapters) {
+      const file = `${lang}/seminar-3/${chapter.file}`;
+      await page.goto(base + '/' + file);
+      const ids = await page.locator('.lesson-main > section').evaluateAll(nodes => nodes.map(node => node.id));
+      for (const id of ids) {
+        await page.goto('about:blank');
+        await page.goto(`${base}/${file}?present=1#${id}`);
+        assert.equal(await page.locator('.lesson-main > section:visible').count(), 1, `${file}#${id}`);
+        assert.equal(await page.locator('.lesson-main > section:visible').getAttribute('id'), id);
+        assert.equal(await page.locator(`#${id} details[open]`).count(), 0, 'entry must preserve visible setup with answers closed');
+        assert.ok(await page.locator(`#${id} h2`).innerText());
+      }
+    }
+  } finally { await page.close(); }
+});
+
+test('all three contents pages expose complete native screen maps without JavaScript', { skip: unavailable }, async () => {
+  const page = await browser.newPage({ javaScriptEnabled: false });
+  try {
+    for (const file of ['toc.html', 'en/seminar-3/toc.html', 'ko/seminar-3/toc.html']) {
+      const lang = file.startsWith('en/') ? 'en' : 'ko';
+      const expectedScreens = (await Promise.all(route.chapters.map(async chapter => {
+        const chapterFile = `${lang}/seminar-3/${chapter.file}`;
+        return chapterScreens(await fs.readFile(chapterFile, 'utf8'), chapter.file).length;
+      }))).reduce((total, count) => total + count, 0);
+      await page.goto(base + '/' + file);
+      const maps = page.locator('details.screen-map');
+      assert.equal(await maps.count(), 12, file);
+      for (const map of await maps.all()) {
+        assert.equal(await map.getAttribute('open'), null);
+        await activate(map.locator('summary'), page);
+        assert.equal(await map.getAttribute('open'), '');
+      }
+      assert.equal(await maps.locator('a:visible').count(), expectedScreens, file);
+      for (const width of [1920, 390, 320]) {
+        await page.setViewportSize({ width, height: 1080 });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${file}: open maps at ${width}`);
+      }
+    }
   } finally { await page.close(); }
 });
 
@@ -165,6 +245,15 @@ test('all Korean spoken screen cues resolve to the exact served chapter/anchor',
     await page.goto(base + '/my-presentation-script-session-3.html');
     assert.equal(await page.locator('section.run-sheet').count(), 12);
     const cues = await page.locator('.cue a[href*="seminar-3"], .screen-cues a').evaluateAll(nodes => nodes.map(n => n.getAttribute('href')));
+    const completeMap = await page.locator('.screen-cues a').evaluateAll(nodes => nodes.map(n => ({ href: n.getAttribute('href'), title: n.textContent.trim() })));
+    const expectedMap = [];
+    for (const chapter of route.chapters) {
+      const file = 'ko/seminar-3/' + chapter.file;
+      await page.goto(base + '/' + file);
+      const screens = await page.locator('.lesson-main > section').evaluateAll(nodes => nodes.map(n => ({ id: n.id, title: n.querySelector('h2').textContent.trim() })));
+      expectedMap.push(...screens.map(screen => ({ href: file + '#' + screen.id, title: screen.title })));
+    }
+    assert.deepEqual(completeMap, expectedMap, 'spoken screen map must cover every final Korean screen and heading in order');
     for (const [file, group] of Map.groupBy(cues, href => href.split('#')[0])) {
       await page.goto(base + '/' + file);
       for (const cue of group) assert.equal(await page.locator('[id="' + cue.split('#')[1] + '"]').count(), 1, cue);

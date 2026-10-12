@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { checkTeachingDefinitions, decodeText } from './session-3-definitions.mjs';
 
 export function requiresLegacyRedirect(page) {
   return page.path !== 'index.html'
@@ -9,6 +10,19 @@ export function requiresLegacyRedirect(page) {
 function links(html, marker) {
   return [...html.matchAll(/<a\b([^>]*)>/g)].filter(m => !marker || m[1].includes(marker))
     .map(m => m[1].match(/href="([^"]+)"/)?.[1]);
+}
+
+const visibleTitle = html => decodeText(html.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
+export function chapterScreens(html, file) {
+  return [...html.matchAll(/<section\b[^>]*\bid="([^"]+)"[^>]*>[\s\S]*?<h2\b[^>]*>([\s\S]*?)<\/h2>/g)]
+    .map(match => ({ href: `${file}#${match[1]}`, title: visibleTitle(match[2]) }));
+}
+export function checkContentsScreens(html, screens, prefix = '') {
+  const maps = [...html.matchAll(/<details\b[^>]*class="screen-map"[^>]*>([\s\S]*?)<\/details>/g)].map(match => match[1]).join('');
+  const actual = [...maps.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)]
+    .map(match => ({ href: match[1], title: visibleTitle(match[2]) }));
+  const wanted = screens.map(screen => ({ ...screen, href: prefix + screen.href }));
+  return JSON.stringify(actual) === JSON.stringify(wanted) ? [] : ['screen map must contain every final screen in order with its actual heading'];
 }
 
 export function checkSessionChapter(html, chapter, index, route, lang) {
@@ -37,13 +51,42 @@ export async function validateSession3(root) {
   if (!manifest.session3Route) return { count: 0, failures: [] };
   const route = JSON.parse(await readFile(path.join(root, manifest.session3Route), 'utf8'));
   const failures = [];
+  let registry;
+  try { registry = JSON.parse(await readFile(path.join(root, 'docs/session-3-teaching-labels.json'), 'utf8')); }
+  catch (error) { failures.push(`Session 3 teaching-label registry unavailable: ${error.message}`); }
+  const product = ['toc.html', ...['en', 'ko'].flatMap(lang => [`${lang}/seminar-3/toc.html`, ...route.chapters.map(c => `${lang}/seminar-3/${c.file}`)])];
+  if (registry !== undefined && (!registry || !registry.pages || typeof registry.pages !== 'object' || Array.isArray(registry.pages))) {
+    failures.push('teaching-label registry requires a pages object');
+    registry = undefined;
+  }
+  if (registry) {
+    if (JSON.stringify(Object.keys(registry.pages).sort()) !== JSON.stringify(product.toSorted()))
+      failures.push('teaching-label registry must cover exactly the 27 Session 3 pages');
+    for (const file of product) {
+      const labels = registry.pages[file];
+      if (!Array.isArray(labels) || new Set(labels).size !== labels.length || labels.some(label => typeof label !== 'string' || !label.trim())) {
+        failures.push(`${file}: invalid teaching-label registration`); continue;
+      }
+      const html = await readFile(path.join(root, file), 'utf8');
+      const images = {};
+      for (const match of html.matchAll(/<img\b[^>]*\bsrc="([^"]+\.svg)"/g)) {
+        const asset = path.resolve(root, path.dirname(file), match[1]);
+        if (!asset.startsWith(path.join(root, 'assets') + path.sep)) continue;
+        const svg = await readFile(asset, 'utf8');
+        images[match[1]] = [...svg.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g)].map(m => m[1].replace(/<[^>]*>/g, ' ')).join(' ');
+      }
+      failures.push(...checkTeachingDefinitions(html, labels, images).map(f => `${file}: ${f}`));
+    }
+  }
   if (route.chapters.length !== 12 || new Set(route.chapters.map(c => c.file)).size !== 12)
     failures.push('Session 3 requires twelve distinct ordered chapters');
+  const screensByLanguage = {};
   for (const lang of ['en', 'ko']) {
-    const questions = []; let traces = 0;
+    const questions = [], screens = []; let traces = 0;
     for (const [index, chapter] of route.chapters.entries()) {
       const file = `${lang}/seminar-3/${chapter.file}`;
       const html = await readFile(path.join(root, file), 'utf8');
+      screens.push(...chapterScreens(html, chapter.file));
       failures.push(...checkSessionChapter(html, chapter, index, route, lang).map(f => `${file}: ${f}`));
       if (!manifest.pages.some(p => p[lang] === file)) failures.push(`${file}: missing manifest pair`);
       questions.push(...[...html.matchAll(/data-question-id="([^"]+)"/g)].map(m => m[1]));
@@ -54,12 +97,15 @@ export async function validateSession3(root) {
     if (JSON.stringify(questions.sort()) !== JSON.stringify(wanted)) failures.push(`${lang}: Q01-Q24/D25-D33 must each occur once`);
     if (traces < 25) failures.push(`${lang}: preserve 22 traces and the three new cases`);
     const toc = await readFile(path.join(root, lang, 'seminar-3/toc.html'), 'utf8');
+    screensByLanguage[lang] = screens;
+    failures.push(...checkContentsScreens(toc, screens).map(f => `${lang}/seminar-3/toc.html: ${f}`));
     const ordered = links(toc, 'data-session-chapter');
     if (JSON.stringify(ordered) !== JSON.stringify(route.chapters.map(c => c.file + '#workload'))
         || links(toc, 'data-session-start')[0] !== route.chapters[0].file + '#workload')
       failures.push(`${lang}: detailed TOC ordering differs from route`);
   }
   const rootToc = await readFile(path.join(root, 'toc.html'), 'utf8');
+  failures.push(...checkContentsScreens(rootToc, screensByLanguage.ko, 'ko/seminar-3/').map(f => `toc.html: ${f}`));
   const targets = links(rootToc, 'data-session-chapter');
   if (JSON.stringify(targets) !== JSON.stringify(route.chapters.map(c => 'ko/seminar-3/' + c.file + '#workload'))
       || links(rootToc, 'data-session-start')[0] !== 'ko/seminar-3/' + route.chapters[0].file + '#workload')

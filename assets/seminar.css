@@ -9,6 +9,8 @@ body{background:var(--paper)}[hidden]{display:none!important}.course-shell{width
 .technical-detail { margin: 20px 0; padding: 16px 20px; border: 1px solid var(--line); background: var(--paper); }
 .technical-detail > summary { cursor: pointer; color: var(--teal); font-weight: 700; }
 .technical-detail[open] > summary { margin-bottom: 18px; }
+/* Keep state names intact in the Session 3 pin/credit comparison. */
+body[data-session-3] #clock-problem-part-2 td:first-child { overflow-wrap: normal; }
 @media (min-width: 1100px) {
   .presentation-mode .page-request-journey { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .presentation-mode .page-request-journey p { margin: 12px 0 0; }
