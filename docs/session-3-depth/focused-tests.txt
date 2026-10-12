@@ -1,0 +1,33 @@
+✔ the lesson separates four durability moments and the two LSAs (5.598876ms)
+✔ the generation timeline preserves re-dirty and ordinary rollback (1.424498ms)
+✔ the persistence boundary and evidence cards do not overclaim (2.311678ms)
+✔ the visual and exercise teach the same generation model (1.105947ms)
+✔ the two-LSA timeline extends the worked example into generation G+1 (0.940244ms)
+✔ the daemon reference separates four peer control loops (8.811181ms)
+✔ the maintenance anomaly is routed through one uncertainty owner (1.341291ms)
+✔ the daemon visual shows triggers and boundaries without localized text (2.069274ms)
+✔ the lifecycle audit explains generic timing, gating, wake semantics, and all four cadences (1.071986ms)
+✔ lessons 6A, 6B, and 6C split lifecycle, flush handoff, and control planes with Korean parity (2.624307ms)
+✔ audience CLI rejects an inline continuation that contradicts the curriculum (75.531068ms)
+✔ audience CLI rejects optional labels on required mechanism lectures (59.067803ms)
+✔ audience CLI rejects conditional participation headings for required lectures (67.993141ms)
+✔ audience CLI rejects one exposed answer even when other checkpoint disclosures remain (66.361026ms)
+✔ audience CLI requires a disclosure for every checkpoint, not just one per lecture (68.088392ms)
+✔ audience CLI rejects a checkpoint explanation that starts open (58.759941ms)
+✔ audience CLI rejects an exposed model spine outside a disclosure (57.911344ms)
+✔ en: all 24 questions and authored traces are delivered and keyboard reversible (2164.857733ms)
+✔ en: generation, clock, ring and completion outcomes preserve source boundaries (426.009252ms)
+✔ en: 390px no-JavaScript reading exposes all snapshots and native answers (554.449137ms)
+✔ en: 320px no-JavaScript reading exposes all snapshots and native answers (544.021893ms)
+✔ ko: all 24 questions and authored traces are delivered and keyboard reversible (2009.326838ms)
+✔ ko: generation, clock, ring and completion outcomes preserve source boundaries (497.339292ms)
+✔ ko: 390px no-JavaScript reading exposes all snapshots and native answers (709.410886ms)
+✔ ko: 320px no-JavaScript reading exposes all snapshots and native answers (683.181187ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8152.425085

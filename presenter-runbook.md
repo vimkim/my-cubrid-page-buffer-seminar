@@ -18,6 +18,8 @@ Ask participants to distinguish what the source establishes from what requires a
 
 Before presenting, open the exact served URL and check the intended viewport, diagrams, disclosure controls, source links, and language switch. Keep reading mode available if a projected section needs more context. Consult the coverage audit for remaining editorial or human language-review work.
 
+Session 3 now delivers Q01–Q24 in the script and their relevant paired lecture sections. The [application map](docs/final-session-report-application.md) records the author dispositions; the [current preparation receipt](docs/final-session-preparation.md#current-report-application-and-visual-checks-2026-10-12) owns screen and verification details. Confirm each trace's starting assumptions, allow a prediction, then use Next to reveal the changed fields and controlling guard. Reset starts only that authored scenario; the second clock trace has its own independent reset. Show-all and no-JavaScript reading retain complete histories. Close answers before another prediction; projected section navigation also resets opted-in disclosures. Finish the two cases and Q23/Q24 before the complete page-journey recap and farewell.
+
 
 ## First-time participant route reference
 

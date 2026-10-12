@@ -6,8 +6,8 @@
   <title>강의 18A — 엔진별 replacement policy</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <link rel="stylesheet" href="../../assets/comparison-clarity.css">
-  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0018a-compare-replacement-policies.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
 <main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · Lecture 0018A</span><a href="../index.html">과정 홈</a></div>
@@ -50,6 +50,53 @@
 <h2>PostgreSQL: 다시 쓴 페이지에 기회를 몇 번 더 준다</h2>
 <p><strong>Buffer descriptor</strong>는 프레임 하나의 메타데이터로, 역할상 CUBRID의 BCB에 대응합니다. PostgreSQL은 descriptor를 배열에 둡니다. <strong>Clock hand</strong>는 다음에 검사할 배열 위치를 기억하고, 끝에 도달하면 처음으로 돌아갑니다. 페이지가 배열 안에서 이동하는 것은 아닙니다.</p>
 <p>각 상주 페이지에는 작은 <code>usage_count</code>, 즉 <strong>재사용 크레딧</strong>이 있습니다. 기본 전략에서 backend가 처음 pin할 때 크레딧을 하나 더 받을 수 있으며 상한은 5입니다. Backend는 페이지를 사용하는 PostgreSQL 서버 프로세스입니다. <strong>Pin</strong>은 이 비교에서 CUBRID fix처럼 호출자가 사용하는 동안 프레임 재사용을 막습니다. 페이지 내용의 동시 접근을 보호하는 잠금과는 별개입니다.</p>
+
+<div class="session-question" id="q16" data-audience-checkpoint data-reset-answers data-question-id="Q16">
+<h3>Q16 · 중첩 Pin의 기록</h3>
+<p><strong>구성한 시작 상태:</strong> 공유 descriptor D는 유효한 clean 페이지를 나타내며, 공유 refcount와 usage credit은 모두 0입니다. 기본 strategy를 사용합니다. Backend A가 D를 연속 세 번 pin한 상태에서 B가 D를 처음 pin합니다. 이후 A만 자신의 세 pin을 모두 반납합니다. Clock 방문이나 다른 변경은 없습니다.</p>
+<p><strong>예측 질문:</strong> 이 사건들의 순서에 따라 공유 refcount, A의 private refcount, usage credit을 어떻게 기록하겠습니까?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>A의 첫 pin 뒤 공유 refcount는 1, A의 private refcount는 1, credit은 1입니다. 두 중첩 pin 뒤 공유 값은 1, private은 3, credit은 1입니다. B의 첫 pin 뒤 공유 값과 credit은 각각 2입니다. A가 모두 반납하면 공유 값은 1, A private은 0, credit은 2이며 B가 D를 보호합니다. Credit의 상한은 5이고 전체 호출 횟수를 세는 값은 아닙니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 최종 공유 refcount만 보았을 때 복원할 수 없는 호출 이력은 무엇인가요?</p></details>
+</div>
+<div class="session-question" id="q17" data-audience-checkpoint data-reset-answers data-question-id="Q17">
+<h3>Q17 · 다른 인터페이스의 보호 책임</h3>
+<p><strong>구성한 시작 상태:</strong> CUBRID READ fix를 사용하던 호출자를 PostgreSQL용 wrapper로 옮기는 설계입니다. Wrapper는 기존 identity의 buffer를 pin해 주소만 반환합니다. Caller는 반환 즉시 페이지 바이트를 읽습니다. 같은 페이지를 pin한 B가 content 변경을 위한 보호를 보유하고 있으며 변경 중입니다.</p>
+<p><strong>예측 질문:</strong> 이 wrapper가 caller의 읽기를 지원하려면 어떤 보호 책임을 인터페이스에 명시해야 할까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>Pin은 메모리 사용 수명을 보호하며 호환되는 바이트 접근까지 보장하지 않습니다. 해당 접근 경로에 필요한 content 보호의 획득·반납 주체를 명시해야 합니다. 일반 공유 버퍼 읽기에서는 바이트를 보기 전에 호환되는 content lock을 얻도록 wrapper의 반환 계약이나 caller의 의무에 넣습니다. 주소와 pin만으로 READ fix의 계약을 재현할 수 없습니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 그 책임을 wrapper와 caller 중 누가 수행하게 할지 결정할 때 반환 계약을 어떻게 적겠습니까?</p></details>
+</div>
+
+<div class="state-trace" id="pin-state-trace" data-state-trace><h3>A의 중첩과 공유 descriptor 보호</h3><p class="trace-assumptions">유효하고 clean인 D에서 NORMAL strategy, credit 0으로 시작합니다. Sweep과 다른 변화는 없습니다. Private refcount는 각 backend에 속합니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Pin 이전</h4><p><strong>주체 / 사건:</strong> 구성한 시작 지점</p><dl class="trace-lanes">
+<div><dt>Shared D · refcount / usage_count</dt><dd>0 / 0</dd></div>
+<div><dt>Backend A · private pins</dt><dd>0</dd></div>
+<div><dt>Backend B · private pins</dt><dd>0</dd></div>
+<div><dt>Content access</dt><dd>no content protection assumed</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> D를 보유한 backend 없음</p><p class="trace-change"><strong>변경 / 결과:</strong> 두 공유 값이 0에서 시작</p></li>
+<li data-trace-step="1"><h4>2. A의 첫 pin</h4><p><strong>주체 / 사건:</strong> A PinBuffer NORMAL</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared D · refcount / usage_count</dt><dd>1 / 1</dd></div>
+<div class="trace-changed"><dt>Backend A · private pins</dt><dd>1</dd></div>
+<div><dt>Backend B · private pins</dt><dd>0</dd></div>
+<div class="trace-changed"><dt>Content access</dt><dd>pin protects reuse; bytes need separate protection</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> A의 private pin이 없으며 atomic 갱신 성공</p><p class="trace-change"><strong>변경 / 결과:</strong> 공유 refcount 0→1, usage 0→1, A private 0→1</p></li>
+<li data-trace-step="2"><h4>3. A가 두 번 중첩</h4><p><strong>주체 / 사건:</strong> A가 이미 D를 보유한 상태에서 pin</p><dl class="trace-lanes">
+<div><dt>Shared D · refcount / usage_count</dt><dd>1 / 1</dd></div>
+<div class="trace-changed"><dt>Backend A · private pins</dt><dd>3</dd></div>
+<div><dt>Backend B · private pins</dt><dd>0</dd></div>
+<div class="trace-changed"><dt>Content access</dt><dd>separate from pin nesting</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 기존 private refcount로 중첩 처리</p><p class="trace-change"><strong>변경 / 결과:</strong> A private 1→3. 공유 refcount와 usage는 1 유지</p></li>
+<li data-trace-step="3"><h4>4. B의 첫 pin</h4><p><strong>주체 / 사건:</strong> B PinBuffer NORMAL</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared D · refcount / usage_count</dt><dd>2 / 2</dd></div>
+<div><dt>Backend A · private pins</dt><dd>3</dd></div>
+<div class="trace-changed"><dt>Backend B · private pins</dt><dd>1</dd></div>
+<div class="trace-changed"><dt>Content access</dt><dd>B still needs required content protection</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> B의 private pin 없음. Usage는 상한 5 미만</p><p class="trace-change"><strong>변경 / 결과:</strong> 공유 refcount 1→2, usage 1→2. A private은 3 유지</p></li>
+<li data-trace-step="4"><h4>5. A가 private pin 셋 반납</h4><p><strong>주체 / 사건:</strong> A가 모든 중첩 반납</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared D · refcount / usage_count</dt><dd>1 / 2</dd></div>
+<div class="trace-changed"><dt>Backend A · private pins</dt><dd>0</dd></div>
+<div><dt>Backend B · private pins</dt><dd>1</dd></div>
+<div class="trace-changed"><dt>Content access</dt><dd>B’s pin remains; pin alone is not content locking</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> A의 마지막 private 반납에서만 공유 refcount 감소</p><p class="trace-change"><strong>변경 / 결과:</strong> A private 3→0, 공유 2→1, usage 2 유지. B가 재사용을 막음</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3386">PinBuffer:3295–3386</a></p></div>
 </section>
 <section class="section" id="postgres-credit">
 <h2>PostgreSQL: 크레딧이 늘고 줄어드는 과정</h2>
@@ -63,6 +110,69 @@
 <div class="comparison-flow" role="group" aria-label="PostgreSQL strategy ring 예시"><div><strong>ID 예시</strong><p>slot 0: frame 17<br>slot 1: frame 42<br>slot 2: frame 81</p><span>슬롯 세 개만 표시; 실제 설정 크기가 아님</span></div><div><strong>다음 스캔 페이지</strong><p>다음 슬롯의 프레임 검사</p><span>조건을 만족하면 재사용</span></div><div><strong>재사용할 수 없다면?</strong><p>전역 후보 선택으로 진행</p><span>다른 사용자의 상태도 확인</span></div></div>
 <p>재사용에 성공하면 새 S 페이지가 이 작은 집합 안의 이전 S 페이지를 대체합니다. 계속 더 많은 프레임을 차지할 필요가 줄어드는 것입니다. Pin된 프레임이나 <code>usage_count &gt; 1</code>인 프레임은 ring 재사용에서 제외합니다. 후자는 다른 사용자가 쌓은 재사용 크레딧을 보호합니다. Ring 전략의 접근 자체는 크레딧을 1보다 높게 계속 올리지 않습니다.</p>
 <p><strong>CUBRID와 비교하면:</strong> ring은 한 작업이 가진 shared frame ID 목록이며, private LRU의 상주·quota 도메인이 아닙니다. 이 전략을 사용하는 작업의 캐시 오염을 제한하지만 임의의 모든 스캔을 보호하지는 않습니다.</p>
+
+<div class="session-question" id="q19" data-audience-checkpoint data-reset-answers data-question-id="Q19">
+<h3>Q19 · 두 Ring의 같은 Buffer ID</h3>
+<p><strong>구성한 시작 상태:</strong> 서로 다른 backend A와 B의 ring slot이 같은 공유 buffer ID F를 저장합니다. F는 처음에 R을 나타냈습니다. A가 필요한 보호 절차를 거쳐 F의 identity를 S로 바꾸고 pin을 반납했습니다. B의 ring 배열에는 변경이 없었으며, B는 이제 그 slot을 방문하려고 합니다. F는 clean, refcount 0, credit 1입니다.</p>
+<p><strong>예측 질문:</strong> B의 slot 값이 유지됐다는 기록으로 다음 방문의 페이지 identity에 대해 어디까지 설명할 수 있을까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>Slot은 계속 F를 참조하지만 현재 F의 identity는 S입니다. Slot이 R을 소유하거나 유지하는 것은 아닙니다. B는 현재 frame에 대해 보호된 ring 선택을 시도하고 이후 필요한 identity·writeback 절차를 수행합니다. Backend의 참조 배열과 CUBRID pool이 관리하는 BCB 정책 소속을 기준으로 비교합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 이 소유 관계를 CUBRID private LRU의 소유 관계와 비교할 때 기준으로 삼을 객체는 무엇인가요?</p></details>
+</div>
+<div class="session-question" id="q20" data-audience-checkpoint data-reset-answers data-question-id="Q20">
+<h3>Q20 · Strategy를 바꾼 같은 후보</h3>
+<p><strong>구성한 시작 상태:</strong> 각각 독립된 세 실행에서 BULKREAD, BULKWRITE, VACUUM strategy의 ring으로 같은 조건의 후보를 선택했습니다. 후보는 BM_PERMANENT인 dirty 페이지이며, 필요한 content lock을 대기 없이 얻었습니다. 페이지 LSN까지 WAL flush가 필요합니다. 선택 전 refcount는 0, credit은 1이고 다른 backend의 개입은 없습니다.</p>
+<p><strong>예측 질문:</strong> 같은 후보의 이후 처리는 세 strategy에서 어떻게 달라질 수 있나요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>BULKREAD는 이 ring 후보를 거절하고 현재 slot을 InvalidBuffer로 비운 뒤 lock과 pin을 반납하고 재시도합니다. 공유 페이지의 identity를 제거하는 분기는 아닙니다. BULKWRITE와 VACUUM은 이 bulk-read 거절 정책을 쓰지 않으며 WAL을 보존하고 flush한 뒤 보호된 invalidation으로 갈 수 있습니다. NORMAL에는 strategy ring이 없습니다. 실제 크기는 factory 정책 외에도 caller 입력, AIO·pin 한도와 NBuffers/8 상한을 확인합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 작은 공유 pool에서 ring의 실제 크기를 설명하려면 factory 기본값 외에 어느 계산과 caller 입력을 확인해야 하나요?</p></details>
+</div>
+
+<div class="state-trace" id="ring-state-trace" data-state-trace><h3>로컬 ID가 공유 frame을 참조</h3><p class="trace-assumptions">Factory 크기와 별개의 두 slot 설명 ring입니다. 다음 방문은 slot 0입니다. F4/F5/F6은 clean이며 동시 변경은 없습니다. 두 번째 miss 전에 첫 pin을 반납하고 전역 fallback은 F6을 고른다고 가정합니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. 두 miss 이전의 ring</h4><p><strong>주체 / 사건:</strong> 구성한 시작 지점</p><dl class="trace-lanes">
+<div><dt>Backend-local ring · slots 0 / 1</dt><dd>F4 / F5</dd></div>
+<div><dt>Shared F4 · ref / usage / tag</dt><dd>0 / 1 / R</dd></div>
+<div><dt>Shared F5 · ref / usage / tag</dt><dd>0 / 2 / T</dd></div>
+<div><dt>Shared F6 · ref / usage / tag</dt><dd>0 / 0 / U</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> Slot은 buffer ID를 저장하며 페이지를 소유하지 않음</p><p class="trace-change"><strong>변경 / 결과:</strong> Slot은 F4,F5에서 시작. Frame metadata는 공유 pool에 있음</p></li>
+<li data-trace-step="1"><h4>2. Slot 0: ring 선택 성공</h4><p><strong>주체 / 사건:</strong> Backend가 slot 0의 F4 방문</p><dl class="trace-lanes">
+<div><dt>Backend-local ring · slots 0 / 1</dt><dd>F4 / F5</dd></div>
+<div class="trace-changed"><dt>Shared F4 · ref / usage / tag</dt><dd>1 / 1 / R</dd></div>
+<div><dt>Shared F5 · ref / usage / tag</dt><dd>0 / 2 / T</dd></div>
+<div><dt>Shared F6 · ref / usage / tag</dt><dd>0 / 0 / U</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> ref=0, usage≤1에서 선택 CAS 성공</p><p class="trace-change"><strong>변경 / 결과:</strong> F4 ref 0→1. Slot은 F4 유지. Ring 선택만으로 tag R을 바꾸지 않음</p></li>
+<li data-trace-step="2"><h4>3. 보호된 재사용·반납 후 slot 1</h4><p><strong>주체 / 사건:</strong> Caller가 안전한 재사용 후 F4를 S로 바꾸고 반납한 뒤 F5 방문</p><dl class="trace-lanes">
+<div><dt>Backend-local ring · slots 0 / 1</dt><dd>F4 / F5</dd></div>
+<div class="trace-changed"><dt>Shared F4 · ref / usage / tag</dt><dd>0 / 1 / S</dd></div>
+<div><dt>Shared F5 · ref / usage / tag</dt><dd>0 / 2 / T</dd></div>
+<div><dt>Shared F6 · ref / usage / tag</dt><dd>0 / 0 / U</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> F4 identity 교체는 별도의 writeback·mapping 조건 필요. F5 usage=2이면 ring 재사용 거절</p><p class="trace-change"><strong>변경 / 결과:</strong> F4 R→S 후 pin 반납. F5는 공유 pool에 유지하며 ring은 fallback</p></li>
+<li data-trace-step="3"><h4>4. Fallback이 F6 선택 후 ID 하나 교체</h4><p><strong>주체 / 사건:</strong> 전역 clock 후 AddBufferToRing</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Backend-local ring · slots 0 / 1</dt><dd>F4 / F6</dd></div>
+<div><dt>Shared F4 · ref / usage / tag</dt><dd>0 / 1 / S</dd></div>
+<div><dt>Shared F5 · ref / usage / tag</dt><dd>0 / 2 / T</dd></div>
+<div class="trace-changed"><dt>Shared F6 · ref / usage / tag</dt><dd>1 / 0 / U</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> Pin 없고 credit 0인 F6을 고른다는 전제. CAS 성공</p><p class="trace-change"><strong>변경 / 결과:</strong> F6 ref 0→1, slot 1 F5→F6. F5 tag와 공유 메모리 상태는 유지</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L615-L705">ring claim/refill:615–705</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2471-L2673">later reuse:2471–2673</a></p></div>
+
+<div class="state-trace" id="ring-wal-trace" data-state-trace><h3>같은 dirty 후보, 세 독립 strategy</h3><p class="trace-assumptions">각 열은 하나의 실행을 이어가는 것이 아니라 Q20의 독립 실행입니다. Ring에서 고른 dirty BM_PERMANENT R은 초기 ref=0, usage=1이며 선택과 조건부 content lock에 성공합니다. WAL flush가 필요합니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. 후보 선택과 content 보호</h4><p><strong>주체 / 사건:</strong> 서로 다른 세 할당 backend</p><dl class="trace-lanes">
+<div><dt>BULKREAD · slot / R</dt><dd>R / pin=1; DIRTY=1</dd></div>
+<div><dt>BULKWRITE · slot / R</dt><dd>R / pin=1; DIRTY=1</dd></div>
+<div><dt>VACUUM · slot / R</dt><dd>R / pin=1; DIRTY=1</dd></div>
+<div><dt>Other shared frame H</dt><dd>pinned by another backend</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 필요한 content 보호 아래 LSN 검사</p><p class="trace-change"><strong>변경 / 결과:</strong> 각각 R pin을 보유하나 필요한 WAL은 부족. 별도 H의 pin은 유지</p></li>
+<li data-trace-step="1"><h4>2. Strategy별 판단</h4><p><strong>주체 / 사건:</strong> GetVictimBuffer → StrategyRejectBuffer</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>BULKREAD · slot / R</dt><dd>InvalidBuffer / shared R remains dirty</dd></div>
+<div class="trace-changed"><dt>BULKWRITE · slot / R</dt><dd>R / WAL→FlushBuffer path</dd></div>
+<div class="trace-changed"><dt>VACUUM · slot / R</dt><dd>R / WAL→FlushBuffer path</dd></div>
+<div class="trace-changed"><dt>Other shared frame H</dt><dd>pin still protects H</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> Strategy, from_ring, BM_PERMANENT, WAL 필요 조건. 거절은 BULKREAD만</p><p class="trace-change"><strong>변경 / 결과:</strong> BULKREAD는 slot R→InvalidBuffer 후 lock·pin 반납. 다른 둘은 WAL·write로 진행</p></li>
+<li data-trace-step="2"><h4>3. 재시도 또는 이후 보호된 invalidation</h4><p><strong>주체 / 사건:</strong> Bulk-read는 선택 재시도, 다른 caller는 write 후 재검사</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>BULKREAD · slot / R</dt><dd>retry; empty current slot falls back</dd></div>
+<div class="trace-changed"><dt>BULKWRITE · slot / R</dt><dd>recheck ref=1 and !DIRTY</dd></div>
+<div class="trace-changed"><dt>VACUUM · slot / R</dt><dd>recheck ref=1 and !DIRTY</dd></div>
+<div class="trace-changed"><dt>Other shared frame H</dt><dd>still pinned; not a victim</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 전역 clock도 H pin을 건너뜀. 이후 identity 제거는 자기 pin만 있고 clean이어야 함</p><p class="trace-change"><strong>변경 / 결과:</strong> Ring 거절만으로 공유 R을 바꾸지 않음. Write 성공만으로 identity 교체를 허가하지도 않음</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2590-L2639">caller conditions:2590–2639</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L741-L770">BULKREAD rejection:741–770</a></p></div>
 <p class="source-note"><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L615-L705">고정 리비전의 ring 재사용 규칙</a> · <a href="#postgres-first-trace">Clock 후보 선택 예시와 소스</a></p>
 </section>
 
@@ -70,7 +180,72 @@
   → BufferAlloc
     → GetVictimBuffer
       → StrategyGetBuffer
-        → ClockSweepTick</pre><figcaption>소스에서 확인한 직접 호출 관계입니다. 조건에 따른 분기를 보여 주며, 실행 중 수집한 스택은 아닙니다.</figcaption></figure><details class="technical-detail"><summary>소스 위치 펼치기</summary><p class="source-note">고정 소스: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L1223-L1251">bufmgr.c:1223–1251</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2268">bufmgr.c:2268</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2671">bufmgr.c:2548–2671</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">freelist.c:239–317</a></p></details><p>Usage credit은 시각이나 누적 hit 횟수가 아니다. 기본 경로에서 backend의 첫 pin은 이를 최대 5까지 높일 수 있지만, 같은 backend의 중첩 pin이 shared credit을 계속 높이지는 않는다. Access-strategy ring은 다른 우선 경로를 쓰며, 별도 전용 pool이 아니라 shared-buffer ID를 담는다.</p><p><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3380">Pin credit 규칙</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L135-L146">Credit 상한</a></p></section>
+        → ClockSweepTick</pre><figcaption>소스에서 확인한 직접 호출 관계입니다. 조건에 따른 분기를 보여 주며, 실행 중 수집한 스택은 아닙니다.</figcaption></figure><details class="technical-detail"><summary>소스 위치 펼치기</summary>
+
+
+
+<p class="source-note">고정 소스: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L1223-L1251">bufmgr.c:1223–1251</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2268">bufmgr.c:2268</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2671">bufmgr.c:2548–2671</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">freelist.c:239–317</a></p></details><p>Usage credit은 시각이나 누적 hit 횟수가 아니다. 기본 경로에서 backend의 첫 pin은 이를 최대 5까지 높일 수 있지만, 같은 backend의 중첩 pin이 shared credit을 계속 높이지는 않는다. Access-strategy ring은 다른 우선 경로를 쓰며, 별도 전용 pool이 아니라 shared-buffer ID를 담는다.</p><p><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3380">Pin credit 규칙</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L135-L146">Credit 상한</a></p>
+<div class="state-trace" id="clock-state-trace" data-state-trace><h3>고정 descriptor: 감소, 건너뜀, 감소, 선택</h3><p class="trace-assumptions">모두 clean이며 동시 변경이 없는 네 descriptor 설명 모델입니다. Hand는 F0에서 시작하고 F1은 다른 backend가 보유합니다. 선택은 새 pin에서 끝나며 identity 교체는 이후 작업입니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. F0에서 초기화</h4><p><strong>주체 / 사건:</strong> Hand의 첫 방문 전</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 2</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 1</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 이전 강의 trace를 이어받지 않는 새 사례</p><p class="trace-change"><strong>변경 / 결과:</strong> Frame 위치 고정. 초기 credit 2,0,1,0</p></li>
+<li data-trace-step="1"><h4>2. F0 방문: 감소</h4><p><strong>주체 / 사건:</strong> F0의 clock hand</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 1</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> Pin 없고 usage 양수. 감소 CAS 성공</p><p class="trace-change"><strong>변경 / 결과:</strong> F0 usage 2→1 후 hand는 F1. 선택 없음</p></li>
+<li data-trace-step="2"><h4>3. F1 방문: 건너뜀</h4><p><strong>주체 / 사건:</strong> F1의 clock hand</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 1</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> refcount=1이면 선택과 감소를 하지 않음</p><p class="trace-change"><strong>변경 / 결과:</strong> Descriptor 필드 변경 없이 hand가 F2로 이동</p></li>
+<li data-trace-step="3"><h4>4. F2 방문: 0으로 줄이고 이동</h4><p><strong>주체 / 사건:</strong> F2의 clock hand</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div class="trace-changed"><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 0</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 양수 usage 분기는 감소 성공 후 이 방문을 끝냄</p><p class="trace-change"><strong>변경 / 결과:</strong> F2 usage 1→0. 이 방문에서 선택하지 않고 hand는 F3</p></li>
+<li data-trace-step="4"><h4>5. F3 방문: pin으로 선택</h4><p><strong>주체 / 사건:</strong> Allocator의 clock CAS</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 0</dd></div>
+<div class="trace-changed"><dt>F3 · identity / ref / usage</dt><dd>S3 / 1 / 0</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 현재 ref=0, usage=0에서 자기 pin 추가 CAS 성공</p><p class="trace-change"><strong>변경 / 결과:</strong> F3 refcount 0→1 후 descriptor 반환. Identity는 아직 S3</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">clock selection:239–317</a></p></div>
+<div class="state-trace" id="clock-alternative-trace" data-state-trace><h3>독립 초기화: F3의 초기 credit이 1</h3><p class="trace-assumptions">앞선 표의 시작 상태로 모든 descriptor를 초기화하고 초기 F3 usage만 0→1로 바꿉니다. 동시 변경은 없습니다. 중간 방문은 변화 설명에 모두 적습니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. 새 네 frame 시작 지점</h4><p><strong>주체 / 사건:</strong> 사례 초기화</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 2</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 1</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 1</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 첫 trace의 마지막 pin·감소 상태를 이어받지 않음</p><p class="trace-change"><strong>변경 / 결과:</strong> Refcount·credit을 2,0,1,1 시작 상태로 초기화</p></li>
+<li data-trace-step="1"><h4>2. 첫 전체 순회</h4><p><strong>주체 / 사건:</strong> Hand F0→F1→F2→F3</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div class="trace-changed"><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 0</dd></div>
+<div class="trace-changed"><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> Pin 없는 양수 credit 감소. F1은 건너뜀</p><p class="trace-change"><strong>변경 / 결과:</strong> F0 2→1, F1 건너뜀, F2 1→0, F3 1→0. 선택 없음</p></li>
+<li data-trace-step="2"><h4>3. 두 번째 순회 F0 후 F1 건너뜀</h4><p><strong>주체 / 사건:</strong> Hand F0 후 F1</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 0</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 0</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> F0의 양수 credit으로 이번 방문을 넘김. F1은 여전히 pin</p><p class="trace-change"><strong>변경 / 결과:</strong> F0 1→0 후 F1 건너뜀. Hand가 F2에 도달</p></li>
+<li data-trace-step="3"><h4>4. 이후 방문에서 F2 선택</h4><p><strong>주체 / 사건:</strong> F2의 clock</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 0</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div class="trace-changed"><dt>F2 · identity / ref / usage</dt><dd>S2 / 1 / 0</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> ref=0, usage=0에서 선택 CAS 성공</p><p class="trace-change"><strong>변경 / 결과:</strong> F2 refcount 0→1. 이 순회에서 F3까지 가지 않음</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">clock branches:239–317</a></p></div>
+</section>
 
 <section class="section" id="postgresql">
 <h2>PostgreSQL: Clock이 재사용 credit을 줄인다</h2>
@@ -85,9 +260,47 @@
           <li><strong>Bulk scan:</strong> backend-local strategy ring이 bulk read/write와 vacuum을 위해 작은 ID 집합을 reuse한다. 그래도 shared pool의 frame을 가리키며 private buffer pool은 아니다.</li>
         </ol>
         <div class="callout"><strong>LRU order가 아니다:</strong> <code>usage_count = 2</code>인 descriptor 둘 사이에는 “더 오래된 것을 먼저”라는 관계가 없다. Count는 clock visit이 줄이는 bounded reuse credit이지 timestamp나 linked-list rank가 아니다.</div>
-        <p class="source-note"><strong>Pinned PostgreSQL:</strong> <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L104-L317">clock selection</a>, <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L136-L147">maximum usage count 5</a>, <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L420-L540">strategy-ring size</a>.</p>
+
+
+
+
+<p class="source-note"><strong>Pinned PostgreSQL:</strong> <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L104-L317">clock selection</a>, <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L136-L147">maximum usage count 5</a>, <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L420-L540">strategy-ring size</a>.</p>
 
 </details>
+
+<div class="session-question" id="q18" data-audience-checkpoint data-reset-answers data-question-id="Q18">
+<h3>Q18 · Clock 후보의 동시 변경</h3>
+<p><strong>구성한 시작 상태:</strong> Hand가 D의 credit을 1에서 0으로 낮추고 다음 descriptor로 갔습니다. 다시 D를 방문한 A는 refcount 0과 credit 0을 읽었습니다. A가 그 상태를 기대한 CAS로 자기 pin을 얻기 전에 B의 정상적인 첫 pin이 성공했고, B는 pin을 유지합니다. 다른 변화는 없습니다.</p>
+<p><strong>예측 질문:</strong> 이 순서에서 A가 D를 반환할 수 있는지를 결정하는 사건은 무엇인가요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>이전의 상태를 기대한 A의 CAS가 실패합니다. 다시 읽으면 B의 pin이 있으므로 이 방문에서 D를 반환할 수 없습니다. 0을 읽은 것은 관찰이고 성공한 CAS가 보호를 확보합니다. 동시 변경이 없어도 양수 credit을 0으로 줄인 방문은 다음으로 이동하며, 이후 0인 상태의 방문에서 선택합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 동시 변경이 없는 경우에도 credit을 0으로 낮춘 방문과 후보를 반환하는 방문을 하나로 합친 추적은 어떤 정책 차이를 만들까요?</p></details>
+</div>
+<div class="state-trace" id="clock-cas-trace" data-state-trace><h3>0을 읽는 것과 0에서 선택하는 것</h3><p class="trace-assumptions">Q18의 독립 동시성 사례입니다. B는 성공한 NORMAL pin을 trace 끝까지 유지합니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. 이전 감소 방문</h4><p><strong>주체 / 사건:</strong> Clock이 D를 age</p><dl class="trace-lanes">
+<div><dt>Descriptor D · ref / usage</dt><dd>0 / 0</dd></div>
+<div><dt>Allocator A</dt><dd>no pin</dd></div>
+<div><dt>Backend B</dt><dd>no pin</dd></div>
+<div><dt>Result</dt><dd>no claim</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> Pin 없고 credit 양수</p><p class="trace-change"><strong>변경 / 결과:</strong> Usage 1→0 후 hand 이동. Pin은 없음</p></li>
+<li data-trace-step="1"><h4>2. A가 0을 관찰</h4><p><strong>주체 / 사건:</strong> A가 이후 hand 방문으로 돌아옴</p><dl class="trace-lanes">
+<div><dt>Descriptor D · ref / usage</dt><dd>0 / 0</dd></div>
+<div class="trace-changed"><dt>Allocator A</dt><dd>expected 0 / 0; no pin</dd></div>
+<div><dt>Backend B</dt><dd>no pin</dd></div>
+<div class="trace-changed"><dt>Result</dt><dd>observation only</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 기대한 상태를 읽었을 뿐 CAS 선택 전</p><p class="trace-change"><strong>변경 / 결과:</strong> A는 ref=0, usage=0을 기대 상태로 저장. 공유 필드 변경 없음</p></li>
+<li data-trace-step="2"><h4>3. A의 CAS 전에 B가 pin</h4><p><strong>주체 / 사건:</strong> B의 NORMAL 첫 pin 성공</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Descriptor D · ref / usage</dt><dd>1 / 1</dd></div>
+<div><dt>Allocator A</dt><dd>expected 0 / 0; no pin</dd></div>
+<div class="trace-changed"><dt>Backend B</dt><dd>holds pin</dd></div>
+<div class="trace-changed"><dt>Result</dt><dd>A has not claimed D</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 공유 상태 atomic 갱신 성공</p><p class="trace-change"><strong>변경 / 결과:</strong> D ref 0→1, usage 0→1. A의 기대 상태는 오래됨</p></li>
+<li data-trace-step="3"><h4>4. A의 기대 상태 CAS 실패</h4><p><strong>주체 / 사건:</strong> A가 CAS 실패 후 다시 읽음</p><dl class="trace-lanes">
+<div><dt>Descriptor D · ref / usage</dt><dd>1 / 1</dd></div>
+<div class="trace-changed"><dt>Allocator A</dt><dd>CAS failed; skip D</dd></div>
+<div><dt>Backend B</dt><dd>holds pin</dd></div>
+<div class="trace-changed"><dt>Result</dt><dd>D not returned to A</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 현재 B의 pin이 D 반환을 막음</p><p class="trace-change"><strong>변경 / 결과:</strong> A pin은 추가하지 않음. 현재 ref=1로 건너뜀. Identity 유지</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L252-L317">clock CAS loop:252–317</a></p></div>
 </section>
 
 <section class="section" id="innodb-model">
@@ -141,7 +354,50 @@
           </tbody>
         </table></div>
         <p class="big-claim">“Cold”는 어디를 볼지 정합니다. 실제 재사용은 clean 상태와 현재 사용자·대기자·페이지 ID를 보호 아래 재검사한 결과로 결정합니다.</p>
-      </section>
+
+<div class="session-question" id="q21" data-audience-checkpoint data-reset-answers data-question-id="Q21">
+<h3>Q21 · 다른 사용자가 떠난 뒤</h3>
+<p><strong>구성한 시작 상태:</strong> Backend A가 선택한 dirty victim을 flush한 뒤 자신의 pin을 유지합니다. 그 사이 B가 기존 identity를 pin하고, 필요한 content 보호 아래 새 변경을 만든 다음 보호와 pin을 모두 반납했습니다. A가 identity 제거를 검사할 때 공유 refcount는 1이고 현재 DIRTY는 설정돼 있습니다.</p>
+<p><strong>예측 질문:</strong> 공유 refcount가 다시 1이 됐다는 관찰은 A의 재사용 승인 근거로 어디까지 사용할 수 있을까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>현재 A의 공유 pin만 남았다는 사실까지만 알 수 있습니다. Mapping과 header 보호 아래 검사하는 현재 DIRTY가 InvalidateVictimBuffer를 거절하게 합니다. 이전 write가 이후 B의 변경까지 보존한 것은 아닙니다. A는 후보를 반납하고 재시도하며 관찰에는 write와 변경의 순서를 남겨야 합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> A의 이전 write와 B의 이후 변경을 구분하는 관측 기록에는 어떤 순서 정보가 필요한가요?</p></details>
+</div>
+<div class="session-question" id="q22" data-audience-checkpoint data-reset-answers data-question-id="Q22">
+<h3>Q22 · Writeback 주체의 목적</h3>
+<p><strong>구성한 시작 상태:</strong> 서로 다른 dirty 페이지 P와 Q가 있습니다. 둘 다 현재 pin은 없습니다. P의 credit은 3이고 이번 checkpoint가 처리해야 할 대상입니다. Q의 credit은 0입니다. 운영 변경안은 background writer가 돌고 있다는 이유로 이번 checkpoint의 페이지 처리를 생략하려고 합니다.</p>
+<p><strong>예측 질문:</strong> 이 변경을 검토할 때 두 주체가 완료해야 할 일을 어떤 기준으로 구분하겠습니까?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>Background writer는 pin·credit 조건과 scan 예산을 고려해 향후 사용할 clean 후보를 마련하며 Q는 가능한 대상입니다. Checkpoint는 선택된 checkpoint 의무를 처리하므로 양수 credit인 P도 포함됩니다. Thread의 존재나 Q의 청소가 P의 checkpoint 작업을 대신하지 않습니다. 요청 backend도 자신의 dirty victim을 쓸 수 있습니다. 지연의 우열에는 비교 가능한 workload 측정이 필요합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 두 엔진의 writeback 구조만 읽고 지연 시간의 우위를 주장하려면 어떤 측정 근거가 더 필요한가요?</p></details>
+</div>
+
+<div class="state-trace" id="invalidation-state-trace" data-state-trace><h3>이전 write는 이후 변경까지 보존하지 않음</h3><p class="trace-assumptions">Q21의 새 사례입니다. A는 선택한 victim을 flush한 뒤 pin 하나를 유지합니다. 이후 B가 이전 identity를 pin하고 content 보호 아래 로그·dirty를 기록한 뒤 모두 반납합니다. 다른 변화는 없습니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. A의 이미지 write 종료</h4><p><strong>주체 / 사건:</strong> A FlushBuffer 반환</p><dl class="trace-lanes">
+<div><dt>Shared descriptor · tag / ref / DIRTY</dt><dd>R / 1 / 0</dd></div>
+<div><dt>A · write / pin</dt><dd>earlier write done; pin held</dd></div>
+<div><dt>B · mutation / pin</dt><dd>none / 0</dd></div>
+<div><dt>Identity-removal result</dt><dd>not yet checked</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 이 경로의 필요한 WAL·write 순서 완료</p><p class="trace-change"><strong>변경 / 결과:</strong> 이전 이미지 write 완료. A의 pin만 남으며 이전 tag 유지</p></li>
+<li data-trace-step="1"><h4>2. B가 pin하고 새 dirty 변경 생성</h4><p><strong>주체 / 사건:</strong> Content 보호 아래 B</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared descriptor · tag / ref / DIRTY</dt><dd>R / 2 / 1</dd></div>
+<div><dt>A · write / pin</dt><dd>earlier write done; pin held</dd></div>
+<div class="trace-changed"><dt>B · mutation / pin</dt><dd>new logged change / 1</dd></div>
+<div class="trace-changed"><dt>Identity-removal result</dt><dd>old write cannot cover new work</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 기존 identity를 pin하고 필요한 변경 보호 획득</p><p class="trace-change"><strong>변경 / 결과:</strong> 공유 ref 1→2. B의 이후 변경으로 DIRTY 0→1</p></li>
+<li data-trace-step="2"><h4>3. B가 떠나도 dirty는 남음</h4><p><strong>주체 / 사건:</strong> B가 보호와 pin 반납</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared descriptor · tag / ref / DIRTY</dt><dd>R / 1 / 1</dd></div>
+<div><dt>A · write / pin</dt><dd>earlier write done; pin held</dd></div>
+<div class="trace-changed"><dt>B · mutation / pin</dt><dd>new change remains / 0</dd></div>
+<div class="trace-changed"><dt>Identity-removal result</dt><dd>ref=1 alone insufficient</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 반납만으로 보존할 변경이 사라지지 않음</p><p class="trace-change"><strong>변경 / 결과:</strong> 공유 ref 2→1. DIRTY는 1 유지</p></li>
+<li data-trace-step="3"><h4>4. 보호된 invalidation 거절</h4><p><strong>주체 / 사건:</strong> A가 mapping partition lock·buffer header lock 보유</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared descriptor · tag / ref / DIRTY</dt><dd>R / 1 / 1 at check</dd></div>
+<div class="trace-changed"><dt>A · write / pin</dt><dd>must release rejected candidate</dd></div>
+<div class="trace-changed"><dt>B · mutation / pin</dt><dd>no pin; dirty work remains</dd></div>
+<div class="trace-changed"><dt>Identity-removal result</dt><dd>R mapping retained; no retag</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 현재 ref=1이며 !BM_DIRTY여야 함</p><p class="trace-change"><strong>변경 / 결과:</strong> DIRTY 검사로 identity 제거 거절. A는 반납하고 다른 후보 재시도</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2471-L2511">InvalidateVictimBuffer:2471–2511</a></p></div>
+
+<h3>Writeback 주체 셋, 결과 셋</h3><div class="trace-lanes"><div><strong>할당 backend</strong><p>선택한 dirty victim → 조건부 content lock → WAL / FlushBuffer → 보호된 invalidation. 실패하면 반납 후 재시도합니다.</p></div><div><strong>Background writer</strong><p>Pin 없고 credit 0인 처리 가능 페이지 → 예산 안에서 향후 쓸 clean 후보를 마련합니다.</p></div><div><strong>Checkpointer</strong><p>Checkpoint가 선택한 dirty 페이지 → 해당 전달과 저장 작업을 처리합니다. 양수 usage credit이 이 의무를 없애지 않습니다.</p></div></div><p class="source-note"><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2673">Backend victim write</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3854-L4211">BgBufferSync / SyncOneBuffer</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3575-L3615">Checkpoint selection</a></p>
+</section>
 
 <section class="section" id="postgres-tradeoffs">
 <h2>PostgreSQL 대 CUBRID: 장점과 단점</h2>
@@ -222,7 +478,23 @@
 <h2>페이지 여정 마무리: 요청에서 프레임 재사용까지</h2>
 <ol><li>호출자가 레코드 작업에 필요한 페이지를 찾습니다. 한 작업은 여러 페이지를 방문할 수 있습니다.</li><li>버퍼는 페이지 ID로 프레임과 BCB를 찾고, miss이면 적재합니다. Fix는 사용 기간을 보호하고, 호환되는 latch는 바이트 접근을 허용합니다.</li><li>대응하는 unfix로 사용 빚을 갚습니다. 일반적인 마지막 unfix에서 진입·재사용 정책이 갱신될 수 있지만, 곧 퇴출된다는 뜻은 아닙니다.</li><li>교체는 도메인과 후보를 고른 뒤 보호 아래 현재 안전 조건을 다시 확인합니다. Dirty 데이터는 보존해야 합니다. Background 작업은 진행을 도울 수 있지만 즉시 재사용할 프레임을 보장하지는 않습니다.</li><li>안전한 분리와 이전 매핑 제거 후에야 같은 프레임이 새 페이지 ID를 담을 수 있습니다. 주소가 같아도 이전 페이지가 계속 있다는 뜻은 아닙니다.</li></ol>
 <p>H1/H2가 남는지는 앞에서 확인한 재사용 순서와 정책 상태에 달려 있습니다. 다른 엔진도 재사용을 기억하지만 그 방법과 비용이 다릅니다. 이번 비교로 속도 순위를 정하지는 않았습니다.</p>
-<p class="callout"><strong>이번 세션은 여기까지입니다.</strong> 요청에서 재사용까지의 여정을 마쳤습니다. 상세한 durability 순서와 recovery는 다음 세션에서 다룹니다. <a href="../reference/first-principles-route.html">세션 경로로 돌아가기</a>. 전체 커리큘럼과 소스 참고 자료는 별도로 계속 볼 수 있습니다.</p>
+<p class="callout"><strong>앞선 first-principles 세션의 종료 지점입니다.</strong> 그 세션에서는 요청에서 재사용까지의 흐름을 살펴보고 상세한 durability 순서를 미뤘습니다. 이제 3회차에서는 아래의 세대·daemon·PostgreSQL 추론까지 완성합니다. <a href="../reference/first-principles-route.html">세션 경로로 돌아가기</a>. 전체 커리큘럼과 소스 참고 자료는 별도로 계속 볼 수 있습니다.</p>
+
+<div class="session-question" id="q23" data-audience-checkpoint data-reset-answers data-question-id="Q23">
+<h3>Q23 · 다음 관찰 하나를 선택하기</h3>
+<p><strong>구성한 시작 상태:</strong> 새로운 CUBRID 운영 사례에서 invalid frame은 없고 allocator 하나가 기다립니다. 관찰 구간의 flush 제출 성공 횟수는 20 늘었고 token 예산도 갱신됐습니다. 개별 BCB의 완료 경로, 현재 상태, 배정 기록은 없습니다. 제출 주체도 구분하지 않았습니다.</p>
+<p><strong>예측 질문:</strong> 다음 관찰을 하나만 추가할 수 있다면 무엇을 선택하겠습니까?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>제출 주체부터 완료와 배정까지 연결한 BCB별 추적이 유용합니다. Enqueue 결과, 소비자 또는 caller 완료, 현재 flag·fix·zone·quota와 대기자·제안 결과를 함께 봅니다. Queue에 남아 있으면 소비자의 실행을, 소비됐지만 DIRTY나 fix 때문에 거절됐다면 현재 사용자와 보존 작업을 봅니다. 제출·token 합계만으로 둘을 구분할 수는 없습니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 선택한 관찰의 서로 다른 두 결과는 원인 후보를 각각 어떻게 바꾸나요?</p></details>
+</div>
+<div class="session-question" id="q24" data-audience-checkpoint data-reset-answers data-question-id="Q24">
+<h3>Q24 · 이름이 다른 모듈의 검토</h3>
+<p><strong>구성한 시작 상태:</strong> 설명용 모듈의 문서에는 Acquire(P) → Use → Release(P)와 SubmitImage(P) → Complete(ticket) → Offer(frame) → Retag(frame, Q)라는 두 경로가 적혀 있습니다. Submit은 사본을 전달하고 ticket을 반환합니다. Complete와 Offer의 보장 범위, Retag가 현재 상태를 검사하는지는 아직 정의하지 않았습니다. 이는 실제 엔진 API가 아닌 인터페이스 검토 사례입니다.</p>
+<p><strong>예측 질문:</strong> 이 문서로 한 페이지의 안전한 재사용을 설명하려면 어떤 전이 계약을 먼저 명확하게 해야 할까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>Acquire/Release의 identity 연결과 사용 수명, Submit/Complete의 안정된 이미지와 보존 경계, Offer의 취소 가능 여부와 소유권을 정의합니다. Retag에는 보호된 현재 상태의 재사용 조건과 이전 mapping 제거를 넣고 각 전이의 실패·정리 책임도 명시합니다. CUBRID와 PostgreSQL은 다른 필드와 호출 경로로 이 책임을 충족합니다. API 이름만으로 보장 범위를 정할 수는 없습니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 앞서 검토한 CUBRID와 PostgreSQL에서 그 계약의 근거를 찾는 방법은 어떻게 달랐나요?</p></details>
+</div>
+
+<div id="final-cubrid"><h3>마지막 사례 A: 제출은 늘었지만 allocator가 기다린다</h3><p>CUBRID의 새 사례입니다. Invalid frame이 없고 B가 direct victim을 기다립니다. G 제출과 포인터 enqueue에 성공했지만 소비 전에 A가 P를 fix해 G+1을 만들고 fix를 유지합니다. 이제 소비자가 실행됩니다.</p><p>이전 작업 중 무엇을 마치고, 어떤 현재 상태가 배정을 막을까요? 소비자 미실행과 배정 거절을 어떻게 구분할까요?</p><details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>BCB mutex 아래 소비해 이전 FLUSHING을 해제하고 flush 대기자를 깨웁니다. DIRTY와 A의 fix는 유지하며 B에게 배정하지 않습니다. Enqueue, 소비자 진입, 현재 flag·fix·zone·quota와 배정 결과를 연결해 관찰합니다. <a href="0006b-follow-page-flush-handoff.html#post-flush-state-trace">네 단계 상태 변화 보기</a>.</p></details></div>
+<div id="final-postgres"><h3>마지막 사례 B: bulk-read가 ring을 벗어난다</h3><p>PostgreSQL의 새 사례입니다. Ring 후보 R은 dirty이며 BM_PERMANENT입니다. 초기 pin은 없고 credit은 1입니다. 선택과 조건부 content lock에 성공했지만 페이지 LSN까지 WAL flush가 필요합니다. 별도 hot H는 다른 backend가 pin을 유지합니다.</p><p>Slot과 공유 R에서 무엇이 바뀔까요? Fallback 후 H를 덮어쓸 수 있을까요?</p><details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>BULKREAD는 slot을 InvalidBuffer로 비우고 R의 lock·pin을 반납한 뒤 재시도할 수 있습니다. R의 공유 identity를 제거하는 것은 아닙니다. 전역 clock도 pin 중인 H를 건너뜁니다. <a href="#ring-wal-trace">Strategy·WAL 상태 변화 보기</a>.</p></details></div><h3>3회차: 한 페이지의 여정을 완성한다</h3><p>Identity 요청 → 메모리 저장 공간 찾기·마련하기 → 사용 보호와 호환되는 바이트 접근 획득 → 변경 로그와 DIRTY 기록 → 사용 반납 → G와 해당 WAL 기준 확보 → 순서를 지킨 이미지 제출 → G+1을 유지하며 G 완료 → 보호된 현재 상태 검사 → 이전 mapping 제거 → 다음 identity 연결. Queue 제안과 write 성공은 이 여정의 중간 사건입니다.</p><p>마지막 페이지 버퍼 세미나는 여기서 마칩니다. 이후 진단에서는 원인을 이름 붙이기 전에 현재 상태, 그 소유자, 전이를 결정하는 조건과 다음 관찰을 찾습니다.</p>
 </section>
 
 <section class="section" id="primary-reading">

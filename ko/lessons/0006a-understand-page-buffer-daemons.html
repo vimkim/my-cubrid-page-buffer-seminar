@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lecture 6A — 네 daemon은 각각 어떤 문제를 해결할까?</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0006a-understand-page-buffer-daemons.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
 <main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · Lecture 0006A</span><a href="../index.html">과정 홈</a></div>
@@ -115,6 +115,8 @@ fileio_write: successful OS write
         <div class="callout"><strong>Wake는 hint이며 durable event가 아닙니다.</strong> generic waiter는 sleep 중일 때만 <code>wakeup()</code>을 받아들입니다. task가 이미 RUNNING이면 다음 pause를 위한 event로 저장하지 않습니다. 따라서 task는 실행될 때 shared pressure 또는 queue state를 다시 확인합니다.</div>
 
 </details>
+
+<img class="diagram" src="../../assets/page-buffer-daemon-control-loops.svg" alt="서로 다른 네 loop의 trigger, 공유 상태와 유용한 결과">
 </section>
 
 <section class="section" id="background-session-exit"><h2>이번 세션의 경계: 네 역할을 구분하고 이동한다</h2><p>Page-flush는 후보를 준비하고, post-flush는 위임받은 BCB 상태 처리를 끝내며, maintenance는 정책을 조정하고, flush-control은 write 후 소비할 credit을 갱신합니다. 어느 역할도 즉시 재사용이나 공정한 진행을 보장하지는 않습니다.</p><p>이제 <a href="0006b-follow-page-flush-handoff.html#first-principles">선택한 handoff 설명</a>으로 이동합니다. 아래 lifecycle과 상세 기록 절차는 이후 세션의 전체 curriculum 자료입니다. WAL, LSA, DWB, 사본 세대에 관한 추론도 그때 다룹니다.</p></section>
@@ -145,6 +147,13 @@ fileio_write: successful OS write
         <p>task는 생성 직후 한 번 실행됩니다. fixed period는 start-to-start 목표입니다. looper가 직전 task 실행 시간을 빼므로 100 ms 주기가 “작업을 끝낸 뒤 항상 100 ms를 더 sleep한다”는 뜻도, 매번 유용한 작업을 한다는 보장도 아닙니다.</p>
 
 </details>
+
+<div class="session-question" id="q05" data-audience-checkpoint data-reset-answers data-question-id="Q05">
+<h3>Q05 · 실행 알림의 순서</h3>
+<p><strong>구성한 시작 상태:</strong> Page-flush의 타이머 주기는 0입니다. Recovery 중 실행된 작업은 닫힌 boot gate를 보고 반환했습니다. 다음 대기에 들어가기 직전 waiter는 아직 RUNNING입니다. 이때 gate가 열리고 다른 thread가 wakeup을 호출한 뒤 daemon이 대기에 들어갑니다. 이후 신호는 아직 기록되지 않았습니다.</p>
+<p><strong>예측 질문:</strong> 이 기록에서 다음 작업 진입이 이어진다고 설명하려면 어떤 사건을 더 확인해야 할까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>RUNNING 중 wakeup은 다음 대기를 위해 저장되지 않습니다. 주기가 0이면 gate가 열린 사실만으로 timeout이나 자동 wake가 생기지 않습니다. 이후 SLEEPING 상태에서 받아들인 wake 또는 소스로 확인한 다른 대기 종료 사건이 필요합니다. 유한 타이머는 다음 검사 기회를 주며, flush 완료를 보장하지는 않습니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 이 실행 순서에 유한한 타이머를 추가하면 다음 진입을 설명하는 근거가 어떻게 달라지나요?</p></details>
+</div>
 </section>
 
 <section class="section" id="lifecycle">
@@ -153,7 +162,7 @@ fileio_write: successful OS write
 <details class="technical-detail"><summary>세부 동작과 소스 펼치기</summary>
 
 
-        <img class="diagram" src="../../assets/page-buffer-daemon-lifecycle.svg" alt="page-buffer daemon 생성, recovery gate, useful loop, join destruction">
+
         <ol>
           <li>먼저 page-buffer pool, LRU, queue, monitor를 초기화합니다.</li>
           <li>server boot는 log recovery가 끝나기 전에 네 daemon thread를 만듭니다.</li>
@@ -165,6 +174,49 @@ fileio_write: successful OS write
         <p>stand-alone mode에서는 이 네 thread를 만들지 않습니다. background page-flush가 없으면 관련 requester가 victim flushing을 동기적으로 수행할 수 있습니다.</p>
 
 </details>
+
+<div class="session-question" id="q06" data-audience-checkpoint data-reset-answers data-question-id="Q06">
+<h3>Q06 · 종료와 자원 수명</h3>
+<p><strong>구성한 시작 상태:</strong> 종료 절차 변경안은 stop 표시 직후 BCB와 queue 저장 공간을 해제하고, 그다음 wake와 join을 수행합니다. Stop을 표시할 때 daemon이 작업 본문 안에 있는지는 확인하지 않습니다.</p>
+<p><strong>예측 질문:</strong> 이 자원 해제 시점이 안전하다고 승인하려면 어떤 사실을 증명해야 할까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>저장 공간을 해제할 때 어떤 daemon도 그 공간에 접근하지 않는다는 사실이 필요합니다. Stop 표시는 loop 종료 요청이며, 실행 중인 작업은 여전히 공유 상태를 사용할 수 있습니다. Wake는 대기 중인 thread를 풀고 join은 thread 종료를 확인합니다. 필요한 공유 저장 공간은 join과 task/context 정리까지 유지합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 작업 중인 daemon과 대기 중인 daemon에 같은 종료 절차를 적용할 때 검토할 사건은 어떻게 달라지나요?</p></details>
+</div>
+
+<div class="state-trace" id="daemon-state-trace" data-state-trace><h3>Thread의 존재, gate, 받아들인 wake, join한 종료</h3><p class="trace-assumptions">주기 0인 page-flush의 독립 사례입니다. 4단계 전에는 이후 wake가 없다고 가정합니다. 다른 역할은 각자의 타이머·queue를 유지합니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Recovery 중 thread 생성</h4><p><strong>주체 / 사건:</strong> Boot이 daemon을 만들고 작업 실행</p><dl class="trace-lanes">
+<div><dt>Boot gate</dt><dd>closed</dd></div>
+<div><dt>Page-flush waiter / task</dt><dd>RUNNING → task return</dd></div>
+<div><dt>Shared pool / queues</dt><dd>alive</dd></div>
+<div><dt>Useful output</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 닫힌 gate에서 유용한 작업 전에 반환</p><p class="trace-change"><strong>변경 / 결과:</strong> Thread는 존재하지만 gate는 닫혀 있고 제출은 없음</p></li>
+<li data-trace-step="1"><h4>2. Gate가 열리고 wake가 너무 일찍 도착</h4><p><strong>주체 / 사건:</strong> Boot이 gate를 열고 다른 thread가 wakeup 호출</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Boot gate</dt><dd>open</dd></div>
+<div class="trace-changed"><dt>Page-flush waiter / task</dt><dd>RUNNING; wake not latched</dd></div>
+<div><dt>Shared pool / queues</dt><dd>alive</dd></div>
+<div><dt>Useful output</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> wakeup은 SLEEPING에만 작용. 현재는 RUNNING</p><p class="trace-change"><strong>변경 / 결과:</strong> Gate는 closed→open. Wake는 다음 대기를 위해 저장되지 않음</p></li>
+<li data-trace-step="2"><h4>3. Wake만 기다리는 대기 진입</h4><p><strong>주체 / 사건:</strong> Daemon이 pause 진입</p><dl class="trace-lanes">
+<div><dt>Boot gate</dt><dd>open</dd></div>
+<div class="trace-changed"><dt>Page-flush waiter / task</dt><dd>SLEEPING; infinite wait</dd></div>
+<div><dt>Shared pool / queues</dt><dd>alive</dd></div>
+<div><dt>Useful output</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 주기 0에는 timeout이 없음</p><p class="trace-change"><strong>변경 / 결과:</strong> RUNNING→SLEEPING. 열린 gate만으로 새 작업 진입은 생기지 않음</p></li>
+<li data-trace-step="3"><h4>4. 이후 wake로 실행 기회를 얻음</h4><p><strong>주체 / 사건:</strong> Allocator 부족 신호가 대기 중인 waiter를 깨움</p><dl class="trace-lanes">
+<div><dt>Boot gate</dt><dd>open</dd></div>
+<div class="trace-changed"><dt>Page-flush waiter / task</dt><dd>task entry; helper call</dd></div>
+<div class="trace-changed"><dt>Shared pool / queues</dt><dd>pressure recorded; alive</dd></div>
+<div class="trace-changed"><dt>Useful output</dt><dd>entry only; submission not assumed</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> SLEEPING 중 wake를 받고 gate를 다시 확인</p><p class="trace-change"><strong>변경 / 결과:</strong> SLEEPING→AWAKENING→RUNNING. 후보 helper 진입 후에도 제출 조건이 필요</p></li>
+<li data-trace-step="4"><h4>5. Stop, wake, join 후 정리</h4><p><strong>주체 / 사건:</strong> Shutdown이 thread 종료를 기다림</p><dl class="trace-lanes">
+<div><dt>Boot gate</dt><dd>open</dd></div>
+<div class="trace-changed"><dt>Page-flush waiter / task</dt><dd>stop → wake → join</dd></div>
+<div class="trace-changed"><dt>Shared pool / queues</dt><dd>alive through join; teardown later</dd></div>
+<div class="trace-changed"><dt>Useful output</dt><dd>thread ended</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 실행 중인 작업 완료와 join까지 저장 공간 유지</p><p class="trace-change"><strong>변경 / 결과:</strong> Stop 요청→대기자 wake→join. 이후 필요한 공유 저장 공간을 정리</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_waiter.cpp#L76-L101">waiter:76–101</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_daemon.cpp#L53-L105">daemon:53–105</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/boot_sr.c#L2405-L2441">boot:2405–2441</a></p></div>
+
+<img class="diagram" src="../../assets/page-buffer-daemon-lifecycle.svg" alt="page-buffer daemon 생성, recovery gate, useful loop, join destruction">
 </section>
 
 <section class="section" id="routes">

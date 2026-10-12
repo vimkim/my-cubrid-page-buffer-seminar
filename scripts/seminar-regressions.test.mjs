@@ -58,8 +58,8 @@ test('audience CLI rejects conditional participation headings for required lectu
 
 test('audience CLI rejects one exposed answer even when other checkpoint disclosures remain', async () => {
   await withLectureFixture('0006-flush-one-generation.html', html =>
-    html.replace(/<details class="answer-disclosure"><summary>[^<]+<\/summary>([\s\S]*?)<\/details>/,
-      '$1'),
+    html.replace(/(<section\b[^>]*data-audience-checkpoint[^>]*>[\s\S]*?)<details class="answer-disclosure"><summary>[^<]+<\/summary>([\s\S]*?)<\/details>/,
+      '$1$2'),
   async fixture => {
     await assert.rejects(exec(process.execPath, [checker, '--root', fixture, '--gate', 'audience']),
       error => /exposed checkpoint answer/.test(error.stderr));
@@ -77,7 +77,8 @@ test('audience CLI requires a disclosure for every checkpoint, not just one per 
 
 test('audience CLI rejects a checkpoint explanation that starts open', async () => {
   await withLectureFixture('0006-flush-one-generation.html', html =>
-    html.replace('<details class="answer-disclosure">', '<details class="answer-disclosure" open>'),
+    html.replace(/(<section\b[^>]*data-audience-checkpoint[^>]*>[\s\S]*?)<details class="answer-disclosure">/,
+      '$1<details class="answer-disclosure" open>'),
   async fixture => {
     await assert.rejects(exec(process.execPath, [checker, '--root', fixture, '--gate', 'audience']),
       error => /checkpoint explanation starts open/.test(error.stderr));

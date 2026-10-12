@@ -404,7 +404,7 @@ enqueues the `PGBUF_BCB *` only when all four conditions hold:
 3. some direct-victim allocator is waiting; and
 4. the bounded `flushed_bcbs` queue accepts the pointer.
 
-Otherwise the page-flush thread reacquires the BCB mutex, clears the old
+Otherwise the submitting caller reacquires the BCB mutex, clears the old
 `FLUSHING` state, and wakes flush waiters itself. [Conditional handoff and local
 fallback](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952).
 
@@ -616,7 +616,7 @@ pgbuf-page-post-flush
             -> maybe reserve BCB for allocator
 
 Any condition false or queue full
-  -> page-flush completes the same BCB work itself
+  -> submitting caller completes the same BCB work itself
 ```
 
 Maintenance influences which lists page-flush prioritizes through quota and

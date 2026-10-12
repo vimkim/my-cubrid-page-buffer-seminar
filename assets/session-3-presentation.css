@@ -3,17 +3,11 @@
   color-scheme: light;
   scroll-behavior: smooth;
   scroll-padding-block-start: 1.5rem;
-  --ink: #19313e;
-  --muted: #526572;
-  --navy: #12364a;
-  --teal: #006b68;
-  --line: #d4dfe3;
-  --paper: #f3f6f7;
-  --panel: #fff;
-  --cue-paper: #edf7f5;
-  --question-paper: #f2f6fa;
-  --boundary-paper: #fff6e8;
-  --focus: #a94a09;
+  /* Palette and typography inherit index.html's shared Layout A styles. */
+  --cue-paper: var(--teal-soft);
+  --question-paper: var(--teal-soft);
+  --boundary-paper: var(--amber-soft);
+  --focus: #ad5c16;
   --measure: 42rem;
   --gutter: clamp(0.75rem, 3vw, 2rem);
   --panel-padding: clamp(1.25rem, 4vw, 3rem);
@@ -29,7 +23,9 @@
   margin: 0;
   color: var(--ink);
   background: var(--paper);
-  font: 1.1875rem/1.85 "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  font-size: 1.1875rem;
+  line-height: 1.85;
+  font-family: inherit;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
@@ -52,7 +48,7 @@
 .session-3-presentation code {
   padding: 0.08em 0.22em;
   border-radius: 0.2rem;
-  background: #edf2f4;
+  background: var(--teal-soft);
   font: 0.88em/1.7 ui-monospace, "SFMono-Regular", Consolas, monospace;
   word-break: normal;
   overflow-wrap: anywhere;
@@ -116,9 +112,10 @@
 
 .session-3-presentation .hero {
   padding: var(--panel-padding);
-  border-radius: 1rem;
-  color: #fff;
-  background: var(--navy);
+  border-radius: 0;
+  color: var(--ink);
+  background: none;
+  border-block-end: 1px solid var(--line);
 }
 
 .session-3-presentation .hero :is(h1, a) {
@@ -126,7 +123,7 @@
 }
 
 .session-3-presentation .hero a {
-  color: #c2f1ec;
+  color: var(--teal);
 }
 
 .session-3-presentation .hero p {
@@ -143,14 +140,14 @@
 }
 
 .session-3-presentation .hero .eyebrow {
-  color: #c2f1ec;
+  color: var(--teal);
 }
 
 .session-3-presentation :is(.route, .run-sheet) {
   margin-block-start: 1.75rem;
   padding: var(--panel-padding);
   border: 1px solid var(--line);
-  border-radius: 1rem;
+  border-radius: 0;
   background: var(--panel);
 }
 
@@ -204,7 +201,7 @@
 .session-3-presentation .prompt {
   margin-block: 1.75rem;
   padding: 1.25rem;
-  border: 1px solid #c9d8e2;
+  border: 1px solid var(--line);
   border-inline-start: 4px solid var(--navy);
   border-radius: 0.5rem;
   background: var(--question-paper);
@@ -217,7 +214,7 @@
 .session-3-presentation .answer {
   margin-block: 1.125rem 0;
   padding: 0;
-  border: 1px solid #c9d8e2;
+  border: 1px solid var(--line);
   border-radius: 0.375rem;
   background: var(--panel);
 }
@@ -276,12 +273,12 @@
 
 .session-3-presentation th {
   color: var(--navy);
-  background: #eaf1f4;
+  background: var(--teal-soft);
   font-weight: 750;
 }
 
 .session-3-presentation tbody tr:nth-child(even) {
-  background: #f8fafb;
+  background: var(--paper);
 }
 
 .session-3-presentation tbody tr:last-child td {
@@ -334,7 +331,12 @@
   }
 
   .session-3-presentation :is(th, td) {
-    padding: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  .session-3-presentation table {
+    min-width: 0;
+    font-size: 0.875rem;
   }
 }
 

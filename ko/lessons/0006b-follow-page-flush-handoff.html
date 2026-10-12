@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>강의 6B — Page-flush와 post-flush handoff</title><link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header><nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0006b-follow-page-flush-handoff.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>강의 6B — Page-flush와 post-flush handoff</title><link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header><nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0006b-follow-page-flush-handoff.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
 <main class="course-shell" id="seminar-content"><div class="topline"><span>CUBRID page buffer · Lecture 0006B</span><a href="../index.html">과정 홈</a></div>
 <header class="hero"><div class="eyebrow">LECTURE 6B / 변경과 durability</div><h1>Page-flush와 post-flush handoff</h1><p>Allocator pressure가 후보 선택, 페이지 제출, 보호 아래 재확인, allocator wakeup으로 이어집니다.</p><div class="pills"><span class="pill">Pressure wake</span><span class="pill">LRU3</span><span class="pill">BCB</span><span class="pill">flushed_bcbs</span><span class="pill">Recheck</span></div></header>
 <div class="lesson-grid"><article class="lesson-main">
@@ -22,6 +22,13 @@
 <p><code>pgbuf-page-flush</code>는 기본 1,000 ms인 <code>page_bg_flush_interval</code>만큼 pause합니다. 0이면 wake가 올 때까지 무기한 기다립니다. normal victim search가 실패하거나, clean bottom 제거 뒤 dirty bottom이 드러나거나, 선택한 victim scan이 reusable BCB를 못 찾으면 allocation/victim pressure가 깨웁니다.</p>
 <p>sleep 중 관찰된 demand wake는 <code>pgbuf_flush_victim_candidates()</code>를 최소 한 번 호출하게 합니다. timer timeout은 direct-victim waiter가 있거나 충분한 victim request 뒤 sampled hit ratio가 99.9% 아래일 때만 호출합니다. pressure가 남으면 task 한 번에 여러 call을 반복할 수 있고, timed pass가 page를 하나도 submit하지 않을 수도 있습니다.</p>
 </details>
+
+<div class="session-question" id="q08" data-audience-checkpoint data-reset-answers data-question-id="Q08">
+<h3>Q08 · 호출 이후의 진행</h3>
+<p><strong>구성한 시작 상태:</strong> Boot gate가 열린 서버에서 allocator가 기다리고 있습니다. SLEEPING 상태의 page-flush를 깨운 뒤 pgbuf_flush_victim_candidates() 진입을 한 번 기록했습니다. 선택하려는 사본에는 LSA 300까지의 변경이 있고 WAL은 250까지 영속화됐습니다. 추적 구간은 helper가 반환하기 전에 끝났으며, 그 구간의 페이지 제출 횟수는 0입니다.</p>
+<p><strong>예측 질문:</strong> 이 호출이 allocator의 진행에 기여하는지 판단하기 위해 다음으로 어느 주체의 어떤 사건을 추적하겠습니까?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>Log-flush 또는 부족 상황에서 동기적으로 수행하는 WAL force가 300까지 도달하는 사건을 먼저 봅니다. 그 뒤 후보 재시도, 제출, 완료, 배정으로 이어지는지 확인합니다. 다른 공급자가 대기자를 처리했는지도 봅니다. 아직 끝나지 않은 추적의 제출 0회는 유용한 완료나 flusher 고장을 입증하지 않습니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 이 기록만으로 page-flush가 할 일을 마쳤다고 보고하려면 무엇이 부족한가요?</p></details>
+</div>
 </section>
 
 <section class="section" id="selection">
@@ -30,6 +37,35 @@
 <ol><li>pressure를 읽고 LRU별 priority와 scan budget을 계산합니다.</li><li>LRU mutex를 하나씩 잡고 cold LRU3 node를 따라가며 candidate BCB pointer와 VPID를 저장합니다.</li><li>LRU lock을 놓고 sequentiality를 위해 candidate를 VPID로 sort할 수 있습니다.</li><li>candidate마다 BCB를 lock하고 같은 VPID, DIRTY, 현재 FLUSHING 없음, 여전히 LRU3, fix 0을 다시 확인합니다.</li><li>WAL boundary가 준비되지 않았으면 skip하고 log-flush를 깨웁니다. allocator pressure에서는 필요한 log boundary를 한 번 force하고 재시도할 수 있습니다.</li><li>하나의 stable generation을 copy하여 DWB 또는 direct I/O로 submit하고 필요하면 neighbor page도 포함합니다.</li></ol>
 <details class="technical-detail"><summary>후보 탐색량 계산 예제</summary><p>512 MiB/16 KiB 예에서 <code>B=32,768</code>입니다. 기본 1% unboosted selection budget은 327개 check이고, 최대 10× boost는 3,270개로 12,800-page 200 MiB cap보다 작습니다. 이것은 inspection budget이지 write 개수 보장이 아닙니다.</p></details>
 
+
+<div class="session-question" id="q07" data-audience-checkpoint data-reset-answers data-question-id="Q07">
+<h3>Q07 · Identity만 다시 보는 최적화</h3>
+<p><strong>구성한 시작 상태:</strong> 후보 수집 당시 P는 dirty, LRU3, fcnt == 0, FLUSHING 해제 상태입니다. List lock을 놓은 뒤 BCB를 잠글 때까지 VPID는 P로 유지됩니다. 변경안은 VPID 일치만 확인하고 나머지 수집 당시 상태를 그대로 사용합니다.</p>
+<p><strong>예측 질문:</strong> 이 최적화의 안전성을 검토할 반례를 어떤 중간 사건으로 구성할 수 있을까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>Reader가 P를 fix하고 계속 사용하면 VPID는 같아도 fix가 0이라는 전제가 깨집니다. P가 hot 상태로 바뀌거나 다른 flush가 시작되는 사건도 후보 상태를 바꿉니다. List lock을 놓은 뒤 BCB mutex 아래 identity와 현재 DIRTY, FLUSHING, zone, fix를 다시 검사합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 그 사건을 놓치지 않는 재검사는 어느 보호 구간에서 수행해야 하나요?</p></details>
+</div>
+
+<div class="state-trace" id="candidate-state-trace" data-state-trace><h3>기억한 포인터는 후보 관찰일 뿐</h3><p class="trace-assumptions">독립된 P 사례입니다. List lock을 놓고 BCB mutex를 잡기 전에 reader가 실행됩니다. VPID는 P로 유지됩니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Cold dirty P를 수집</h4><p><strong>주체 / 사건:</strong> LRU mutex 아래 page-flush</p><dl class="trace-lanes">
+<div><dt>Remembered candidate</dt><dd>BCB*=F; VPID=P</dd></div>
+<div><dt>Current BCB P</dt><dd>DIRTY=1; FLUSHING=0; LRU3; fcnt=0</dd></div>
+<div><dt>Protection / actor</dt><dd>LRU mutex held</dd></div>
+<div><dt>Submission</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 수집 시점의 후보 상태를 관찰</p><p class="trace-change"><strong>변경 / 결과:</strong> BCB 포인터와 VPID P를 저장. 이후 상태의 보호까지 확보한 것은 아님</p></li>
+<li data-trace-step="1"><h4>2. 보호 공백에서 reader가 P를 fix</h4><p><strong>주체 / 사건:</strong> List unlock 후 reader A</p><dl class="trace-lanes">
+<div><dt>Remembered candidate</dt><dd>BCB*=F; VPID=P</dd></div>
+<div class="trace-changed"><dt>Current BCB P</dt><dd>DIRTY=1; FLUSHING=0; LRU3; fcnt=1</dd></div>
+<div class="trace-changed"><dt>Protection / actor</dt><dd>list unlocked; A holds fix</dd></div>
+<div><dt>Submission</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 정상 fix가 현재 사용을 보호</p><p class="trace-change"><strong>변경 / 결과:</strong> fcnt 0→1. 저장한 VPID는 같지만 후보 상태는 달라짐</p></li>
+<li data-trace-step="2"><h4>3. 보호된 재검사에서 거절</h4><p><strong>주체 / 사건:</strong> Page-flush가 BCB를 잠금</p><dl class="trace-lanes">
+<div><dt>Remembered candidate</dt><dd>BCB*=F; VPID=P</dd></div>
+<div><dt>Current BCB P</dt><dd>DIRTY=1; FLUSHING=0; LRU3; fcnt=1</dd></div>
+<div class="trace-changed"><dt>Protection / actor</dt><dd>BCB mutex held</dd></div>
+<div class="trace-changed"><dt>Submission</dt><dd>rejected; none</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 같은 VPID, DIRTY, !FLUSHING, cold zone, fix 0을 확인한 뒤 WAL 검사</p><p class="trace-change"><strong>변경 / 결과:</strong> VPID는 통과하지만 fix 검사 실패로 P를 건너뜀. P→Q였다면 identity 검사 실패</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4041-L4088">candidate recheck:4041–4088</a></p></div>
 </section>
 
 <section class="section" id="handoff" data-handoff-payload="PGBUF_BCB-pointer" data-handoff-after="successful-submission" data-handoff-new-io="none" data-handoff-fallback="page-flush-local">
@@ -37,14 +73,112 @@
 <img class="diagram" src="../../assets/page-flush-post-flush-handoff.svg" alt="page-flush에서 post-flush로 가는 조건부 handoff와 local completion fallback">
 <p>이 시점에는 stable page generation이 설정된 DWB/direct-write submission boundary를 넘었지만, BCB에는 아직 이전 flush가 진행 중이라고 기록되어 있습니다. 이 state를 clear하고 flush waiter를 깨우며 clean frame을 기다리는 allocator에 직접 줄지 판단하는 일은 CPU-side bookkeeping입니다. handoff는 이 bookkeeping 담당자만 바꾸며 page write를 반복하지 않습니다.</p>
 <ol><li><strong>이동하는 것:</strong> copy한 page image가 아니라 control record를 가리키는 <code>PGBUF_BCB *</code> 하나입니다.</li><li><strong>받는 곳:</strong> bounded <code>flushed_bcbs</code> queue를 거쳐 post-flush daemon이 받습니다.</li><li><strong>받은 쪽이 하는 일:</strong> 현재 BCB를 lock하고 다시 확인한 뒤 이전 <code>FLUSHING</code> state를 clear하고 flush waiter를 깨우며, 가능하면 clean frame을 allocator에 reserve합니다.</li><li><strong>여기서 하지 않는 일:</strong> post-flush는 새 page I/O를 시작하지 않습니다.</li></ol>
-<p>page-flush가 submission을 만들었고, post-flush가 존재하며, allocator가 기다리고, 8,192-entry queue가 pointer를 받아야만 delegate합니다. 조건 하나라도 맞지 않으면 page-flush가 같은 BCB bookkeeping을 직접 수행합니다.</p>
+<p>page-flush가 submission을 만들었고, post-flush가 존재하며, allocator가 기다리고, 8,192-entry queue가 pointer를 받아야만 delegate합니다. 조건 하나라도 맞지 않으면 이미지를 제출한 caller가 같은 BCB bookkeeping을 직접 수행합니다. Checkpoint나 명시적 caller도 이 일반 완료 분기를 사용합니다.</p>
 <p>DWB가 켜져 있으면 successful submission은 stable image가 DWB에 들어갔다는 뜻일 수 있어 home-volume write보다 앞섭니다. 따라서 이 handoff는 page-buffer submission boundary를 나타낼 뿐, 보편적인 disk durability나 transaction durability를 뜻하지 않습니다.</p>
+
+<div class="session-question" id="q09" data-audience-checkpoint data-reset-answers data-question-id="Q09">
+<h3>Q09 · Queue 인계 실패</h3>
+<p><strong>구성한 시작 상태:</strong> Page-flush thread가 G를 성공적으로 제출했습니다. Post-flush daemon과 direct-victim 대기자는 모두 있지만 queue가 가득 차 포인터 삽입에 실패했습니다. G의 FLUSHING 상태와 flush 대기자는 아직 남아 있습니다.</p>
+<p><strong>예측 질문:</strong> 이 실행에서 G의 BCB 완료 처리를 책임지는 주체는 누구인가요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>제출한 page-flush thread가 BCB mutex를 다시 잡고 이전 FLUSHING을 해제한 뒤 flush 대기자를 깨웁니다. Checkpoint thread가 제출했다면 is_page_flush_thread 조건부터 거짓이므로 역시 제출 caller의 일반 완료 분기로 갑니다. Queue에 넣지 못한 이 제출의 완료를 소비자에게 맡길 수는 없습니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 같은 이미지를 checkpoint thread가 제출했다면 완료 처리 주체를 결정하는 근거는 어떻게 달라지나요?</p></details>
+</div>
+
+<div class="state-trace" id="queue-full-state-trace" data-state-trace><h3>Queue가 가득 차면 제출 caller가 완료</h3><p class="trace-assumptions">Q09를 독립적으로 초기화합니다. G 제출 성공 후 post-flush와 B 대기자는 있지만 queue는 가득 찼습니다. 새 dirty 변경은 없다고 가정합니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. 제출은 끝남</h4><p><strong>주체 / 사건:</strong> 제출한 page-flush caller</p><dl class="trace-lanes">
+<div><dt>G / BCB P</dt><dd>accepted; FLUSHING=1</dd></div>
+<div><dt>Bounded completion queue</dt><dd>full; no P item</dd></div>
+<div><dt>Completion actor</dt><dd>submitter</dd></div>
+<div><dt>Waiters</dt><dd>flush waiting; B waiting</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 남은 BCB 완료는 페이지 I/O와 별도</p><p class="trace-change"><strong>변경 / 결과:</strong> 제출 성공 후 FLUSHING이 남은 상태에서 시작</p></li>
+<li data-trace-step="1"><h4>2. 포인터 삽입 실패</h4><p><strong>주체 / 사건:</strong> 제출 thread가 produce 시도</p><dl class="trace-lanes">
+<div><dt>G / BCB P</dt><dd>accepted; FLUSHING=1</dd></div>
+<div><dt>Bounded completion queue</dt><dd>full; no P item</dd></div>
+<div class="trace-changed"><dt>Completion actor</dt><dd>submitter retains completion</dd></div>
+<div><dt>Waiters</dt><dd>flush waiting; B waiting</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 네 인계 조건 모두 필요. Queue full이면 produce 실패</p><p class="trace-change"><strong>변경 / 결과:</strong> P 항목을 넣지 못했으므로 이 완료는 wake나 소비자의 책임이 아님</p></li>
+<li data-trace-step="2"><h4>3. Caller가 잠그고 완료</h4><p><strong>주체 / 사건:</strong> 제출 thread가 BCB mutex를 다시 잡음</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>G / BCB P</dt><dd>accepted; FLUSHING=0</dd></div>
+<div class="trace-changed"><dt>Bounded completion queue</dt><dd>no P completion item</dd></div>
+<div class="trace-changed"><dt>Completion actor</dt><dd>local completion done</dd></div>
+<div class="trace-changed"><dt>Waiters</dt><dd>flush woken; B not assigned here</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 일반 완료 분기. Page-flush 외의 제출자도 사용</p><p class="trace-change"><strong>변경 / 결과:</strong> FLUSHING 1→0, flush 대기자 wake. 이 분기에서 직접 배정하지 않음</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">caller fallback:10925–10952</a></p></div>
 </section>
 
 <section class="section" id="post">
 <h2>Post-flush가 실행될 때는 상태가 달라졌을 수 있다</h2>
 <p>Post-flush는 queue가 빌 때까지 drain합니다. pointer마다 BCB를 lock하고 fix 0, LRU3 membership, clean/eligible flag, private list라면 quota를 다시 봅니다. submission 뒤 resident page가 fix되거나 다시 dirty해지거나 hot해졌을 수 있습니다.</p>
 <p>현재도 eligible해야 live direct-victim waiter 하나에게 reserve할 수 있습니다. 결과와 무관하게 old FLUSHING generation을 끝내고 BCB flush waiter를 깨웁니다. work를 consume하면 다음 pause는 1 ms로 reset되고, 연속 idle timeout은 10 ms, 100 ms를 거쳐 wake-only infinite sleep으로 갑니다.</p>
+
+<div class="session-question" id="q10" data-audience-checkpoint data-reset-answers data-question-id="Q10">
+<h3>Q10 · 소비 전의 정책 변화</h3>
+<p><strong>구성한 시작 상태:</strong> Private LRU의 P가 G 제출을 마치고 queue에 들어갔습니다. 소비자가 실행될 때 P는 clean, LRU3이며, fix와 BCB에 연결된 page-latch 대기 thread가 없는 상태입니다. 해당 list의 크기는 80입니다. 그 사이 quota가 60에서 100으로 바뀌었고 allocator는 계속 기다립니다. 다른 배정 방해 flag는 없습니다.</p>
+<p><strong>예측 질문:</strong> 소비자가 P의 처리 결과를 결정할 때 새 quota는 어떤 판단에 참여하나요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>현재 list는 quota를 초과하지 않습니다. 80은 100보다 작으므로 clean이고 fix가 없어도 private-list 조건에서 직접 배정을 거절합니다. 소비자는 이전 FLUSHING을 해제하고 flush 대기자를 깨우는 일은 마칩니다. 그 완료 사건과 allocator에게 배정하지 않은 결과를 따로 기록합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 이 결과를 기록할 때 G의 완료 처리와 allocator의 frame 배정을 어떤 사건으로 구분하겠습니까?</p></details>
+</div>
+<div class="session-question" id="q11" data-audience-checkpoint data-reset-answers data-question-id="Q11">
+<h3>Q11 · Direct-victim 제안 이후</h3>
+<p><strong>구성한 시작 상태:</strong> 소비자가 clean 상태인 P의 BCB를 allocator B에게 direct victim으로 배정했습니다. B가 실제로 재사용하기 전에 reader A가 P를 정상적으로 fix했습니다. A의 fix는 아직 남아 있고 B는 이제 실행 기회를 얻었습니다.</p>
+<p><strong>예측 질문:</strong> B가 frame 재사용을 결정하기 위해 새로 확인해야 할 상태는 무엇인가요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>실제 재사용은 보호된 수신 검사를 통과해야 합니다. VPID가 같아도 다시 fix하면 제안이 취소될 수 있습니다. B는 A가 사용 중인 frame을 덮어쓸 수 없습니다. pgbuf_get_direct_victim은 BCB mutex 아래 flag와 현재 fix·대기자를 검사하며, 거절하면 사용할 제안을 반환하지 않습니다. 이후 A의 unfix도 같은 제안이나 즉시 성공을 보장하지 않습니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> A가 나중에 unfix한 사건만으로 B의 다음 성공을 설명하려면 어떤 추가 전제가 필요한가요?</p></details>
+</div>
+
+<div class="state-trace" id="post-flush-state-trace" data-state-trace><h3>이전 작업을 완료해도 현재 재사용은 거절</h3><p class="trace-assumptions">마지막 사례 A의 새 실행 순서입니다. Page-flush가 G를 제출했고 소비자가 존재하며 allocator B가 기다립니다. Enqueue 성공 후 소비 전에 writer A가 실행됩니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. G 제출 성공</h4><p><strong>주체 / 사건:</strong> Page-flush의 동기 제출 호출 반환</p><dl class="trace-lanes">
+<div><dt>BCB P · current state</dt><dd>DIRTY=0; FLUSHING=1; fcnt=0; LRU3</dd></div>
+<div><dt>Completion queue / owner</dt><dd>not yet published; submitter owns work</dd></div>
+<div><dt>Flush waiter</dt><dd>waiting for G</dd></div>
+<div><dt>Allocator B</dt><dd>waiting for frame</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> DWB/direct 제출 성공 후에도 완료 처리는 남음</p><p class="trace-change"><strong>변경 / 결과:</strong> 이미지 수락 후 FLUSHING=1. 아직 frame을 배정한 것은 아님</p></li>
+<li data-trace-step="1"><h4>2. 포인터를 넣고 소비자를 깨움</h4><p><strong>주체 / 사건:</strong> Producer → 용량 제한 queue. Wakeup은 실행 알림</p><dl class="trace-lanes">
+<div><dt>BCB P · current state</dt><dd>DIRTY=0; FLUSHING=1; fcnt=0; LRU3</dd></div>
+<div class="trace-changed"><dt>Completion queue / owner</dt><dd>[BCB P*]; consumer owns queued work</dd></div>
+<div><dt>Flush waiter</dt><dd>waiting for G</dd></div>
+<div><dt>Allocator B</dt><dd>waiting for frame</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> Page-flush 제출자, daemon, allocator 대기자, enqueue 성공</p><p class="trace-change"><strong>변경 / 결과:</strong> Queue에 BCB 포인터 추가로 완료 인계. 소비자는 아직 실행하지 않음</p></li>
+<li data-trace-step="2"><h4>3. Writer가 보호된 새 변경을 만듦</h4><p><strong>주체 / 사건:</strong> Writer A가 P를 fix하고 로그·dirty 기록</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>BCB P · current state</dt><dd>DIRTY=1; FLUSHING=1; fcnt=1; LRU3</dd></div>
+<div class="trace-changed"><dt>Completion queue / owner</dt><dd>[BCB P*]; current state changed</dd></div>
+<div><dt>Flush waiter</dt><dd>waiting for G</dd></div>
+<div><dt>Allocator B</dt><dd>waiting for frame</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> A가 fix를 유지하며 G 사본은 안정된 상태로 유지</p><p class="trace-change"><strong>변경 / 결과:</strong> fcnt 0→1, G+1의 DIRTY 0→1. Queue에는 같은 포인터가 남음</p></li>
+<li data-trace-step="3"><h4>4. 소비하고 완료하되 배정하지 않음</h4><p><strong>주체 / 사건:</strong> 이후 post-flush 실행, BCB mutex</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>BCB P · current state</dt><dd>DIRTY=1; FLUSHING=0; fcnt=1; LRU3</dd></div>
+<div class="trace-changed"><dt>Completion queue / owner</dt><dd>empty; G completion done</dd></div>
+<div class="trace-changed"><dt>Flush waiter</dt><dd>woken for G</dd></div>
+<div class="trace-changed"><dt>Allocator B</dt><dd>still waiting; no offer</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 현재 flag·fix·대기자·zone·quota로 배정 판단. DIRTY부터 거절</p><p class="trace-change"><strong>변경 / 결과:</strong> Queue 소비 후 FLUSHING 1→0, flush 대기자 wake. DIRTY=1과 A의 fix 유지. B 배정 없음</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">handoff:10925–10952</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15556">consumer:15487–15556</a></p></div>
+
+<div class="state-trace" id="offer-state-trace" data-state-trace><h3>Quota 거절과 독립적으로 초기화한 제안 취소</h3><p class="trace-assumptions">두 독립 분기입니다. A는 소비 전 list 크기 80에서 quota가 60→100으로 바뀝니다. B는 초과 quota의 clean 후보 배정 성공 상태에서 다시 시작하며 reader A가 fix합니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. A: 소비 전에 quota 변경</h4><p><strong>주체 / 사건:</strong> 조건을 통과한 정책 갱신</p><dl class="trace-lanes">
+<div><dt>Branch / current BCB</dt><dd>A: clean; fcnt=0; LRU3</dd></div>
+<div><dt>Private-list policy</dt><dd>size=80; quota=100</dd></div>
+<div><dt>Completion / reservation</dt><dd>G FLUSHING=1; pointer queued</dd></div>
+<div><dt>Allocator</dt><dd>waiting</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 소비자는 enqueue 당시 값 대신 현재 quota 사용</p><p class="trace-change"><strong>변경 / 결과:</strong> Quota 60→100. 크기 80은 더 이상 quota를 초과하지 않음</p></li>
+<li data-trace-step="1"><h4>2. A: 제안 없이 완료</h4><p><strong>주체 / 사건:</strong> 소비자가 BCB mutex 보유</p><dl class="trace-lanes">
+<div><dt>Branch / current BCB</dt><dd>A: clean; fcnt=0; LRU3</dd></div>
+<div><dt>Private-list policy</dt><dd>size=80; quota=100</dd></div>
+<div class="trace-changed"><dt>Completion / reservation</dt><dd>G FLUSHING=0; no reservation</dd></div>
+<div class="trace-changed"><dt>Allocator</dt><dd>still waiting</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 현재 private list가 quota를 초과해야 배정</p><p class="trace-change"><strong>변경 / 결과:</strong> 배정 거절 후 G FLUSHING 해제와 flush 대기자 wake</p></li>
+<li data-trace-step="2"><h4>3. B: 유효한 제안으로 독립 초기화</h4><p><strong>주체 / 사건:</strong> 조건을 통과한 소비자가 직접 배정</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Branch / current BCB</dt><dd>B: clean; fcnt=0; LRU3</dd></div>
+<div class="trace-changed"><dt>Private-list policy</dt><dd>size=80; quota=60</dd></div>
+<div class="trace-changed"><dt>Completion / reservation</dt><dd>valid direct-victim offer</dd></div>
+<div class="trace-changed"><dt>Allocator</dt><dd>woken; not yet received</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 새 초과 quota 사례. 현재 조건을 모두 통과하며 대기자가 존재</p><p class="trace-change"><strong>변경 / 결과:</strong> List 크기·quota와 BCB를 초기화. 제안 생성 후 allocator wake</p></li>
+<li data-trace-step="3"><h4>4. B: 다시 fix해 제안 취소</h4><p><strong>주체 / 사건:</strong> B가 받기 전에 reader A가 fix</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Branch / current BCB</dt><dd>B: clean; fcnt=1; identity P unchanged</dd></div>
+<div><dt>Private-list policy</dt><dd>size=80; quota=60</dd></div>
+<div class="trace-changed"><dt>Completion / reservation</dt><dd>offer revoked / rejected</dd></div>
+<div class="trace-changed"><dt>Allocator</dt><dd>no frame; high-priority retry</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 수신자는 BCB mutex 아래 현재 제안·flag·fix를 검사</p><p class="trace-change"><strong>변경 / 결과:</strong> fcnt 0→1, 제안 사용 불가. B는 identity를 바꾸지 않고 재시도</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15512-L15545">quota guard:15512–15545</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15592-L15660">receiver:15592–15660</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8315-L8325">allocator retry:8315–8325</a></p></div>
 </section>
 
 <section class="section" id="clean-unfix-handoff"><h2>Clean 페이지를 unfix하면 누가 allocator를 깨우는가?</h2><p>모든 frame이 fixed라서 탐색에 실패한 allocator가 잠든 뒤, reader들이 clean 페이지를 반납하는 상황을 구성해 보자. Unfix만으로 즉시 배정을 보장하지는 않는다. 일반 LRU3 페이지의 마지막 unfix는 보통 승격이나 private→shared 이동을 수행하므로, 반납한 페이지가 계속 cold 후보로 남는 것도 아니다.</p><p>Unfix가 직접 배정하는 경로도 있다. Vacuum worker 또는 임시 볼륨의 특정 LRU3 경로와 VOID의 vacuum 경로가 해당한다. LRU 재조정으로 다른 BCB가 LRU3으로 내려갈 때도 적격성 검사, BCB trylock과 재검사를 통과하면 배정할 수 있다. 모든 unfix마다 깨우는 규칙은 아니다.</p><p>Page-flush는 후보 탐색 중 이미 clean한 BCB를 발견해 배정할 수 있다. 반면 post-flush는 flushed_bcbs 큐를 소비하며, read unfix로 생긴 모든 clean BCB를 탐색하지 않는다. 수정하지 않은 WRITE fix도 기존 페이지가 이미 clean이었다는 조건이 있어야 같은 사례가 된다.</p><p>직접 배정은 대기 allocator를 깨우지만 취소될 수 있다. VPID가 같아도 재fix로 배정이 무효화될 수 있으므로 수령자는 BCB mutex를 잡고 재사용 조건을 다시 검사한다. Maintenance backup에는 기존 VS-20 소스 문제가 있어 반드시 구제한다고 설명할 수 없다. 이 순서는 구성 사례이며 실행 관찰이나 starvation 입증이 아니다.</p><p class="source-note"><a href="../../advanced/replacement-progress.md#who-supplies-a-waiter-after-a-clean-unfix">배정 주체별 상세 경로와 소스 근거</a> · <a href="0006c-follow-maintenance-and-pacing.html">VS-20</a></p></section>

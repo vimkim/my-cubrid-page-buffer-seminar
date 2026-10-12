@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>강의 1 — Page buffer는 무엇을 하는가?</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0001-present-the-page-journey.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
 <main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · lecture 0001</span><a href="../index.html">강의 홈</a></div>
@@ -46,6 +46,13 @@
       <section class="section" id="journey">
 <h2>페이지 P 하나의 흐름</h2>
 <div class="journey page-request-journey"><article><span class="step">1</span><h3>P를 요청한다</h3><p>이름으로 메모리에 있는지 찾습니다.</p></article><article><span class="step">2</span><h3>없으면 자리를 마련한다</h3><p>빈 frame을 쓰거나, 안전한 후보를 내보낸 자리에 P를 읽습니다.</p></article><article><span class="step">3</span><h3>접근 권한을 얻는다</h3><p>Fix가 성공하면 latch로 보호되는 내용을 사용합니다.</p></article><article><span class="step">4</span><h3>읽거나 변경한다</h3><p>변경 경로의 호출자는 필요한 로그와 dirty 표시를 처리합니다.</p></article><article><span class="step">5</span><h3>사용을 마친다</h3><p>Unfix합니다. 이 동작이 flush나 commit을 뜻하지는 않습니다.</p></article><article><span class="step">6</span><h3>기록하고 다시 활용한다</h3><p>Dirty 내용은 관련 로그를 먼저 안전하게 기록하는 WAL 순서를 지켜 저장합니다. 이후 안전 조건을 만족하면 frame을 다른 페이지에 재사용할 수 있습니다.</p></article></div><p>일반적인 기존 페이지 요청을 요약한 흐름입니다. 모든 요청이 쓰기나 교체로 끝나지는 않으며, flush는 다른 실행 흐름에서 진행될 수도 있습니다.</p>
+
+<div class="session-question" id="q01" data-audience-checkpoint data-reset-answers data-question-id="Q01">
+<h3>Q01 · 재사용 승인 규칙</h3>
+<p><strong>구성한 시작 상태:</strong> 유지보수자가 마지막 unfix 직후 fcnt == 0이면 외부에 reusable = true를 알리는 변경을 제안했습니다. 이 알림을 받은 allocator는 다른 상태를 확인하지 않고 frame의 identity를 바꿉니다. 다른 기존 검사는 이 알림 경로에는 없습니다.</p>
+<p><strong>예측 질문:</strong> 이 승인 규칙을 검토할 수 있는 가장 작은 반례는 어떤 실행 순서일까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>Writer가 변경을 기록하고 P를 dirty 상태로 만든 뒤 마지막 unfix를 합니다. fcnt는 0이지만 보존할 변경은 남아 있습니다. 이때 identity를 바꾸면 그 변경을 잃습니다. 실제 재사용은 보호 아래 현재 flag, identity, 대기자와 정책 조건도 확인해야 합니다. Unfix는 사용을 끝내고, 이미지 전달은 별도의 보존 작업을 끝냅니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 그 반례에서 사용을 끝내는 사건과 보존 의무를 끝내는 사건은 각각 무엇인가요?</p></details>
+</div>
 </section>
 <section class="section" id="first-code-path"><h2>Miss에서 frame 확보까지: 실제 helper를 따라가기</h2><figure class="source-call-path"><pre>pgbuf_fix_release
   → pgbuf_claim_bcb_for_fix

@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lecture 6B — Page-flush and post-flush handoff</title><link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header><nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0006b-follow-page-flush-handoff.html" hreflang="ko" lang="ko">KO</a></nav>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lecture 6B — Page-flush and post-flush handoff</title><link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header><nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0006b-follow-page-flush-handoff.html" hreflang="ko" lang="ko">KO</a></nav>
 <main class="course-shell" id="seminar-content"><div class="topline"><span>CUBRID page buffer · Lecture 0006B</span><a href="../index.html">Curriculum</a></div>
 <header class="hero"><div class="eyebrow">LECTURE 6B / Mutation and durability</div><h1>Page-flush and post-flush handoff</h1><p>Allocator pressure connects candidate selection, page submission, protected rechecks, and allocator wakeup.</p><div class="pills"><span class="pill">Pressure wake</span><span class="pill">LRU3</span><span class="pill">BCB</span><span class="pill">flushed_bcbs</span><span class="pill">Recheck</span></div></header>
 <div class="lesson-grid"><article class="lesson-main">
@@ -20,8 +20,15 @@
 <p>The daemon runs periodically and can be woken by frame pressure. Waking does not establish that a page was written; the task checks waiting allocators and current replacement pressure.</p>
 <details class="technical-detail"><summary>Expand implementation details and sources</summary>
 <p><code>pgbuf-page-flush</code> pauses for <code>page_bg_flush_interval</code>, 1,000 ms by default. A value of zero means infinite wait until a wake. Allocation/victim pressure wakes it when normal victim search fails, when removing a clean bottom exposes a dirty bottom, or when a selected victim scan finds no reusable BCB.</p>
-<p>An observed demand wake forces at least one <code>pgbuf_flush_victim_candidates()</code> call. A timer timeout calls it only while a direct-victim waiter exists or the sampled hit ratio is below 99.9% after enough victim requests. One task execution may loop through several calls while pressure remains; a timed pass can also submit zero pages.</p>
+<p>After the boot gate passes, a wake reported by the waiter forces at least one <code>pgbuf_flush_victim_candidates()</code> call. A timer timeout calls it only while a direct-victim waiter exists or the sampled hit ratio is below 99.9% after enough victim requests. One task execution may loop through several calls while pressure remains; a timed pass can also submit zero pages.</p>
 </details>
+
+<div class="session-question" id="q08" data-audience-checkpoint data-reset-answers data-question-id="Q08">
+<h3>Q08 · Entry is not submission</h3>
+<p><strong>Constructed starting state:</strong> The gate is open and an allocator waits. A wake accepted while page-flush is SLEEPING leads to one pgbuf_flush_victim_candidates entry. The intended copy needs LSA 300; WAL reaches 250. The trace stops before helper return and records zero submissions.</p>
+<p><strong>Prediction:</strong> Which actor and event would you trace next to assess allocator progress?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>Follow log-flush or the pressure-driven synchronous WAL force to the required 300 boundary, then candidate retry and submission/completion/assignment. Also check whether another supplier serves the waiter. Zero submissions in this unfinished trace neither establishes useful completion nor proves a broken flusher.</p><p class="optional-question"><strong>Optional follow-up:</strong> What is missing from a claim that page-flush finished its work?</p></details>
+</div>
 </section>
 
 <section class="section" id="selection">
@@ -30,6 +37,35 @@
 <ol><li>Read pressure and compute per-LRU priority plus a scan budget.</li><li>Take one LRU mutex at a time, walk cold LRU3 nodes, and save candidate BCB pointer plus VPID.</li><li>Release LRU locks and optionally sort candidates by VPID for sequentiality.</li><li>For each candidate, lock its BCB and recheck the same VPID, DIRTY, no current FLUSHING, still LRU3, and zero fixes.</li><li>If its WAL boundary is not ready, skip it and wake log-flush. Under allocator pressure, the code can force the needed log boundary once and retry.</li><li>Copy and submit one stable generation through DWB or direct I/O, possibly with neighboring pages.</li></ol>
 <details class="technical-detail"><summary>Candidate-budget calculation</summary><p>For the 512 MiB/16 KiB example, <code>B=32,768</code>. The default 1% unboosted selection budget is 327 checks; the maximum 10× boost is 3,270, below the 12,800-page 200 MiB cap. These are inspection budgets, not write counts.</p></details>
 
+
+<div class="session-question" id="q07" data-audience-checkpoint data-reset-answers data-question-id="Q07">
+<h3>Q07 · The same identity can change state</h3>
+<p><strong>Constructed starting state:</strong> Collection remembers dirty P in LRU3 with fcnt=0 and no FLUSHING. VPID remains P across list unlock and later BCB lock. An optimization checks only VPID and trusts the old state.</p>
+<p><strong>Prediction:</strong> Which intervening event provides a counterexample?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>A reader fixes P and retains it; VPID still matches but zero-fix no longer holds. Heating P or starting another flush can also invalidate the remembered state. Recheck identity and current DIRTY, FLUSHING, zone and fixes under the BCB mutex after the list-lock gap.</p><p class="optional-question"><strong>Optional follow-up:</strong> Which protected interval must contain the recheck?</p></details>
+</div>
+
+<div class="state-trace" id="candidate-state-trace" data-state-trace><h3>A saved pointer is only a remembered candidate</h3><p class="trace-assumptions">Independent P scenario. The list lock is released before acquiring the BCB mutex. A reader intervenes; VPID stays P.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Collect cold dirty P</h4><p><strong>Actor / event:</strong> Page-flush with LRU mutex</p><dl class="trace-lanes">
+<div><dt>Remembered candidate</dt><dd>BCB*=F; VPID=P</dd></div>
+<div><dt>Current BCB P</dt><dd>DIRTY=1; FLUSHING=0; LRU3; fcnt=0</dd></div>
+<div><dt>Protection / actor</dt><dd>LRU mutex held</dd></div>
+<div><dt>Submission</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Collection observes candidate state</p><p class="trace-change"><strong>Changed / result:</strong> Save BCB pointer + VPID P, not a protected future state</p></li>
+<li data-trace-step="1"><h4>2. Reader fixes P across the gap</h4><p><strong>Actor / event:</strong> Reader A after list unlock</p><dl class="trace-lanes">
+<div><dt>Remembered candidate</dt><dd>BCB*=F; VPID=P</dd></div>
+<div class="trace-changed"><dt>Current BCB P</dt><dd>DIRTY=1; FLUSHING=0; LRU3; fcnt=1</dd></div>
+<div class="trace-changed"><dt>Protection / actor</dt><dd>list unlocked; A holds fix</dd></div>
+<div><dt>Submission</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Normal fix obtains current use protection</p><p class="trace-change"><strong>Changed / result:</strong> fcnt 0→1; saved VPID still matches. Candidate state became stale</p></li>
+<li data-trace-step="2"><h4>3. Protected recheck rejects</h4><p><strong>Actor / event:</strong> Page-flush locks BCB</p><dl class="trace-lanes">
+<div><dt>Remembered candidate</dt><dd>BCB*=F; VPID=P</dd></div>
+<div><dt>Current BCB P</dt><dd>DIRTY=1; FLUSHING=0; LRU3; fcnt=1</dd></div>
+<div class="trace-changed"><dt>Protection / actor</dt><dd>BCB mutex held</dd></div>
+<div class="trace-changed"><dt>Submission</dt><dd>rejected; none</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Require same VPID, DIRTY, !FLUSHING, cold zone, zero fixes; then WAL</p><p class="trace-change"><strong>Changed / result:</strong> VPID check passes; fix check fails; skip P. Retag P→Q would fail identity check instead</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4041-L4088">candidate recheck:4041–4088</a></p></div>
 </section>
 
 <section class="section" id="handoff" data-handoff-payload="PGBUF_BCB-pointer" data-handoff-after="successful-submission" data-handoff-new-io="none" data-handoff-fallback="page-flush-local">
@@ -37,14 +73,112 @@
 <img class="diagram" src="../../assets/page-flush-post-flush-handoff.svg" alt="Conditional page-flush to post-flush handoff and local completion fallback">
 <p>At this point the stable page generation has crossed the configured DWB/direct-write submission boundary, but its BCB still records the old flush in progress. Clearing that state, waking flush waiters, and perhaps giving the clean frame directly to a waiting allocator are CPU-side bookkeeping. The handoff changes who performs that bookkeeping; it does not repeat the page write.</p>
 <ol><li><strong>What moves:</strong> one <code>PGBUF_BCB *</code>, a pointer to the control record—not the copied page image.</li><li><strong>Who receives it:</strong> the post-flush daemon through the bounded <code>flushed_bcbs</code> queue.</li><li><strong>What the receiver does:</strong> lock and recheck the current BCB, clear the old <code>FLUSHING</code> state, wake flush waiters, and optionally reserve the clean frame for an allocator.</li><li><strong>What never happens here:</strong> post-flush starts no new page I/O.</li></ol>
-<p>Page-flush delegates only when it produced the submission, post-flush exists, an allocator is waiting, and the 8,192-entry queue accepts the pointer. If any condition fails, page-flush performs the same BCB bookkeeping locally.</p>
+<p>Page-flush delegates only when it produced the submission, post-flush exists, an allocator is waiting, and the 8,192-entry queue accepts the pointer. If any condition fails, the submitting caller performs the same BCB bookkeeping locally. A checkpoint or explicit caller also takes this ordinary completion branch.</p>
 <p>With DWB enabled, successful submission can mean “the stable image entered DWB,” before its home-volume write. The handoff therefore marks a page-buffer submission boundary, not universal disk or transaction durability.</p>
+
+<div class="session-question" id="q09" data-audience-checkpoint data-reset-answers data-question-id="Q09">
+<h3>Q09 · A full completion queue</h3>
+<p><strong>Constructed starting state:</strong> Page-flush successfully submits G. Post-flush exists and a direct-victim allocator waits, but enqueue fails because the queue is full. G still has FLUSHING and flush waiters.</p>
+<p><strong>Prediction:</strong> Who owns BCB completion in this execution?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>The submitting page-flush thread reacquires the BCB mutex, clears old FLUSHING and wakes flush waiters locally. A checkpoint submitter also uses the ordinary caller completion branch because is_page_flush_thread is false. No successful queue publication means no consumer-owned completion item for this submission.</p><p class="optional-question"><strong>Optional follow-up:</strong> How would a checkpoint submitter change the ownership reasoning?</p></details>
+</div>
+
+<div class="state-trace" id="queue-full-state-trace" data-state-trace><h3>Queue full: the submitting caller completes locally</h3><p class="trace-assumptions">Independent reset of Q09: successful G submission, post-flush exists, B waits; queue is full. No re-dirty is assumed.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Submission has ended</h4><p><strong>Actor / event:</strong> Page-flush caller</p><dl class="trace-lanes">
+<div><dt>G / BCB P</dt><dd>accepted; FLUSHING=1</dd></div>
+<div><dt>Bounded completion queue</dt><dd>full; no P item</dd></div>
+<div><dt>Completion actor</dt><dd>submitter</dd></div>
+<div><dt>Waiters</dt><dd>flush waiting; B waiting</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Remaining BCB completion is separate from page I/O</p><p class="trace-change"><strong>Changed / result:</strong> Start with successful submission and FLUSHING still set</p></li>
+<li data-trace-step="1"><h4>2. Publication fails</h4><p><strong>Actor / event:</strong> Submitting thread attempts produce</p><dl class="trace-lanes">
+<div><dt>G / BCB P</dt><dd>accepted; FLUSHING=1</dd></div>
+<div><dt>Bounded completion queue</dt><dd>full; no P item</dd></div>
+<div class="trace-changed"><dt>Completion actor</dt><dd>submitter retains completion</dd></div>
+<div><dt>Waiters</dt><dd>flush waiting; B waiting</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> All four handoff conditions must pass; full queue fails produce</p><p class="trace-change"><strong>Changed / result:</strong> No P item published; wake/consumer does not own this completion</p></li>
+<li data-trace-step="2"><h4>3. Caller locks and completes</h4><p><strong>Actor / event:</strong> Submitting thread reacquires BCB mutex</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>G / BCB P</dt><dd>accepted; FLUSHING=0</dd></div>
+<div class="trace-changed"><dt>Bounded completion queue</dt><dd>no P completion item</dd></div>
+<div class="trace-changed"><dt>Completion actor</dt><dd>local completion done</dd></div>
+<div class="trace-changed"><dt>Waiters</dt><dd>flush woken; B not assigned here</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Ordinary completion branch; also used by non-page-flush submitters</p><p class="trace-change"><strong>Changed / result:</strong> FLUSHING 1→0; flush waiters wake. This branch supplies no direct assignment</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">caller fallback:10925–10952</a></p></div>
 </section>
 
 <section class="section" id="post">
 <h2>State may have changed before post-flush runs</h2>
 <p>Post-flush drains until the queue is empty. For each pointer it locks the BCB and rechecks zero fixes, LRU3 membership, clean/eligible flags, and—on a private list—quota. The resident page may have been fixed, dirtied again, or heated after submission.</p>
 <p>Only an eligible current state may be reserved for one live direct-victim waiter. In every case, post-flush finishes the old FLUSHING generation and wakes the BCB's flush waiters. Consuming work resets its pause to 1 ms; consecutive idle timeouts move through 10 ms and 100 ms, then infinite wake-only sleep.</p>
+
+<div class="session-question" id="q10" data-audience-checkpoint data-reset-answers data-question-id="Q10">
+<h3>Q10 · Policy changed before consumption</h3>
+<p><strong>Constructed starting state:</strong> P is queued after G submission. At consumption it is clean, LRU3, unfixed and has no attached page-latch waiter or other blocking flag. Its private list has 80 pages; quota changed from 60 to 100. An allocator still waits.</p>
+<p><strong>Prediction:</strong> How does the new quota participate in the decision?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>The current list is no longer over quota: 80 does not exceed 100. This private-list guard rejects direct assignment even though P is clean and unfixed. The consumer still clears old FLUSHING and wakes flush waiters. Record those completion events separately from the absent allocator assignment.</p><p class="optional-question"><strong>Optional follow-up:</strong> How would you record completion separately from assignment?</p></details>
+</div>
+<div class="session-question" id="q11" data-audience-checkpoint data-reset-answers data-question-id="Q11">
+<h3>Q11 · An offer can be revoked</h3>
+<p><strong>Constructed starting state:</strong> The consumer offers clean P to allocator B. Before B receives it for reuse, reader A normally fixes P and retains the fix. B now gets CPU time.</p>
+<p><strong>Prediction:</strong> What current state must B verify before reuse?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>The direct-victim reservation remains valid only if the protected receiving check succeeds. Re-fix can revoke it without changing VPID. B must not overwrite A’s held frame; pgbuf_get_direct_victim checks flags and current fixes/waiters under the BCB mutex and returns no usable offer on rejection. A later unfix does not promise the same offer or immediate success.</p><p class="optional-question"><strong>Optional follow-up:</strong> What further premises would make A’s later unfix sufficient for B’s next success?</p></details>
+</div>
+
+<div class="state-trace" id="post-flush-state-trace" data-state-trace><h3>Finish old work while rejecting current reuse</h3><p class="trace-assumptions">Fresh final-case A schedule: G submitted by page-flush, consumer exists, allocator B waits, enqueue succeeds. Writer A intervenes before consumption.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. G submission succeeds</h4><p><strong>Actor / event:</strong> Page-flush synchronous submission call returns</p><dl class="trace-lanes">
+<div><dt>BCB P · current state</dt><dd>DIRTY=0; FLUSHING=1; fcnt=0; LRU3</dd></div>
+<div><dt>Completion queue / owner</dt><dd>not yet published; submitter owns work</dd></div>
+<div><dt>Flush waiter</dt><dd>waiting for G</dd></div>
+<div><dt>Allocator B</dt><dd>waiting for frame</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> DWB/direct submission success; completion still owed</p><p class="trace-change"><strong>Changed / result:</strong> Image accepted; FLUSHING=1. This does not yet assign a frame</p></li>
+<li data-trace-step="1"><h4>2. Publish pointer, wake consumer</h4><p><strong>Actor / event:</strong> Producer → bounded queue; wakeup hint</p><dl class="trace-lanes">
+<div><dt>BCB P · current state</dt><dd>DIRTY=0; FLUSHING=1; fcnt=0; LRU3</dd></div>
+<div class="trace-changed"><dt>Completion queue / owner</dt><dd>[BCB P*]; consumer owns queued work</dd></div>
+<div><dt>Flush waiter</dt><dd>waiting for G</dd></div>
+<div><dt>Allocator B</dt><dd>waiting for frame</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> page-flush producer + daemon + allocator waiter + enqueue success</p><p class="trace-change"><strong>Changed / result:</strong> Queue gains BCB pointer; completion delegated. Consumer has not executed yet</p></li>
+<li data-trace-step="2"><h4>3. Writer creates protected newer work</h4><p><strong>Actor / event:</strong> Writer A fixes, logs and dirties P</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>BCB P · current state</dt><dd>DIRTY=1; FLUSHING=1; fcnt=1; LRU3</dd></div>
+<div class="trace-changed"><dt>Completion queue / owner</dt><dd>[BCB P*]; current state changed</dd></div>
+<div><dt>Flush waiter</dt><dd>waiting for G</dd></div>
+<div><dt>Allocator B</dt><dd>waiting for frame</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> A retains fix; G copy remains stable</p><p class="trace-change"><strong>Changed / result:</strong> fcnt 0→1; DIRTY 0→1 for G+1. Queue entry stays the same pointer</p></li>
+<li data-trace-step="3"><h4>4. Consume and finish, do not assign</h4><p><strong>Actor / event:</strong> Post-flush later execution, BCB mutex</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>BCB P · current state</dt><dd>DIRTY=1; FLUSHING=0; fcnt=1; LRU3</dd></div>
+<div class="trace-changed"><dt>Completion queue / owner</dt><dd>empty; G completion done</dd></div>
+<div class="trace-changed"><dt>Flush waiter</dt><dd>woken for G</dd></div>
+<div class="trace-changed"><dt>Allocator B</dt><dd>still waiting; no offer</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Current flags/fixes/waiters/zone/quota decide assignment; DIRTY already rejects</p><p class="trace-change"><strong>Changed / result:</strong> Queue consumed; FLUSHING 1→0; wake flush waiter. DIRTY=1 and A fix survive; B gets no frame</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">handoff:10925–10952</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15556">consumer:15487–15556</a></p></div>
+
+<div class="state-trace" id="offer-state-trace" data-state-trace><h3>Quota rejection and a separately reset revoked offer</h3><p class="trace-assumptions">Two explicitly separate branches. A: list size 80, quota changes 60→100 before consumption. B restarts with an eligible over-quota clean candidate and a successful offer, then reader A fixes it.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. A: quota changes before consumer</h4><p><strong>Actor / event:</strong> Accepted policy update</p><dl class="trace-lanes">
+<div><dt>Branch / current BCB</dt><dd>A: clean; fcnt=0; LRU3</dd></div>
+<div><dt>Private-list policy</dt><dd>size=80; quota=100</dd></div>
+<div><dt>Completion / reservation</dt><dd>G FLUSHING=1; pointer queued</dd></div>
+<div><dt>Allocator</dt><dd>waiting</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Consumer uses current quota, not the old enqueue-time quota</p><p class="trace-change"><strong>Changed / result:</strong> Quota 60→100; size=80 is no longer over quota</p></li>
+<li data-trace-step="1"><h4>2. A: finish without offer</h4><p><strong>Actor / event:</strong> Consumer holds BCB mutex</p><dl class="trace-lanes">
+<div><dt>Branch / current BCB</dt><dd>A: clean; fcnt=0; LRU3</dd></div>
+<div><dt>Private-list policy</dt><dd>size=80; quota=100</dd></div>
+<div class="trace-changed"><dt>Completion / reservation</dt><dd>G FLUSHING=0; no reservation</dd></div>
+<div class="trace-changed"><dt>Allocator</dt><dd>still waiting</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Private list must currently be over quota</p><p class="trace-change"><strong>Changed / result:</strong> Reject assignment; clear G FLUSHING and wake flush waiters</p></li>
+<li data-trace-step="2"><h4>3. B: independent reset to a valid offer</h4><p><strong>Actor / event:</strong> Eligible consumer assigns direct victim</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Branch / current BCB</dt><dd>B: clean; fcnt=0; LRU3</dd></div>
+<div class="trace-changed"><dt>Private-list policy</dt><dd>size=80; quota=60</dd></div>
+<div class="trace-changed"><dt>Completion / reservation</dt><dd>valid direct-victim offer</dd></div>
+<div class="trace-changed"><dt>Allocator</dt><dd>woken; not yet received</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Fresh over-quota case; all current guards pass; live waiter exists</p><p class="trace-change"><strong>Changed / result:</strong> Reset size/quota and BCB; offer created, allocator woken</p></li>
+<li data-trace-step="3"><h4>4. B: re-fix revokes the offer</h4><p><strong>Actor / event:</strong> Reader A fixes before B receives</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Branch / current BCB</dt><dd>B: clean; fcnt=1; identity P unchanged</dd></div>
+<div><dt>Private-list policy</dt><dd>size=80; quota=60</dd></div>
+<div class="trace-changed"><dt>Completion / reservation</dt><dd>offer revoked / rejected</dd></div>
+<div class="trace-changed"><dt>Allocator</dt><dd>no frame; high-priority retry</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Receiver must validate current reservation/flags/fixes under BCB mutex</p><p class="trace-change"><strong>Changed / result:</strong> fcnt 0→1; offer becomes unusable; B retries instead of retagging</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15512-L15545">quota guard:15512–15545</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15592-L15660">receiver:15592–15660</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8315-L8325">allocator retry:8315–8325</a></p></div>
 </section>
 
 <section class="section" id="clean-unfix-handoff"><h2>Who wakes an allocator after a clean unfix?</h2><p>Consider a constructed schedule: every frame is fixed, an allocator sleeps after its search fails, and readers then release clean pages. Becoming unfixed does not itself guarantee immediate assignment. Ordinary final unfix of an LRU3 page usually boosts it or moves it from private to shared; the released page need not remain a cold candidate.</p><p>Unfix can assign directly in specific vacuum-worker or temporary-volume LRU3 paths, and in a VOID vacuum path. Zone adjustment can also assign a different BCB as it falls into LRU3, after eligibility checks and a successful BCB trylock/recheck. These are conditional paths, not a wake on every unfix.</p><p>Page-flush can assign an already-clean candidate during its scan. Post-flush, however, consumes the flushed_bcbs queue; it does not search every clean BCB produced by read unfix. A WRITE fix without modification is comparable only if the page was already clean.</p><p>Assignment wakes a live allocator but remains revocable. Re-fix can invalidate the reservation without changing VPID; the receiver takes the BCB mutex and rechecks before reuse. The maintenance backup has the existing VS-20 source anomaly, so it is not a guaranteed rescue. This schedule is not a runtime observation or proof of starvation.</p><p class="source-note"><a href="../../advanced/replacement-progress.md#who-supplies-a-waiter-after-a-clean-unfix">Canonical producer paths and source evidence</a> · <a href="0006c-follow-maintenance-and-pacing.html">VS-20</a></p></section>

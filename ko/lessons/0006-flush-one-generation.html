@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>강의 6 — Flush generation과 WAL 순서</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">본문으로 이동</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="커리큘럼 탐색"><a data-curriculum-link href="../reference/course-learning-path.html">커리큘럼</a><a data-library-link href="../index.html#library">자료 찾기</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="언어"><a href="../../en/lessons/0006-flush-one-generation.html" hreflang="en" lang="en">EN</a><span aria-hidden="true">|</span><span aria-current="page">KO</span></nav>
 <main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · lecture 0006</span><a href="../index.html">강의 홈</a></div>
@@ -153,7 +153,48 @@
           <li><strong>G를 안전하게 보낸다:</strong> BCB protection을 놓고, 복사된 page LSA까지 WAL을 force한 다음 DWB 또는 direct write를 사용합니다.</li>
           <li><strong>작업을 닫는다:</strong> protection을 다시 잡고 FLUSHING을 clear하고 waiter를 깨웁니다. 더 새로운 DIRTY를 지우면 안 됩니다.</li>
         </ol>
-        <p class="source-note"><strong>검증된 mechanism:</strong> ordinary path는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>입니다.</p>
+
+<div class="session-question" id="q02" data-audience-checkpoint data-reset-answers data-question-id="Q02">
+<h3>Q02 · 사본의 로그 기준</h3>
+<p><strong>구성한 시작 상태:</strong> 로그가 필요한 영구 페이지에서 안정된 사본 G와 그 페이지 LSA 120을 함께 확보했습니다. 이후 resident 페이지의 LSA는 180이 됐습니다. 지금 영속화된 WAL은 140까지입니다. 아직 G를 제출하지 않았습니다.</p>
+<p><strong>예측 질문:</strong> G의 제출에 필요한 WAL 순서를 판단할 때 세 LSA 중 무엇을 기준으로 삼아야 할까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>G가 담은 LSA는 120이므로 140까지 보존된 WAL이 이 사본의 경계를 충족합니다. Resident의 180은 이후 변경에 속합니다. 180을 기준으로 삼으면 사본의 내용은 그대로인데 로그 작업을 더 기다리게 됩니다. 후보 선택의 사전 검사는 당시 resident LSA를 보고, 공통 helper는 자신이 확보한 사본의 LSA를 전달합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 같은 시점의 resident LSA를 기준으로 삼는 변경은 제출할 이미지와 로그 작업의 관계를 어떻게 바꾸나요?</p></details>
+</div>
+
+<div class="state-trace" id="flush-state-trace" data-state-trace><h3>한 frame, 안정된 사본, 두 보존 작업</h3><p class="trace-assumptions">로그가 필요한 영구 페이지 P의 구성 사례입니다. 한 필드를 LSA 160에서 바꾸고 LSA 180에서 다시 40으로 바꿉니다. G/G+1은 설명용 이름이며 DWB를 사용합니다. WAL 숫자는 순서를 나타내는 단순화된 위치이며 실제 LSA 구조체가 아닙니다.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>이전</button><button type="button" data-trace-next>다음</button><button type="button" data-trace-reset>사례 초기화</button><button type="button" data-trace-all>전체 단계 보기</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. 이전: 아직 전달하지 않은 변경</h4><p><strong>주체 / 사건:</strong> Writer가 변경 후 unfix</p><dl class="trace-lanes">
+<div><dt>Resident P · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div><dt>Stable copy G · bytes / LSA</dt><dd>none</dd></div>
+<div><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>1 / 0 / 120</dd></div>
+<div><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=none; home=older</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 현재 fix가 없어도 보존할 변경은 남음</p><p class="trace-change"><strong>변경 / 결과:</strong> 시작 지점: 아직 제출한 이미지가 없음</p></li>
+<li data-trace-step="1"><h4>2. G를 확보</h4><p><strong>주체 / 사건:</strong> 보호 아래 flush caller</p><dl class="trace-lanes">
+<div><dt>Resident P · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div class="trace-changed"><dt>Stable copy G · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div class="trace-changed"><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>0 / 1 / NULL</dd></div>
+<div><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=none; home=older</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 한 flush 주체가 안정된 바이트와 해당 LSA를 확보</p><p class="trace-change"><strong>변경 / 결과:</strong> DIRTY 1→0, FLUSHING 0→1. 사본은 40/120이며 resident 하한을 비움</p></li>
+<li data-trace-step="2"><h4>3. 이후 writer가 G+1을 만듦</h4><p><strong>주체 / 사건:</strong> 사본 보호를 놓은 뒤 writer</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Resident P · bytes / LSA</dt><dd>40 / 180</dd></div>
+<div><dt>Stable copy G · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div class="trace-changed"><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>1 / 1 / 160</dd></div>
+<div><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=none; home=older</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> Writer가 필요한 fix·content 보호를 얻고 로그·dirty를 기록</p><p class="trace-change"><strong>변경 / 결과:</strong> 값은 40→41→40, 현재 LSA는 120→180, 새 DIRTY는 0→1. G는 40/120으로 유지</p></li>
+<li data-trace-step="3"><h4>4. 확보한 이미지만 제출</h4><p><strong>주체 / 사건:</strong> Flush caller → DWB 제출</p><dl class="trace-lanes">
+<div><dt>Resident P · bytes / LSA</dt><dd>40 / 180</dd></div>
+<div><dt>Stable copy G · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>1 / 1 / 160</dd></div>
+<div class="trace-changed"><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=G accepted; home=unobserved</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> WAL 140이 사본의 LSA 120을 충족. 이후 resident LSA 180은 별도 작업</p><p class="trace-change"><strong>변경 / 결과:</strong> DWB가 G=40/120을 받아들임. Home write와 fsync는 관찰하지 않음</p></li>
+<li data-trace-step="4"><h4>5. G를 마치고 새 DIRTY 유지</h4><p><strong>주체 / 사건:</strong> BCB mutex 아래 완료 주체</p><dl class="trace-lanes">
+<div><dt>Resident P · bytes / LSA</dt><dd>40 / 180</dd></div>
+<div><dt>Stable copy G · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div class="trace-changed"><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>1 / 0 / 160</dd></div>
+<div><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=G accepted; home=unobserved</dd></div>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 제출 성공 후 이전 FLUSHING만 해제하고 flush 대기자를 깨움</p><p class="trace-change"><strong>변경 / 결과:</strong> FLUSHING 1→0. DIRTY=1과 하한 160은 유지. 같은 값이어도 G+1을 지우지 않음</p></li>
+</ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 runtime 증거가 아닙니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962">page_buffer.c:10723–10962</a></p></div>
+<p class="source-note"><strong>검증된 mechanism:</strong> ordinary path는 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>입니다.</p>
       </section>
 
       <section class="section" id="copy-versus-dwb">
@@ -167,7 +208,14 @@
             <tr><td>DWB의 torn/incomplete-page 보호를 제공합니다.</td><td>그 DWB repair source를 제공하지 않습니다.</td></tr>
           </tbody>
         </table></div>
-        <p class="source-note"><strong>검증된 mechanism:</strong> stable copy와 route 선택은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>, WAL gating과 DWB/direct submission은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>입니다.</p>
+
+<div class="session-question" id="q04" data-audience-checkpoint data-reset-answers data-question-id="Q04">
+<h3>Q04 · 완료 기록의 범위</h3>
+<p><strong>구성한 시작 상태:</strong> 구성한 로그에는 G의 DWB 인수 성공과 BCB의 FLUSHING 해제만 있습니다. 그 뒤 새 변경은 없습니다. Home volume의 write와 fsync, 재시작 결과는 기록하지 않았습니다.</p>
+<p><strong>예측 질문:</strong> 이 기록으로 작성할 수 있는 가장 강한 완료 주장은 무엇인가요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>확보한 이미지가 DWB 제출 경계를 통과했고 페이지 버퍼의 완료 처리가 끝났다고 말할 수 있습니다. Home-volume 전달과 재시작 후 보존까지 주장하려면 이후 write, synchronization과 해당 recovery 결과를 별도로 확인해야 합니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> Home volume의 영속화까지 포함하는 주장으로 넓히려면 어떤 추가 증거가 필요한가요?</p></details>
+</div>
+<p class="source-note"><strong>검증된 mechanism:</strong> stable copy와 route 선택은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>, WAL gating과 DWB/direct submission은 <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>입니다.</p>
       </section>
 
       <section class="section" id="redirty">
@@ -176,7 +224,14 @@
         <p>성공하면 completion은 FLUSHING만 clear합니다. Writer가 G+1을 만들었다면 그 DIRTY bit와 새 oldest-unflush 값은 다음 flush를 위해 남습니다.</p>
         <p>Ordinary DWB/direct-I/O failure에서는 FLUSHING을 clear하고, 복사해 둔 DIRTY debt와 oldest-unflush lower bound를 복원하고, waiter를 깨운 뒤 failure를 반환합니다. 작업은 계속 보이고 재시도할 수 있습니다.</p>
         <div class="callout warn"><strong>Review 질문:</strong> 모든 success 또는 failure exit 뒤에 어느 generation이 DIRTY를 소유하는가, 어느 operation이 FLUSHING을 소유하는가, checkpoint가 어떤 lower bound를 계속 볼 수 있어야 하는가?</div>
-        <p class="source-note"><strong>검증된 mechanism:</strong> ordinary failure reconstruction은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>입니다. 더 이른 TDE/DWB preparation return은 여기서 입증된 defect라고 선언하지 않고 uncertainty registry의 <code>VS-12</code>로 보냅니다.</p>
+
+<div class="session-question" id="q03" data-audience-checkpoint data-reset-answers data-question-id="Q03">
+<h3>Q03 · 값이 다시 같아진 페이지</h3>
+<p><strong>구성한 시작 상태:</strong> G의 사본에는 값 40과 페이지 LSA 120이 들어 있습니다. G가 진행되는 동안 writer가 같은 필드를 41로 바꾼 뒤 다시 40으로 바꿨고, 두 변경을 기록해 현재 페이지 LSA는 180입니다. 현재 DIRTY는 설정돼 있습니다. 이제 G의 제출이 성공했습니다.</p>
+<p><strong>예측 질문:</strong> 값이 40으로 같다는 관찰은 현재 DIRTY를 정리할 근거로 어디까지 사용할 수 있을까요?</p>
+<details class="answer-disclosure"><summary>논의 후 설명 보기</summary><p>값이 같다는 사실만으로 DIRTY를 지울 수 없습니다. G는 120까지의 이력을 담지만 현재 로그 작업은 180까지입니다. 완료 처리는 이전 FLUSHING만 해제하고 새로운 DIRTY와 oldest-unflush 하한은 남깁니다. 한 필드의 값 비교는 세대 완료의 근거가 되지 않습니다.</p><p class="optional-question"><strong>선택 후속 질문:</strong> 필요한 보존 작업을 설명하려면 필드 값 외에 어떤 이력을 함께 남겨야 하나요?</p></details>
+</div>
+<p class="source-note"><strong>검증된 mechanism:</strong> ordinary failure reconstruction은 pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>입니다. 더 이른 TDE/DWB preparation return은 여기서 입증된 defect라고 선언하지 않고 uncertainty registry의 <code>VS-12</code>로 보냅니다.</p>
       </section>
 
       <section class="section" id="failure" data-audience-checkpoint>

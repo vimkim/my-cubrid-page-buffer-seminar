@@ -1,0 +1,38 @@
+/* Authored snapshots use Layout A's tokens, inherited from seminar.css. */
+[data-session-3-traces] :is(h1, h2, h3) { overflow-wrap: anywhere; }
+.state-trace { margin: 28px 0; padding: 22px; border: 1px solid var(--line); background: var(--paper); overflow-wrap: anywhere; }
+.state-trace h3 { color: var(--teal); font-size: 1.2rem; }
+.trace-assumptions, .trace-caption { color: var(--muted); font-size: .95rem; }
+.trace-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0; }
+.trace-controls[hidden], .trace-steps > li[hidden] { display: none !important; }
+.trace-controls button { margin: 0; border: 1px solid var(--line); border-radius: 3px; background: var(--teal-soft); color: var(--ink); font: inherit; font-size: .9rem; padding: 9px 13px; }
+.trace-controls button:disabled { opacity: .45; cursor: default; }
+.trace-controls button:focus-visible { outline: 3px solid #ad5c16; outline-offset: 3px; }
+.trace-controls output { flex-basis: 100%; color: var(--muted); font-size: .9rem; }
+.trace-steps { list-style: none; padding: 0; margin: 0; }
+.trace-steps > li { margin: 18px 0 0; border-top: 1px solid var(--line); padding-top: 18px; }
+.trace-steps h4 { margin: 0 0 12px; font-size: 1.05rem; color: var(--ink); }
+.trace-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.trace-lanes > div { min-width: 0; border: 1px solid var(--line); padding: 14px; background: var(--panel); }
+.trace-lanes dt { color: var(--muted); font-size: .8rem; letter-spacing: .03em; font-weight: 700; }
+.trace-lanes dd { margin: 8px 0 0; overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-size: .95rem; white-space: pre-line; }
+.trace-lanes .trace-changed { border-inline-start: 4px solid var(--teal); background: var(--teal-soft); }
+.trace-change { padding: 12px 16px; border-inline-start: 4px solid var(--teal); background: var(--teal-soft); }
+.trace-guard { font-size: .95rem; }
+.session-question { padding-block: 20px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.session-question > h3 { font-size: 1.15rem; }
+.session-question > details { margin-bottom: 0; }
+.session-question .optional-question { color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+.presentation-mode .trace-lanes dd { font-size: 1.05em; }
+.presentation-mode .trace-lanes dt { font-size: .85em; }
+.presentation-mode .trace-steps h4 { font-size: 1.1em; }
+@media (max-width: 650px) {
+  .state-trace { padding: 14px; }
+  .trace-lanes { grid-template-columns: minmax(0, 1fr); }
+}
+@media print {
+  .trace-controls { display: none !important; }
+  .trace-steps > li[hidden] { display: block !important; }
+  .trace-steps > li { break-inside: avoid; }
+}
+@media (prefers-reduced-motion: reduce) { html, .state-trace { scroll-behavior: auto; } }

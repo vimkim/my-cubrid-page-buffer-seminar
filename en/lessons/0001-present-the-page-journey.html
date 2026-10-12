@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lecture 1 — What does a page buffer do?</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0001-present-the-page-journey.html" hreflang="ko" lang="ko">KO</a></nav>
 <main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · lecture 0001</span><a href="../index.html">Curriculum</a></div>
@@ -46,6 +46,13 @@
       <section class="section" id="journey">
 <h2>One request for page P</h2>
 <div class="journey page-request-journey"><article><span class="step">1</span><h3>Request P</h3><p>Look up whether P is resident.</p></article><article><span class="step">2</span><h3>Make room on a miss</h3><p>Use an unused frame, or safely remove a candidate and read P into its slot.</p></article><article><span class="step">3</span><h3>Obtain access</h3><p>After fix succeeds, use the contents with the granted latch.</p></article><article><span class="step">4</span><h3>Read or modify</h3><p>A modifying caller handles the required logging and dirty marking.</p></article><article><span class="step">5</span><h3>Finish using it</h3><p>Unfix the page. This does not itself mean flush or commit.</p></article><article><span class="step">6</span><h3>Write back and reuse</h3><p>Dirty contents are written with WAL ordering: make the corresponding log durable first. Once safe, the frame can be reused for another page.</p></article></div><p>This summarizes an ordinary request for an existing page. Not every request writes or evicts it, and flushing can occur in another execution context.</p>
+
+<div class="session-question" id="q01" data-audience-checkpoint data-reset-answers data-question-id="Q01">
+<h3>Q01 · Permission to reuse</h3>
+<p><strong>Constructed starting state:</strong> A proposed change publishes reusable=true immediately after final unfix makes fcnt=0. Its allocator retags the frame without any other checks.</p>
+<p><strong>Prediction:</strong> What is the smallest schedule that challenges this approval rule?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>A writer logs a change and marks P dirty, then performs its final unfix. fcnt becomes zero while the preservation debt remains. Retagging now loses that debt. A protected reuse decision must also check current flags, identity, waiters and policy eligibility. Release ends use; generation propagation ends a different obligation.</p><p class="optional-question"><strong>Optional follow-up:</strong> Which event ends use, and which ends preservation work?</p></details>
+</div>
 </section>
 <section class="section" id="first-code-path"><h2>A miss reaches frame acquisition through a real helper</h2><figure class="source-call-path"><pre>pgbuf_fix_release
   → pgbuf_claim_bcb_for_fix

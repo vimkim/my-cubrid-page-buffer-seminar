@@ -6,8 +6,8 @@
   <title>Lecture 18A — Replacement policies across engines</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
   <link rel="stylesheet" href="../../assets/comparison-clarity.css">
-  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0018a-compare-replacement-policies.html" hreflang="ko" lang="ko">KO</a></nav>
 <main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · Lecture 0018A</span><a href="../index.html">Curriculum</a></div>
@@ -50,6 +50,53 @@
 <h2>PostgreSQL: give reused pages a few extra chances</h2>
 <p>A <strong>buffer descriptor</strong> is metadata for one frame, comparable in role to a CUBRID BCB. PostgreSQL keeps these descriptors in an array. A <strong>clock hand</strong> remembers the next array position to inspect; it wraps around at the end. Pages do not move around the array.</p>
 <p>Each resident page has a small <code>usage_count</code>: <strong>reuse credit</strong>. A default-strategy first pin by a backend can add one credit, capped at 5. A backend is a PostgreSQL server process using the page. A <strong>pin</strong>, like a CUBRID fix for this purpose, prevents frame reuse while the caller uses it. It is separate from a lock protecting page contents.</p>
+
+<div class="session-question" id="q16" data-audience-checkpoint data-reset-answers data-question-id="Q16">
+<h3>Q16 · Private nesting and shared pins</h3>
+<p><strong>Constructed starting state:</strong> Valid clean D starts with shared refcount=0 and usage_count=0 under the default strategy. A pins three times; B then pins for its first time. A releases all three pins. No clock visit or other change occurs.</p>
+<p><strong>Prediction:</strong> How do shared refcount, A’s private refcount and usage credit change?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>After A’s first pin: shared=1, A private=1, credit=1. A’s nested pins give shared=1, A private=3, credit=1. B’s first pin gives shared=2, credit=2. A’s final release gives shared=1, A private=0, credit=2; B still protects D. Credit is capped at 5 and is not a lifetime call count.</p><p class="optional-question"><strong>Optional follow-up:</strong> Which call history cannot be recovered from the final shared refcount?</p></details>
+</div>
+<div class="session-question" id="q17" data-audience-checkpoint data-reset-answers data-question-id="Q17">
+<h3>Q17 · Who protects the bytes?</h3>
+<p><strong>Constructed starting state:</strong> A wrapper replacing CUBRID READ fix pins an existing PostgreSQL identity and returns its address. The caller reads bytes immediately. Another pinned backend B holds the required content protection and is changing them.</p>
+<p><strong>Prediction:</strong> Which protection responsibility must the wrapper contract state?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>Pin protects residency, not compatible byte access. State who acquires and releases the content protection required by the access path. For this ordinary shared-buffer read, provide compatible content locking before inspecting bytes, either within the wrapper’s return contract or as an explicit caller obligation. A pointer plus pin alone does not reproduce READ fix.</p><p class="optional-question"><strong>Optional follow-up:</strong> How does assigning protection to the wrapper versus caller change the return contract?</p></details>
+</div>
+
+<div class="state-trace" id="pin-state-trace" data-state-trace><h3>A’s nesting versus shared descriptor protection</h3><p class="trace-assumptions">Fresh valid clean D, NORMAL strategy, credit=0, no sweep or other changes. Private refcounts belong to each backend.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Before pins</h4><p><strong>Actor / event:</strong> Constructed checkpoint</p><dl class="trace-lanes">
+<div><dt>Shared D · refcount / usage_count</dt><dd>0 / 0</dd></div>
+<div><dt>Backend A · private pins</dt><dd>0</dd></div>
+<div><dt>Backend B · private pins</dt><dd>0</dd></div>
+<div><dt>Content access</dt><dd>no content protection assumed</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> No backend holds D</p><p class="trace-change"><strong>Changed / result:</strong> Both shared counters start at zero</p></li>
+<li data-trace-step="1"><h4>2. A first pin</h4><p><strong>Actor / event:</strong> A PinBuffer NORMAL</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared D · refcount / usage_count</dt><dd>1 / 1</dd></div>
+<div class="trace-changed"><dt>Backend A · private pins</dt><dd>1</dd></div>
+<div><dt>Backend B · private pins</dt><dd>0</dd></div>
+<div class="trace-changed"><dt>Content access</dt><dd>pin protects reuse; bytes need separate protection</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> A had no private pin; successful atomic update</p><p class="trace-change"><strong>Changed / result:</strong> Shared refcount 0→1, usage 0→1; A private 0→1</p></li>
+<li data-trace-step="2"><h4>3. A nests twice</h4><p><strong>Actor / event:</strong> A pins while already holding D</p><dl class="trace-lanes">
+<div><dt>Shared D · refcount / usage_count</dt><dd>1 / 1</dd></div>
+<div class="trace-changed"><dt>Backend A · private pins</dt><dd>3</dd></div>
+<div><dt>Backend B · private pins</dt><dd>0</dd></div>
+<div class="trace-changed"><dt>Content access</dt><dd>separate from pin nesting</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Existing private refcount handles nesting</p><p class="trace-change"><strong>Changed / result:</strong> A private 1→3; shared refcount and usage remain 1</p></li>
+<li data-trace-step="3"><h4>4. B first pin</h4><p><strong>Actor / event:</strong> B PinBuffer NORMAL</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared D · refcount / usage_count</dt><dd>2 / 2</dd></div>
+<div><dt>Backend A · private pins</dt><dd>3</dd></div>
+<div class="trace-changed"><dt>Backend B · private pins</dt><dd>1</dd></div>
+<div class="trace-changed"><dt>Content access</dt><dd>B still needs required content protection</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> B has no private pin; usage below cap 5</p><p class="trace-change"><strong>Changed / result:</strong> Shared refcount 1→2, usage 1→2; A private remains 3</p></li>
+<li data-trace-step="4"><h4>5. A repays three private pins</h4><p><strong>Actor / event:</strong> A releases all nesting</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared D · refcount / usage_count</dt><dd>1 / 2</dd></div>
+<div class="trace-changed"><dt>Backend A · private pins</dt><dd>0</dd></div>
+<div><dt>Backend B · private pins</dt><dd>1</dd></div>
+<div class="trace-changed"><dt>Content access</dt><dd>B’s pin remains; pin alone is not content locking</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Only A’s last private release lowers shared refcount</p><p class="trace-change"><strong>Changed / result:</strong> A private 3→0; shared 2→1; usage remains 2; B prevents reuse</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3386">PinBuffer:3295–3386</a></p></div>
 </section>
 <section class="section" id="postgres-credit">
 <h2>PostgreSQL: watch credit rise and fall</h2>
@@ -63,6 +110,69 @@
 <div class="comparison-flow" role="group" aria-label="Illustrative PostgreSQL strategy ring"><div><strong>Illustrative IDs</strong><p>slot 0: frame 17<br>slot 1: frame 42<br>slot 2: frame 81</p><span>Three shown slots; not a configured ring size</span></div><div><strong>Next scan page</strong><p>Try next slot's frame</p><span>Reuse it if eligible</span></div><div><strong>Cannot reuse?</strong><p>Fall back to global selection</p><span>Other users still matter</span></div></div>
 <p>When reuse succeeds, successive S pages can replace earlier S pages in this small set instead of continually taking more frames. A pinned frame or one with <code>usage_count &gt; 1</code> is rejected for ring reuse. The latter lets other users' reuse credit protect a page. Ring strategy accesses do not keep increasing credit above 1.</p>
 <p><strong>Compared with CUBRID:</strong> the ring is an operation's list of shared frame IDs, not a private LRU residency/quota domain. It limits pollution for operations that use it; it does not guarantee protection for every arbitrary scan.</p>
+
+<div class="session-question" id="q19" data-audience-checkpoint data-reset-answers data-question-id="Q19">
+<h3>Q19 · Two rings, one frame ID</h3>
+<p><strong>Constructed starting state:</strong> Backend A and B have ring slots containing shared buffer ID F. F initially represents R. A performs the protected identity change to S and releases its pin. B’s array is unchanged. B visits F, now clean, refcount=0, credit=1.</p>
+<p><strong>Prediction:</strong> What does B’s unchanged slot say about the current identity?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>It still refers to F, which now represents S. The slot does not own or preserve R. B can attempt the current frame’s protected ring claim, then perform the required identity/writeback work. Compare a backend-local reference array with CUBRID’s pool-owned BCB policy membership, rather than equating private storage ownership.</p><p class="optional-question"><strong>Optional follow-up:</strong> Which object should anchor the comparison with a CUBRID private LRU?</p></details>
+</div>
+<div class="session-question" id="q20" data-audience-checkpoint data-reset-answers data-question-id="Q20">
+<h3>Q20 · Same candidate, different strategy</h3>
+<p><strong>Constructed starting state:</strong> Three independent runs use BULKREAD, BULKWRITE and VACUUM rings. Each selects an unpinned credit-1 dirty BM_PERMANENT page from its ring, obtains the required content lock without waiting, and needs a WAL flush through the page LSN. No other backend intervenes.</p>
+<p><strong>Prediction:</strong> How can the three strategies differ after selection?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>BULKREAD rejects this ring candidate, clears its current slot to InvalidBuffer and releases lock/pin before retry. This branch does not invalidate the shared page identity. BULKWRITE and VACUUM do not use that bulk-read rejection: they can force WAL and flush before protected invalidation. NORMAL has no strategy ring. Factory size is policy; caller size, AIO/pin limits and the NBuffers/8 cap determine actual sizes at this pin.</p><p class="optional-question"><strong>Optional follow-up:</strong> Which calculations and caller inputs matter besides factory defaults?</p></details>
+</div>
+
+<div class="state-trace" id="ring-state-trace" data-state-trace><h3>Local IDs refer to shared frames</h3><p class="trace-assumptions">Two-slot teaching ring, not factory sizing. Next visit slot 0. F4/F5/F6 are clean; no concurrent changes. Release the first acquired pin before the second miss; global fallback chooses F6.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Ring before two misses</h4><p><strong>Actor / event:</strong> Constructed checkpoint</p><dl class="trace-lanes">
+<div><dt>Backend-local ring · slots 0 / 1</dt><dd>F4 / F5</dd></div>
+<div><dt>Shared F4 · ref / usage / tag</dt><dd>0 / 1 / R</dd></div>
+<div><dt>Shared F5 · ref / usage / tag</dt><dd>0 / 2 / T</dd></div>
+<div><dt>Shared F6 · ref / usage / tag</dt><dd>0 / 0 / U</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Slots store buffer IDs, not page ownership</p><p class="trace-change"><strong>Changed / result:</strong> Start slots F4,F5; frame metadata stays in shared pool</p></li>
+<li data-trace-step="1"><h4>2. Slot 0: ring claim succeeds</h4><p><strong>Actor / event:</strong> Backend visits F4 via slot 0</p><dl class="trace-lanes">
+<div><dt>Backend-local ring · slots 0 / 1</dt><dd>F4 / F5</dd></div>
+<div class="trace-changed"><dt>Shared F4 · ref / usage / tag</dt><dd>1 / 1 / R</dd></div>
+<div><dt>Shared F5 · ref / usage / tag</dt><dd>0 / 2 / T</dd></div>
+<div><dt>Shared F6 · ref / usage / tag</dt><dd>0 / 0 / U</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> ref=0 and usage≤1; successful claim CAS</p><p class="trace-change"><strong>Changed / result:</strong> F4 ref 0→1; slot remains F4. Tag R is not changed by the ring claim</p></li>
+<li data-trace-step="2"><h4>3. Protected reuse, release, then slot 1</h4><p><strong>Actor / event:</strong> Caller retags F4 to S after safe reuse, then visits F5</p><dl class="trace-lanes">
+<div><dt>Backend-local ring · slots 0 / 1</dt><dd>F4 / F5</dd></div>
+<div class="trace-changed"><dt>Shared F4 · ref / usage / tag</dt><dd>0 / 1 / S</dd></div>
+<div><dt>Shared F5 · ref / usage / tag</dt><dd>0 / 2 / T</dd></div>
+<div><dt>Shared F6 · ref / usage / tag</dt><dd>0 / 0 / U</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> F4 identity change needs separate writeback/mapping guards; F5 usage=2 rejects ring reuse</p><p class="trace-change"><strong>Changed / result:</strong> F4 R→S and pin released; F5 retained in shared pool; ring falls back</p></li>
+<li data-trace-step="3"><h4>4. Fallback claims F6 and replaces one ID</h4><p><strong>Actor / event:</strong> Global clock then AddBufferToRing</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Backend-local ring · slots 0 / 1</dt><dd>F4 / F6</dd></div>
+<div><dt>Shared F4 · ref / usage / tag</dt><dd>0 / 1 / S</dd></div>
+<div><dt>Shared F5 · ref / usage / tag</dt><dd>0 / 2 / T</dd></div>
+<div class="trace-changed"><dt>Shared F6 · ref / usage / tag</dt><dd>1 / 0 / U</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Assumed unpinned zero-credit F6; successful CAS</p><p class="trace-change"><strong>Changed / result:</strong> F6 ref 0→1; slot 1 F5→F6. F5’s tag and shared residency remain</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L615-L705">ring claim/refill:615–705</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2471-L2673">later reuse:2471–2673</a></p></div>
+
+<div class="state-trace" id="ring-wal-trace" data-state-trace><h3>Same dirty candidate, three independent strategies</h3><p class="trace-assumptions">Each column is a fresh Q20 execution, not successive changes to one run. Dirty BM_PERMANENT R comes from the ring, initial ref=0/usage=1; claim and conditional content lock succeed. WAL must be flushed.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Candidate claimed and content protected</h4><p><strong>Actor / event:</strong> Three separate allocating backends</p><dl class="trace-lanes">
+<div><dt>BULKREAD · slot / R</dt><dd>R / pin=1; DIRTY=1</dd></div>
+<div><dt>BULKWRITE · slot / R</dt><dd>R / pin=1; DIRTY=1</dd></div>
+<div><dt>VACUUM · slot / R</dt><dd>R / pin=1; DIRTY=1</dd></div>
+<div><dt>Other shared frame H</dt><dd>pinned by another backend</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> LSN inspected only with required content protection</p><p class="trace-change"><strong>Changed / result:</strong> Each owns R pin; required WAL still missing. A separate H stays pinned</p></li>
+<li data-trace-step="1"><h4>2. Strategy-specific decision</h4><p><strong>Actor / event:</strong> GetVictimBuffer → StrategyRejectBuffer</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>BULKREAD · slot / R</dt><dd>InvalidBuffer / shared R remains dirty</dd></div>
+<div class="trace-changed"><dt>BULKWRITE · slot / R</dt><dd>R / WAL→FlushBuffer path</dd></div>
+<div class="trace-changed"><dt>VACUUM · slot / R</dt><dd>R / WAL→FlushBuffer path</dd></div>
+<div class="trace-changed"><dt>Other shared frame H</dt><dd>pin still protects H</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> strategy + from_ring + BM_PERMANENT + WAL needed; rejection only BULKREAD</p><p class="trace-change"><strong>Changed / result:</strong> BULKREAD slot R→InvalidBuffer and releases lock/pin; other two proceed to WAL/write</p></li>
+<li data-trace-step="2"><h4>3. Retry or later protected invalidation</h4><p><strong>Actor / event:</strong> Bulk-read retries selection; other callers revalidate after write</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>BULKREAD · slot / R</dt><dd>retry; empty current slot falls back</dd></div>
+<div class="trace-changed"><dt>BULKWRITE · slot / R</dt><dd>recheck ref=1 and !DIRTY</dd></div>
+<div class="trace-changed"><dt>VACUUM · slot / R</dt><dd>recheck ref=1 and !DIRTY</dd></div>
+<div class="trace-changed"><dt>Other shared frame H</dt><dd>still pinned; not a victim</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Global clock also skips H’s pin; later identity removal needs sole pin and clean state</p><p class="trace-change"><strong>Changed / result:</strong> Ring rejection does not retag shared R. Write success alone also does not authorize retagging</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2590-L2639">caller conditions:2590–2639</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L741-L770">BULKREAD rejection:741–770</a></p></div>
 <p class="source-note"><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L615-L705">Pinned ring-reuse rules</a> · <a href="#postgres-first-trace">Clock selection example and source</a></p>
 </section>
 
@@ -70,7 +180,72 @@
   → BufferAlloc
     → GetVictimBuffer
       → StrategyGetBuffer
-        → ClockSweepTick</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><details class="technical-detail"><summary>Expand source locations</summary><p class="source-note">Source: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L1223-L1251">bufmgr.c:1223–1251</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2268">bufmgr.c:2268</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2671">bufmgr.c:2548–2671</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">freelist.c:239–317</a></p></details><p>Usage credit is not a timestamp or lifetime hit count. Default first pin by a backend can raise it up to 5; nested pins held by that backend do not keep raising shared credit. Access-strategy rings take a different first route and contain shared-buffer IDs, not a separate privately owned pool.</p><p><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3380">Pin credit rules</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L135-L146">Credit cap</a></p></section>
+        → ClockSweepTick</pre><figcaption>Source-verified calls, not a captured runtime stack. Arrows denote direct calls on the stated branch; indented branches share a caller.</figcaption></figure><details class="technical-detail"><summary>Expand source locations</summary>
+
+
+
+<p class="source-note">Source: <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L1223-L1251">bufmgr.c:1223–1251</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2268">bufmgr.c:2268</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2671">bufmgr.c:2548–2671</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">freelist.c:239–317</a></p></details><p>Usage credit is not a timestamp or lifetime hit count. Default first pin by a backend can raise it up to 5; nested pins held by that backend do not keep raising shared credit. Access-strategy rings take a different first route and contain shared-buffer IDs, not a separate privately owned pool.</p><p><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3295-L3380">Pin credit rules</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L135-L146">Credit cap</a></p>
+<div class="state-trace" id="clock-state-trace" data-state-trace><h3>Stable descriptors: decrement, skip, decrement, claim</h3><p class="trace-assumptions">Four-descriptor teaching model, all clean, no concurrent changes. Hand starts F0; F1 is held by another backend. Selection ends with a new pin, before identity replacement.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Reset to F0</h4><p><strong>Actor / event:</strong> Hand before first visit</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 2</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 1</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Fresh scenario, not the previous lecture trace</p><p class="trace-change"><strong>Changed / result:</strong> Stable frame positions; initial credits 2,0,1,0</p></li>
+<li data-trace-step="1"><h4>2. Visit F0: decrement</h4><p><strong>Actor / event:</strong> Clock hand at F0</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 1</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Unpinned and positive usage; decrement CAS succeeds</p><p class="trace-change"><strong>Changed / result:</strong> F0 usage 2→1; hand moves to F1; no claim</p></li>
+<li data-trace-step="2"><h4>3. Visit F1: skip</h4><p><strong>Actor / event:</strong> Clock hand at F1</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 1</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> refcount=1 prevents claim and decrement</p><p class="trace-change"><strong>Changed / result:</strong> No descriptor fields change; hand moves to F2</p></li>
+<li data-trace-step="3"><h4>4. Visit F2: reach zero, move on</h4><p><strong>Actor / event:</strong> Clock hand at F2</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div class="trace-changed"><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 0</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Positive usage branch ends this visit after successful decrement</p><p class="trace-change"><strong>Changed / result:</strong> F2 usage 1→0. It is not claimed on this visit; hand moves to F3</p></li>
+<li data-trace-step="4"><h4>5. Visit F3: claim with pin</h4><p><strong>Actor / event:</strong> Allocator’s clock CAS</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 0</dd></div>
+<div class="trace-changed"><dt>F3 · identity / ref / usage</dt><dd>S3 / 1 / 0</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Current ref=0 and usage=0; CAS adds own pin successfully</p><p class="trace-change"><strong>Changed / result:</strong> F3 refcount 0→1; return selected descriptor. Identity remains S3 for now</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">clock selection:239–317</a></p></div>
+<div class="state-trace" id="clock-alternative-trace" data-state-trace><h3>Independent reset: F3 starts with one credit</h3><p class="trace-assumptions">Reset every descriptor to the preceding initial table, changing only initial F3 usage 0→1. No concurrent change. Intermediate visits remain listed in the feedback.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Fresh four-frame checkpoint</h4><p><strong>Actor / event:</strong> Scenario reset</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 2</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 1</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 1</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Do not inherit the first trace’s final pin or decrements</p><p class="trace-change"><strong>Changed / result:</strong> Reset refcounts and credits to 2,0,1,1</p></li>
+<li data-trace-step="1"><h4>2. First full pass</h4><p><strong>Actor / event:</strong> Hand F0→F1→F2→F3</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 1</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div class="trace-changed"><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 0</dd></div>
+<div class="trace-changed"><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Decrement each unpinned positive credit; skip F1</p><p class="trace-change"><strong>Changed / result:</strong> F0 2→1, F1 skipped, F2 1→0, F3 1→0; no claim</p></li>
+<li data-trace-step="2"><h4>3. Second pass starts F0, skips F1</h4><p><strong>Actor / event:</strong> Hand F0 then F1</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 0</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div><dt>F2 · identity / ref / usage</dt><dd>S2 / 0 / 0</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> F0 positive credit buys this visit; F1 still pinned</p><p class="trace-change"><strong>Changed / result:</strong> F0 1→0, then skip F1; hand reaches F2</p></li>
+<li data-trace-step="3"><h4>4. Claim F2 on a later visit</h4><p><strong>Actor / event:</strong> Clock at F2</p><dl class="trace-lanes">
+<div><dt>F0 · identity / ref / usage</dt><dd>H1 / 0 / 0</dd></div>
+<div><dt>F1 · identity / ref / usage</dt><dd>S1 / 1 / 0</dd></div>
+<div class="trace-changed"><dt>F2 · identity / ref / usage</dt><dd>S2 / 1 / 0</dd></div>
+<div><dt>F3 · identity / ref / usage</dt><dd>S3 / 0 / 0</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> ref=0, usage=0; successful claim CAS</p><p class="trace-change"><strong>Changed / result:</strong> F2 refcount 0→1; F3 is not reached on this pass</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L239-L317">clock branches:239–317</a></p></div>
+</section>
 
 <section class="section" id="postgresql">
 <h2>PostgreSQL: the clock reduces reuse credits</h2>
@@ -85,9 +260,47 @@
           <li><strong>Bulk scans:</strong> backend-local strategy rings reuse a small set of IDs for bulk read/write and vacuum. They still name frames in the shared pool; they are not private buffer pools.</li>
         </ol>
         <div class="callout"><strong>No LRU order:</strong> two descriptors with <code>usage_count = 2</code> have no “older one first” relation. The count is bounded reuse credit decayed by clock visits, not a timestamp or linked-list rank.</div>
-        <p class="source-note"><strong>Pinned PostgreSQL:</strong> <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L104-L317">clock selection</a>, <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L136-L147">maximum usage count 5</a>, and <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L420-L540">strategy-ring sizes</a>.</p>
+
+
+
+
+<p class="source-note"><strong>Pinned PostgreSQL:</strong> <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L104-L317">clock selection</a>, <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/include/storage/buf_internals.h#L136-L147">maximum usage count 5</a>, and <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L420-L540">strategy-ring sizes</a>.</p>
 
 </details>
+
+<div class="session-question" id="q18" data-audience-checkpoint data-reset-answers data-question-id="Q18">
+<h3>Q18 · A CAS decides the claim</h3>
+<p><strong>Constructed starting state:</strong> A hand visit decrements D from credit 1 to 0 and moves on. At a later visit A reads refcount=0, credit=0. Before A’s expected-state CAS adds its pin, B succeeds at a normal first pin and retains it. No other change occurs.</p>
+<p><strong>Prediction:</strong> Which event determines whether A can return D?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>A’s CAS against the old state fails. It rereads the state and sees B’s pin, so it cannot return D from this visit. Reading zero is an observation; successful CAS acquires protection. Even without interference, the positive-credit decrement visit moves on and a later zero-credit visit is needed for a claim.</p><p class="optional-question"><strong>Optional follow-up:</strong> What policy changes if decrement-to-zero and claiming are combined into one visit?</p></details>
+</div>
+<div class="state-trace" id="clock-cas-trace" data-state-trace><h3>Reading zero versus successfully claiming zero</h3><p class="trace-assumptions">Independent Q18 concurrency schedule. B retains its successful NORMAL pin until the trace ends.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Earlier decrement visit</h4><p><strong>Actor / event:</strong> Clock ages D</p><dl class="trace-lanes">
+<div><dt>Descriptor D · ref / usage</dt><dd>0 / 0</dd></div>
+<div><dt>Allocator A</dt><dd>no pin</dd></div>
+<div><dt>Backend B</dt><dd>no pin</dd></div>
+<div><dt>Result</dt><dd>no claim</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Unpinned positive credit</p><p class="trace-change"><strong>Changed / result:</strong> Usage 1→0; hand moves on without a pin</p></li>
+<li data-trace-step="1"><h4>2. A observes zero</h4><p><strong>Actor / event:</strong> A returns on a later hand visit</p><dl class="trace-lanes">
+<div><dt>Descriptor D · ref / usage</dt><dd>0 / 0</dd></div>
+<div class="trace-changed"><dt>Allocator A</dt><dd>expected 0 / 0; no pin</dd></div>
+<div><dt>Backend B</dt><dd>no pin</dd></div>
+<div class="trace-changed"><dt>Result</dt><dd>observation only</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Expected state read is not yet a CAS claim</p><p class="trace-change"><strong>Changed / result:</strong> A saves expected ref=0, usage=0; no shared field changed</p></li>
+<li data-trace-step="2"><h4>3. B pins before A’s CAS</h4><p><strong>Actor / event:</strong> B NORMAL first pin succeeds</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Descriptor D · ref / usage</dt><dd>1 / 1</dd></div>
+<div><dt>Allocator A</dt><dd>expected 0 / 0; no pin</dd></div>
+<div class="trace-changed"><dt>Backend B</dt><dd>holds pin</dd></div>
+<div class="trace-changed"><dt>Result</dt><dd>A has not claimed D</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Atomic shared-state update succeeds</p><p class="trace-change"><strong>Changed / result:</strong> D ref 0→1 and usage 0→1; A’s expected state is stale</p></li>
+<li data-trace-step="3"><h4>4. A’s expected-state CAS fails</h4><p><strong>Actor / event:</strong> A rereads after failed CAS</p><dl class="trace-lanes">
+<div><dt>Descriptor D · ref / usage</dt><dd>1 / 1</dd></div>
+<div class="trace-changed"><dt>Allocator A</dt><dd>CAS failed; skip D</dd></div>
+<div><dt>Backend B</dt><dd>holds pin</dd></div>
+<div class="trace-changed"><dt>Result</dt><dd>D not returned to A</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Current B pin blocks return of D</p><p class="trace-change"><strong>Changed / result:</strong> No A pin added; current ref=1 causes skip. Identity unchanged</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/freelist.c#L252-L317">clock CAS loop:252–317</a></p></div>
 </section>
 
 <section class="section" id="innodb-model">
@@ -141,7 +354,50 @@
           </tbody>
         </table></div>
         <p class="big-claim">“Cold” answers where to look. Clean state and protected checks of current users, waiters and identity decide whether reuse can proceed.</p>
-      </section>
+
+<div class="session-question" id="q21" data-audience-checkpoint data-reset-answers data-question-id="Q21">
+<h3>Q21 · The other user left new dirty work</h3>
+<p><strong>Constructed starting state:</strong> A flushes a dirty victim and keeps its pin. B pins the old identity, changes it under content protection, then releases protection and pin. At A’s invalidation check shared refcount=1 and current DIRTY is set.</p>
+<p><strong>Prediction:</strong> How much does refcount returning to 1 authorize reuse?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>It establishes only that A now has the sole shared pin. Current DIRTY still rejects InvalidateVictimBuffer under mapping and header protection. The earlier write did not cover B’s later change. A releases this candidate and retries; preserve write and mutation order in the observation.</p><p class="optional-question"><strong>Optional follow-up:</strong> Which ordering distinguishes A’s write from B’s later mutation?</p></details>
+</div>
+<div class="session-question" id="q22" data-audience-checkpoint data-reset-answers data-question-id="Q22">
+<h3>Q22 · Background cleaning versus checkpoint work</h3>
+<p><strong>Constructed starting state:</strong> Unpinned dirty P has credit 3 and belongs to this checkpoint’s required work. Unpinned dirty Q has credit 0. A proposal skips checkpoint page processing because background writer is running.</p>
+<p><strong>Prediction:</strong> How do the two actors’ required outputs differ?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>Background writer tries to produce clean near-future victims, using pin/credit eligibility and its scan budget; Q is a plausible eligible target. Checkpoint processing covers its selected checkpoint obligation, which includes P despite positive credit. Thread existence or cleaning Q does not discharge P’s checkpoint work. A foreground backend can also flush its selected dirty victim. Measure comparable workloads before claiming latency superiority.</p><p class="optional-question"><strong>Optional follow-up:</strong> What measurement would be needed to compare writeback latency across engines?</p></details>
+</div>
+
+<div class="state-trace" id="invalidation-state-trace" data-state-trace><h3>A completed write does not cover a later mutation</h3><p class="trace-assumptions">Fresh Q21: A has flushed a selected victim and retains one pin. B later pins its old identity, logs/dirties under content protection, then fully releases. No other change.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. A’s image write ended</h4><p><strong>Actor / event:</strong> A FlushBuffer returns</p><dl class="trace-lanes">
+<div><dt>Shared descriptor · tag / ref / DIRTY</dt><dd>R / 1 / 0</dd></div>
+<div><dt>A · write / pin</dt><dd>earlier write done; pin held</dd></div>
+<div><dt>B · mutation / pin</dt><dd>none / 0</dd></div>
+<div><dt>Identity-removal result</dt><dd>not yet checked</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Necessary WAL/write ordering completed on this path</p><p class="trace-change"><strong>Changed / result:</strong> Old image is written; A retains sole pin; old tag still present</p></li>
+<li data-trace-step="1"><h4>2. B pins and makes new dirty work</h4><p><strong>Actor / event:</strong> B under content protection</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared descriptor · tag / ref / DIRTY</dt><dd>R / 2 / 1</dd></div>
+<div><dt>A · write / pin</dt><dd>earlier write done; pin held</dd></div>
+<div class="trace-changed"><dt>B · mutation / pin</dt><dd>new logged change / 1</dd></div>
+<div class="trace-changed"><dt>Identity-removal result</dt><dd>old write cannot cover new work</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Pin existing identity then obtain required mutation protection</p><p class="trace-change"><strong>Changed / result:</strong> Shared ref 1→2; DIRTY 0→1 for B’s later change</p></li>
+<li data-trace-step="2"><h4>3. B leaves, dirty remains</h4><p><strong>Actor / event:</strong> B releases protection and pin</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared descriptor · tag / ref / DIRTY</dt><dd>R / 1 / 1</dd></div>
+<div><dt>A · write / pin</dt><dd>earlier write done; pin held</dd></div>
+<div class="trace-changed"><dt>B · mutation / pin</dt><dd>new change remains / 0</dd></div>
+<div class="trace-changed"><dt>Identity-removal result</dt><dd>ref=1 alone insufficient</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Release does not discharge preservation debt</p><p class="trace-change"><strong>Changed / result:</strong> Shared ref 2→1; DIRTY stays 1</p></li>
+<li data-trace-step="3"><h4>4. Protected invalidation rejects</h4><p><strong>Actor / event:</strong> A holds mapping partition lock and buffer header lock</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Shared descriptor · tag / ref / DIRTY</dt><dd>R / 1 / 1 at check</dd></div>
+<div class="trace-changed"><dt>A · write / pin</dt><dd>must release rejected candidate</dd></div>
+<div class="trace-changed"><dt>B · mutation / pin</dt><dd>no pin; dirty work remains</dd></div>
+<div class="trace-changed"><dt>Identity-removal result</dt><dd>R mapping retained; no retag</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Require current ref=1 and !BM_DIRTY</p><p class="trace-change"><strong>Changed / result:</strong> DIRTY check rejects identity removal; A releases and retries another candidate</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2471-L2511">InvalidateVictimBuffer:2471–2511</a></p></div>
+
+<h3>Three writeback owners, three outputs</h3><div class="trace-lanes"><div><strong>Allocating backend</strong><p>Selected dirty victim → conditional content lock → WAL / FlushBuffer → protected invalidation, or release and retry.</p></div><div><strong>Background writer</strong><p>Eligible unpinned zero-credit pages → clean near-future candidates within its budget.</p></div><div><strong>Checkpointer</strong><p>Checkpoint-selected dirty pages → checkpoint propagation and storage work. Positive usage credit does not waive this obligation.</p></div></div><p class="source-note"><a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L2548-L2673">Backend victim write</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3854-L4211">BgBufferSync / SyncOneBuffer</a> · <a href="https://github.com/postgres/postgres/blob/fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc/src/backend/storage/buffer/bufmgr.c#L3575-L3615">Checkpoint selection</a></p>
+</section>
 
 <section class="section" id="postgres-tradeoffs">
 <h2>PostgreSQL versus CUBRID: benefits and costs</h2>
@@ -222,7 +478,23 @@
 <h2>Close the journey: one request, a reusable frame, another identity</h2>
 <ol><li>A caller finds the page needed for a record operation. One operation may visit several pages.</li><li>The buffer resolves the page identity to a frame and BCB, loading on a miss. Fix protects its use lifetime; a compatible latch grants access to its bytes.</li><li>Matching unfixes repay use debt. Ordinary final unfix can update admission or reuse policy; it does not promise eviction.</li><li>Replacement chooses a domain and candidate, then rechecks current safety under protection. Dirty data must be preserved, and background work can help without guaranteeing an immediately reusable frame.</li><li>Only after safe detachment and old mapping removal can the same frame carry a new page identity. Its stable address does not preserve the old identity.</li></ol>
 <p>H1/H2 survival depends on the established reuse schedule and policy state. The comparison showed other ways to remember reuse, with different costs; it established no speed ranking.</p>
-<p class="callout"><strong>End of this session.</strong> This completes the request-to-reuse story. Detailed durability ordering and recovery belong to the next session. <a href="../reference/first-principles-route.html">Return to the session itinerary</a>. The full curriculum and source references remain available separately.</p>
+<p class="callout"><strong>Earlier first-principles session boundary.</strong> That session completed the request-to-reuse outline and deferred detailed durability ordering. Session 3 now completes the generation, daemon and PostgreSQL reasoning below. <a href="../reference/first-principles-route.html">Return to the session itinerary</a>. The full curriculum and source references remain available separately.</p>
+
+<div class="session-question" id="q23" data-audience-checkpoint data-reset-answers data-question-id="Q23">
+<h3>Q23 · Choose the next observation</h3>
+<p><strong>Constructed starting state:</strong> No invalid CUBRID frame exists and one allocator waits. Successful submissions increase by 20 and token budgets refresh. Submitter identities, per-BCB completion paths, current states and assignments are unrecorded.</p>
+<p><strong>Prediction:</strong> If you can add one observation, what do you choose?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>A correlated per-BCB completion/assignment trace is useful: include submitter, enqueue result, consumer or local completion, current flags/fixes/zone/quota and waiter/offer result. A queued item still pending suggests following consumer scheduling; a consumed item rejected by DIRTY/fix suggests following its current user and preservation work. Submission and token totals alone cannot decide between them.</p><p class="optional-question"><strong>Optional follow-up:</strong> How would two different outcomes change your cause candidates?</p></details>
+</div>
+<div class="session-question" id="q24" data-audience-checkpoint data-reset-answers data-question-id="Q24">
+<h3>Q24 · Transfer the contracts</h3>
+<p><strong>Constructed starting state:</strong> A constructed module documents Acquire(P) → Use → Release(P) and SubmitImage(P) → Complete(ticket) → Offer(frame) → Retag(frame,Q). Submit passes a copy and returns a ticket. Complete/Offer guarantees and Retag’s current-state checks are undefined. These are teaching interfaces.</p>
+<p><strong>Prediction:</strong> Which transition contracts must be defined before explaining safe reuse?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>Define identity binding and use lifetime for Acquire/Release, stable image and preservation boundary for Submit/Complete, revocable versus exclusive ownership for Offer, and the protected current-state eligibility and old-mapping removal required by Retag. State failure/cleanup ownership at each edge. CUBRID and PostgreSQL supply different fields and call paths for these responsibilities; an API name supplies no guarantee.</p><p class="optional-question"><strong>Optional follow-up:</strong> How did source evidence for these contracts differ between the two engines?</p></details>
+</div>
+
+<div id="final-cubrid"><h3>Final case A: submissions rise, allocator still waits</h3><p>Fresh CUBRID schedule: no invalid frames; B waits for a direct victim. G submission and pointer enqueue succeed. Before consumption, A fixes P, creates G+1 and retains its fix. The consumer now runs.</p><p>Which old work finishes, which current state prevents an offer, and which observation distinguishes an unrun consumer from a rejected assignment?</p><details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>Consume under the BCB mutex, clear old FLUSHING and wake flush waiters. Preserve DIRTY and A’s fix; no assignment to B. Correlate enqueue, consumer entry, current flags/fixes/zone/quota and assignment outcome. <a href="0006b-follow-page-flush-handoff.html#post-flush-state-trace">See the four-step state trace</a>.</p></details></div>
+<div id="final-postgres"><h3>Final case B: bulk-read leaves its ring</h3><p>Fresh PostgreSQL schedule: ring candidate R is dirty and BM_PERMANENT, initially unpinned with credit 1. Claim and conditional content lock succeed; its page LSN still needs WAL flushing. Another backend retains a pin on separate hot H.</p><p>What changes in the slot and shared R? Does falling back permit overwriting H?</p><details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>BULKREAD can clear the ring slot to InvalidBuffer and release R’s lock/pin before retry. This does not remove R’s shared identity. Global clock still skips pinned H. <a href="#ring-wal-trace">See the strategy/WAL state trace</a>.</p></details></div><h3>Session 3: complete the page journey</h3><p>Request identity → find or materialize resident storage → obtain use protection and compatible byte access → log mutation and publish DIRTY → release use → capture G and its WAL target → ordered image submission → complete G while retaining any G+1 → protected current-state check → retire old mapping → bind the frame to the next identity. A queue offer and a successful write are intermediate events.</p><p>The final page-buffer seminar closes here. For a future diagnosis, identify the current state, its owner, the controlling predicate and the next observation before naming a cause.</p>
 </section>
 
 <section class="section" id="primary-reading">

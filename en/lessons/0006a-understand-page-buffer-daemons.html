@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lecture 6A — What problem does each of the four daemons solve?</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0006a-understand-page-buffer-daemons.html" hreflang="ko" lang="ko">KO</a></nav>
 <main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · Lecture 0006A</span><a href="../index.html">Curriculum</a></div>
@@ -115,6 +115,8 @@ fileio_write: successful OS write
         <div class="callout"><strong>Wake is a hint, not a durable event:</strong> the generic waiter accepts <code>wakeup()</code> only while it is sleeping. If the task is already running, the call is not stored for its next pause. Each task therefore rechecks shared pressure or queue state when it executes.</div>
 
 </details>
+
+<img class="diagram" src="../../assets/page-buffer-daemon-control-loops.svg" alt="Four independent loops: triggers, shared state and useful outputs">
 </section>
 
 <section class="section" id="background-session-exit"><h2>Session boundary: carry four responsibilities onward</h2><p>Page-flush prepares candidates; post-flush finishes delegated BCB state; maintenance adapts policy; flush-control refreshes post-write credits. None promises immediate reuse or fairness.</p><p>Continue with <a href="0006b-follow-page-flush-handoff.html#first-principles">the selected handoff explanation</a>. The lifecycle and detailed write protocol below remain full-curriculum reading for a later session, including WAL, LSA, DWB and copied-generation reasoning.</p></section>
@@ -145,6 +147,13 @@ fileio_write: successful OS write
         <p>The task runs once immediately after construction. A fixed period is a start-to-start target: the looper subtracts the previous execution time. A 100 ms period does not mean “finish work, then always sleep another 100 ms,” and it does not guarantee useful work on every pass.</p>
 
 </details>
+
+<div class="session-question" id="q05" data-audience-checkpoint data-reset-answers data-question-id="Q05">
+<h3>Q05 · A wake before sleeping</h3>
+<p><strong>Constructed starting state:</strong> Page-flush has interval 0. During recovery its task returns at the closed gate. Before its next wait the waiter is still RUNNING. The gate opens, another thread calls wakeup, then the daemon enters its wait. No later signal is recorded.</p>
+<p><strong>Prediction:</strong> Which further event is needed to explain another task entry?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>wakeup while RUNNING is not latched. With interval 0, gate opening supplies no timeout and no automatic wake. Confirm a later wake accepted while SLEEPING, or another source-supported exit from the wait. A finite timer would provide a later retry opportunity, not a completed flush.</p><p class="optional-question"><strong>Optional follow-up:</strong> How would a finite timer change the explanation?</p></details>
+</div>
 </section>
 
 <section class="section" id="lifecycle">
@@ -153,7 +162,7 @@ fileio_write: successful OS write
 <details class="technical-detail"><summary>Expand implementation details and sources</summary>
 
 
-        <img class="diagram" src="../../assets/page-buffer-daemon-lifecycle.svg" alt="Page-buffer daemon creation, recovery gate, useful loop, and joined destruction">
+
         <ol>
           <li>The page-buffer pool, LRUs, queues, and monitors are initialized first.</li>
           <li>Server boot creates the four daemon threads before log recovery finishes.</li>
@@ -165,6 +174,49 @@ fileio_write: successful OS write
         <p>Stand-alone mode creates none of these four threads. When background page-flush is unavailable, the relevant requester can perform victim flushing synchronously.</p>
 
 </details>
+
+<div class="session-question" id="q06" data-audience-checkpoint data-reset-answers data-question-id="Q06">
+<h3>Q06 · Stop is not yet join</h3>
+<p><strong>Constructed starting state:</strong> A shutdown proposal frees BCB and queue storage immediately after setting stop, then wakes and joins. It does not check whether a daemon is inside its task body.</p>
+<p><strong>Prediction:</strong> What fact must be proved to approve this resource lifetime?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>No daemon may still access the storage when it is freed. Setting stop only asks the loop to end; a running task can still touch shared state. Wake releases a sleeper, and join establishes that its thread has ended. Keep required shared storage alive through join and task/context retirement.</p><p class="optional-question"><strong>Optional follow-up:</strong> Which events differ for a working daemon and a sleeping daemon?</p></details>
+</div>
+
+<div class="state-trace" id="daemon-state-trace" data-state-trace><h3>Thread existence, gate, accepted wake, joined stop</h3><p class="trace-assumptions">Independent wake-only page-flush scenario, interval=0. No later wake is assumed until step 4. Other roles keep their own timers/queues.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Threads created during recovery</h4><p><strong>Actor / event:</strong> Boot creates daemon; task executes</p><dl class="trace-lanes">
+<div><dt>Boot gate</dt><dd>closed</dd></div>
+<div><dt>Page-flush waiter / task</dt><dd>RUNNING → task return</dd></div>
+<div><dt>Shared pool / queues</dt><dd>alive</dd></div>
+<div><dt>Useful output</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Closed gate returns before useful work</p><p class="trace-change"><strong>Changed / result:</strong> Thread exists; gate still closed; no submission</p></li>
+<li data-trace-step="1"><h4>2. Gate opens, wake arrives too early</h4><p><strong>Actor / event:</strong> Boot opens gate; another thread calls wakeup</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Boot gate</dt><dd>open</dd></div>
+<div class="trace-changed"><dt>Page-flush waiter / task</dt><dd>RUNNING; wake not latched</dd></div>
+<div><dt>Shared pool / queues</dt><dd>alive</dd></div>
+<div><dt>Useful output</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> wakeup only changes SLEEPING; this waiter is RUNNING</p><p class="trace-change"><strong>Changed / result:</strong> Gate closed→open; wake is not stored for the next wait</p></li>
+<li data-trace-step="2"><h4>3. Enter wake-only wait</h4><p><strong>Actor / event:</strong> Daemon enters pause</p><dl class="trace-lanes">
+<div><dt>Boot gate</dt><dd>open</dd></div>
+<div class="trace-changed"><dt>Page-flush waiter / task</dt><dd>SLEEPING; infinite wait</dd></div>
+<div><dt>Shared pool / queues</dt><dd>alive</dd></div>
+<div><dt>Useful output</dt><dd>none</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Interval=0 supplies no timeout</p><p class="trace-change"><strong>Changed / result:</strong> RUNNING→SLEEPING. Open gate alone gives no new task entry</p></li>
+<li data-trace-step="3"><h4>4. Later wake gives an opportunity</h4><p><strong>Actor / event:</strong> Allocator pressure signals sleeping waiter</p><dl class="trace-lanes">
+<div><dt>Boot gate</dt><dd>open</dd></div>
+<div class="trace-changed"><dt>Page-flush waiter / task</dt><dd>task entry; helper call</dd></div>
+<div class="trace-changed"><dt>Shared pool / queues</dt><dd>pressure recorded; alive</dd></div>
+<div class="trace-changed"><dt>Useful output</dt><dd>entry only; submission not assumed</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Wake accepted while SLEEPING; gate checked again</p><p class="trace-change"><strong>Changed / result:</strong> SLEEPING→AWAKENING→RUNNING; candidate helper enters. Submission still needs guards</p></li>
+<li data-trace-step="4"><h4>5. Stop, wake, join, then retire</h4><p><strong>Actor / event:</strong> Shutdown waits for thread termination</p><dl class="trace-lanes">
+<div><dt>Boot gate</dt><dd>open</dd></div>
+<div class="trace-changed"><dt>Page-flush waiter / task</dt><dd>stop → wake → join</dd></div>
+<div class="trace-changed"><dt>Shared pool / queues</dt><dd>alive through join; teardown later</dd></div>
+<div class="trace-changed"><dt>Useful output</dt><dd>thread ended</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Keep storage through running task completion and join</p><p class="trace-change"><strong>Changed / result:</strong> Stop requested→sleeper woken→joined. Required shared storage may be retired afterwards</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_waiter.cpp#L76-L101">waiter:76–101</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_daemon.cpp#L53-L105">daemon:53–105</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/boot_sr.c#L2405-L2441">boot:2405–2441</a></p></div>
+
+<img class="diagram" src="../../assets/page-buffer-daemon-lifecycle.svg" alt="Page-buffer daemon creation, recovery gate, useful loop, and joined destruction">
 </section>
 
 <section class="section" id="routes">

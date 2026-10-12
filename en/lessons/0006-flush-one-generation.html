@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lecture 6 — Flush generations and WAL ordering</title>
   <link rel="stylesheet" href="../../assets/teach-course.css">
-  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
+  <link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0006-flush-one-generation.html" hreflang="ko" lang="ko">KO</a></nav>
 <main class="course-shell" id="seminar-content">
   <div class="topline"><span>CUBRID page buffer · lecture 0006</span><a href="../index.html">Curriculum</a></div>
@@ -153,7 +153,48 @@
           <li><strong>Send G safely:</strong> release BCB protection, force WAL through the copied page LSA, then use DWB or direct write.</li>
           <li><strong>Close the job:</strong> reacquire protection, clear FLUSHING, and wake waiters. Do not erase a newer DIRTY.</li>
         </ol>
-        <p class="source-note"><strong>Verified mechanism:</strong> the ordinary path is pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>.</p>
+
+<div class="session-question" id="q02" data-audience-checkpoint data-reset-answers data-question-id="Q02">
+<h3>Q02 · The copied WAL target</h3>
+<p><strong>Constructed starting state:</strong> A logged permanent page has a stable copy G with page LSA 120. Its resident LSA later becomes 180. Durable WAL reaches 140; G has not been submitted.</p>
+<p><strong>Prediction:</strong> Which LSA governs WAL ordering for this copy?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>G carries 120, so WAL through 140 already covers its required boundary. Resident 180 belongs to later work. Using 180 would force extra WAL without changing the captured image. The candidate-selection precheck can examine the current resident LSA; the common helper subsequently carries the LSA of its own captured image.</p><p class="optional-question"><strong>Optional follow-up:</strong> How would using the resident LSA change the relationship between the image and forced log work?</p></details>
+</div>
+
+<div class="state-trace" id="flush-state-trace" data-state-trace><h3>One frame, a stable copy, two obligations</h3><p class="trace-assumptions">Constructed logged permanent page P. One field changes at LSA 160 and returns to 40 at LSA 180; G/G+1 are explanatory names. DWB is enabled. WAL numbers are simplified ordered positions, not real LSA structs.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Before: unpropagated work</h4><p><strong>Actor / event:</strong> Writer finished and unfixed</p><dl class="trace-lanes">
+<div><dt>Resident P · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div><dt>Stable copy G · bytes / LSA</dt><dd>none</dd></div>
+<div><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>1 / 0 / 120</dd></div>
+<div><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=none; home=older</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> No current fix; preservation debt remains</p><p class="trace-change"><strong>Changed / result:</strong> Starting checkpoint: no submitted image</p></li>
+<li data-trace-step="1"><h4>2. Claim and capture G</h4><p><strong>Actor / event:</strong> Flush caller, under protection</p><dl class="trace-lanes">
+<div><dt>Resident P · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div class="trace-changed"><dt>Stable copy G · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div class="trace-changed"><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>0 / 1 / NULL</dd></div>
+<div><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=none; home=older</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> One flush owner; capture stable bytes and their LSA</p><p class="trace-change"><strong>Changed / result:</strong> DIRTY 1→0; FLUSHING 0→1; copy=40/120; resident lower bound cleared</p></li>
+<li data-trace-step="2"><h4>3. Later writer makes G+1</h4><p><strong>Actor / event:</strong> Writer after copy protection is released</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Resident P · bytes / LSA</dt><dd>40 / 180</dd></div>
+<div><dt>Stable copy G · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div class="trace-changed"><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>1 / 1 / 160</dd></div>
+<div><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=none; home=older</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Writer obtains required fix/content protection, logs and dirties</p><p class="trace-change"><strong>Changed / result:</strong> Payload 40→41→40; current LSA 120→180; new DIRTY 0→1. G stays 40/120</p></li>
+<li data-trace-step="3"><h4>4. Submit only the captured image</h4><p><strong>Actor / event:</strong> Flush caller → DWB (submission)</p><dl class="trace-lanes">
+<div><dt>Resident P · bytes / LSA</dt><dd>40 / 180</dd></div>
+<div><dt>Stable copy G · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>1 / 1 / 160</dd></div>
+<div class="trace-changed"><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=G accepted; home=unobserved</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> WAL 140 covers copied LSA 120; later resident LSA 180 is separate</p><p class="trace-change"><strong>Changed / result:</strong> DWB accepts G=40/120; home write and fsync remain unobserved</p></li>
+<li data-trace-step="4"><h4>5. Finish G, keep newer DIRTY</h4><p><strong>Actor / event:</strong> Completion owner, BCB mutex held</p><dl class="trace-lanes">
+<div><dt>Resident P · bytes / LSA</dt><dd>40 / 180</dd></div>
+<div><dt>Stable copy G · bytes / LSA</dt><dd>40 / 120</dd></div>
+<div class="trace-changed"><dt>BCB · DIRTY / FLUSHING / oldest-unflush</dt><dd>1 / 0 / 160</dd></div>
+<div><dt>WAL / DWB / home volume</dt><dd>durable WAL=140; DWB=G accepted; home=unobserved</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Successful submission; clear only old FLUSHING and wake flush waiters</p><p class="trace-change"><strong>Changed / result:</strong> FLUSHING 1→0. DIRTY=1 and lower bound 160 survive; equal payload does not erase G+1</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962">page_buffer.c:10723–10962</a></p></div>
+<p class="source-note"><strong>Verified mechanism:</strong> the ordinary path is pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10962"><code>page_buffer.c:10723–10962</code></a>.</p>
       </section>
 
       <section class="section" id="copy-versus-dwb">
@@ -167,7 +208,14 @@
             <tr><td>Provides DWB torn/incomplete-page protection.</td><td>Does not provide that DWB repair source.</td></tr>
           </tbody>
         </table></div>
-        <p class="source-note"><strong>Verified mechanism:</strong> stable copy and route choice are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>; WAL gating and DWB/direct submission are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>.</p>
+
+<div class="session-question" id="q04" data-audience-checkpoint data-reset-answers data-question-id="Q04">
+<h3>Q04 · What did completion establish?</h3>
+<p><strong>Constructed starting state:</strong> A constructed log records DWB acceptance of G and clearing FLUSHING. No later mutation occurs. Home-volume write, fsync and restart results were not recorded.</p>
+<p><strong>Prediction:</strong> What is the strongest completion claim supported by this record?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>The captured image crossed the DWB submission boundary and its page-buffer completion bookkeeping ended. Home-volume propagation and crash durability need separate evidence of the downstream writes, synchronization and relevant recovery outcome.</p><p class="optional-question"><strong>Optional follow-up:</strong> What additional evidence would support home-volume durability?</p></details>
+</div>
+<p class="source-note"><strong>Verified mechanism:</strong> stable copy and route choice are at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10735-L10834"><code>page_buffer.c:10735–10834</code></a>; WAL gating and DWB/direct submission are at <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10836-L10899"><code>10836–10899</code></a>.</p>
       </section>
 
       <section class="section" id="redirty">
@@ -176,7 +224,14 @@
         <p>On success, completion clears only FLUSHING. If a writer created G+1, its DIRTY bit and new oldest-unflush value remain for the next flush.</p>
         <p>On ordinary DWB/direct-I/O failure, the path clears FLUSHING, restores the captured DIRTY debt and oldest-unflush lower bound, wakes waiters, and returns failure. The work remains visible and retryable.</p>
         <div class="callout warn"><strong>Review question:</strong> after every success or failure exit, which generation owns DIRTY, which operation owns FLUSHING, and what lower bound must checkpoint still see?</div>
-        <p class="source-note"><strong>Verified mechanism:</strong> ordinary failure reconstruction is at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>. Earlier TDE/DWB preparation returns remain routed to <code>VS-12</code> in the uncertainty registry rather than being declared a proven defect here.</p>
+
+<div class="session-question" id="q03" data-audience-checkpoint data-reset-answers data-question-id="Q03">
+<h3>Q03 · Equal values, different logged work</h3>
+<p><strong>Constructed starting state:</strong> G contains value 40 at LSA 120. A writer changes the resident field to 41 and back to 40, logging both changes. Current LSA is 180 and DIRTY is set. G submission now succeeds.</p>
+<p><strong>Prediction:</strong> How much does equal payload value tell us about clearing current DIRTY?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>It does not authorize clearing DIRTY. G covers history through 120; current logged work reaches 180. Completion clears old FLUSHING while the newer DIRTY and oldest-unflush lower bound survive. Comparing one payload field cannot establish generation completion.</p><p class="optional-question"><strong>Optional follow-up:</strong> What history must be recorded alongside the field value?</p></details>
+</div>
+<p class="source-note"><strong>Verified mechanism:</strong> ordinary failure reconstruction is at pinned <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10923"><code>page_buffer.c:10908–10923</code></a>. Earlier TDE/DWB preparation returns remain routed to <code>VS-12</code> in the uncertainty registry rather than being declared a proven defect here.</p>
       </section>
 
       <section class="section" id="failure" data-audience-checkpoint>

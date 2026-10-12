@@ -1,0 +1,136 @@
+{
+  "checkedAt": "2026-10-12T09:33:13.052Z",
+  "baseline": "fa812bb8b795ea8cdd5b88845a8db296c2ff41f7",
+  "files": {
+    "assets/maintenance-and-pacing-control.svg": "9bfa465c0a63006bfd528a2b07f871ee069799ab4fb6d0b336f6ac8f60ec7778",
+    "assets/page-buffer-daemon-control-loops.svg": "5a9237ce6484dd78b8d37706c579c0e79aa5df53e614351aa659ef716e284db4",
+    "assets/page-buffer-daemon-lifecycle.svg": "ed2d8a63665c03317abab9758a022e96b323b0180e02ee7b910278d431428623",
+    "assets/page-flush-post-flush-handoff.svg": "1c5389b52a371bbb7a4b1142a076ebd1bcf0fb0e362f9c38b5e0e04b55f8d2a1",
+    "assets/session-3-presentation.css": "3e8c4a516346a151566ad96823583ccc93d55893dfd148496d6891d9f00bd172",
+    "en/lessons/0001-present-the-page-journey.html": "977ca45286f234732eb1831172e9fd0bf280c29d860b479d8e0621b38810df8c",
+    "en/lessons/0006-flush-one-generation.html": "d1645d2fe852d07c2171d978dec979940f875fcdc1fbff9bb750da4eff42d81f",
+    "en/lessons/0006a-understand-page-buffer-daemons.html": "b8ca60b98fe28df3c38d0921b01f6ce218e8ad62ddb5ff5896fe386c2e53023a",
+    "en/lessons/0006b-follow-page-flush-handoff.html": "ea885a4931635676cec53da14c85c7bac6078a0b4475a62d204cf5d6360228a4",
+    "en/lessons/0006c-follow-maintenance-and-pacing.html": "bc54094ce81bb79a1e41ae1cd6f24afa9f2cabfe4e25847d937d364324638c29",
+    "en/lessons/0018a-compare-replacement-policies.html": "4d728e7e6d7efb6ada22a483ebcba8a0ebda0822712da62e2e62ab64b893b5bb",
+    "ko/lessons/0001-present-the-page-journey.html": "1c9d591a373348e8059e64954b540e603060bb2b97244d24986093fd0b5b9fd2",
+    "ko/lessons/0006-flush-one-generation.html": "9f0ce3ed3fd639b3aa5ada2fff23e9e43a19300dfc8989b47646206e11d3c55d",
+    "ko/lessons/0006a-understand-page-buffer-daemons.html": "9f480a0545b9a75fe9ce2ce32ff6e651843383b07338c591f3f58b5d146d8883",
+    "ko/lessons/0006b-follow-page-flush-handoff.html": "e16fa53594d877bfb9ae228244dda631524ebbd83ef9195d2dce85badf24735a",
+    "ko/lessons/0006c-follow-maintenance-and-pacing.html": "01980f0fc6e86ede0fdaeaa7844ae4f9ca29660afefd3e0ad47a1d5a9d755a2f",
+    "ko/lessons/0018a-compare-replacement-policies.html": "5e051d3272f45e4f7d3ab2c1ff7a1e93f509763d8ca601a2856bd96ca521d91c",
+    "my-presentation-script-session-3.html": "6955d8c5103f4723cec71e10b9ce913aab6523bd47b6610d1061e2694aafffa6",
+    "scripts/seminar-regressions.test.mjs": "a702a72e1b828d62c1bf0847009027e2b8470a2f42eb317bbf35e6eb5c833116",
+    "docs/final-session-report-application.md": "924a454f6b6e5b822bf63c486dd5e31e342a62b9e279580539917d44379aa445",
+    "docs/final-session-preparation.md": "4d1ebbeafad3c052448d6cf1dbd38b02b02e1239b5af8c819c449ba68e2776be",
+    "reference/page-buffer-daemon-lifecycle-audit.md": "141090da4c1aa1f4b6bb07fc9b811493f423e0b0baafc1c9e760b1be6cb3a94e",
+    "presenter-runbook.md": "c61edb71aae5aa7f53a95490a9634b9b2fd74bd8315706778e729ec256d461be",
+    "assets/session-3-traces.css": "efe6f775fbf05955b4e4c153af9f9cd7dce9aba8eeb3c043120552165444234c",
+    "assets/session-3-traces.js": "950c44db8fd0e2e83cfd65e7484e33737217860cd2c050c17ccc5de92baa7aef",
+    "scripts/session-3-traces-browser.test.mjs": "3410f4b0be1ec9a253c9106078f2e6633dfa2db0097392e10235de64b29401f9"
+  },
+  "localReferences": 759,
+  "pinnedSourceTargets": 170,
+  "scriptViews": [
+    {
+      "width": 1440,
+      "javaScript": false,
+      "sections": 12,
+      "questions": 24,
+      "initiallyClosedAnswers": 29,
+      "keyboardDisclosures": 29
+    },
+    {
+      "width": 390,
+      "javaScript": false,
+      "sections": 12,
+      "questions": 24,
+      "initiallyClosedAnswers": 29,
+      "keyboardDisclosures": 29
+    },
+    {
+      "width": 320,
+      "javaScript": false,
+      "sections": 12,
+      "questions": 24,
+      "initiallyClosedAnswers": 29,
+      "keyboardDisclosures": 29
+    }
+  ],
+  "cueTargets": 96,
+  "presentationTargets": 36,
+  "screenshots": {
+    "docs/session-3-depth/script-desktop-before.png": "210ba389530f60be00c6ad82db77c78f805cc2dbfb2ce42f3580472b2b8d26c0",
+    "docs/session-3-depth/script-desktop-after.png": "1a148bc031743b073d842f44ab2aaa9d82b95363eaf5322c1296069651ccd5eb",
+    "docs/session-3-depth/script-mobile-before.png": "0df385ce55507dc2dcc35c3c496e00f7402d4ad8ec72e7b1fe2505e9a543c84f",
+    "docs/session-3-depth/script-mobile-after.png": "c652f2aaea17f4116d4c15f17a7f170d643ea05915738ebe6a6e1e8bbc6dfc50",
+    "docs/session-3-depth/projection-flush-before.png": "ef200bfb81e5d07ddaf8b12fbcdd254dfbbc070ca65b094b8fcf5ed797f7ec12",
+    "docs/session-3-depth/projection-flush-start.png": "79f2474c320d18e79df70a52c4f38afafbd3ea95242ee7c3787795f3d8df982f",
+    "docs/session-3-depth/projection-flush-redirty.png": "1b6ae374933f3173be7cc196cfb88123e9dfb988d0f7593c7edf92386daf4f54",
+    "docs/session-3-depth/projection-post-flush.png": "dbd133e4ff7b1f53d1d654da53ec5b20c556934bfaed86b849789ccdc76c50d9",
+    "docs/session-3-depth/projection-clock-cas.png": "3a60667fe0746e7d46d59248b7527219e6d5ca27cf3f8a5571ad25d49f3f210a",
+    "docs/session-3-depth/mobile-trace.png": "49fd7e25f305b64876aeba6724c3f588e6921981dab10cd403da6a7331c714d9"
+  },
+  "runtimeErrors": [],
+  "bilingual": {
+    "missingHumanReceipts": 58,
+    "staleFingerprints": 82,
+    "newStaleKeys": [
+      "FAIL: lessons/0006c-follow-maintenance-and-pacing.html: stale review fingerprint for en",
+      "FAIL: lessons/0006c-follow-maintenance-and-pacing.html: stale review fingerprint for ko",
+      "FAIL: lessons/0018a-compare-replacement-policies.html: stale review fingerprint for en",
+      "FAIL: lessons/0018a-compare-replacement-policies.html: stale review fingerprint for ko"
+    ],
+    "technicalFailures": [],
+    "http": {
+      "status": "PASS",
+      "resources": 298
+    },
+    "liveDom": {
+      "status": "PASS",
+      "pages": 117
+    }
+  },
+  "scriptTables": [
+    {
+      "width": 1440,
+      "focusableTables": 5,
+      "fullyVisible": true
+    },
+    {
+      "width": 390,
+      "focusableTables": 5,
+      "fullyVisible": true
+    },
+    {
+      "width": 320,
+      "focusableTables": 5,
+      "fullyVisible": true
+    }
+  ],
+  "reducedMotion": "PASS",
+  "answerNavigationReset": "PASS",
+  "maintainerGuide": {
+    "status": "PASS",
+    "sourcePages": 43,
+    "displayedSvg": 71,
+    "orphanSvg": 0,
+    "httpResources": 114,
+    "liveDomPages": 43
+  },
+  "focusedTests": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  },
+  "validatorRegressionTests": {
+    "passed": 30,
+    "failed": 0
+  },
+  "inputReports": {
+    "feedback.md": "49f5088cf502fa9d61459f40dce931331feaadda4a8aa386710c766a8af0728f",
+    "socratic-questions.md": "2a49c1d3d48c8d146bbe56bc367c4ef4a703e729ae0fdc5b49327f847515be71"
+  },
+  "humanAcceptance": "pending",
+  "engineRuntimeExperiment": "not performed"
+}

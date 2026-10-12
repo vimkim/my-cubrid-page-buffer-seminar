@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lecture 6C — Replacement maintenance and I/O pacing</title><link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script></head>
-<body data-seminar><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header><nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0006c-follow-maintenance-and-pacing.html" hreflang="ko" lang="ko">KO</a></nav>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lecture 6C — Replacement maintenance and I/O pacing</title><link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><script defer src="../../assets/seminar.js"></script><link rel="stylesheet" href="../../assets/session-3-traces.css"><script defer src="../../assets/session-3-traces.js"></script></head>
+<body data-seminar data-session-3-traces><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Curriculum navigation"><a data-curriculum-link href="../reference/course-learning-path.html">Curriculum</a><a data-library-link href="../index.html#library">Topic library</a></nav></header><nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span><span aria-hidden="true">|</span><a href="../../ko/lessons/0006c-follow-maintenance-and-pacing.html" hreflang="ko" lang="ko">KO</a></nav>
 <main class="course-shell" id="seminar-content"><div class="topline"><span>CUBRID page buffer · Lecture 0006C</span><a href="../index.html">Curriculum</a></div>
 <header class="hero"><div class="eyebrow">LECTURE 6C / Mutation and durability</div><h1>Replacement maintenance and I/O pacing</h1><p>Quota maintenance and post-write token control shape future progress through separate state and timing policies.</p><div class="pills"><span class="pill">100 ms attempt</span><span class="pill">Quota epoch</span><span class="pill">50 ms target</span><span class="pill">Token replace</span><span class="pill">Soft pacing</span></div></header>
 <div class="lesson-grid"><article class="lesson-main">
@@ -30,6 +30,41 @@
 <p>For <code>B=32,768</code>, the high-activity threshold is 8,192 counted final unfixes. Fewer than 81 unfixes on an accepted pass is the low-activity case. With low activity, the executable 500 ms guard normally admits roughly the first 100 ms attempt at or after 500 ms, subject to scheduling.</p>
 <p>Cost is O(T) for a normal timing/activity check and O(T + L + D) for an accepted adjustment, plus LRU mutex waits. It performs no page copy, WAL force, or file I/O.</p>
 </details>
+
+<div class="session-question" id="q12" data-audience-checkpoint data-reset-answers data-question-id="Q12">
+<h3>Q12 · Count accepted quota epochs</h3>
+<p><strong>Constructed starting state:</strong> adjust_age starts at 8. Of six distinct calls, four return early and two execute the full quota update. A particular private-list quota has the same numeric value after both updates.</p>
+<p><strong>Prediction:</strong> How do you describe the final quota epoch?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>With no other update or wrap in this constructed schedule, adjust_age is 10. Epoch counts accepted update passes, so unchanged numeric quota does not imply no update. Observe guard result, sample consumption and adjust_age, as well as quota values.</p><p class="optional-question"><strong>Optional follow-up:</strong> What information is absent when only quota numbers are recorded?</p></details>
+</div>
+
+<div class="state-trace" id="quota-state-trace" data-state-trace><h3>Six attempts, two accepted epochs</h3><p class="trace-assumptions">Fresh Q12 schedule: adjust_age=8, no concurrent adjustment or wrap. Four calls return early; two complete updates whose selected quota result stays 60.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. Starting epoch</h4><p><strong>Actor / event:</strong> Constructed checkpoint</p><dl class="trace-lanes">
+<div><dt>Calls / accepted passes</dt><dd>0 / 0</dd></div>
+<div><dt>adjust_age</dt><dd>8</dd></div>
+<div><dt>Selected private quota</dt><dd>60</dd></div>
+<div><dt>Samples / useful output</dt><dd>pending activity/hit samples</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> No call yet</p><p class="trace-change"><strong>Changed / result:</strong> Start at age 8 and quota 60</p></li>
+<li data-trace-step="1"><h4>2. Four early returns</h4><p><strong>Actor / event:</strong> Quota caller attempts work</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Calls / accepted passes</dt><dd>4 / 0</dd></div>
+<div><dt>adjust_age</dt><dd>8</dd></div>
+<div><dt>Selected private quota</dt><dd>60</dd></div>
+<div class="trace-changed"><dt>Samples / useful output</dt><dd>no accepted-pass sample consumption</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Disabled, already adjusting, &lt;1 ms, or low activity and &lt;500 ms</p><p class="trace-change"><strong>Changed / result:</strong> Attempts 0→4; accepted passes stay 0; age and quota unchanged</p></li>
+<li data-trace-step="2"><h4>3. First accepted pass</h4><p><strong>Actor / event:</strong> pgbuf_adjust_quotas</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Calls / accepted passes</dt><dd>5 / 1</dd></div>
+<div class="trace-changed"><dt>adjust_age</dt><dd>9</dd></div>
+<div><dt>Selected private quota</dt><dd>60</dd></div>
+<div class="trace-changed"><dt>Samples / useful output</dt><dd>samples consumed; thresholds recomputed</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Admission guards pass; compute policy from samples</p><p class="trace-change"><strong>Changed / result:</strong> adjust_age 8→9; samples consumed; computed quota still 60</p></li>
+<li data-trace-step="3"><h4>4. Second accepted pass</h4><p><strong>Actor / event:</strong> Another admitted quota call</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>Calls / accepted passes</dt><dd>6 / 2</dd></div>
+<div class="trace-changed"><dt>adjust_age</dt><dd>10</dd></div>
+<div><dt>Selected private quota</dt><dd>60</dd></div>
+<div class="trace-changed"><dt>Samples / useful output</dt><dd>second sample set consumed; policy recomputed</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Separate admitted pass; same numeric result is allowed</p><p class="trace-change"><strong>Changed / result:</strong> adjust_age 9→10 while quota=60. Epoch is not elapsed time or numeric difference</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14294-L14340">quota admission:14294–14340</a></p></div>
 </section>
 
 <section class="section" id="maintenance-boundary">
@@ -39,6 +74,15 @@
 <div class="callout warn"><strong>VS-20:</strong> both outer loops in the intended direct-victim backup initialize <code>index</code> to <code>start_index</code> and immediately require <code>index != start_index</code>. Their bodies do not execute as written. Other victim producers still exist, so this alone is not runtime proof of starvation.</div>
 <div class="callout warn"><strong>VS-21:</strong> a comment mentions a five-minute quota condition, while the visible executable admission code uses 1 ms and 500 ms comparisons. The lecture uses the executable 500 ms behavior.</div>
 </details>
+
+<div class="session-question" id="q13" data-audience-checkpoint data-reset-answers data-question-id="Q13">
+<h3>Q13 · Source finding and operational cause</h3>
+<p><strong>Constructed starting state:</strong> Pinned source shows that the backup loop bodies are not entered. An operator reports allocator latency during low activity. Other direct-victim suppliers and assignment events for that interval are unrecorded.</p>
+<p><strong>Prediction:</strong> How would you design an observation that tests causality?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>Record waiting intervals, supplier executions, current eligibility and assignment/revocation outcomes on the same timeline. A controlled comparison of the backup path can then test its contribution while holding workload and configuration fixed. VS-20 establishes skipped bodies; latency attribution still needs evidence. A successful alternate supplier is a counterexample to universal lack of progress.</p><p class="optional-question"><strong>Optional follow-up:</strong> What evidence could demonstrate allocator progress despite skipped backup bodies?</p></details>
+</div>
+
+<p class="callout warn"><strong>VS-20:</strong> both backup loops start at <code>start_index</code> but require <code>index != start_index</code> before entering. Their bodies are skipped at this pin. Quota adjustment still runs independently; allocator impact remains unmeasured. <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">Current uncertainty status</a>.</p>
 </section>
 
 <section class="section" id="control" data-token-unit="written-page" data-token-checkpoint="after-successful-os-write" data-token-update="replace" data-token-soft-limit="true">
@@ -50,6 +94,47 @@
 <ol><li>Lock the token bucket.</li><li>Read and clear consumed-token plus page-write statistics.</li><li>Compute an adaptive or configured interval budget.</li><li>Replace <code>tokens</code>; do not accumulate the new budget onto the old balance.</li><li>Reset interval statistics and broadcast the condition variable.</li></ol>
 <p>At 16 KiB/page, the adaptive 40 MiB/s floor is 2,560 pages/s, about 128 tokens per 50 ms. The non-adaptive internal 10,000-page/s default would be about 500 tokens per 50 ms. Actual values depend on elapsed time, integer truncation, and feedback.</p>
 </details>
+
+<div class="session-question" id="q14" data-audience-checkpoint data-reset-answers data-question-id="Q14">
+<h3>Q14 · Replace the token balance</h3>
+<p><strong>Constructed starting state:</strong> An interval sets tokens to 7. Writers consume some, leaving 3. The next interval computes 5; no consumption overlaps the update.</p>
+<p><strong>Prediction:</strong> What is the balance immediately after the update?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>It is 5: the mutex-protected update replaces the balance, rather than adding 5 to 3. Compensation occurs after successful participating OS writes. Bypasses and bounded waits prevent treating these updates as a strict write-volume ceiling.</p><p class="optional-question"><strong>Optional follow-up:</strong> Which other paths must be explained before claiming a strict write bound?</p></details>
+</div>
+
+<div class="state-trace" id="token-state-trace" data-state-trace><h3>Post-write consumption and interval replacement</h3><p class="trace-assumptions">Independent compensated single-page writes; shared bucket begins at 7. Four successful OS writes consume four tokens. Next computed budget is 5; no concurrent consumption during update.</p>
+<div class="trace-controls" hidden><button type="button" data-trace-previous>Previous</button><button type="button" data-trace-next>Next</button><button type="button" data-trace-reset>Reset scenario</button><button type="button" data-trace-all>Show all steps</button><output aria-live="polite" aria-atomic="true"></output></div><ol class="trace-steps">
+<li data-trace-step="0"><h4>1. An interval starts with seven</h4><p><strong>Actor / event:</strong> Flush-control task</p><dl class="trace-lanes">
+<div><dt>OS-write boundary</dt><dd>no write assumed</dd></div>
+<div><dt>Shared tokens</dt><dd>7</dd></div>
+<div><dt>Caller progress</dt><dd>ready</dd></div>
+<div><dt>Update / guard</dt><dd>budget set under bucket mutex</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Open boot gate and initialized bucket</p><p class="trace-change"><strong>Changed / result:</strong> Starting balance=7; no writes inferred from budget</p></li>
+<li data-trace-step="1"><h4>2. Four writes succeed first</h4><p><strong>Actor / event:</strong> Participating ordinary writer</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>OS-write boundary</dt><dd>4 successful writes</dd></div>
+<div><dt>Shared tokens</dt><dd>7</dd></div>
+<div class="trace-changed"><dt>Caller progress</dt><dd>reaches compensation</dd></div>
+<div class="trace-changed"><dt>Update / guard</dt><dd>successful OS write → token request</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Default compensated path; OS write must succeed</p><p class="trace-change"><strong>Changed / result:</strong> Write count 0→4 before token compensation</p></li>
+<li data-trace-step="2"><h4>3. Spend the shared balance</h4><p><strong>Actor / event:</strong> Writer under token mutex</p><dl class="trace-lanes">
+<div><dt>OS-write boundary</dt><dd>4 successful writes</dd></div>
+<div class="trace-changed"><dt>Shared tokens</dt><dd>3</dd></div>
+<div class="trace-changed"><dt>Caller progress</dt><dd>continues</dd></div>
+<div class="trace-changed"><dt>Update / guard</dt><dd>4 tokens consumed</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Available tokens cover requests</p><p class="trace-change"><strong>Changed / result:</strong> Tokens 7→3; the writes have already happened</p></li>
+<li data-trace-step="3"><h4>4. Replace, then broadcast</h4><p><strong>Actor / event:</strong> Later flush-control execution</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>OS-write boundary</dt><dd>same 4 writes</dd></div>
+<div class="trace-changed"><dt>Shared tokens</dt><dd>5</dd></div>
+<div class="trace-changed"><dt>Caller progress</dt><dd>waiting writers may retry</dd></div>
+<div class="trace-changed"><dt>Update / guard</dt><dd>replace under mutex → broadcast</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> New computed interval budget=5; no overlapping consumption</p><p class="trace-change"><strong>Changed / result:</strong> Tokens 3→5, not 8; broadcast is a retry opportunity</p></li>
+<li data-trace-step="4"><h4>5. Independent shortage branches</h4><p><strong>Actor / event:</strong> A and log-critical-section owner B, after writes</p><dl class="trace-lanes">
+<div class="trace-changed"><dt>OS-write boundary</dt><dd>A and B writes already succeeded</dd></div>
+<div class="trace-changed"><dt>Shared tokens</dt><dd>0 (fresh shortage case)</dd></div>
+<div class="trace-changed"><dt>Caller progress</dt><dd>A: may wait; B: proceeds</dd></div>
+<div class="trace-changed"><dt>Update / guard</dt><dd>soft pacing; no strict write ceiling</dd></div>
+</dl><p class="trace-guard"><strong>Controlling guard:</strong> Reset tokens=0. A may wait; LOG_CS_OWN B must not wait here</p><p class="trace-change"><strong>Changed / result:</strong> A waits/retries (at most ten); B accounts demand and returns. Bypass paths remain</p></li>
+</ol><p class="trace-caption">Source basis: constructed schedule, not runtime evidence. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L4122-L4204">post-write:4122–4204</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L751-L829">token wait:751–829</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L850-L891">replacement:850–891</a></p></div>
 </section>
 
 <section class="section" id="soft">
@@ -59,6 +144,13 @@
 <p><code>fileio_write()</code> and <code>fileio_write_pages()</code> call <code>fileio_compensate_flush()</code> after a successful OS write only in the default compensated mode. <code>FILEIO_WRITE_NO_COMPENSATE_WRITE</code> skips the bucket; DWB-related write paths can choose this mode. A normal participating caller may wait for budget but proceeds after at most ten broadcasts/retries. A caller holding the log critical section accounts demand without waiting for missing tokens.</p>
 <p>This is soft pacing rather than correctness authorization or a strict throughput ceiling. CPU accounting is O(1); condition broadcast and the scheduling of awakened waiters scale with their count.</p>
 </details>
+
+<div class="session-question" id="q15" data-audience-checkpoint data-reset-answers data-question-id="Q15">
+<h3>Q15 · Different callers after a write</h3>
+<p><strong>Constructed starting state:</strong> Ordinary writer A and writer B holding the log critical section each succeed at OS writing, then reach compensation with insufficient tokens. B keeps the critical section and no new budget has arrived.</p>
+<p><strong>Prediction:</strong> Which branch determines how their progress differs?</p>
+<details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>LOG_CS_OWN separates the paths. A can wait on the token condition and retry, with a ten-retry escape. B accounts demand and returns without waiting for missing tokens. Both writes already happened. This is soft pacing of later progress, not write authorization or a durability contract.</p><p class="optional-question"><strong>Optional follow-up:</strong> How would you express the pacing contract including this difference?</p></details>
+</div>
 </section>
 
 <section class="section" id="outside">
