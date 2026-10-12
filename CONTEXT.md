@@ -68,6 +68,14 @@ _Avoid_: Level, stage gate, learner status
 An audience-facing exercise that connects several Seminar lectures through one page journey or maintainer scenario and provides an evidence-bounded model explanation without automated scoring.
 _Avoid_: Synthesis studio, retrieval checkpoint, automated assessment
 
+**Session 3 workload**:
+The recurring final-session teaching situation in which repeated page access, a large scan, and dirty-page pressure fill a finite buffer pool. It connects the CUBRID and PostgreSQL explanations while each constructed schedule has an independent starting state.
+_Avoid_: Shared engine simulation, continuous runtime trace
+
+**Seminar experiment proposal**:
+An audience-facing plan for testing one seminar claim, stating its hypothesis, conditions, changed variable, observations, and falsification criterion. It is a proposal rather than evidence that the experiment was executed.
+_Avoid_: Runtime receipt, measured result
+
 **Audience checkpoint**:
 An optional pause in the seminar material that asks participants to reason about a transition or scenario before revealing an explanation. It supports discussion and does not score mastery or control progression.
 _Avoid_: Teach-back, mastery check, retrieval gate
