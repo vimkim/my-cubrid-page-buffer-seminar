@@ -71,6 +71,8 @@ This stable heading now routes to the [dedicated final-defense chapter](../ko/se
 
 **Compare costs with conditions.** CUBRID's many replacement domains and PostgreSQL's global clock with workload-local rings make different choices about ordering, metadata work, and where writeback latency is paid. The [canonical comparison](../reference/cross-database-replacement-policy-comparison.md#postgresql-decay-a-resident-counter-under-a-clock-hand) owns the deeper explanation. A source trace supports a mechanism comparison; a performance winner requires a controlled workload and measurement.
 
+The common multi-client question now has a dedicated [FAQ screen](../ko/seminar-3/08-postgresql-buffers.html#multiclient-faq) and [English counterpart](../en/seminar-3/08-postgresql-buffers.html#multiclient-faq). Continue through the backend pin budget, concurrent hand, another backend's effect on ring eligibility, and the domain/promotion comparison in chapters 8–11. The [research note](research/postgresql-multiclient-buffers.md) records primary-source evidence, a narrow PostgreSQL 18.0 cross-check, the AIO lifetime-pin qualification, and the limits of a performance claim. Its experiment proposal has not been executed.
+
 ## Bounded source traces
 
 Read one main branch per block. The ranges below were inspected at the pinned commits while preparing this session; the traces establish source behavior, not an observed execution.
