@@ -1,0 +1,163 @@
+FAIL: reference/defense-generations.html: missing Korean review receipt
+FAIL: reference/defense-generations.html: stale review fingerprint for en; current sha256:d65197db21d9fcf4090c35f526de2e3e2a2cf8ca779849b9b2a682c87384cd89
+FAIL: reference/defense-generations.html: stale review fingerprint for ko; current sha256:74ea68497d69d65123bd23fc3250e1e248f0a6d33502d8e898bcc8a5f066b9de
+FAIL: reference/defense-daemons.html: missing Korean review receipt
+FAIL: reference/defense-daemons.html: stale review fingerprint for en; current sha256:c1f3875862b4dc9a1f6f41318a4ce63de9af2754940d818671a87510b8113741
+FAIL: reference/defense-daemons.html: stale review fingerprint for ko; current sha256:6d81490b1b30c4808180833f5ab516d34a7a43c34202e95e839e6411e1c3c60a
+FAIL: reference/defense-handoff.html: missing Korean review receipt
+FAIL: reference/defense-handoff.html: stale review fingerprint for en; current sha256:8c120d3b33ce08000b88ba21e365e5650f5e41d221561372f942ab39bb094b69
+FAIL: reference/defense-handoff.html: stale review fingerprint for ko; current sha256:0a81d81e00cf961a0fc03594c6c68c4b2552028f55f8d6cf4c0d08629ae6b16f
+FAIL: reference/defense-pacing.html: missing Korean review receipt
+FAIL: reference/defense-pacing.html: stale review fingerprint for en; current sha256:11be2ef4a7f1adb0a22f7fd3419d6587b1f508c65ced3dbd8af0c345bde8ab39
+FAIL: reference/defense-pacing.html: stale review fingerprint for ko; current sha256:cf028d5d97ab11c493ae673d0bd5498c2f1d91148c4afc429a2b72820f6efb18
+FAIL: reference/defense-clock.html: missing Korean review receipt
+FAIL: reference/defense-clock.html: stale review fingerprint for en; current sha256:befcc201f564540ada4b4b085e6c586e6b8d8c3335f4bc7e7e140ca8685da2e5
+FAIL: reference/defense-clock.html: stale review fingerprint for ko; current sha256:77f1041571cf5efb80c88bbcec436e4fc68ff844e51f85118982e1be833560c7
+FAIL: reference/defense-rings.html: missing Korean review receipt
+FAIL: reference/defense-rings.html: stale review fingerprint for en; current sha256:99801490346f8ab99fcffdbc2dc75ce4a999f98ee2fa043ef2237084e3db97ce
+FAIL: reference/defense-rings.html: stale review fingerprint for ko; current sha256:0a06f9b778591f6f5d31480fee37c7d87de962cc5c677d2eeda2fff49a15338c
+FAIL: reference/defense-synthesis.html: missing Korean review receipt
+FAIL: reference/defense-synthesis.html: stale review fingerprint for en; current sha256:e1e06c8cf8fd3b73715344e2685c9de18f2714693ce0da237388892d32b44e60
+FAIL: reference/defense-synthesis.html: stale review fingerprint for ko; current sha256:b15ec8cb47dbbcf3992ecb2ed64f642d0635ec31610f9206c38c7de1a3581242
+FAIL: reference/replacement-lab.html: missing Korean review receipt
+FAIL: reference/replacement-lab.html: stale review fingerprint for en; current sha256:4ba3ee7b0c177fb18ada59e1db453d343c7c4e0128781d035b6d4475224560a8
+FAIL: reference/replacement-lab.html: stale review fingerprint for ko; current sha256:7ad58a6a15d61c0e398584e319cb7b80a4975105ab2b2d4274f60374c738a8ce
+FAIL: reference/first-principles-route.html: missing Korean review receipt
+FAIL: lessons/0000a-database-bridge.html: missing Korean review receipt
+FAIL: lessons/0000a-database-bridge.html: stale review fingerprint for en; current sha256:be7a50fc19bfef5885e9afcb239ddd42e8b38896fb6dc1a75f7534c3d986bce4
+FAIL: lessons/0000a-database-bridge.html: stale review fingerprint for ko; current sha256:b7695194cf0723a6d19fb25067280fe90474510563e600cfb31313f3b36255d8
+FAIL: lessons/0000-replacement-foundations.html: missing Korean review receipt
+FAIL: reference/lru-worked-example.html: missing Korean review receipt
+FAIL: reference/lru-reuse-and-policy.html: missing Korean review receipt
+FAIL: index.html: missing Korean review receipt
+FAIL: index.html: stale review fingerprint for en; current sha256:8edfa7ec89cd6f98fbb6bbb06536ec10ee51501675ee0550a6ac36e25117b31b
+FAIL: index.html: stale review fingerprint for ko; current sha256:5248aef6e2d4433e7e387d908c731a8e106ec65476ec53e60e3c7f51a02222e3
+FAIL: lessons/0001-present-the-page-journey.html: missing Korean review receipt
+FAIL: lessons/0001-present-the-page-journey.html: stale review fingerprint for en; current sha256:39a45f53cf2117914b24ce27cd8449265ca21f21fac83fbf772c81c6f8806ce2
+FAIL: lessons/0001-present-the-page-journey.html: stale review fingerprint for ko; current sha256:854683c084eec09bdf3124637b7a27e6ea419cf8e35d534477054200ee688b81
+FAIL: lessons/0002-separate-objects-from-state.html: missing Korean review receipt
+FAIL: lessons/0002-separate-objects-from-state.html: stale review fingerprint for en; current sha256:ec92563ba8eb3bc48aa33cd05bb675a9138cb5b2ec176176513a5b27417939c7
+FAIL: lessons/0002-separate-objects-from-state.html: stale review fingerprint for ko; current sha256:d9cff30c29927ac7cd318958918a85bf1c2ca2aba157cb68ae0b82e6346f8af3
+FAIL: reference/new-page-vs-old-page.html: missing Korean review receipt
+FAIL: reference/new-page-vs-old-page.html: stale review fingerprint for en; current sha256:a0d32d0b63695aecd95ce59ca06c72df2ea6f26303a63e05a279f20618855111
+FAIL: reference/new-page-vs-old-page.html: stale review fingerprint for ko; current sha256:63006f10042386e4c665d56346604673e8b095cd28deeccae1c48201b4d129cb
+FAIL: lessons/0003-trace-fix-convergence.html: missing Korean review receipt
+FAIL: lessons/0003-trace-fix-convergence.html: stale review fingerprint for en; current sha256:7c949293ef2e6a7c110eb902ca12ca9aff01ec51466b89a848e0a28e00a2d609
+FAIL: lessons/0003-trace-fix-convergence.html: stale review fingerprint for ko; current sha256:344e16ade2dfb03ddab1f3878143bfe709be79993308e108acb9bab8db7c1eba
+FAIL: lessons/0004-repay-fix-debt.html: missing Korean review receipt
+FAIL: lessons/0004a-understand-holder-anchor.html: missing Korean review receipt
+FAIL: lessons/0004a-understand-holder-anchor.html: stale review fingerprint for en; current sha256:80dce4dda7b43d4271744bc11305e26a55ac5b094d2f98724c8870847ad3b5e6
+FAIL: lessons/0004a-understand-holder-anchor.html: stale review fingerprint for ko; current sha256:78a32f15367552dedd16a45934cc6bc9f683f3a1e5e8cd335a554e97efe0320a
+FAIL: lessons/0005-audit-a-logged-mutation.html: missing Korean review receipt
+FAIL: lessons/0005-audit-a-logged-mutation.html: stale review fingerprint for en; current sha256:be44408d685aea3339ce176deb02213acd8324333959f9edfa80e18b956fa123
+FAIL: lessons/0005-audit-a-logged-mutation.html: stale review fingerprint for ko; current sha256:e9e505f12c45375ddf3b488b3743029e474854e948cd0465e14640deca69b7a0
+FAIL: lessons/0006-flush-one-generation.html: missing Korean review receipt
+FAIL: lessons/0006-flush-one-generation.html: stale review fingerprint for en; current sha256:38bf0538ae2e53f2b79145a2309c3ed6af08f9458c009376b851e8f60806c8e8
+FAIL: lessons/0006-flush-one-generation.html: stale review fingerprint for ko; current sha256:5ded17969e0f17d617baf6af389832875ca5c2b6eaa6d38dbfe97e54953da332
+FAIL: lessons/0006a-understand-page-buffer-daemons.html: missing Korean review receipt
+FAIL: lessons/0006a-understand-page-buffer-daemons.html: stale review fingerprint for en; current sha256:2f943bcb53a3e83644e31add6f8c1d12c003eefb2c9194dd42138d5b0d2b68e4
+FAIL: lessons/0006a-understand-page-buffer-daemons.html: stale review fingerprint for ko; current sha256:c097ec0a0dc48717ba072ef06cd653a1eedcb63fba33eb00ab08a22cbc37caff
+FAIL: lessons/0006b-follow-page-flush-handoff.html: missing Korean review receipt
+FAIL: lessons/0006b-follow-page-flush-handoff.html: stale review fingerprint for en; current sha256:4a05524eec760051115e7e9add5a516f76b07b612d802928f5ac8d25f2a82b84
+FAIL: lessons/0006b-follow-page-flush-handoff.html: stale review fingerprint for ko; current sha256:985a9e029c6899f6e81d4b6d58aefcf6f7dba554b82927fc34ffbc9691b2bf33
+FAIL: lessons/0006c-follow-maintenance-and-pacing.html: missing Korean review receipt
+FAIL: lessons/0006c-follow-maintenance-and-pacing.html: stale review fingerprint for en; current sha256:41ecdcac54443381093c11d679bd8cacc7cda586ea643c9bec29f5d2081a01f7
+FAIL: lessons/0006c-follow-maintenance-and-pacing.html: stale review fingerprint for ko; current sha256:12612110bc923459a7b412668689b038cbf1832066bc32389986e126def7be7c
+FAIL: lessons/0007-replace-one-frame.html: missing Korean review receipt
+FAIL: lessons/0007a-select-and-reuse-frame.html: missing Korean review receipt
+FAIL: lessons/0007b-recheck-and-reuse-frame.html: missing Korean review receipt
+FAIL: lessons/0007c-replacement-progress-and-costs.html: missing Korean review receipt
+FAIL: lessons/0008-defend-a-safe-change.html: missing Korean review receipt
+FAIL: lessons/0008-defend-a-safe-change.html: stale review fingerprint for en; current sha256:c63b6c98bd1a23136960b64457707d106fc336a336b6b9cf9811e30e42f67a2d
+FAIL: lessons/0008-defend-a-safe-change.html: stale review fingerprint for ko; current sha256:df8014ed2e02de1aea29db484af0a9c827140040ae3bdf3f2ab8cbc0501c9beb
+FAIL: lessons/0009-classify-latch-wait.html: missing Korean review receipt
+FAIL: lessons/0009-classify-latch-wait.html: stale review fingerprint for en; current sha256:a2216a2037e07ad568526291ba2ba1826aec1f945dbaa221f72b7f08a21e2bd9
+FAIL: lessons/0009-classify-latch-wait.html: stale review fingerprint for ko; current sha256:43710370dda571c198ca611b36ed06290b0c112de34ef2202feb188a4b1ffe87
+FAIL: lessons/0010-revalidate-after-promotion.html: missing Korean review receipt
+FAIL: lessons/0010-revalidate-after-promotion.html: stale review fingerprint for en; current sha256:3f3f35a07a8aa6dbf2d49451b7485b60a22b40d21a49c9479f5231dbe05c63a1
+FAIL: lessons/0010-revalidate-after-promotion.html: stale review fingerprint for ko; current sha256:3274666f3e98d8d865e2e7e6df9a7209e294317616ec7548b291917ae67f6fa3
+FAIL: lessons/0011-rebuild-after-ordered-refix.html: missing Korean review receipt
+FAIL: lessons/0011-rebuild-after-ordered-refix.html: stale review fingerprint for en; current sha256:653d4d52b99f6658eb54838895cc5588d77d6bbaf8a11fe6627fe4da76d78360
+FAIL: lessons/0011-rebuild-after-ordered-refix.html: stale review fingerprint for ko; current sha256:14914292c98295658a2f2a69327e73c715354f83f20da2a46bc792a08879172f
+FAIL: lessons/0012-prove-replacement-progress.html: missing Korean review receipt
+FAIL: lessons/0012b-understand-private-lru-index.html: missing Korean review receipt
+FAIL: lessons/0012a-understand-aout-ghost-history.html: missing Korean review receipt
+FAIL: lessons/0013-gate-redo-by-page-lsa.html: missing Korean review receipt
+FAIL: lessons/0013-gate-redo-by-page-lsa.html: stale review fingerprint for en; current sha256:55c6a05dfaae7781292a222354ff8702029f8fbbce0eff1d8cd292c0245b23c2
+FAIL: lessons/0013-gate-redo-by-page-lsa.html: stale review fingerprint for ko; current sha256:668c30fc1c2a5fca01233247b5da611abbd9295414949444f8ecc0d55b4cc6b0
+FAIL: lessons/0014-preserve-lifecycle-order.html: missing Korean review receipt
+FAIL: lessons/0014-preserve-lifecycle-order.html: stale review fingerprint for en; current sha256:7ae16ae4f484cfc602a910744d82039c7b6e48ec0f725386dbd6ec71ab73e48c
+FAIL: lessons/0014-preserve-lifecycle-order.html: stale review fingerprint for ko; current sha256:2e48d3061a5e5f291d2fa793c046e19456fea4bc74869be24a5e374fb522c7fb
+FAIL: lessons/0015-route-a-specialized-interface.html: missing Korean review receipt
+FAIL: lessons/0015-route-a-specialized-interface.html: stale review fingerprint for en; current sha256:f35c7bff981d2f7bf11f548c150f458f18919dd30e1303d6af848d0d5c0b2bf4
+FAIL: lessons/0015-route-a-specialized-interface.html: stale review fingerprint for ko; current sha256:9394d62fd7ab34938b961617d99bace55612f3ec839beb477ec95951c8bf94f9
+FAIL: lessons/0016-close-a-failure-proof.html: missing Korean review receipt
+FAIL: lessons/0016-close-a-failure-proof.html: stale review fingerprint for en; current sha256:5ebbd15b086b776bd48d2c957cb40fa645ac4589a1e6d8d0fc5e023822223469
+FAIL: lessons/0016-close-a-failure-proof.html: stale review fingerprint for ko; current sha256:fd15ef741a55a769a7bdc4a9930e495ab67d4e3e16d1a93138f883b5ec1b665e
+FAIL: lessons/0017-defend-the-module-live.html: missing Korean review receipt
+FAIL: lessons/0018-compare-three-buffer-pools.html: missing Korean review receipt
+FAIL: lessons/0018-compare-three-buffer-pools.html: stale review fingerprint for en; current sha256:06490fe7d8b50c4f4cb76e5751211d644fbc7093e4c2cd39fcda01a1d95e6356
+FAIL: lessons/0018-compare-three-buffer-pools.html: stale review fingerprint for ko; current sha256:32cc2b9a79ddea1832ddb3e33ba14ff301bda4f1cfc5a071b64c04faee5c391c
+FAIL: lessons/0018a-compare-replacement-policies.html: missing Korean review receipt
+FAIL: lessons/0018a-compare-replacement-policies.html: stale review fingerprint for en; current sha256:3b65f3ef9ac3453a988aa60f430f0aadc06c7da045cce77e7adea368159fed8f
+FAIL: lessons/0018a-compare-replacement-policies.html: stale review fingerprint for ko; current sha256:048b7661a844bb0b65c2ffe6a5e21b63bb1cf08618b0be9488b1bc21af958835
+FAIL: reference/caller-mutation-card.html: missing Korean review receipt
+FAIL: reference/caller-mutation-card.html: stale review fingerprint for en; current sha256:e30d6104c998d995323bf89d85063f389b45ded489f93797bf1cc78aa7d27bda
+FAIL: reference/caller-mutation-card.html: stale review fingerprint for ko; current sha256:6113b62fab32db490c05e74a7258f98ed3f48ed106fc11a2d179cec6f40a2ee1
+FAIL: reference/change-defense-card.html: missing Korean review receipt
+FAIL: reference/change-defense-card.html: stale review fingerprint for en; current sha256:fdb804fc3c9446c04811c51df4c3c49db21d4f3d52582415159c966f28e27542
+FAIL: reference/change-defense-card.html: stale review fingerprint for ko; current sha256:e9c3c39e16c3fa8a1448837ff9f6f639a30d78845263b54160e78dc8172394f1
+FAIL: reference/core-synthesis-studio.html: missing Korean review receipt
+FAIL: reference/core-synthesis-studio.html: stale review fingerprint for en; current sha256:1c01d37aae7acb4d7d321e8f6908dcdc18d9603b1233d720c1363934ccc058c7
+FAIL: reference/core-synthesis-studio.html: stale review fingerprint for ko; current sha256:946c3e1f51fa8fb2cd245ccae93335ac5ca8457a6cb9f9e0fc23ee4b06f5d5f0
+FAIL: reference/course-coverage-matrix.html: missing Korean review receipt
+FAIL: reference/course-coverage-matrix.html: stale review fingerprint for en; current sha256:200bfd87d1f929a382aaf147d281f7d2c1f82a6ab9c2739e34a9e9dd47c7cca2
+FAIL: reference/course-coverage-matrix.html: stale review fingerprint for ko; current sha256:5cb266b257fa831227964f997784253c8cb7c60b3d1d41bb3a629b93e5270b8f
+FAIL: reference/course-learning-path.html: missing Korean review receipt
+FAIL: reference/expected-team-questions.html: missing Korean review receipt
+FAIL: reference/failure-proof-ledger-card.html: missing Korean review receipt
+FAIL: reference/failure-proof-ledger-card.html: stale review fingerprint for en; current sha256:35d5e901b82a4bc551954c7101a16b3776576b50c1b436f6bbafe96f5ae62085
+FAIL: reference/failure-proof-ledger-card.html: stale review fingerprint for ko; current sha256:7563f0a0ec80219d9a21093ed841e8016e2d7795d9e24b26015786f0ab584a40
+FAIL: reference/fix-convergence-map.html: missing Korean review receipt
+FAIL: reference/fix-convergence-map.html: stale review fingerprint for en; current sha256:59be4598a618b5f8468fea8e0f648aa22a607a03e60eef9fd1e36023f1e5b09d
+FAIL: reference/fix-convergence-map.html: stale review fingerprint for ko; current sha256:1f9fce7df811bc8105e2ba52978f49aee02df64629daf5fba862ba54fb2e0421
+FAIL: reference/flush-generation-card.html: missing Korean review receipt
+FAIL: reference/flush-generation-card.html: stale review fingerprint for en; current sha256:88398c7e59fba6e0d390781dc06db6e47912191fc29b5c51f822c9b4ce5da6ba
+FAIL: reference/flush-generation-card.html: stale review fingerprint for ko; current sha256:62933d1b0fe1eb715c7e0f25498967efe53773f25a7902d10d436501110427eb
+FAIL: reference/latch-queue-card.html: missing Korean review receipt
+FAIL: reference/latch-queue-card.html: stale review fingerprint for en; current sha256:e4120f7d35dccee481ceefc25547ca00b14efed968477dce29c6254b3270d88d
+FAIL: reference/latch-queue-card.html: stale review fingerprint for ko; current sha256:31663b5453a09ce149e3dc79d3186fe9371c6c183442a0cdbb39ba72bd5f2f9c
+FAIL: reference/lifecycle-order-card.html: missing Korean review receipt
+FAIL: reference/lifecycle-order-card.html: stale review fingerprint for en; current sha256:8032089db351eaa982c2712e98a5a9c3217312dcee949cab7ca9fae0767e234a
+FAIL: reference/lifecycle-order-card.html: stale review fingerprint for ko; current sha256:7b9f15400c6eb53d1052085ef0cd3887c4ac330f0f659a2f1ded40de630cd198
+FAIL: reference/object-and-state-map.html: missing Korean review receipt
+FAIL: reference/object-and-state-map.html: stale review fingerprint for en; current sha256:8f96a7b136069d13d1a3775a4b1d648adf9563a3830bd3f24143917a660ed5df
+FAIL: reference/object-and-state-map.html: stale review fingerprint for ko; current sha256:099854bf073d50d017c310e49af72baedbad8f1e485542cedaf59d49343cfa4a
+FAIL: reference/ordered-watcher-card.html: missing Korean review receipt
+FAIL: reference/ordered-watcher-card.html: stale review fingerprint for en; current sha256:34fc7bc3d1545daee70ed4b8b27d6c90bb94d340374a3e9066636b31834bb99d
+FAIL: reference/ordered-watcher-card.html: stale review fingerprint for ko; current sha256:9e00ae26c1a9b073a8b906b90fc9ee98d87f1c305149a04f54e502c92ba33905
+FAIL: reference/ownership-debt-card.html: missing Korean review receipt
+FAIL: reference/ownership-debt-card.html: stale review fingerprint for en; current sha256:cc28ab3d3a308d3a61d84c5ba41a055d1b7e7d22ab62341098fdacd06b9018c6
+FAIL: reference/ownership-debt-card.html: stale review fingerprint for ko; current sha256:10b8cfd76da144dbaafb6c9206099fabd040872c103016fd2834320532dc857b
+FAIL: reference/presentation-rehearsal-card.html: missing Korean review receipt
+FAIL: reference/presentation-spine.html: missing Korean review receipt
+FAIL: reference/presentation-spine.html: stale review fingerprint for en; current sha256:658d0a796907df38973f88a08a7101880163210ec6ce1d4ddc2ff51eaf6cec74
+FAIL: reference/presentation-spine.html: stale review fingerprint for ko; current sha256:ed158e934f50f87e06fc4b8c6a63f08c9f4e8f6cf909e318a40da3ff9288b14a
+FAIL: reference/promotion-restart-card.html: missing Korean review receipt
+FAIL: reference/promotion-restart-card.html: stale review fingerprint for en; current sha256:0200606b7ad20bb9f38236feeefd095de65f86918250dd657f2941dfc21e346e
+FAIL: reference/promotion-restart-card.html: stale review fingerprint for ko; current sha256:3bc0a6f4934a4e36f30bc1cd7a47d2386d318ec600861c13b88c2b7d307d085c
+FAIL: reference/redo-recovery-card.html: missing Korean review receipt
+FAIL: reference/redo-recovery-card.html: stale review fingerprint for en; current sha256:fdce6df218bff28f838b7924e9bc0d71d8d1fa0727cc72078da435a941a41a55
+FAIL: reference/redo-recovery-card.html: stale review fingerprint for ko; current sha256:792933b250bd296a199b3f40a1552534caf431cb4adaee46f5124c467a81fca9
+FAIL: reference/replacement-progress-card.html: missing Korean review receipt
+FAIL: reference/replacement-progress-card.html: stale review fingerprint for en; current sha256:5fdb2d8f216d1fc2d15bca3d0c32ce80df63d363ed435d413db2d1be7731da54
+FAIL: reference/replacement-progress-card.html: stale review fingerprint for ko; current sha256:49d48111dcf5e337c1ec40d718bafcbd607c98a986b6d99705ccfe43908b5944
+FAIL: reference/replacement-safety-card.html: missing Korean review receipt
+FAIL: reference/replacement-safety-card.html: stale review fingerprint for en; current sha256:b3dc84198ad0136cb58c93d90a314221befb7863fd38f059293bac482c3debc7
+FAIL: reference/replacement-safety-card.html: stale review fingerprint for ko; current sha256:8eddba2c028261f390611fd0e4b3d588ad9a331488094823c34b14c43fb1908e
+FAIL: reference/specialized-interface-card.html: missing Korean review receipt
+FAIL: reference/specialized-interface-card.html: stale review fingerprint for en; current sha256:834fa9b9a21d18c7d46db6dee98d73df851409bc81e35e6a981b6bd1e851a2de
+FAIL: reference/specialized-interface-card.html: stale review fingerprint for ko; current sha256:ca8fd028a5f0175e197daebe80d8e9e87b1a837d790910bc750ba97ed65ffc29
+FAIL: reference/three-engine-performance-card.html: missing Korean review receipt
+FAIL: reference/three-engine-performance-card.html: stale review fingerprint for en; current sha256:bb72e92bcdda40faa869458495bb926c2a1650514e24d3c88a99d561b08bf36c
+FAIL: reference/three-engine-performance-card.html: stale review fingerprint for ko; current sha256:8f57651dc2570fc5d6b9094217fae7b23754335fb227bb2875eab96b38c41f1f

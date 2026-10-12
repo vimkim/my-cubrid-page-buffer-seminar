@@ -1,0 +1,216 @@
+{
+  "checkedAt": "2026-10-12T10:47:15.749Z",
+  "baseline": "759a4b85de7cf4ee0b30907c08aba2787efb96e2",
+  "implementationRevision": "85565be67dd34cdd83eb14406f1c19f9748300e9",
+  "files": {
+    "README.md": "a9424465bde9929d12eb0ad2d291dc08cf02f804e39ec437ecd0f07bdc50b435",
+    "presenter-runbook.md": "3dd7cefa59d58c6e779c3ad9790ab0aa21e8dc52788221a1097647837b459e6c",
+    "docs/final-session-preparation.md": "f1f165b8f4f768e14297518a37808dd0a995a760e5c0532b10540691265d6d15",
+    "docs/final-session-report-application.md": "a613e2713d63b30d72a771978f6b2439cfcdda10a4ad411f1d8c27739b91b299",
+    "docs/final-session-defense-research.md": "a24d7d754a9260e5933cacb7cdb11fe510a9b6b6c6d72ce934705bc0421d8b5a",
+    "my-presentation-script-session-3.html": "e2b911154b2e53f01d367f364f9bf4ba581929cfe7de81ea3af52cba4ad6e678",
+    "en/index.html": "6757295e9e4bb899e14b93e5d205b1f8f61a998dcdb8ec548e05d8355c783567",
+    "en/lessons/0006-flush-one-generation.html": "c95a4786d7592276b6233c6e9f962aca0f5e36f03e0c6d18e99a5b474a878948",
+    "en/lessons/0006a-understand-page-buffer-daemons.html": "dac6878bc902ea75769bc40f59090cec6ce8b2dacc6a683c6ec2577df155daa4",
+    "en/lessons/0006b-follow-page-flush-handoff.html": "0a435a0a154c68f325a4a75031f973edb144ba3f461e0f567a370eb877b507c1",
+    "en/lessons/0006c-follow-maintenance-and-pacing.html": "360e532c93f8f594dc4061f72d0f6f0453a65bf82714e11b8feb53979e666260",
+    "en/lessons/0018a-compare-replacement-policies.html": "6e721ded7a18bc0880f5173cb882b29d9621128bb693ea97d43b56422c45a07d",
+    "en/reference/defense-clock.html": "5c3b5e14e0052a4127593a9325db4af1698ee544174bff1d51f5132cbc35e6d7",
+    "en/reference/defense-daemons.html": "461b3d6c6edbabce07460d1098936b3e5ca27255f2dac5b5479ae96f83256dda",
+    "en/reference/defense-generations.html": "e579800254bf8492ed4e934b97266e056dc59a71e9afc001c5b20ca1605f38cb",
+    "en/reference/defense-handoff.html": "b1b30fb4d4fec603affed1e0a6f4c2c5c5edd3a892a439b2999a4ce842b3c816",
+    "en/reference/defense-pacing.html": "151e93f2a576318a86a7d853bc78522740b34dab1c14ab0ce630a41bca6fd81f",
+    "en/reference/defense-rings.html": "41405ac6149c62be7e59f7566bcc11221e83e2a388817bd23fb3259faf152c82",
+    "en/reference/defense-synthesis.html": "6059fdff9aeebb2caa165d8c7e5ee479025ab90ad14d84134ef20eaea157eada",
+    "ko/index.html": "03f62922f08d5caad81980c76e22700694fb7426f70b1a163b0ade016c03c7cb",
+    "ko/lessons/0006-flush-one-generation.html": "4c452f1e0677df43212cec7b4c4bad24011f036c72b44a9f994ab5f564be9c35",
+    "ko/lessons/0006a-understand-page-buffer-daemons.html": "7733a17dabdd0ae6a9d730a206d6e1831c4c7441e7af27b8ca603ef6becf81bd",
+    "ko/lessons/0006b-follow-page-flush-handoff.html": "fcf037c89a9f81f5fde84fd108620915e0e579e385ceb85467923896e270dd15",
+    "ko/lessons/0006c-follow-maintenance-and-pacing.html": "01162ccd29c98398b9a81017993e241ecd4803dc1f64456a942bd102a1482318",
+    "ko/lessons/0018a-compare-replacement-policies.html": "4174b01a4f1160c10cc397b2d75c7292fd19f3c24acd6fee34e59c15feb3b3be",
+    "ko/reference/defense-clock.html": "e21a3ecc3cc6441b764e5a466ba4069281a95633605464fbf9b302fc5e213b80",
+    "ko/reference/defense-daemons.html": "0802c6a09ff282baadd6c5f7cbeac7151d3fe3ace0a6bf6953e79e74eae17ea2",
+    "ko/reference/defense-generations.html": "39de30d996dea63b1165dc343233673905f2436ef7763f2f48fb396f4ce4c739",
+    "ko/reference/defense-handoff.html": "dc1755a206a44427a684ada2754fbfd2f286ae8d2942037969b2ae1d90915baf",
+    "ko/reference/defense-pacing.html": "47565216b127448ee33c208b5c05c0fda3dff9f6f400880d2eeda64ad573d05b",
+    "ko/reference/defense-rings.html": "d147dbd5aec9e069ff2fdc4eb346a2d6bd7247678f3caa33a917ddd5b2776543",
+    "ko/reference/defense-synthesis.html": "855dd1f0742feabc6466b03b70c08262eae0e94fe14ab7d6e1f16645e4a65ce3",
+    "reference/defense-clock.html": "5021abff07bcafe295edb9494a703ca3542599c1abbf4d5a4e49d4a4185e7594",
+    "reference/defense-daemons.html": "fb0b2b2ac381cd4869b64f71e47f0c91f07aa1f129ed8cfc6e63d93a856277b1",
+    "reference/defense-generations.html": "01f39e3180084e3af8eee12a721bfa7db437d4debab1b2c11b01f6427d72e556",
+    "reference/defense-handoff.html": "b619bd65a561dda36d9f9aa3044967b8218f28b28abf07a75f935eb7784b2157",
+    "reference/defense-pacing.html": "f34d2b03d19c44e9a577b1f60a6b160f0c3f92949efc3335c140043636b1fb4c",
+    "reference/defense-rings.html": "c893fbbbce012fca62d8faadbf3fedd9fe961ef095d965069551ae64d3c9d20b",
+    "reference/defense-synthesis.html": "9c1ceef88256744c5c9e12c6a4de8386e23c2bb1c76ada3faf741ecd2157dca2"
+  },
+  "relativeReferences": 1460,
+  "exactServedHtml": 34,
+  "pinnedSourceTargets": 127,
+  "pinnedSourceFiles": 13,
+  "scriptCues": 134,
+  "uniqueScriptCues": 132,
+  "defenseScreensPerLanguage": 42,
+  "existingQuestions": 24,
+  "newQuestions": 9,
+  "existingTraces": 15,
+  "newTraces": 7,
+  "screens": [
+    {
+      "file": "projection-generations-en.png",
+      "topic": "generations",
+      "lang": "en",
+      "h": "Removing an axis can erase work",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-daemons-en.png",
+      "topic": "daemons",
+      "lang": "en",
+      "h": "Deleting durable state changes the protocol",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-handoff-en.png",
+      "topic": "handoff",
+      "lang": "en",
+      "h": "Identity alone cannot bridge a protection gap",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-pacing-en.png",
+      "topic": "pacing",
+      "lang": "en",
+      "h": "Changing one budget rule changes bursts",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-clock-en.png",
+      "topic": "clock",
+      "lang": "en",
+      "h": "Removing lifetime protection is a correctness change",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-rings-en.png",
+      "topic": "rings",
+      "lang": "en",
+      "h": "Sole remaining pin does not mean no new work",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-synthesis-en.png",
+      "topic": "synthesis",
+      "lang": "en",
+      "h": "A new interleaving defeats a tempting shortcut",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-generations-ko.png",
+      "topic": "generations",
+      "lang": "ko",
+      "h": "축 하나를 제거하면 작업을 잃을 수 있습니다",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-daemons-ko.png",
+      "topic": "daemons",
+      "lang": "ko",
+      "h": "지속되는 상태를 지우면 protocol이 달라집니다",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-handoff-ko.png",
+      "topic": "handoff",
+      "lang": "ko",
+      "h": "Identity만으로 보호 공백을 메울 수 없습니다",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-pacing-ko.png",
+      "topic": "pacing",
+      "lang": "ko",
+      "h": "예산 규칙 하나를 바꾸면 burst가 달라집니다",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-clock-ko.png",
+      "topic": "clock",
+      "lang": "ko",
+      "h": "수명 보호 제거는 정확성 변경입니다",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-rings-ko.png",
+      "topic": "rings",
+      "lang": "ko",
+      "h": "Pin 하나만 남았다고 새 작업이 없는 것은 아닙니다",
+      "viewport": [
+        1440,
+        1080
+      ]
+    },
+    {
+      "file": "projection-synthesis-ko.png",
+      "topic": "synthesis",
+      "lang": "ko",
+      "h": "새 interleaving은 간단해 보이는 생략을 깨뜨립니다",
+      "viewport": [
+        1440,
+        1080
+      ]
+    }
+  ],
+  "scriptViews": [
+    {
+      "width": 1440,
+      "js": false,
+      "blocks": 12,
+      "closedKeyboardAnswers": 29,
+      "file": "script-generation-1440.png"
+    },
+    {
+      "width": 390,
+      "js": false,
+      "blocks": 12,
+      "closedKeyboardAnswers": 29,
+      "file": "script-generation-390.png"
+    }
+  ],
+  "consoleErrors": []
+}

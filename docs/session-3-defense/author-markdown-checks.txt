@@ -1,0 +1,6 @@
+OK: README.md
+OK: presenter-runbook.md
+OK: docs/final-session-preparation.md
+OK: docs/final-session-report-application.md
+OK: docs/final-session-defense-research.md
+OK: docs/final-session-defense-checks.md

@@ -1,0 +1,27 @@
+✔ audience CLI rejects an inline continuation that contradicts the curriculum (65.706045ms)
+✔ audience CLI rejects optional labels on required mechanism lectures (57.278565ms)
+✔ audience CLI rejects conditional participation headings for required lectures (66.152351ms)
+✔ audience CLI rejects one exposed answer even when other checkpoint disclosures remain (78.588224ms)
+✔ audience CLI requires a disclosure for every checkpoint, not just one per lecture (68.257771ms)
+✔ audience CLI rejects a checkpoint explanation that starts open (66.29354ms)
+✔ audience CLI rejects an exposed model spine outside a disclosure (73.662211ms)
+✔ en: Q01–Q24, D25–D33 and all 22 traces are delivered and keyboard reversible (3671.85975ms)
+✔ en: generation, clock, ring and completion outcomes preserve source boundaries (440.136317ms)
+✔ en: six-screen defense routes, language pairs and answer resets work by keyboard (861.619554ms)
+✔ en: removal traces distinguish safety, policy and authorization outcomes (521.681579ms)
+✔ en: 390px no-JavaScript reading exposes all snapshots and native answers (1106.509574ms)
+✔ en: 320px no-JavaScript reading exposes all snapshots and native answers (1036.480676ms)
+✔ ko: Q01–Q24, D25–D33 and all 22 traces are delivered and keyboard reversible (3629.227074ms)
+✔ ko: generation, clock, ring and completion outcomes preserve source boundaries (631.974472ms)
+✔ ko: six-screen defense routes, language pairs and answer resets work by keyboard (1029.686059ms)
+✔ ko: removal traces distinguish safety, policy and authorization outcomes (591.616171ms)
+✔ ko: 390px no-JavaScript reading exposes all snapshots and native answers (1223.833349ms)
+✔ ko: 320px no-JavaScript reading exposes all snapshots and native answers (1232.133124ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16562.393801

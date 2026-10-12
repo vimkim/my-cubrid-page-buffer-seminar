@@ -1,0 +1,20 @@
+✔ en: Q01–Q24, D25–D33 and all 22 traces are delivered and keyboard reversible (3457.239639ms)
+✔ en: generation, clock, ring and completion outcomes preserve source boundaries (417.93395ms)
+✔ en: six-screen defense routes, language pairs and answer resets work by keyboard (810.804451ms)
+✔ en: removal traces distinguish safety, policy and authorization outcomes (523.021344ms)
+✔ en: 390px no-JavaScript reading exposes all snapshots and native answers (988.124322ms)
+✔ en: 320px no-JavaScript reading exposes all snapshots and native answers (993.038747ms)
+✔ ko: Q01–Q24, D25–D33 and all 22 traces are delivered and keyboard reversible (3497.285688ms)
+✔ ko: generation, clock, ring and completion outcomes preserve source boundaries (532.694678ms)
+✔ ko: six-screen defense routes, language pairs and answer resets work by keyboard (994.196806ms)
+✔ ko: removal traces distinguish safety, policy and authorization outcomes (508.852218ms)
+✔ ko: 390px no-JavaScript reading exposes all snapshots and native answers (1144.913245ms)
+✔ ko: 320px no-JavaScript reading exposes all snapshots and native answers (1195.714852ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15590.247014
