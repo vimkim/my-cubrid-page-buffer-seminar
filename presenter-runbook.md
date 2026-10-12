@@ -2,6 +2,8 @@
 
 Author-only facilitation notes for the [seminar curriculum](docs/seminar-curriculum-design.md). This file is deliberately absent from participant navigation, but is not protected from direct access.
 
+Prepare the remaining session from the [current Seminar delivery record](README.md#seminar-delivery). That record owns completed coverage and the remaining agenda; earlier provisional timing and route plans below serve as supporting material.
+
 Use Korean as the default live edition. Begin in reading mode to show the lecture's scope, then use presentation mode when focusing a section. PageUp/PageDown move between sections; Escape returns to reading. Open a model explanation after participants have considered the scenario. No participant responses are stored by the site.
 
 A provisional meeting can allocate roughly 60 minutes to mechanisms and source traces, 20 to a worked scenario, and 10 to questions. These are planning aids, not limits. Split a dense lecture across meetings and revisit prerequisites whenever an ownership, guard, lifetime, or evidence boundary remains unclear. Continue until teammates can explain the causal path and handle counterexamples, even if the series exceeds a college semester.
@@ -11,7 +13,7 @@ Ask participants to distinguish what the source establishes from what requires a
 Before presenting, open the exact served URL and check the intended viewport, diagrams, disclosure controls, source links, and language switch. Keep reading mode available if a projected section needs more context. Consult the coverage audit for remaining editorial or human language-review work.
 
 
-## Current first-time participant session
+## First-time participant route reference
 
 Use the [complete Korean spoken script](my-presentation-script.html) as the one current companion. It contains actual explanations, transitions, diagram cues, prediction pauses and reveal explanations for every selected stop. The previous script is superseded for this session and preserved in Git history. Ticket contribution fragments are author evidence, not additional current companions.
 

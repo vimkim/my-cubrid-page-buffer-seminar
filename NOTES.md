@@ -6,6 +6,10 @@ Write directly to participants. Explain the problem, contract, state owner and g
 
 The [accepted design](docs/seminar-curriculum-design.md) and [ADR 0005](docs/adr/0005-make-html-an-audience-facing-seminar-curriculum.md) govern the HTML. The English Markdown guide remains governed by [maintainer-guide-notes.md](maintainer-guide-notes.md). Its canonical explanations, source inventory, and uncertainty registry retain ownership of technical claims.
 
+## Current seminar delivery
+
+Use the [Seminar delivery record](README.md#seminar-delivery) for the three-session format, completed coverage, and remaining agenda. It takes precedence over earlier provisional timing and session-route plans when preparing the remaining session. Retain the broader curriculum as supporting material for deeper study.
+
 ## Editing a page
 
 1. Update English and Korean together. Korean sentences should read naturally while retaining established database terminology, evidence labels, and exact source identifiers. Preserve qualifications beside their claims.

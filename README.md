@@ -8,6 +8,20 @@ This repository contains the bilingual audience-facing seminar, the English Main
 
 Page buffer is independently versioned. The user will later add this repository as the `page-buffer` submodule of the multi-topic `my-cubrid-seminar` collection.
 
+## Seminar delivery
+
+The live seminar has three sessions: **3 hours + 4 hours + n hours**, with the third session's duration still to be determined.
+
+| Session | Duration | Status |
+| --- | --- | --- |
+| 1 | 3 hours | Completed |
+| 2 | 4 hours | Completed |
+| 3 | n hours (to be determined) | Remaining |
+
+Together, the first two sessions covered page-buffer basics, Buffer Control Blocks (BCBs), and private/shared LRU organization. The remaining session covers page-buffer daemon details and PostgreSQL buffer-management and replacement strategies.
+
+The delivered sessions and remaining agenda govern current seminar preparation. The broader curriculum and Maintainer Guide remain available for deeper study.
+
 ## Authoring and checks
 
 Read [AGENTS.md](AGENTS.md), [seminar authoring notes](NOTES.md), and [guide authoring notes](maintainer-guide-notes.md) before editing. Existing personal validation dependencies remain intentional: Node.js, Python, the configured Copyparty Markdown checker, Copyparty, and Playwright with Chromium for browser checks. The checker supports `COPYPARTY_MARKDOWN_CHECKER`; browser checks support `PLAYWRIGHT_MODULE`.
