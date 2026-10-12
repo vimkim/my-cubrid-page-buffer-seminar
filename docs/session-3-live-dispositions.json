@@ -1,0 +1,1400 @@
+[
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q01",
+    "source": [
+      "en/lessons/0001-present-the-page-journey.html#q01"
+    ],
+    "target": "en/seminar-3/01-opening.html#q01",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q02",
+    "source": [
+      "en/lessons/0006-flush-one-generation.html#q02"
+    ],
+    "target": "en/seminar-3/02-flush-generations.html#q02",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q04",
+    "source": [
+      "en/lessons/0006-flush-one-generation.html#q04"
+    ],
+    "target": "en/seminar-3/02-flush-generations.html#q04",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q03",
+    "source": [
+      "en/lessons/0006-flush-one-generation.html#q03"
+    ],
+    "target": "en/seminar-3/02-flush-generations.html#q03",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "D25",
+    "source": [
+      "en/reference/defense-generations.html#d25"
+    ],
+    "target": "en/seminar-3/02-flush-generations.html#d25",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "flush-state-trace",
+    "source": [
+      "en/lessons/0006-flush-one-generation.html#flush-state-trace"
+    ],
+    "target": "en/seminar-3/02-flush-generations.html#flush-state-trace",
+    "terminal": [
+      "40 / 180",
+      "40 / 120",
+      "1 / 0 / 160",
+      "durable WAL=140; DWB=G accepted; home=unobserved"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "generations-defense-trace",
+    "source": [
+      "en/reference/defense-generations.html#generations-defense-trace"
+    ],
+    "target": "en/seminar-3/02-flush-generations.html#generations-defense-trace",
+    "terminal": [
+      "D=1; F=0",
+      "D=0; newer debt lost",
+      "G done; writer may now run",
+      "G remains 11 @120"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q05",
+    "source": [
+      "en/lessons/0006a-understand-page-buffer-daemons.html#q05"
+    ],
+    "target": "en/seminar-3/03-daemon-architecture.html#q05",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q06",
+    "source": [
+      "en/lessons/0006a-understand-page-buffer-daemons.html#q06"
+    ],
+    "target": "en/seminar-3/03-daemon-architecture.html#q06",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "D26",
+    "source": [
+      "en/reference/defense-daemons.html#d26"
+    ],
+    "target": "en/seminar-3/03-daemon-architecture.html#d26",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "daemon-state-trace",
+    "source": [
+      "en/lessons/0006a-understand-page-buffer-daemons.html#daemon-state-trace"
+    ],
+    "target": "en/seminar-3/03-daemon-architecture.html#daemon-state-trace",
+    "terminal": [
+      "open",
+      "stop → wake → join",
+      "alive through join; teardown later",
+      "thread ended"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "daemons-defense-trace",
+    "source": [
+      "en/reference/defense-daemons.html#daemons-defense-trace"
+    ],
+    "target": "en/seminar-3/03-daemon-architecture.html#daemons-defense-trace",
+    "terminal": [
+      "drain F when loop checks queue",
+      "cannot discover F",
+      "claim pending under protocol",
+      "later sleep needs producer/check coordination"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q08",
+    "source": [
+      "en/lessons/0006b-follow-page-flush-handoff.html#q08"
+    ],
+    "target": "en/seminar-3/04-page-flush.html#q08",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q07",
+    "source": [
+      "en/lessons/0006b-follow-page-flush-handoff.html#q07"
+    ],
+    "target": "en/seminar-3/04-page-flush.html#q07",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "candidate-state-trace",
+    "source": [
+      "en/lessons/0006b-follow-page-flush-handoff.html#candidate-state-trace"
+    ],
+    "target": "en/seminar-3/04-page-flush.html#candidate-state-trace",
+    "terminal": [
+      "BCB*=F; VPID=P",
+      "DIRTY=1; FLUSHING=0; LRU3; fcnt=1",
+      "BCB mutex held",
+      "rejected; none"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "identity-gap-trace",
+    "source": [],
+    "target": "en/seminar-3/04-page-flush.html#identity-gap-trace",
+    "terminal": [
+      "X/P",
+      "R dirty, unfixed",
+      "P != R: reject",
+      "R may be submitted as P candidate"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q09",
+    "source": [
+      "en/lessons/0006b-follow-page-flush-handoff.html#q09"
+    ],
+    "target": "en/seminar-3/05-post-flush.html#q09",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q10",
+    "source": [
+      "en/lessons/0006b-follow-page-flush-handoff.html#q10"
+    ],
+    "target": "en/seminar-3/05-post-flush.html#q10",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q11",
+    "source": [
+      "en/lessons/0006b-follow-page-flush-handoff.html#q11"
+    ],
+    "target": "en/seminar-3/05-post-flush.html#q11",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "D27",
+    "source": [
+      "en/reference/defense-handoff.html#d27"
+    ],
+    "target": "en/seminar-3/05-post-flush.html#d27",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "queue-full-state-trace",
+    "source": [
+      "en/lessons/0006b-follow-page-flush-handoff.html#queue-full-state-trace"
+    ],
+    "target": "en/seminar-3/05-post-flush.html#queue-full-state-trace",
+    "terminal": [
+      "accepted; FLUSHING=0",
+      "no P completion item",
+      "local completion done",
+      "flush woken; B not assigned here"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "post-flush-state-trace",
+    "source": [
+      "en/lessons/0006b-follow-page-flush-handoff.html#post-flush-state-trace"
+    ],
+    "target": "en/seminar-3/05-post-flush.html#post-flush-state-trace",
+    "terminal": [
+      "DIRTY=1; FLUSHING=0; fcnt=1; LRU3",
+      "empty; G completion done",
+      "woken for G",
+      "still waiting; no offer"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "offer-state-trace",
+    "source": [
+      "en/lessons/0006b-follow-page-flush-handoff.html#offer-state-trace"
+    ],
+    "target": "en/seminar-3/05-post-flush.html#offer-state-trace",
+    "terminal": [
+      "B: clean; fcnt=1; identity P unchanged",
+      "size=80; quota=60",
+      "offer revoked / rejected",
+      "no frame; high-priority retry"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "handoff-defense-trace",
+    "source": [
+      "en/reference/defense-handoff.html#handoff-defense-trace"
+    ],
+    "target": "en/seminar-3/05-post-flush.html#handoff-defense-trace",
+    "terminal": [
+      "lock; reject; retry",
+      "retag despite A's use",
+      "claim under retained exclusion",
+      "P retained by safe path"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q12",
+    "source": [
+      "en/lessons/0006c-follow-maintenance-and-pacing.html#q12"
+    ],
+    "target": "en/seminar-3/06-maintenance.html#q12",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q13",
+    "source": [
+      "en/lessons/0006c-follow-maintenance-and-pacing.html#q13"
+    ],
+    "target": "en/seminar-3/06-maintenance.html#q13",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "quota-state-trace",
+    "source": [
+      "en/lessons/0006c-follow-maintenance-and-pacing.html#quota-state-trace"
+    ],
+    "target": "en/seminar-3/06-maintenance.html#quota-state-trace",
+    "terminal": [
+      "6 / 2",
+      "10",
+      "60",
+      "second sample set consumed; policy recomputed"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q14",
+    "source": [
+      "en/lessons/0006c-follow-maintenance-and-pacing.html#q14"
+    ],
+    "target": "en/seminar-3/07-flush-control.html#q14",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q15",
+    "source": [
+      "en/lessons/0006c-follow-maintenance-and-pacing.html#q15"
+    ],
+    "target": "en/seminar-3/07-flush-control.html#q15",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "D28",
+    "source": [
+      "en/reference/defense-pacing.html#d28"
+    ],
+    "target": "en/seminar-3/07-flush-control.html#d28",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "token-state-trace",
+    "source": [
+      "en/lessons/0006c-follow-maintenance-and-pacing.html#token-state-trace"
+    ],
+    "target": "en/seminar-3/07-flush-control.html#token-state-trace",
+    "terminal": [
+      "A and B writes already succeeded",
+      "0 (fresh shortage case)",
+      "A: may wait; B: proceeds",
+      "soft pacing; no strict write ceiling"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "pacing-defense-trace",
+    "source": [
+      "en/reference/defense-pacing.html#pacing-defense-trace"
+    ],
+    "target": "en/seminar-3/07-flush-control.html#pacing-defense-trace",
+    "terminal": [
+      "consume 3; deficit 1; wait/retry",
+      "consume 4; tokens=1",
+      "continue immediately",
+      "four pages already written"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q16",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#q16"
+    ],
+    "target": "en/seminar-3/08-postgresql-buffers.html#q16",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q17",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#q17"
+    ],
+    "target": "en/seminar-3/08-postgresql-buffers.html#q17",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "pin-state-trace",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#pin-state-trace"
+    ],
+    "target": "en/seminar-3/08-postgresql-buffers.html#pin-state-trace",
+    "terminal": [
+      "1 / 2",
+      "0",
+      "1",
+      "B’s pin remains; pin alone is not content locking"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "clock-defense-trace",
+    "source": [
+      "en/reference/defense-clock.html#clock-defense-trace"
+    ],
+    "target": "en/seminar-3/08-postgresql-buffers.html#clock-defense-trace",
+    "terminal": [
+      "private=1; shared=1",
+      "identity no longer protected",
+      "private ledger=1; shared=1",
+      "one outstanding use remains"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q18",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#q18"
+    ],
+    "target": "en/seminar-3/09-clock-sweep.html#q18",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "D29",
+    "source": [
+      "en/reference/defense-clock.html#d29"
+    ],
+    "target": "en/seminar-3/09-clock-sweep.html#d29",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "clock-state-trace",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#clock-state-trace"
+    ],
+    "target": "en/seminar-3/09-clock-sweep.html#clock-state-trace",
+    "terminal": [
+      "H1 / 0 / 1",
+      "S1 / 1 / 0",
+      "S2 / 0 / 0",
+      "S3 / 1 / 0"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "clock-alternative-trace",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#clock-alternative-trace"
+    ],
+    "target": "en/seminar-3/09-clock-sweep.html#clock-alternative-trace",
+    "terminal": [
+      "H1 / 0 / 0",
+      "S1 / 1 / 0",
+      "S2 / 1 / 0",
+      "S3 / 0 / 0"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "clock-cas-trace",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#clock-cas-trace"
+    ],
+    "target": "en/seminar-3/09-clock-sweep.html#clock-cas-trace",
+    "terminal": [
+      "1 / 1",
+      "CAS failed; skip D",
+      "holds pin",
+      "D not returned to A"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "fresh-clock-trace",
+    "source": [],
+    "target": "en/seminar-3/09-clock-sweep.html#fresh-clock-trace",
+    "terminal": [
+      "1/0",
+      "0/1",
+      "0/0",
+      "1/0"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q19",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#q19"
+    ],
+    "target": "en/seminar-3/10-strategy-rings.html#q19",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q20",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#q20"
+    ],
+    "target": "en/seminar-3/10-strategy-rings.html#q20",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "D30",
+    "source": [
+      "en/reference/defense-rings.html#d30"
+    ],
+    "target": "en/seminar-3/10-strategy-rings.html#d30",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "ring-state-trace",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#ring-state-trace"
+    ],
+    "target": "en/seminar-3/10-strategy-rings.html#ring-state-trace",
+    "terminal": [
+      "F4 / F6",
+      "0 / 1 / S",
+      "0 / 2 / T",
+      "1 / 0 / U"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "ring-wal-trace",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#ring-wal-trace"
+    ],
+    "target": "en/seminar-3/10-strategy-rings.html#ring-wal-trace",
+    "terminal": [
+      "retry; empty current slot falls back",
+      "recheck ref=1 and !DIRTY",
+      "recheck ref=1 and !DIRTY",
+      "still pinned; not a victim"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "two-rings-trace",
+    "source": [],
+    "target": "en/seminar-3/10-strategy-rings.html#two-rings-trace",
+    "terminal": [
+      "pinned X",
+      "reject/fallback",
+      "1/1",
+      "X cannot be retagged by B"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q21",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#q21"
+    ],
+    "target": "en/seminar-3/11-writeback-and-reuse.html#q21",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q22",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#q22"
+    ],
+    "target": "en/seminar-3/11-writeback-and-reuse.html#q22",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "D31",
+    "source": [
+      "en/reference/defense-rings.html#d31"
+    ],
+    "target": "en/seminar-3/11-writeback-and-reuse.html#d31",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "invalidation-state-trace",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#invalidation-state-trace"
+    ],
+    "target": "en/seminar-3/11-writeback-and-reuse.html#invalidation-state-trace",
+    "terminal": [
+      "R / 1 / 1 at check",
+      "must release rejected candidate",
+      "no pin; dirty work remains",
+      "R mapping retained; no retag"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "rings-defense-trace",
+    "source": [
+      "en/reference/defense-rings.html#rings-defense-trace"
+    ],
+    "target": "en/seminar-3/11-writeback-and-reuse.html#rings-defense-trace",
+    "terminal": [
+      "lock; dirty rejects; retry",
+      "ref=1 trusted; drop R debt",
+      "retire under exclusion",
+      "R must survive in implemented path"
+    ]
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "D32",
+    "source": [
+      "en/reference/defense-synthesis.html#d32"
+    ],
+    "target": "en/seminar-3/12-final-defense.html#d32",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "D33",
+    "source": [
+      "en/reference/defense-synthesis.html#d33"
+    ],
+    "target": "en/seminar-3/12-final-defense.html#d33",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q23",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#q23"
+    ],
+    "target": "en/seminar-3/12-final-defense.html#q23",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "question",
+    "key": "Q24",
+    "source": [
+      "en/lessons/0018a-compare-replacement-policies.html#q24"
+    ],
+    "target": "en/seminar-3/12-final-defense.html#q24",
+    "terminal": null
+  },
+  {
+    "language": "en",
+    "kind": "trace",
+    "key": "synthesis-defense-trace",
+    "source": [
+      "en/reference/defense-synthesis.html#synthesis-defense-trace"
+    ],
+    "target": "en/seminar-3/12-final-defense.html#synthesis-defense-trace",
+    "terminal": [
+      "clear FLUSHING; refuse dirty offer",
+      "done=true; unsafe retag",
+      "G receipt valid; reuse request rejected",
+      "Q still needs eligible frame"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q01",
+    "source": [
+      "ko/lessons/0001-present-the-page-journey.html#q01"
+    ],
+    "target": "ko/seminar-3/01-opening.html#q01",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q02",
+    "source": [
+      "ko/lessons/0006-flush-one-generation.html#q02"
+    ],
+    "target": "ko/seminar-3/02-flush-generations.html#q02",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q04",
+    "source": [
+      "ko/lessons/0006-flush-one-generation.html#q04"
+    ],
+    "target": "ko/seminar-3/02-flush-generations.html#q04",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q03",
+    "source": [
+      "ko/lessons/0006-flush-one-generation.html#q03"
+    ],
+    "target": "ko/seminar-3/02-flush-generations.html#q03",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "D25",
+    "source": [
+      "ko/reference/defense-generations.html#d25"
+    ],
+    "target": "ko/seminar-3/02-flush-generations.html#d25",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "flush-state-trace",
+    "source": [
+      "ko/lessons/0006-flush-one-generation.html#flush-state-trace"
+    ],
+    "target": "ko/seminar-3/02-flush-generations.html#flush-state-trace",
+    "terminal": [
+      "40 / 180",
+      "40 / 120",
+      "1 / 0 / 160",
+      "durable WAL=140; DWB=G accepted; home=unobserved"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "generations-defense-trace",
+    "source": [
+      "ko/reference/defense-generations.html#generations-defense-trace"
+    ],
+    "target": "ko/seminar-3/02-flush-generations.html#generations-defense-trace",
+    "terminal": [
+      "D=1; F=0",
+      "D=0; newer debt lost",
+      "G done; writer may now run",
+      "G remains 11 @120"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q05",
+    "source": [
+      "ko/lessons/0006a-understand-page-buffer-daemons.html#q05"
+    ],
+    "target": "ko/seminar-3/03-daemon-architecture.html#q05",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q06",
+    "source": [
+      "ko/lessons/0006a-understand-page-buffer-daemons.html#q06"
+    ],
+    "target": "ko/seminar-3/03-daemon-architecture.html#q06",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "D26",
+    "source": [
+      "ko/reference/defense-daemons.html#d26"
+    ],
+    "target": "ko/seminar-3/03-daemon-architecture.html#d26",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "daemon-state-trace",
+    "source": [
+      "ko/lessons/0006a-understand-page-buffer-daemons.html#daemon-state-trace"
+    ],
+    "target": "ko/seminar-3/03-daemon-architecture.html#daemon-state-trace",
+    "terminal": [
+      "open",
+      "stop → wake → join",
+      "alive through join; teardown later",
+      "thread ended"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "daemons-defense-trace",
+    "source": [
+      "ko/reference/defense-daemons.html#daemons-defense-trace"
+    ],
+    "target": "ko/seminar-3/03-daemon-architecture.html#daemons-defense-trace",
+    "terminal": [
+      "drain F when loop checks queue",
+      "cannot discover F",
+      "claim pending under protocol",
+      "later sleep needs producer/check coordination"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q08",
+    "source": [
+      "ko/lessons/0006b-follow-page-flush-handoff.html#q08"
+    ],
+    "target": "ko/seminar-3/04-page-flush.html#q08",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q07",
+    "source": [
+      "ko/lessons/0006b-follow-page-flush-handoff.html#q07"
+    ],
+    "target": "ko/seminar-3/04-page-flush.html#q07",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "candidate-state-trace",
+    "source": [
+      "ko/lessons/0006b-follow-page-flush-handoff.html#candidate-state-trace"
+    ],
+    "target": "ko/seminar-3/04-page-flush.html#candidate-state-trace",
+    "terminal": [
+      "BCB*=F; VPID=P",
+      "DIRTY=1; FLUSHING=0; LRU3; fcnt=1",
+      "BCB mutex held",
+      "rejected; none"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "identity-gap-trace",
+    "source": [],
+    "target": "ko/seminar-3/04-page-flush.html#identity-gap-trace",
+    "terminal": [
+      "X/P",
+      "R dirty, unfixed",
+      "P != R: reject",
+      "R may be submitted as P candidate"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q09",
+    "source": [
+      "ko/lessons/0006b-follow-page-flush-handoff.html#q09"
+    ],
+    "target": "ko/seminar-3/05-post-flush.html#q09",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q10",
+    "source": [
+      "ko/lessons/0006b-follow-page-flush-handoff.html#q10"
+    ],
+    "target": "ko/seminar-3/05-post-flush.html#q10",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q11",
+    "source": [
+      "ko/lessons/0006b-follow-page-flush-handoff.html#q11"
+    ],
+    "target": "ko/seminar-3/05-post-flush.html#q11",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "D27",
+    "source": [
+      "ko/reference/defense-handoff.html#d27"
+    ],
+    "target": "ko/seminar-3/05-post-flush.html#d27",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "queue-full-state-trace",
+    "source": [
+      "ko/lessons/0006b-follow-page-flush-handoff.html#queue-full-state-trace"
+    ],
+    "target": "ko/seminar-3/05-post-flush.html#queue-full-state-trace",
+    "terminal": [
+      "accepted; FLUSHING=0",
+      "no P completion item",
+      "local completion done",
+      "flush woken; B not assigned here"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "post-flush-state-trace",
+    "source": [
+      "ko/lessons/0006b-follow-page-flush-handoff.html#post-flush-state-trace"
+    ],
+    "target": "ko/seminar-3/05-post-flush.html#post-flush-state-trace",
+    "terminal": [
+      "DIRTY=1; FLUSHING=0; fcnt=1; LRU3",
+      "empty; G completion done",
+      "woken for G",
+      "still waiting; no offer"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "offer-state-trace",
+    "source": [
+      "ko/lessons/0006b-follow-page-flush-handoff.html#offer-state-trace"
+    ],
+    "target": "ko/seminar-3/05-post-flush.html#offer-state-trace",
+    "terminal": [
+      "B: clean; fcnt=1; identity P unchanged",
+      "size=80; quota=60",
+      "offer revoked / rejected",
+      "no frame; high-priority retry"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "handoff-defense-trace",
+    "source": [
+      "ko/reference/defense-handoff.html#handoff-defense-trace"
+    ],
+    "target": "ko/seminar-3/05-post-flush.html#handoff-defense-trace",
+    "terminal": [
+      "lock; reject; retry",
+      "retag despite A's use",
+      "claim under retained exclusion",
+      "P retained by safe path"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q12",
+    "source": [
+      "ko/lessons/0006c-follow-maintenance-and-pacing.html#q12"
+    ],
+    "target": "ko/seminar-3/06-maintenance.html#q12",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q13",
+    "source": [
+      "ko/lessons/0006c-follow-maintenance-and-pacing.html#q13"
+    ],
+    "target": "ko/seminar-3/06-maintenance.html#q13",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "quota-state-trace",
+    "source": [
+      "ko/lessons/0006c-follow-maintenance-and-pacing.html#quota-state-trace"
+    ],
+    "target": "ko/seminar-3/06-maintenance.html#quota-state-trace",
+    "terminal": [
+      "6 / 2",
+      "10",
+      "60",
+      "second sample set consumed; policy recomputed"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q14",
+    "source": [
+      "ko/lessons/0006c-follow-maintenance-and-pacing.html#q14"
+    ],
+    "target": "ko/seminar-3/07-flush-control.html#q14",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q15",
+    "source": [
+      "ko/lessons/0006c-follow-maintenance-and-pacing.html#q15"
+    ],
+    "target": "ko/seminar-3/07-flush-control.html#q15",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "D28",
+    "source": [
+      "ko/reference/defense-pacing.html#d28"
+    ],
+    "target": "ko/seminar-3/07-flush-control.html#d28",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "token-state-trace",
+    "source": [
+      "ko/lessons/0006c-follow-maintenance-and-pacing.html#token-state-trace"
+    ],
+    "target": "ko/seminar-3/07-flush-control.html#token-state-trace",
+    "terminal": [
+      "A and B writes already succeeded",
+      "0 (fresh shortage case)",
+      "A: may wait; B: proceeds",
+      "soft pacing; no strict write ceiling"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "pacing-defense-trace",
+    "source": [
+      "ko/reference/defense-pacing.html#pacing-defense-trace"
+    ],
+    "target": "ko/seminar-3/07-flush-control.html#pacing-defense-trace",
+    "terminal": [
+      "consume 3; deficit 1; wait/retry",
+      "consume 4; tokens=1",
+      "continue immediately",
+      "four pages already written"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q16",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#q16"
+    ],
+    "target": "ko/seminar-3/08-postgresql-buffers.html#q16",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q17",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#q17"
+    ],
+    "target": "ko/seminar-3/08-postgresql-buffers.html#q17",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "pin-state-trace",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#pin-state-trace"
+    ],
+    "target": "ko/seminar-3/08-postgresql-buffers.html#pin-state-trace",
+    "terminal": [
+      "1 / 2",
+      "0",
+      "1",
+      "B’s pin remains; pin alone is not content locking"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "clock-defense-trace",
+    "source": [
+      "ko/reference/defense-clock.html#clock-defense-trace"
+    ],
+    "target": "ko/seminar-3/08-postgresql-buffers.html#clock-defense-trace",
+    "terminal": [
+      "private=1; shared=1",
+      "identity no longer protected",
+      "private ledger=1; shared=1",
+      "one outstanding use remains"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q18",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#q18"
+    ],
+    "target": "ko/seminar-3/09-clock-sweep.html#q18",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "D29",
+    "source": [
+      "ko/reference/defense-clock.html#d29"
+    ],
+    "target": "ko/seminar-3/09-clock-sweep.html#d29",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "clock-state-trace",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#clock-state-trace"
+    ],
+    "target": "ko/seminar-3/09-clock-sweep.html#clock-state-trace",
+    "terminal": [
+      "H1 / 0 / 1",
+      "S1 / 1 / 0",
+      "S2 / 0 / 0",
+      "S3 / 1 / 0"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "clock-alternative-trace",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#clock-alternative-trace"
+    ],
+    "target": "ko/seminar-3/09-clock-sweep.html#clock-alternative-trace",
+    "terminal": [
+      "H1 / 0 / 0",
+      "S1 / 1 / 0",
+      "S2 / 1 / 0",
+      "S3 / 0 / 0"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "clock-cas-trace",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#clock-cas-trace"
+    ],
+    "target": "ko/seminar-3/09-clock-sweep.html#clock-cas-trace",
+    "terminal": [
+      "1 / 1",
+      "CAS failed; skip D",
+      "holds pin",
+      "D not returned to A"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "fresh-clock-trace",
+    "source": [],
+    "target": "ko/seminar-3/09-clock-sweep.html#fresh-clock-trace",
+    "terminal": [
+      "1/0",
+      "0/1",
+      "0/0",
+      "1/0"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q19",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#q19"
+    ],
+    "target": "ko/seminar-3/10-strategy-rings.html#q19",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q20",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#q20"
+    ],
+    "target": "ko/seminar-3/10-strategy-rings.html#q20",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "D30",
+    "source": [
+      "ko/reference/defense-rings.html#d30"
+    ],
+    "target": "ko/seminar-3/10-strategy-rings.html#d30",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "ring-state-trace",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#ring-state-trace"
+    ],
+    "target": "ko/seminar-3/10-strategy-rings.html#ring-state-trace",
+    "terminal": [
+      "F4 / F6",
+      "0 / 1 / S",
+      "0 / 2 / T",
+      "1 / 0 / U"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "ring-wal-trace",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#ring-wal-trace"
+    ],
+    "target": "ko/seminar-3/10-strategy-rings.html#ring-wal-trace",
+    "terminal": [
+      "retry; empty current slot falls back",
+      "recheck ref=1 and !DIRTY",
+      "recheck ref=1 and !DIRTY",
+      "still pinned; not a victim"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "two-rings-trace",
+    "source": [],
+    "target": "ko/seminar-3/10-strategy-rings.html#two-rings-trace",
+    "terminal": [
+      "pinned X",
+      "reject/fallback",
+      "1/1",
+      "X cannot be retagged by B"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q21",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#q21"
+    ],
+    "target": "ko/seminar-3/11-writeback-and-reuse.html#q21",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q22",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#q22"
+    ],
+    "target": "ko/seminar-3/11-writeback-and-reuse.html#q22",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "D31",
+    "source": [
+      "ko/reference/defense-rings.html#d31"
+    ],
+    "target": "ko/seminar-3/11-writeback-and-reuse.html#d31",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "invalidation-state-trace",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#invalidation-state-trace"
+    ],
+    "target": "ko/seminar-3/11-writeback-and-reuse.html#invalidation-state-trace",
+    "terminal": [
+      "R / 1 / 1 at check",
+      "must release rejected candidate",
+      "no pin; dirty work remains",
+      "R mapping retained; no retag"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "rings-defense-trace",
+    "source": [
+      "ko/reference/defense-rings.html#rings-defense-trace"
+    ],
+    "target": "ko/seminar-3/11-writeback-and-reuse.html#rings-defense-trace",
+    "terminal": [
+      "lock; dirty rejects; retry",
+      "ref=1 trusted; drop R debt",
+      "retire under exclusion",
+      "R must survive in implemented path"
+    ]
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "D32",
+    "source": [
+      "ko/reference/defense-synthesis.html#d32"
+    ],
+    "target": "ko/seminar-3/12-final-defense.html#d32",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "D33",
+    "source": [
+      "ko/reference/defense-synthesis.html#d33"
+    ],
+    "target": "ko/seminar-3/12-final-defense.html#d33",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q23",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#q23"
+    ],
+    "target": "ko/seminar-3/12-final-defense.html#q23",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "question",
+    "key": "Q24",
+    "source": [
+      "ko/lessons/0018a-compare-replacement-policies.html#q24"
+    ],
+    "target": "ko/seminar-3/12-final-defense.html#q24",
+    "terminal": null
+  },
+  {
+    "language": "ko",
+    "kind": "trace",
+    "key": "synthesis-defense-trace",
+    "source": [
+      "ko/reference/defense-synthesis.html#synthesis-defense-trace"
+    ],
+    "target": "ko/seminar-3/12-final-defense.html#synthesis-defense-trace",
+    "terminal": [
+      "clear FLUSHING; refuse dirty offer",
+      "done=true; unsafe retag",
+      "G receipt valid; reuse request rejected",
+      "Q still needs eligible frame"
+    ]
+  }
+]

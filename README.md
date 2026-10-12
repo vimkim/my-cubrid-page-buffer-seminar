@@ -22,9 +22,9 @@ Together, the first two sessions covered page-buffer basics, Buffer Control Bloc
 
 The delivered sessions and remaining agenda govern current seminar preparation. The broader curriculum and Maintainer Guide remain available for deeper study.
 
-Prepare the final session with the [Session 3 preparation plan](docs/final-session-preparation.md) and [Korean spoken script](my-presentation-script-session-3.html).
+Open the current final presentation at [Session 3 contents](toc.html), with [Korean detailed contents](ko/seminar-3/toc.html) and [English contents](en/seminar-3/toc.html). Twelve dedicated chapters carry the complete daemon and PostgreSQL argument through the closing defense. Prepare with the [Session 3 plan](docs/final-session-preparation.md) and [Korean spoken script](my-presentation-script-session-3.html).
 
-The expanded defense route begins at [Korean stable-image reasoning](ko/reference/defense-generations.html#problem) or its [English counterpart](en/reference/defense-generations.html#problem). Seven linked pages explain necessity, invariants, removal schedules, alternatives, costs and proof limits, with nine additional defense questions and a complete seminar ending.
+The earlier seven defense pages remain supporting inputs at their stable URLs. The current presentation owns a dedicated order, 24 retained questions, nine additional defense questions, 25 independent state traces, concrete experiment proposals, and a staged final diagnosis. The [application record](docs/session-3-live-application.md) maps their provenance and exact new anchors.
 
 ## Authoring and checks
 

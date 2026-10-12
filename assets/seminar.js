@@ -77,4 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
   locateHash();
   bar.hidden = false;
   render();
+  // A deep trace anchor selects its screen; begin projecting at the screen top.
+  if (document.body.hasAttribute('data-session-3')) {
+    window.addEventListener('load', () => {
+      requestAnimationFrame(() => { if (active) window.scrollTo(0, 0); });
+    });
+  }
 });

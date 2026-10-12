@@ -1,0 +1,799 @@
+{
+  "date": "2026-10-12",
+  "work_item": 327,
+  "branch": "seminar/session-3-live",
+  "base": "c6397b13ce52016f87473fd1200d640376b749ad",
+  "pins": {
+    "cubrid": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+    "postgres": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc"
+  },
+  "results": {
+    "validator_tests": {
+      "passed": 52,
+      "failed": 0,
+      "skipped": 0
+    },
+    "route_and_browser_tests": {
+      "passed": 24,
+      "failed": 0,
+      "skipped": 0
+    },
+    "guide": {
+      "pages": 43,
+      "displayed_svgs": 71,
+      "orphaned_svgs": 0,
+      "http_resources": 114,
+      "dom_pages": 43
+    },
+    "bilingual_served": {
+      "http_resources": 349,
+      "dom_pages": 158
+    },
+    "review": {
+      "missing_human_receipts": 78,
+      "stale_existing_fingerprints": 96,
+      "technical_failures": 0
+    }
+  },
+  "limits": [
+    "No native engine run or benchmark",
+    "No human Korean/semantic acceptance or participant/rehearsal observation",
+    "Experiment proposals are unexecuted",
+    "Pinned line closure is not a full proof of implementation behavior"
+  ],
+  "artifacts": {
+    "assets/seminar.js": "6b864d90a63cbeb76b90ba8ef646ddb548b8106bc86b5cb55cb90f1a3871af8e",
+    "assets/session-3-live.css": "2f1b81f3cfe122c7f5d9cb1b6b9daccfd9537fbab26fbd2e646f21bc381af1a8",
+    "assets/session-3-traces.css": "efe6f775fbf05955b4e4c153af9f9cd7dce9aba8eeb3c043120552165444234c",
+    "assets/session-3-traces.js": "950c44db8fd0e2e83cfd65e7484e33737217860cd2c050c17ccc5de92baa7aef",
+    "en/seminar-3/01-opening.html": "474184f23c00d7903d8b7641017e62e785839aaf7f60253cefb86aed8dacb95e",
+    "en/seminar-3/02-flush-generations.html": "6cd1cf2c136c59f125fbe1706d32ac281164158be932f518f89b5f44e3bf3f75",
+    "en/seminar-3/03-daemon-architecture.html": "52bc5a65abb4c36162d8b51f75244cfb0aa01d0b9e86fec51b57ae71e6032170",
+    "en/seminar-3/04-page-flush.html": "306884e11e4cfad3ba4f2836f04b0c05e8ff57c580fb7ca51b16e573fef3815a",
+    "en/seminar-3/05-post-flush.html": "1323260ffc71a8025a2efc75d983f9c8c58c3424806b43c82aa70cc840b309c1",
+    "en/seminar-3/06-maintenance.html": "08beab3696aec108f6a071faf736f64cef55be5ec6d8fac4b25f7aeec9d2c402",
+    "en/seminar-3/07-flush-control.html": "a72f270b948d06767cd0c3140c5401c55d851266c892f87260444f6ea7d6a735",
+    "en/seminar-3/08-postgresql-buffers.html": "fbb4cd08eb2c47ff678c361e34ca1de49571e058b1dd4e6e8756bc77f1be5bbc",
+    "en/seminar-3/09-clock-sweep.html": "a5982729e4462012a4c467f4b4db2f598eeb827a37e75a93afc5c77be4d473ec",
+    "en/seminar-3/10-strategy-rings.html": "86099150ae059f0ab938cfbc4b52a244fcb78d0bdd21698242c0bb7e0098e3d2",
+    "en/seminar-3/11-writeback-and-reuse.html": "2395581b223b40f71fd7248162d8658cf843345d0618ca8571a625f8186cf995",
+    "en/seminar-3/12-final-defense.html": "c01f47ecccd9210b80fe78843250e92cc9cb170fc1b1c8beaf70f545071b3a3b",
+    "en/seminar-3/toc.html": "62c901960c8918443ca630ce49d4dda33e36aa34aaa144f2649e41572e6cd095",
+    "ko/seminar-3/01-opening.html": "d07b3a7e48bc7207f9f8e821457bbc293e805fec686e9c3ca8898ca3aca1a6db",
+    "ko/seminar-3/02-flush-generations.html": "156ce37d13fd44d3ce5dfd5d6f539ab6ccbe0cbe245b6b7f06d71f84c9c7c773",
+    "ko/seminar-3/03-daemon-architecture.html": "296aa98b50955b89623dad595e2c9eb52f3fa23863100db3c9a0aaa4140893ae",
+    "ko/seminar-3/04-page-flush.html": "8f63da7648c7316ae57d96cf0bf05af5bb62801af8476458afdce1b7d4ae1842",
+    "ko/seminar-3/05-post-flush.html": "eec7b43b7434db6a65af74ca1663860ebfb697a13c0a346169e338078741ae8d",
+    "ko/seminar-3/06-maintenance.html": "5e7bce2a45119f1d02d27e2fc8673b161f258e30421a636b294d7ab825ae0460",
+    "ko/seminar-3/07-flush-control.html": "5f8d827f0d200923c7538ee2f850b17940b63392c9a7f985bcf482a775f288c7",
+    "ko/seminar-3/08-postgresql-buffers.html": "44bfd8fbee36c771365df870818eea1ab9d60d56fc7041249fba8ca52965809d",
+    "ko/seminar-3/09-clock-sweep.html": "158455801c7386e13d76ebf2a586b8ed24653d77e69fe192e95081f540dcee22",
+    "ko/seminar-3/10-strategy-rings.html": "8200e5349b3b4e03c879d258da1e8fb02c385a05cc96b09f11cc6753e9f05fd5",
+    "ko/seminar-3/11-writeback-and-reuse.html": "94d2f2dd99776c5afc8ab5ef6167b0d11b1f23b5c81966954b1fa3150fb369ba",
+    "ko/seminar-3/12-final-defense.html": "01a17206841f94ec404e6e31829bf60e6f48f984c0245c7344f27fa7aa71cf6a",
+    "ko/seminar-3/toc.html": "be609b69c043f353e233fc578ee06c59314fbde81bb95e225e94512d9978e3ad",
+    "my-presentation-script-session-3.html": "a122fa174303b4eeb8e9ce3182427baab079ce40c37711c7910b708eda01bd0a",
+    "scripts/check-bilingual-teaching-site.mjs": "fadab42d297ad788ab89686842e75115e7bbe6ad0d425c498721b6ab06fb2b8f",
+    "scripts/session-3-contract.mjs": "7b5f3be4d0c00c381981266b0c242ac7afada03527cd04c586a7f104051614c7",
+    "scripts/session-3-live.test.mjs": "ab3ec39fd57023a607731090adc8818ea845646bfa0d6150aeeabef3cd5197ed",
+    "session-3-route.json": "a1fd62f3e27388a9df70ebaaa57ce594ae64bb30621c0b6b15fcf9a75c0edb5f",
+    "teaching-pages.json": "ac331e62ff5cdf3ed886ce7e6e6b7e96e869f67a67725c10e066f600a4b4ab16",
+    "toc.html": "3f026458a3fe77414099bb3faa52e4ce95b52234ea66e8c576284a60e3d60cc0"
+  },
+  "source_targets": [
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/double_write_buffer.cpp",
+      "first": 2310,
+      "last": 2412,
+      "file_sha256": "32ae9d886d6ef5d2f3c1b280980eab25172fb74e9bc3e2178153f9122d6b365a"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/double_write_buffer.cpp",
+      "first": 2714,
+      "last": 2828,
+      "file_sha256": "32ae9d886d6ef5d2f3c1b280980eab25172fb74e9bc3e2178153f9122d6b365a"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/double_write_buffer.cpp",
+      "first": 3093,
+      "last": 3184,
+      "file_sha256": "32ae9d886d6ef5d2f3c1b280980eab25172fb74e9bc3e2178153f9122d6b365a"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/file_io.c",
+      "first": 744,
+      "last": 892,
+      "file_sha256": "3d4f38846aaf9e5f4dc0e753cb95946329429087775dbae3a6ce7c08eb101762"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/file_io.c",
+      "first": 751,
+      "last": 829,
+      "file_sha256": "3d4f38846aaf9e5f4dc0e753cb95946329429087775dbae3a6ce7c08eb101762"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/file_io.c",
+      "first": 751,
+      "last": 891,
+      "file_sha256": "3d4f38846aaf9e5f4dc0e753cb95946329429087775dbae3a6ce7c08eb101762"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/file_io.c",
+      "first": 839,
+      "last": 929,
+      "file_sha256": "3d4f38846aaf9e5f4dc0e753cb95946329429087775dbae3a6ce7c08eb101762"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/file_io.c",
+      "first": 850,
+      "last": 891,
+      "file_sha256": "3d4f38846aaf9e5f4dc0e753cb95946329429087775dbae3a6ce7c08eb101762"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/file_io.c",
+      "first": 881,
+      "last": 890,
+      "file_sha256": "3d4f38846aaf9e5f4dc0e753cb95946329429087775dbae3a6ce7c08eb101762"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/file_io.c",
+      "first": 4122,
+      "last": 4204,
+      "file_sha256": "3d4f38846aaf9e5f4dc0e753cb95946329429087775dbae3a6ce7c08eb101762"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 541,
+      "last": 541,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 3780,
+      "last": 4165,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 4040,
+      "last": 4088,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 4041,
+      "last": 4088,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 4047,
+      "last": 4054,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 4172,
+      "last": 4186,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 4247,
+      "last": 4257,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 4533,
+      "last": 4600,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 5041,
+      "last": 5071,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 8181,
+      "last": 8403,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 8315,
+      "last": 8325,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 8809,
+      "last": 8901,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 9608,
+      "last": 9648,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 9629,
+      "last": 9635,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 10723,
+      "last": 10962,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 10727,
+      "last": 10966,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 10735,
+      "last": 10834,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 10830,
+      "last": 10898,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 10836,
+      "last": 10899,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 10908,
+      "last": 10923,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 10925,
+      "last": 10952,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 10929,
+      "last": 10954,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 14251,
+      "last": 14511,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 14260,
+      "last": 14511,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 14294,
+      "last": 14340,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 15420,
+      "last": 15656,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 15487,
+      "last": 15556,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 15487,
+      "last": 15656,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 15487,
+      "last": 15660,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 15496,
+      "last": 15556,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 15512,
+      "last": 15545,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 15592,
+      "last": 15660,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 16077,
+      "last": 16126,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 16077,
+      "last": 16143,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 16971,
+      "last": 17255,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 16994,
+      "last": 17255,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 16997,
+      "last": 17008,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 17012,
+      "last": 17067,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 17029,
+      "last": 17055,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 17072,
+      "last": 17080,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/storage/page_buffer.c",
+      "first": 17112,
+      "last": 17143,
+      "file_sha256": "d1e71931b2a2da569f7e96c8a35eab85ec5bf0b4dac5fa0c3d0ac69adf03c163"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/thread/thread_daemon.cpp",
+      "first": 53,
+      "last": 105,
+      "file_sha256": "7218570a05c5499dbaf537f77dca3a85d5d788c394ecaeb9b4e97eb8bd320530"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/thread/thread_waiter.cpp",
+      "first": 76,
+      "last": 101,
+      "file_sha256": "066576da12dcfad30c23af91afa53f323e6b9317bdbef71965be79122da4690d"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/transaction/boot_sr.c",
+      "first": 2405,
+      "last": 2441,
+      "file_sha256": "01c1189c162d2d6b6a41dac4d9a52e0cab169c5fd1e6ae2cd003bb5f90343651"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/transaction/boot_sr.c",
+      "first": 3086,
+      "last": 3114,
+      "file_sha256": "01c1189c162d2d6b6a41dac4d9a52e0cab169c5fd1e6ae2cd003bb5f90343651"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/transaction/log_page_buffer.c",
+      "first": 6974,
+      "last": 7030,
+      "file_sha256": "98dbfb055d2370ab7a98334de328bebc46c1828c0e04e2ea80a7d14e8472ef9c"
+    },
+    {
+      "repository": "CUBRID/CUBRID",
+      "pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+      "file": "src/transaction/log_page_buffer.c",
+      "first": 7217,
+      "last": 7225,
+      "file_sha256": "98dbfb055d2370ab7a98334de328bebc46c1828c0e04e2ea80a7d14e8472ef9c"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/access/transam/xlog.c",
+      "first": 7715,
+      "last": 7754,
+      "file_sha256": "9d96df375a16778376c83671e92303689ebf8099bab07fc48992197be01f5a8a"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/access/transam/xlog.c",
+      "first": 8049,
+      "last": 8069,
+      "file_sha256": "9d96df375a16778376c83671e92303689ebf8099bab07fc48992197be01f5a8a"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 1223,
+      "last": 1251,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 2268,
+      "last": 2268,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 2471,
+      "last": 2511,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 2471,
+      "last": 2673,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 2500,
+      "last": 2511,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 2548,
+      "last": 2671,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 2548,
+      "last": 2673,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 2590,
+      "last": 2639,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 3295,
+      "last": 3380,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 3295,
+      "last": 3386,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 3575,
+      "last": 3615,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 3854,
+      "last": 4115,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 3854,
+      "last": 4211,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/bufmgr.c",
+      "first": 4561,
+      "last": 4604,
+      "file_sha256": "e06ef92568b542148fda10ecae264c7451a52c0269182d1403d0ec6a31837732"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 94,
+      "last": 139,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 104,
+      "last": 317,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 171,
+      "last": 295,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 171,
+      "last": 317,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 239,
+      "last": 317,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 252,
+      "last": 317,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 286,
+      "last": 295,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 420,
+      "last": 540,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 420,
+      "last": 770,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 615,
+      "last": 705,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 615,
+      "last": 770,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/backend/storage/buffer/freelist.c",
+      "first": 741,
+      "last": 770,
+      "file_sha256": "276156fbe9ee0f85c711cfbebc99c2c1c0e62ce2926fb4e80d8c751bd3d364ba"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/include/storage/buf_internals.h",
+      "first": 35,
+      "last": 147,
+      "file_sha256": "9ebf91dfbabf16fc66a783b795129919cb076bde30c35de08d1d5ec20e55c845"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/include/storage/buf_internals.h",
+      "first": 135,
+      "last": 146,
+      "file_sha256": "9ebf91dfbabf16fc66a783b795129919cb076bde30c35de08d1d5ec20e55c845"
+    },
+    {
+      "repository": "postgres/postgres",
+      "pin": "fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc",
+      "file": "src/include/storage/buf_internals.h",
+      "first": 136,
+      "last": 147,
+      "file_sha256": "9ebf91dfbabf16fc66a783b795129919cb076bde30c35de08d1d5ec20e55c845"
+    }
+  ],
+  "screenshots": {
+    "clock.png": "ee58d03ce35a4efc777e3d3a926c25766f4fc3d2a5c4647b45a2293b53957ce2",
+    "diagnosis.png": "c794e46ccaa60c7fce093f9f0538425f5580c13ce29a320ddaf5033b88409314",
+    "generation-removal.png": "1269bb68db914ed3e517eb4280c9725798df82d7c090b9a1734b7bbbd211c22d",
+    "post-flush.png": "4ae8985ae1c65f7eff08619a49fcdad566f2dcd03aa0b2d6bad01bcb7635cbef",
+    "rings.png": "a77abe4241a4438a5125804a36aa489794796567bfe5ace2af44452a6f6cdebc",
+    "toc.png": "e8a92249ef6d2cca9fd4416ef3a44fb19b37d36bfd3aac53f4cfe439e13af919"
+  },
+  "author_links_checked": 259,
+  "author_markdown_dom_pages": 3
+}

@@ -6,6 +6,7 @@ import { Script } from "node:vm";
 import path from "node:path";
 import process from "node:process";
 import { validateAudience, checkPresentationDom, checkPresentationKeyboard } from "./seminar-contract.mjs";
+import { validateSession3, requiresLegacyRedirect } from "./session-3-contract.mjs";
 
 function parseArguments (argv)
 {
@@ -169,7 +170,7 @@ async function validateLinks (root)
 
   for (const page of manifest.pages ?? [])
     {
-      if (page.path === "index.html")
+      if (!requiresLegacyRedirect (page))
         {
           continue;
         }
@@ -193,7 +194,7 @@ async function validateLinks (root)
     }
 
   const checkedSvgs = new Set ();
-  for (const page of manifest.pages ?? [])
+  for (const page of [...(manifest.pages ?? []), ...(manifest.session3Route ? [{ en: "toc.html", ko: "toc.html" }] : [])])
     {
       for (const pagePath of [page.en, page.ko])
         {
@@ -1132,12 +1133,12 @@ async function validateServedHttp (root, baseUrl)
     }
   const failures = [];
   const manifest = await readManifest (root);
-  const paths = new Set (["index.html", "teaching-pages.json"]);
+  const paths = new Set (["index.html", "teaching-pages.json", ...(manifest.session3Route ? ["toc.html", manifest.session3Route] : [])]);
   for (const page of manifest.pages ?? [])
     {
       paths.add (page.en);
       paths.add (page.ko);
-      if (page.path !== "index.html")
+      if (requiresLegacyRedirect (page))
         {
           paths.add (page.path);
         }
@@ -1213,7 +1214,7 @@ async function validateLiveDom (root, baseUrl)
 
   const failures = [];
   const manifest = await readManifest (root);
-  const pagePaths = ["index.html", ...(manifest.pages ?? []).flatMap ((page) => [page.en, page.ko])];
+  const pagePaths = ["index.html", ...(manifest.session3Route ? ["toc.html"] : []), ...(manifest.pages ?? []).flatMap ((page) => [page.en, page.ko])];
   const base = new URL (baseUrl.endsWith ("/") ? baseUrl : `${baseUrl}/`);
   try
     {
@@ -1510,6 +1511,10 @@ async function main ()
   const results = [];
   if (options.gate === "all" || options.gate === "audience")
     {
+      results.push (["Session 3 route contract", await validateSession3 (root)]);
+    }
+  if (options.gate === "all" || options.gate === "audience")
+    {
       results.push (["Audience curriculum contract", await validateAudience (root)]);
     }
   if (options.gate === "all" || options.gate === "inventory")
@@ -1563,7 +1568,7 @@ async function main ()
         }
       else
         {
-          console.log (`${label}: PASS (${result.count} ${label === "Served HTTP behavior" ? "resources" : label === "Live DOM behavior" ? "pages" : "pairs"})`);
+          console.log (`${label}: PASS (${result.count} ${label === "Served HTTP behavior" ? "resources" : label === "Live DOM behavior" || label === "Session 3 route contract" ? "pages" : "pairs"})`);
         }
     }
 }

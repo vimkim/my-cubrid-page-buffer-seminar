@@ -1,0 +1,32 @@
+✔ the real dedicated product delivers all questions, traces and the closed route (441.675836ms)
+✔ a wrong next chapter, old-library return, wrong counterpart and missing closure are rejected (75.740567ms)
+✔ root TOC opens the entire Korean journey and reaches closure (1131.498024ms)
+✔ en: deep trace entry starts at its screen top and staged evidence resets (179.802219ms)
+✔ en: every new page renders, pairs, reveals answers and steps by keyboard (2888.762675ms)
+✔ en: all 25 relocated/new traces retain outcomes and independent keyboard reset (2098.080479ms)
+✔ en: no-JavaScript mobile access exposes all screens/snapshots and native evidence (984.482221ms)
+✔ ko: deep trace entry starts at its screen top and staged evidence resets (195.177835ms)
+✔ ko: every new page renders, pairs, reveals answers and steps by keyboard (3552.623207ms)
+✔ ko: all 25 relocated/new traces retain outcomes and independent keyboard reset (2399.305489ms)
+✔ ko: no-JavaScript mobile access exposes all screens/snapshots and native evidence (1110.336543ms)
+✔ all Korean spoken screen cues resolve to the exact served chapter/anchor (1745.623794ms)
+✔ en: Q01–Q24, D25–D33 and all 22 traces are delivered and keyboard reversible (3571.722459ms)
+✔ en: generation, clock, ring and completion outcomes preserve source boundaries (467.499796ms)
+✔ en: six-screen defense routes, language pairs and answer resets work by keyboard (815.378733ms)
+✔ en: removal traces distinguish safety, policy and authorization outcomes (516.936107ms)
+✔ en: 390px no-JavaScript reading exposes all snapshots and native answers (1038.951648ms)
+✔ en: 320px no-JavaScript reading exposes all snapshots and native answers (1081.524558ms)
+✔ ko: Q01–Q24, D25–D33 and all 22 traces are delivered and keyboard reversible (3495.019967ms)
+✔ ko: generation, clock, ring and completion outcomes preserve source boundaries (555.499697ms)
+✔ ko: six-screen defense routes, language pairs and answer resets work by keyboard (1022.464011ms)
+✔ ko: removal traces distinguish safety, policy and authorization outcomes (534.053949ms)
+✔ ko: 390px no-JavaScript reading exposes all snapshots and native answers (1143.389016ms)
+✔ ko: 320px no-JavaScript reading exposes all snapshots and native answers (1170.080147ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16946.099743
