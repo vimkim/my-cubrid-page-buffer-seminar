@@ -49,7 +49,7 @@ The [accepted live design](session-3-live-design.md) governs the recurring workl
 
 Each chapter ends its mechanism argument with a coherent replacement protocol and a falsifiable experiment proposal. The Korean script lists every exact screen, including the new staged evidence and final closure. Proposals identify conditions, intervention, built-in observables or proposed probes, falsifiers and limits. They are not execution receipts.
 
-Keep the Q01-Q24 and D25-D33 coverage, 22 retained state traces and three additional independent cases. The [application record](session-3-live-application.md) maps every question and trace to its new anchor. Native details expose diagnostic evidence after participants choose an observation; all initial premises remain visible. Q23/Q24, the complete page journey and farewell remain part of the ending.
+Keep the Q01-Q24 and D25-D33 coverage except D27, whose separate section was omitted from the live session at the user’s request; retain the 22 existing state traces and three additional independent cases. The [application record](session-3-live-application.md) maps every question and trace to its new anchor. Native details expose diagnostic evidence after participants choose an observation; all initial premises remain visible. Q23/Q24, the complete page journey and farewell remain part of the ending.
 
 ## Intensive defense route
 

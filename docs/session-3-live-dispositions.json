@@ -224,8 +224,10 @@
     "source": [
       "en/reference/defense-handoff.html#d27"
     ],
-    "target": "en/seminar-3/05-post-flush.html#d27",
-    "terminal": null
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the live session at the user’s request; current-state safety and policy checks remain in the post-flush explanations and traces."
   },
   {
     "language": "en",
@@ -923,8 +925,10 @@
     "source": [
       "ko/reference/defense-handoff.html#d27"
     ],
-    "target": "ko/seminar-3/05-post-flush.html#d27",
-    "terminal": null
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the live session at the user’s request; current-state safety and policy checks remain in the post-flush explanations and traces."
   },
   {
     "language": "ko",

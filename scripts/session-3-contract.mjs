@@ -93,8 +93,8 @@ export async function validateSession3(root) {
       traces += [...html.matchAll(/\bdata-state-trace(?:\s|=|>)/g)].length;
       for (const pin of [route.cubrid, route.postgres]) if (!html.includes(pin)) failures.push(`${file}: missing pin ${pin}`);
     }
-    const wanted = [...Array.from({ length: 24 }, (_, i) => `Q${String(i + 1).padStart(2, '0')}`), ...Array.from({ length: 9 }, (_, i) => `D${i + 25}`)].sort();
-    if (JSON.stringify(questions.sort()) !== JSON.stringify(wanted)) failures.push(`${lang}: Q01-Q24/D25-D33 must each occur once`);
+    const wanted = [...Array.from({ length: 24 }, (_, i) => `Q${String(i + 1).padStart(2, '0')}`), ...Array.from({ length: 9 }, (_, i) => `D${i + 25}`).filter(id => id !== 'D27')].sort();
+    if (JSON.stringify(questions.sort()) !== JSON.stringify(wanted)) failures.push(`${lang}: Q01-Q24/D25-D33 except omitted D27 must each occur once`);
     if (traces < 25) failures.push(`${lang}: preserve 22 traces and the three new cases`);
     const toc = await readFile(path.join(root, lang, 'seminar-3/toc.html'), 'utf8');
     screensByLanguage[lang] = screens;
