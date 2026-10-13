@@ -10,6 +10,9 @@
 <p>Page-flush saves the address and page identity while protecting a replacement list with a mutex. A <strong>mutex</strong> allows one thread at a time to inspect or change the protected state. Page-flush releases the list mutex before taking the BCB mutex. Another thread can use the page or reuse the frame during that gap.</p>
 <div class="callout">The saved address answers “which control record?” The saved identity answers “which page did we select?” A fresh check under the BCB mutex answers “may we act on its current state?” Keeping the BCB storage alive preserves only the first fact.</div>
 <p class="live-source"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3780-L4165">Pinned collection and recheck</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Why not keep the list mutex until the write finishes?</summary><p>That would extend list exclusion across BCB locking, WAL and storage waits, and requires a valid lock order. The shown design releases list protection and pays for that gap with current-state revalidation.</p></details>
+</div>
 </section>
 <section class="section" id="first-code-path">
 <div class="eyebrow">04 · 2 / 24</div><h2>Which calls can submit the selected image?</h2>
@@ -22,6 +25,9 @@
       → fileio_write             [later direct-write step]</pre><figcaption>The common helper calls both WAL flushing and page writing, in that order on this branch. These source-verified calls are not a captured runtime stack.</figcaption></figure>
 <p><strong>Submission</strong> means the image reaches its configured direct-write or DWB acceptance boundary. Entering a helper does not establish success; submission still does not establish that the resident frame is currently reusable.</p>
 <p class="source-note">Source: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17055">page_buffer.c:17029–17055</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4088">page_buffer.c:4040–4088</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10830-L10898">page_buffer.c:10830–10898</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Does entering fileio_write prove that the write succeeded?</summary><p>No. Function entry identifies the attempted route. Its result, later completion bookkeeping and any storage synchronization are separate events that need separate observations.</p></details>
+</div>
 </section>
 <section class="section" id="trigger">
 <div class="eyebrow">04 · 3 / 24</div><h2>When does the worker look for useful work?</h2>
@@ -30,6 +36,10 @@
 <p><code>page_flush_interval</code> defaults to 1,000 ms; zero means waiting indefinitely for a wake. Allocation/victim code calls wake when normal search fails, when removing a clean list bottom exposes a dirty one, or when a selected scan finds no reusable frame control record (BCB).</p>
 <div class="callout">A wake asks the worker to check; the gate permits task work; current candidate guards permit an image capture. None of these events alone proves submission.</div>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16971-L17049">Interval and task guards</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_waiter.cpp#L200-L224">Zero-duration wait result</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Does interval zero turn page-flush off?</summary><p>No. It selects wake-only waiting. The worker still exists, and a later accepted wake can give it another task opportunity; useful work also requires the gate and current candidate checks.</p></details>
+<details class="answer-disclosure"><summary>Q&amp;A · Will every timer timeout inspect candidates?</summary><p>Not necessarily. A timer-driven entry needs the relevant allocator pressure or sampled replacement-pressure condition before entering the candidate helper. A timer is an opportunity to check those conditions.</p></details>
+</div>
 </section>
 <section class="section" id="flush-loop-boundaries">
 <div class="eyebrow">04 · 4 / 24</div><h2>What makes this search loop continue or stop?</h2>
@@ -37,6 +47,9 @@
 <ol><li><strong>Enter.</strong> With the gate open, <code>was_woken_up()</code> forces one candidate-helper call. This is a wait result, not a count of work: when execution consumes the timed period, the zero-duration wait also returns true without an external wake.</li><li><strong>Continue.</strong> After that forced call, current allocation waiters or low sampled hit ratio can keep the inner pressure loop running. The task ignores the helper’s error return. A task entry or helper return alone cannot establish whether any image was submitted; an error is not a successful submission receipt.</li><li><strong>Leave this search.</strong> A scan with positive check budget and summed list priority but no dirty candidates sets <code>stop_iteration</code>. The task breaks the inner loop so allocators can look for available victims. A zero budget or zero priority does not supply that hint.</li></ol>
 <div class="callout">The search stop hint differs from the daemon’s shutdown stop flag. The inner pressure loop does not poll that flag. A running task must return to the outer loop before the worker can stop; locks, recovery-log forcing and page I/O can delay that return. No join deadline follows.</div>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3978-L3989">No-candidate hint</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17049">Gate and pressure loop</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17294-L17302">Pointer availability</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_waiter.cpp#L200-L224">Zero wait</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Does was_woken_up always mean another thread signaled?</summary><p>No. The zero-duration wait can also report true when task execution uses up the period. Interpret it as the looper’s wait result, not as a count of external notifications.</p></details>
+</div>
 </section>
 <section class="section" data-reset-answers="" id="trigger-part-2">
 <div class="eyebrow">04 · 5 / 24</div><h2>Why does one helper entry prove so little?</h2>
@@ -47,6 +60,9 @@
 <p><strong>Prediction:</strong> Which actor and event would you trace next to assess allocator progress?</p>
 <details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>Trace log-flush, or page-flush’s pressure-driven synchronous WAL force, reaching the required 300 boundary. Then follow candidate retry, image submission, completion, and any allocator offer and receiving check. Another supplier might serve the allocator first. Zero submissions in this unfinished observation establishes neither completion nor a broken flusher.</p><p class="optional-question"><strong>Optional follow-up:</strong> What further event would support a claim that page-flush finished its work?</p></details>
 </div>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Why might the allocator progress before this helper submits anything?</summary><p>Another producer may supply a suitable frame. To attribute the allocator’s progress to page-flush, connect this helper’s submission and completion to the specific offer and successful receiving check.</p></details>
+</div>
 </section>
 <section class="section" id="selection">
 <div class="eyebrow">04 · 6 / 24</div><h2>How does an observation become a flush decision?</h2>
@@ -55,6 +71,9 @@
 <ol><li><strong>Choose search work.</strong> Read pressure, calculate each list’s priority, and divide a scan budget among the lists with positive priority.</li><li><strong>Remember possibilities.</strong> Hold one LRU mutex at a time. Start at that list’s tail (<code>bottom</code>) and follow <code>prev_BCB</code> while still in LRU3 and within that list’s scan budget. Save each dirty candidate’s BCB address and VPID in a candidate array.</li><li><strong>Leave list protection.</strong> Release the mutex. The collected array may be sorted by volume and page number before checking candidates individually; no reservation spans this gap.</li></ol>
 <div class="callout">This search collects dirty candidates for page-flush. Collection supplies possibilities; the next protected check must still establish current eligibility before any image is captured. <a href="#flush-policy-settings">The policy settings below distinguish scan work from candidate ordering.</a></div>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17049">Daemon call</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3789-L3848">LRU3 scan and collection</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Does sorting candidates by VPID reserve those pages?</summary><p>No. Sorting changes processing order and can favor sequential writes. It adds no protection against fixes, identity changes or other flushes after collection.</p></details>
+</div>
 </section>
 <section class="section" id="selection-current-checks">
 <div class="eyebrow">04 · 7 / 24</div><h2>Which current conditions permit capture?</h2>
@@ -102,6 +121,9 @@
 <p><code>logpb_flush_log_for_wal()</code> rechecks whether WAL is needed inside the log critical section and calls <code>logpb_flush_pages_direct()</code> if it still is. If another thread has already flushed the log, it does not repeat that write.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L11255-L11267">WAL readiness:11255–11267</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L4162-L4180">Synchronous WAL flush:4162–4180</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3883-L3890">Initial retry state:3883–3890</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4030-L4064">Retry entry and current-state rechecks:4030–4064</a></p>
 </details>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Why can fcnt=0 still fail the use check?</summary><p>The helper also considers attached waiters and blocking latch state. Zero outstanding fixes answers only one part of current eligibility; it is not a complete capture or reuse permission.</p></details>
+</div>
 </section>
 <section class="section" data-reset-answers="" id="selection-part-2">
 <div class="eyebrow">04 · 8 / 24</div><h2>Can the same page become an unsuitable candidate?</h2>
@@ -111,6 +133,9 @@
 <p>Page-flush remembers this state under the list mutex, releases that mutex, and later locks the BCB, the frame’s control record. Its VPID still names the same page. A proposed optimization compares only VPID and trusts the earlier state; ordinary readers may still acquire fixes in the gap.</p>
 <p><strong>Prediction:</strong> Which intervening event provides a counterexample?</p>
 <details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>A reader fixes the page and retains that fix. Identity still agrees, but the old zero-fix observation is stale. Moving the page to a hotter zone or starting another flush also changes the decision. Page-flush must recheck identity and current DIRTY, FLUSHING, zone, and use state after acquiring the BCB mutex.</p><p class="optional-question"><strong>Optional follow-up:</strong> Which protected interval must contain that recheck?</p></details>
+</div>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · If the reader later unfixes, can the saved candidate be trusted again?</summary><p>It may become eligible again, but that requires another protected current check. The intervening use does not restore all the earlier observations or reserve the page for this flusher.</p></details>
 </div>
 </section>
 <section class="section" id="selection-part-3">
@@ -147,6 +172,9 @@
     ++num_skipped_fixed_or_hot;
     continue;
   }</code></pre><p><code>||</code> enters the branch when either term is true. In this example, the LRU3 condition still holds, but the current fix makes the second term true. <code>continue</code> advances to the next item in the candidate loop. <code>num_skipped_fixed_or_hot</code> counts fixed and hot rejections together, so this counter alone cannot distinguish the precise cause.</p><p>In server mode, <code>pgbuf_is_bcb_fixed_by_any</code> returns true for a positive current fix count, an attached waiter, or, when its second argument is <code>false</code> as in this call, a latch other than <code>PGBUF_NO_LATCH</code>. Thus <code>fcnt=0</code> alone does not guarantee passing this helper. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9255-L9287">fixed-by-any:9255–9287</a></p></details>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · What if the reader changes no bytes?</summary><p>Its retained fix still changes current use state, so this candidate path rejects it. Dirty-state preservation and caller-use protection are independent reasons for the guards.</p></details>
+</div>
 </section>
 <section class="section" id="handoff-problem">
 <div class="eyebrow">04 · 10 / 24</div><h2>Why save both an address and a page identity?</h2>
@@ -154,6 +182,9 @@
 <p>Saving <code>F/P</code> records where to look and what page was observed. Later, <code>F/Q</code> would have the same control-record address but a different VPID, so identity comparison rejects the stale nomination. Even <code>F/P</code> can now have a caller fix, a newer dirty image, a hotter zone, or another outstanding flush.</p>
 <div class="callout"><strong>Safety checks</strong> protect current callers and outstanding write work. <strong>Retention policy</strong> prefers cold-zone pages and, at the later direct-offer stage, respects private-list quota. A quota is a target number of pages to retain for a replacement domain; it does not grant exclusive page ownership. Coldness does not certify durability.</div>
 <p><strong>Inference:</strong> Releasing the list mutex before BCB work limits how long list operations are blocked. The implementation pays for this shorter protected interval by revalidating the candidate later. A saved observation does not reserve its future state.</p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Is a private-list quota an exclusive ownership claim?</summary><p>No. It is a retention target for a replacement domain. It can affect whether a cold frame is offered, but does not give one session exclusive access to its page.</p></details>
+</div>
 </section>
 <section class="section" id="waiter-origins">
 <div class="eyebrow">04 · 11 / 24</div><h2>Where do flush waiters and frame waiters come from?</h2>
@@ -162,12 +193,18 @@
 <p>The waiters are the requesting server threads. <strong>Page-flush</strong> submits images in the background. After success, it handles completion itself or queues the BCB (frame control record) for the separate <strong>post-flush</strong> thread. Completion wakes flush waiters; post-flush also checks whether it can offer a frame to an allocation waiter.</p>
 <div class="callout">Finishing a particular page's flush and obtaining a reusable frame are different results.</div>
 <details><summary>Source: wait registration and completion</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8839-L8897">Flush wait registration</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8247-L8309">Allocation wait registration</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10927-L10952">Direct or queued completion</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15496-L15553">Post-flush completion and offer</a></p></details>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Can an allocator receive a frame from another page instead?</summary><p>Yes. It needs any currently eligible frame for the missing page. Its registration is separate from a particular BCB’s flush-wait list, so another supplier can satisfy it first.</p></details>
+</div>
 </section>
 <section class="section" id="handoff-boundaries">
 <div class="eyebrow">04 · 12 / 24</div><h2>Why can completion succeed while reuse is rejected?</h2>
 <p>Look ahead to the work after a successful image submission. <strong>Post-flush</strong> finishes the BCB’s old flush bookkeeping and may offer its frame to a waiting allocator. The BCB is the frame’s control record. Its current state decides the offer; finishing the old image remains necessary even if that offer fails. DIRTY marks modified resident work still owed; a fix protects continued caller use. A private replacement list accounts for a policy domain’s pages, and its quota is a target number to retain.</p>
 <div class="table-scroll"><table><thead><tr><th>Current rejection at the offer/receiving stage</th><th>What it means</th></tr></thead><tbody><tr><td>Blocking flags or a new DIRTY obligation</td><td>The current frame is unsuitable for reuse; the old flush still completes.</td></tr><tr><td>Caller fix or attached waiter</td><td>Current use protection blocks reuse, even if the page identity matches.</td></tr><tr><td>Outside the cold LRU3 victim zone</td><td>Retention policy rejects this frame; cleanliness alone is insufficient.</td></tr><tr><td>Private list no longer over quota</td><td>Policy retains pages for that domain; this says nothing about corrupt bytes.</td></tr><tr><td>No live allocation waiter</td><td>There is no receiver to assign; completion bookkeeping and flush wakeups remain.</td></tr><tr><td>Offer invalidated before receiving</td><td>The receiver rejects and retries; publishing an offer did not preserve future eligibility.</td></tr></tbody></table></div>
 <p>An <strong>offer</strong> names a possible frame for an allocator. The allocator must still take the BCB mutex and validate current state before it can receive the frame for reuse. <a href="05-post-flush.html#handoff">Follow the producer, consumer, and receiver next →</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Should completion be undone if the allocator cannot receive the frame?</summary><p>Failure to offer or receive does not undo successful old-image submission. Completion must still retire the old flush bookkeeping and preserve any current obligations; allocation can retry separately.</p></details>
+</div>
 </section>
 <section class="section" id="handoff-boundaries-part-2">
 <div class="eyebrow">04 · 13 / 24</div><h2>How can two waiters need different outcomes?</h2>
@@ -175,6 +212,9 @@
 <p>A <strong>flush waiter</strong> has requested a synchronous flush of dirty P and is waiting for its ongoing flush to complete. Separately, an <strong>allocation waiter</strong> needs a frame to load Q. The writer may also retain a fix that protects continued use of P.</p>
 <p>Completion clears the earlier FLUSHING state and wakes the flush waiter. It preserves the newer DIRTY obligation and any caller fix, so the allocation waiter can still receive no frame. Finishing an old image, being clean now, being eligible, offering a frame, and successfully receiving it are separate events.</p>
 <div class="callout">This schedule does not continue the preceding trace. It shows why an image-completion event alone cannot establish allocator progress. Source structure supplies no bound on total retries or allocator latency.</div>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Can the flush waiter succeed while the allocation waiter keeps waiting?</summary><p>Yes. Old-image completion can satisfy the first while newer dirtiness, a retained fix or policy rejection blocks frame reuse for the second.</p></details>
+</div>
 </section>
 <section class="section" id="cost">
 <div class="eyebrow">04 · 14 / 24</div><h2>What does changing the interval actually change?</h2>
@@ -183,6 +223,9 @@
 <p>A DBA can use <code>SET SYSTEM PARAMETERS 'page_flush_interval=1000ms'</code>. The deprecated alias, <code>page_flush_interval_in_msecs</code>, uses raw milliseconds. Assignment changes the registry—the running server’s parameter values—without editing <code>cubrid.conf</code>. Changing zero to a positive period does not wake a worker already waiting indefinitely. An independent work wake lets a still-running worker leave that wait; it reads the new interval at its next pause. A stop wake instead shuts it down: the stopped looper returns before reading pause settings.</p>
 <div class="callout">Zero selects wake-only waiting; it does not disable the daemon. The interval is an implementation policy for checks, not a page-write count or a completion deadline. Candidate eligibility, WAL and I/O still decide what each pass accomplishes.</div>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L259-L273">Registered names</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L1806-L1829">Definition and default</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16971-L17049">Pause read and inner loop</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Does an online interval change persist in cubrid.conf?</summary><p>The described SQL assignment updates running-server parameter values. It does not edit the configuration file, and the new value affects a subsequent looper read rather than retroactively changing the current wait.</p></details>
+</div>
 </section>
 <section class="section" id="flush-policy-settings">
 <div class="eyebrow">04 · 15 / 24</div><h2>Which settings change candidate search and sorting?</h2>
@@ -192,6 +235,9 @@
 <p>These are server-wide internal policy inputs. At this pin a DBA (database administrator) can update their registry values, the parameters held by the running server, online; an accepted update does not edit <code>cubrid.conf</code>. Hidden settings are not documented operator contracts.</p>
 <div class="callout">Sorting candidates neither evicts their pages nor reserves their frames for reuse. Each candidate still needs a BCB (frame control record) lock and current identity, use, dirty-state and WAL (recovery-log) checks before flush.</div>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L1158-L1168">Ratio definition</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L4067-L4077">Ordering definition</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3761-L3778">Volume/page comparator</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3938-L4008">Budget, collection and sorting reads</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Will increasing the flush ratio proportionally increase completed writes?</summary><p>It increases the candidate search budget at the next read. Current guards, WAL readiness, list priority and downstream capacity still determine submissions, so completed writes need not rise proportionally.</p></details>
+</div>
 </section>
 <section class="section" id="flush-neighbor-settings">
 <div class="eyebrow">04 · 16 / 24</div><h2>When does one selected page lead to a neighbor batch?</h2>
@@ -199,6 +245,9 @@
 <div class="table-scroll"><table><thead><tr><th>Setting and classification</th><th>Default / range / units</th><th>Next-read effect</th></tr></thead><tbody><tr><td><code>data_buffer_neighbor_flush_pages</code><br>Public neighbor-search width</td><td>8; 0–32; pages</td><td>Subsequent candidate/helper reads choose batching. Values of one or zero choose the single-page path.</td></tr><tr><td><code>data_buffer_neighbor_flush_nondirty</code><br>Public neighbor policy</td><td>false; Boolean</td><td>Subsequent neighbor-helper reads can include suitable clean pages to bridge dirty neighbors. It has no batching effect when width is at most one.</td></tr></tbody></table></div>
 <p>Repeated reads do not establish one atomic configuration snapshot for an entire in-flight batch. A wider batch does not guarantee more submitted pages; current page state and available neighbors still decide the work.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L639-L640">Registered names</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L3942-L3964">Definitions</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11859-L11925">Neighbor reads and search</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Why might a batch include a clean neighbor?</summary><p>The optional policy can bridge dirty neighbors with a suitable clean page. It is a batching choice, not evidence that the clean neighbor has a new dirty obligation, and all required current checks still apply.</p></details>
+</div>
 </section>
 <section class="section" id="cost-part-2">
 <div class="eyebrow">04 · 17 / 24</div><h2>Why is a search budget different from a write count?</h2>
@@ -206,6 +255,9 @@
 <p>These numbers budget candidate inspection. A checked node can be clean, already flushing, currently in use, warmer than before, or waiting for WAL; it need not produce a submitted image. An LRU list orders a policy domain’s pages for retention. Per-list priority divides the work, and optional neighbor batching can write additional suitable pages.</p>
 <div class="table-scroll"><table><thead><tr><th>Page-flush work</th><th>How the amount grows</th></tr></thead><tbody><tr><td>Read pressure and collect candidates</td><td>In proportion to thread-counter shards, LRU lists considered, and nodes actually inspected. Shards are separate per-thread counters summed for the pressure sample.</td></tr><tr><td>Sort saved candidates, when enabled</td><td>Candidate count multiplied by the logarithm of that count.</td></tr><tr><td>Try candidate and neighbor paths</td><td>Candidate count multiplied by the possible neighbor search span.</td></tr></tbody></table></div>
 <p>This describes structural work, not elapsed time. List/BCB contention, WAL forcing, DWB slot pressure, file I/O, and thread scheduling can dominate how long the pass takes.</p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Can a helper submit more pages than its collected candidate count?</summary><p>Neighbor batching can add suitable nearby pages. Conversely, many collected candidates can be rejected. Counts of inspected nodes, saved candidates and submitted images measure different work.</p></details>
+</div>
 </section>
 <section class="section" id="cost-part-3">
 <div class="eyebrow">04 · 18 / 24</div><h2>Why does queue capacity fail to bound completion time?</h2>
@@ -213,6 +265,9 @@
 <p>The structural work grows with the completion entries actually consumed, stale allocator records examined, and flush waiters visited. Queue capacity limits entries stored at one moment. A producer can refill the queue during a drain, so capacity does not bound the total entries consumed in that execution.</p>
 <p>A <strong>compare-and-swap (CAS)</strong> operation changes shared state only if its expected old value still matches. CAS retries, BCB/thread-mutex contention, and wakeup scheduling add cost beyond those counts. Separately, page-flush’s WAL and page I/O waits add time before completion work becomes available.</p>
 <div class="callout">Count the work performed and measure the waiting intervals separately. A small candidate budget or bounded queue does not prove a short request latency.</div>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Would a larger completion queue guarantee shorter allocation waits?</summary><p>No. More capacity can retain more outstanding items, but consumers still need scheduling, locks and eligible receivers. Producers may refill it, and an item’s completion may yield no reusable frame.</p></details>
+</div>
 </section>
 <section class="section" id="source-guard">
 <div class="eyebrow">04 · 19 / 24</div><h2>Why does this branch skip three different situations?</h2>
@@ -226,10 +281,16 @@
 	  continue;
 	}</code></pre><p class="live-source"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4047-L4054">page_buffer.c:4047–4054</a></p>
 <p>The shared counter <code>num_skipped_already_flushed</code> groups all three causes, including identity disagreement. Its name alone cannot diagnose which premise failed. Later branches separately check cold-zone/use state and WAL readiness; passing this branch grants no complete flush or reuse permission.</p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Why is the counter name insufficient to identify an already-flushed page?</summary><p>The same increment covers identity mismatch, no longer dirty and already flushing. To diagnose one nomination, observe the actual failing premise under the protected check.</p></details>
+</div>
 </section>
 <section class="section" id="identity-gap-trace-screen">
 <div class="eyebrow">04 · 20 / 24</div><h2>What changes if only identity comparison is removed?</h2>
 <div class="state-trace" data-state-trace="" id="identity-gap-trace"><h3>The address still matches, but the selected page has gone</h3><p class="trace-assumptions" data-teaching-def="X P R"><strong>Independent reset:</strong> <code>X</code> names the address of one pool-owned BCB, the control record for a frame. <code>P</code> names its original logical page; <code>R</code> names a different logical page that will later occupy that frame. Initially the page is dirty and has no caller fixes.</p><p>Page-flush saves the original address and VPID, then releases list protection. Another actor safely completes the old page’s work and reuses the frame; the new page then becomes dirty and cold. We compare the implemented path with a teaching variant that removes only saved-VPID comparison. Both retain all current dirty, flushing, cold-zone, use and WAL guards.</p><div class="trace-controls" hidden=""><button data-trace-previous="" type="button">Previous</button><button data-trace-next="" type="button">Next</button><button data-trace-reset="" type="button">Reset scenario</button><button data-trace-all="" type="button">Show all steps</button><output aria-atomic="true" aria-live="polite"></output></div><ol class="trace-steps"><li data-trace-step="0"><h4>1. Nominate</h4><dl class="trace-lanes"><div><dt>Remembered</dt><dd>X/P</dd></div><div><dt>Current X</dt><dd>P dirty, unfixed</dd></div><div><dt>With VPID guard</dt><dd>saved P</dd></div><div><dt>Without VPID guard</dt><dd>saved P</dd></div></dl><p class="trace-guard">Guard: List protection held</p><p class="trace-change">Changed: Both save the same identity</p></li><li data-trace-step="1"><h4>2. Identity changes in the gap</h4><dl class="trace-lanes"><div><dt>Remembered</dt><dd>X/P</dd></div><div class="trace-changed"><dt>Current X</dt><dd>R dirty, unfixed</dd></div><div class="trace-changed"><dt>With VPID guard</dt><dd>not yet checked</dd></div><div class="trace-changed"><dt>Without VPID guard</dt><dd>not yet checked</dd></div></dl><p class="trace-guard">Guard: No retained reservation</p><p class="trace-change">Changed: The BCB address remains X; its current page identity is now R</p></li><li data-trace-step="2"><h4>3. Protected current check</h4><dl class="trace-lanes"><div><dt>Remembered</dt><dd>X/P</dd></div><div><dt>Current X</dt><dd>R dirty, unfixed</dd></div><div class="trace-changed"><dt>With VPID guard</dt><dd>P != R: reject</dd></div><div class="trace-changed"><dt>Without VPID guard</dt><dd>R may be submitted as P candidate</dd></div></dl><p class="trace-guard">Guard: Both still retain other guards</p><p class="trace-change">Changed: The unchecked variant may write the new page under an old nomination. Current guards still protect its image; this proves wrong selection attribution, not corrupted bytes</p></li></ol></div>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Does removing only the identity check prove byte corruption?</summary><p>No. In this constructed variant the remaining current guards can still protect the new page’s image. The demonstrated result is acting on a different page under a stale nomination; stronger damage needs additional evidence.</p></details>
+</div>
 </section>
 <section class="section" id="replacement-protocol">
 <div class="eyebrow">04 · 21 / 24</div><h2>Could a reservation prevent the protection-gap race?</h2>
@@ -237,6 +298,9 @@
 <ol><li>Under list and BCB protection, reserve the selected identity. Every competing path must recognize that reservation before changing the identity or admitting conflicting use.</li><li>Release list protection while retaining the reservation and a lifetime reference that keeps the required objects alive.</li><li>Obtain the necessary protection against content writers. Capture one stable image and its matching WAL boundary, then submit it.</li><li>On cancellation or failure, preserve or restore pending write/recovery bookkeeping. Clear the reservation before releasing the lifetime reference, so no path observes a reservation on reclaimed storage.</li></ol>
 <p>The reservation preserves identity across the gap, but still needs content protection, WAL ordering, and correct completion. Lookup, retry, cancellation, and teardown must all follow the new protocol. Longer exclusion can delay accesses to frequently used pages; the current implementation instead permits intervening changes and checks again.</p>
 <p>Optional sorting still needs candidate storage and comparisons growing as candidate count times its logarithm. Holding an LRU mutex while waiting for BCB protection or I/O is a different alternative with lock-order and contention costs; a reservation does not justify that shortcut.</p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Could a reservation be added only to page-flush?</summary><p>No coherent reservation follows unless competing fix, reuse, cancellation and teardown paths obey it too. Preserving identity also leaves content protection, WAL and failure cleanup as separate obligations.</p></details>
+</div>
 </section>
 <section class="section" id="flush-statistics">
 <div class="eyebrow">04 · 22 / 24</div><h2>What must be enabled before a counter can help?</h2>
@@ -244,6 +308,9 @@
 <div class="table-scroll"><table><thead><tr><th>Input / classification</th><th>Default and change boundary</th><th>Observation limit</th></tr></thead><tbody><tr><td><code>extended_statistics_activation</code><br>Registered startup mask</td><td>15, combining bits 1, 2, 4, and 8; range 0–1023. Initialization caches it; ordinary SQL mutation is rejected.</td><td>The default excludes victimization bit 16 and daemon bit 64. Configure the needed families before initialization.</td></tr><tr><td><code>stats_on</code><br>Hidden startup collection input</td><td>false; Boolean. Read at initialization; ordinary SQL mutation is rejected.</td><td>One option for always-on collection. An appropriate runtime statistics collection utility/API is another route; establish collection before interpreting counters.</td></tr></tbody></table></div>
 <p>Startup inputs have no ordinary online mutation path at this pin. Activate the needed families and establish collection before treating absent counter values as evidence of absent work.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L4112-L4125">Mask definition</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/perf_monitor.h#L59-L74">Activation bits</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/perf_monitor.c#L3198-L3205">Startup reads</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Is enabling the detailed statistics mask enough to obtain useful counters?</summary><p>The relevant families must be enabled and collection must be active. Even then, these counters do not create the per-candidate identity and event correlation required for causal attribution.</p></details>
+</div>
 </section>
 <section class="section" id="flush-diagnostics">
 <div class="eyebrow">04 · 23 / 24</div><h2>Why do logging and skip totals still need a timeline?</h2>
@@ -252,6 +319,9 @@
 <p>The skip counters group causes: one combines identity mismatch, no longer dirty, and already flushing; another combines fixed or hot candidates. A dirty page still needs a resident write, a fix protects current use, and hotness expresses retention policy. A grouped total cannot identify the rejecting premise for one page.</p>
 <p>Logging and counters do not certify submission or allocator receipt. The per-BCB event probes in the next experiment are proposed instrumentation; they still need to be written and executed.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L4444-L4487">Diagnostic definitions</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3899-L3911">Logging read</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4047-L4054">Grouped rejection counter</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Can high skip totals explain one request’s long wait?</summary><p>They suggest work was rejected, but mix causes and pages. Connect the request’s allocator wait to candidate identity, rejection, submission and receiving events before assigning the cause.</p></details>
+</div>
 </section>
 <section class="section" id="experiment">
 <div class="eyebrow">04 · 24 / 24</div><h2>Which observation separates a stale candidate from a stalled write?</h2>
@@ -259,5 +329,8 @@
 <dl class="live-proposal"><dt>Hypothesis</dt><dd>Protected current checks reject a nomination whose identity or eligibility changed; rejected nominations and slow accepted writes produce different evidence.</dd><dt>Controlled change</dt><dd>Arrange an intervention in that gap. Independently change identity, caller fix count (<code>fcnt</code>), or DIRTY state. Restore the same initial checkpoint before each run; a fix protects a caller’s continued use, and DIRTY records a pending resident write.</dd><dt>Exact observation</dt><dd>Existing skip counters group rejection causes. Add a proposed per-candidate probe for saved/current VPID, the exact rejecting branch, captured LSA (the image’s log position), durable WAL position, and actual submission result.</dd><dt>Falsifier and limit</dt><dd>If the retained identity comparison accepts a different current VPID, the identity claim fails. Removing only that comparison may show wrong selection attribution, while other current guards remain; that result alone establishes no byte corruption.</dd></dl>
 <p>Enable the relevant statistics collection before interpreting existing counters. The proposed event correlation is additional instrumentation, not information those counters already provide. Use nonblocking observations where possible: probe-held locks must not manufacture the protection gap or prevent the competing action.</p>
 <p class="live-source"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3780-L4165">Proposed source seam</a></p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Why intervene on identity, fix count and DIRTY in separate runs?</summary><p>Each changes a different premise. Isolating them identifies which guard caused rejection and avoids attributing a combined intervention to the wrong condition.</p></details>
+</div>
 </section></article><nav class="lesson-nav" aria-label="Chapter screens"><a href="#workload">Why must a saved candidate be checked again?</a><a href="#first-code-path">Which calls can submit the selected image?</a><a href="#trigger">When does the worker look for useful work?</a><a href="#flush-loop-boundaries">What makes this search loop continue or stop?</a><a href="#trigger-part-2">Why does one helper entry prove so little?</a><a href="#selection">How does an observation become a flush decision?</a><a href="#selection-current-checks">Which current conditions permit capture?</a><a href="#selection-part-2">Can the same page become an unsuitable candidate?</a><a href="#selection-part-3">Why does the current fix reject this saved candidate?</a><a href="#handoff-problem">Why save both an address and a page identity?</a><a href="#waiter-origins">Where do flush waiters and frame waiters come from?</a><a href="#handoff-boundaries">Why can completion succeed while reuse is rejected?</a><a href="#handoff-boundaries-part-2">How can two waiters need different outcomes?</a><a href="#cost">What does changing the interval actually change?</a><a href="#flush-policy-settings">Which settings change candidate search and sorting?</a><a href="#flush-neighbor-settings">When does one selected page lead to a neighbor batch?</a><a href="#cost-part-2">Why is a search budget different from a write count?</a><a href="#cost-part-3">Why does queue capacity fail to bound completion time?</a><a href="#source-guard">Why does this branch skip three different situations?</a><a href="#identity-gap-trace-screen">What changes if only identity comparison is removed?</a><a href="#replacement-protocol">Could a reservation prevent the protection-gap race?</a><a href="#flush-statistics">What must be enabled before a counter can help?</a><a href="#flush-diagnostics">Why do logging and skip totals still need a timeline?</a><a href="#experiment">Which observation separates a stale candidate from a stalled write?</a></nav></div><nav class="lecture-navigation" data-lecture-nav aria-label="Chapter navigation"><a data-session-return href="toc.html">Session 3 contents</a><a rel="prev" href="03-daemon-architecture.html#workload">Previous chapter</a><a rel="next" href="05-post-flush.html#workload">Next chapter</a></nav><footer class="footer">CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code> · PostgreSQL <code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code></footer></main>
 <nav class="presentation-controls" data-presentation-controls data-present-label="Presentation mode" data-read-label="Reading mode" hidden aria-label="Presentation controls"><button type="button" data-presentation-toggle aria-pressed="false">Presentation mode</button><button type="button" data-section-previous>Previous section</button><output aria-live="polite"></output><button type="button" data-section-next>Next section</button></nav></body></html>
