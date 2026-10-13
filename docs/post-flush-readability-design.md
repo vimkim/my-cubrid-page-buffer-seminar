@@ -62,4 +62,12 @@ Checks ran from `/home/vimkim/gh/my-cubrid-page-buffer-seminar-post-flush-readab
 
 The successful timeline, attached-waiter exclusion, flag-update order and later identity removal were checked against the exact source before authoring. Checks do not establish participant understanding, human translation acceptance, runtime concurrency outcomes or a measured performance benefit. No engine change, benchmark, native runtime experiment, push or deployment is included.
 
-During review, local `main` advanced to `1d1a886` with the concurrent daemon Q&A revision. A read-only merge-tree preview reports conflicts in the paired Chapter 05 files, three contents maps and manifest. Integration must retain that Q&A, reconcile the actual screen order and recompute fingerprints before proportionate checks. The task branch remains based on `d280b55`; no rebase or merge precedes the required integration approval.
+During review, local `main` advanced to `1d1a886` with the concurrent daemon Q&A revision. A read-only merge-tree preview reported conflicts in the paired Chapter 05 files, three contents maps and manifest. At that point the task branch remained based on `d280b55`; no rebase or merge preceded the required integration approval.
+
+## Approved integration checks
+
+The user approved rebasing and local integration on 2026-10-13. The first rebase retained all 22 destination Q&A blocks in each language byte-for-byte at their original section anchors. Removing those additions leaves the approved chapter unchanged apart from whitespace. All destination IDs, pinned source routes and original trace-step sequences remain; other chapter contents maps, manifest entries and spoken blocks are preserved.
+
+The composed revision passed the 31 focused tests with zero failures or skips, the guide aggregate with 114 HTTP resources and 43 live-DOM pages, and the full bilingual aggregate's technical/served gates. Its only nonzero result remained the existing 78 missing human receipts and 96 historical fingerprint messages. Integration evidence is retained in `/tmp/post-flush-integration.2B3LaU`.
+
+Local `main` advanced again during verification, through the post-flush wake explanation and RAM/token-accounting revisions. The task was rebased onto `eca2a5fd86458302068f3379066542e17a5319a7` under the same approval. The paired post-flush files remained byte-for-byte identical to the first composed revision. Every other contents map and manifest pair was retained from the newer destination. Final source, parity and audience/route checks passed with no unexpected failure; the selected closed-route, Korean journey and full spoken-map tests passed 3/3 with zero skips.
