@@ -112,7 +112,7 @@
 <p>그림은 왼쪽의 확인 대상에서 오른쪽의 결과로 읽습니다. 정책이나 토큰이 바뀌어도 특정 프레임을 덮어쓸 권한이 생기는 것은 아닙니다. 프레임을 찾는 요청 경로인 <strong>allocator</strong>는 현재 페이지와 사용자, 보존 상태를 다시 확인해야 합니다.</p>
 
 <div class="section-qna" data-reset-answers="">
-<details class="answer-disclosure"><summary>Q&amp;A · 목표 보존량이나 토큰이 있으면 프레임을 쓸 수 있나요?</summary><p>그것만으로는 안 됩니다. 목표 보존량은 어떤 페이지를 남길지 정하는 정책이고 토큰은 기록 속도 잔액입니다. 현재 페이지, 사용자 유무와 변경 내용 보존 상태는 별도로 확인해야 합니다.</p></details>
+<details class="answer-disclosure"><summary>Q&amp;A · page-flush가 고른 후보를 다른 스레드가 먼저 fix하면 어떻게 되나요?</summary><p>그 fix가 쓰기 직전에도 유지되고 있으면 해당 후보를 건너뜁니다. 후보를 고른 뒤에도 페이지 상태가 바뀔 수 있으므로, page-flush는 BCB mutex를 잡고 현재 페이지 식별자와 사용 여부 등을 다시 확인한 뒤 기록할지 결정합니다.</p></details>
 </div>
 </section><section class="section" id="scan-scope"><div class="eyebrow">03 · 10 / 31</div><h2>데몬마다 훑어보는 대상이 다르다</h2><p><strong>BCB</strong>는 프레임 하나의 관리 레코드입니다. 풀에는 BCB를 보관하는 공간과 <strong>LRU 리스트 배열</strong>이 따로 있습니다. 각 LRU는 BCB들이 링크로 이어진 교체 목록이며, private과 shared LRU 모두 같은 리스트 배열에 들어 있습니다. 모든 리스트의 통계 숫자를 읽는 것과 리스트 안의 모든 BCB를 따라가는 것은 서로 다른 작업입니다.</p>
 <div class="table-scroll"><table><thead><tr><th>데몬</th><th>무엇을 훑나요?</th><th>어디까지 보나요?</th></tr></thead><tbody>

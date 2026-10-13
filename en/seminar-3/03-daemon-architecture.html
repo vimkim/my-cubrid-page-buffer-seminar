@@ -112,7 +112,7 @@
 <p>Read each row from its checked state on the left to its result on the right. A changed policy or token balance does not authorize overwriting a frame. The request path searching for a frame, the <strong>allocator</strong>, must recheck current page identity, users, and preservation state.</p>
 
 <div class="section-qna" data-reset-answers="">
-<details class="answer-disclosure"><summary>Q&amp;A · Do a quota or tokens authorize frame reuse?</summary><p>No. Quotas guide retention and tokens pace writers. Current page identity, users, and preservation state need separate checks.</p></details>
+<details class="answer-disclosure"><summary>Q&amp;A · What if another thread fixes a candidate after page-flush selects it?</summary><p>If that fix is still held just before writing, page-flush skips the candidate. Page state can change after selection, so page-flush locks the BCB mutex and rechecks the current page identity, use, and other conditions before deciding whether to write.</p></details>
 </div>
 </section><section class="section" id="scan-scope"><div class="eyebrow">03 · 10 / 31</div><h2>Each daemon looks through a different kind of work</h2><p>A <strong>BCB</strong> is one frame's management record. The pool keeps BCB storage and an array of <strong>LRU lists</strong>: replacement lists whose BCBs are connected by links. Private and shared lists are entries in that same list array. Visiting every list's counters differs from following every BCB in those lists.</p>
 <div class="table-scroll"><table><thead><tr><th>Daemon</th><th>What does it visit?</th><th>How far does it go?</th></tr></thead><tbody>
