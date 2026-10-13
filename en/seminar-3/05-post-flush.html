@@ -18,10 +18,10 @@
 <p>The BCB's <code>FLUSHING</code> marker means that this flush still needs completion handling. Even after the write call succeeds, the responsible worker must clear the marker.</p>
 <p>A <strong>thread</strong> is an execution flow that performs work within the program. Waiting threads need different results.</p>
 <table><thead><tr><th scope="col">Who waits?</th><th scope="col">What do they need?</th></tr></thead><tbody>
-<tr><td><strong>Flush waiter</strong><br>A thread waiting for an already-started flush</td><td>Completion handling must finish so it can continue its wait procedure.</td></tr>
-<tr><td><strong>Allocator</strong><br>A request thread looking for a page slot</td><td>A frame it can receive and use.</td></tr>
+<tr><td><strong>Flush waiter</strong> (request thread waiting for flush completion)</td><td>“I am waiting for this page's ongoing flush to finish.” Completion handling must finish so it can continue its wait procedure.</td></tr>
+<tr><td><strong>Allocator</strong> (frame-allocation request thread)</td><td>“Give me a frame to load another page into.” A frame it can receive and use.</td></tr>
 </tbody></table>
-<p><strong>Waking a flush waiter and giving the allocator a slot are separate actions.</strong> A wakeup is a notification that gives a thread a chance to run again. The notification alone proves neither write success nor receipt of a slot.</p>
+<p>The <strong>post-flush daemon</strong> handles completion for a queued BCB and wakes its flush waiters. It separately checks whether it can offer the frame to an allocator. <strong>Waking a flush waiter and giving the allocator a slot are separate actions.</strong> A wakeup is a notification that gives a thread a chance to run again. The notification alone proves neither write success nor receipt of a slot.</p>
 <p>The next normal example has no waiter attached to this frame. An attached flush waiter would block a direct offer in this check. We examine that <a href="#flush-waiter-completion">separate case</a> after the normal path.</p>
 <details class="answer-disclosure"><summary>Expand source locations and related explanations</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9274-L9284">Attached-waiter exclusion</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15496-L15556">Consumer completion</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15598-L15660">Protected receipt</a></p></details>
 </section>
