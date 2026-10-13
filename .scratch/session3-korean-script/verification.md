@@ -47,4 +47,10 @@ Set `PLAYWRIGHT_MODULE` to the available Playwright entry if the module is not o
 
 ## Integration boundary
 
-The starting main checkout was clean. Other authorized work advanced local main during this task; its participant-page and screen-heading changes are not part of this rewrite. After merge approval, rebase onto the current local main, preserve those updates, reconcile any cue labels with the current chapters, and run proportionate checks before the fast-forward merge. No push or deployment is authorized.
+The starting main checkout was clean. Other authorized work advanced local main during this task. The user approved local integration, and the task was rebased onto fixed destination `248c2f7`. The rebase preserves the other work's participant pages, styles, waiter screens, FLUSHING/fsync clarification, flush definition, and fast-storage/token screens. The Korean screen maps use all current chapter headings and contain the same 517 links as that destination script.
+
+The newer flush definition was preserved in the accepted spoken style: DWB memory-slot acceptance can return page-buffer flush success; a not-yet-durable copy can disappear on crash; logged permanent-page recovery uses durable WAL and surviving home pages; DWB staging/home write and synchronization remain separate. All other chapter prose retains the rewrite unchanged.
+
+A transient screen-map check failed while main advanced and the draft maps were ahead of the topic's chapter revision. Rebasing against the fixed latest destination resolved that revision mismatch. Final served tests for the complete product and every spoken screen cue passed (two focused tests, zero skipped). The audience route gate passed for 27 pages and 78 pairs, and technical invariant parity passed for 78 pairs. The latest review gate still reports the exact same 174 pre-existing failures. Maintainer-guide source/HTTP/live-DOM checks also passed during integration. These [integration receipts](checks/) supplement the original full-suite and reading checks.
+
+The verified rebase is ready for the approved fast-forward merge. No push or deployment is authorized.

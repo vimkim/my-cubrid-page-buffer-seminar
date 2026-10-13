@@ -1,6 +1,6 @@
 # Session 3 Korean spoken-script readability
 
-Status: accepted by the user on 2026-10-13; complete script rewrite and available verification finished. Local integration awaits the repository-required approval.
+Status: accepted by the user on 2026-10-13; complete script rewrite and available verification finished. The user approved local integration; the rebase onto the latest main has been verified.
 
 ## Scope and reader
 
@@ -46,4 +46,4 @@ Task checkout: `/home/vimkim/gh/my-cubrid-page-buffer-seminar-session3-korean-sc
 
 Work-tracker item: 339.
 
-The [verification record](verification.md) records the completed checks and the unchanged, pre-existing human-review failures.
+The [verification record](verification.md) records the completed checks, approved rebase, concurrent changes preserved, and the unchanged, pre-existing human-review failures.
