@@ -1,6 +1,6 @@
 # Session 3: Background progress and PostgreSQL strategies
 
-**Current selected delivery:** Present only chapters 03–07, in order, using the [five-chapter Korean speaker script](../my-presentation-script-session-3-03-07.html). It covers all 119 current screens, introduces the necessary WAL/LSA/generation/DWB prerequisites locally, explains each daemon's data structures with an SVG, and closes after chapter 07. The twelve-chapter route below remains the full preparation reference.
+**Current selected delivery:** Present only chapters 03–07, in order, using the [five-chapter Korean speaker script](../my-presentation-script-session-3-03-07.html). It covers all 124 current screens, introduces the necessary WAL/LSA/generation/DWB prerequisites locally, explains each daemon's data structures with an SVG, and closes after chapter 07. The twelve-chapter route below remains the full preparation reference.
 
 This is the **third and final page-buffer seminar session**, lasting **n hours**. The presenter has completed sessions 1 and 2 (3 and 4 hours), covering page-buffer basics, BCBs, and private/shared LRU organization. Use that shared model to answer one remaining question: **when the pool is full, who makes a frame reusable, and what must still be checked?**
 
