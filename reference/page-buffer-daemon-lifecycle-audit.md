@@ -399,8 +399,13 @@ default](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7cae
 defaults](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L3942-L3964).
 
 For `B = 32,768`, the unboosted budget is 327 BCB checks. A full 10x boost is
-3,270, below the 12,800-page 200 MiB cap at 16 KiB per page. These are selection
-budgets, not promises that 327 or 3,270 pages will be written: clean, hot, fixed,
+3,270, below the base cap `209715200 / DB_PAGESIZE` for a 16 KiB I/O
+page. `DB_PAGESIZE` names the initialized usable page size, after subtracting
+reserved header and trailer areas; substituting the full 16,384 bytes would not
+give the exact cap. [Page-size macros](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/storage_common.h#L90-L101),
+[usable-size initialization](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/storage_common.c#L43-L79).
+These are selection budgets, not promises that 327 or 3,270 pages will be written:
+clean, hot, fixed,
 identity-changed, already-flushing, and WAL-blocked candidates reduce the actual
 write count.
 

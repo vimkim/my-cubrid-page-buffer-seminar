@@ -43,7 +43,7 @@
 <li><a href="#s-03-scan-scope">10. 데몬마다 훑어보는 대상이 다르다</a></li>
 <li><a href="#s-03-scan-page-flush">11. Page-flush는 대상 LRU의 꼬리에서 링크를 따라간다</a></li>
 <li><a href="#s-03-scan-share">12. 탐색 비중이 0이면 이번에는 그 리스트의 BCB를 보지 않는다</a></li>
-<li><a href="#s-03-scan-budget">13. 한 번의 후보 수집에는 상한이 있지만 데몬 실행 전체에는 횟수 상한이 없다</a></li>
+<li><a href="#s-03-scan-budget">13. 이번에 몇 개를 살펴볼지는 설정과 현재 상태로 정한다</a></li>
 <li><a href="#s-03-scan-maintenance">14. Maintenance는 리스트 통계를 읽고 구역 경계를 조정한다</a></li>
 <li><a href="#s-03-scan-complexity">15. 리스트 수와 실제 방문량으로 시간복잡도를 읽는다</a></li>
 <li><a href="#s-03-scan-queue-bound">16. 완료 큐의 8,192개 용량은 처리 횟수 제한이 아니다</a></li>
@@ -183,12 +183,13 @@
 <p class="cue"><strong>화면 조작·강조:</strong> 목표 식과 네 private 예제 행을 각각 독립 계산으로 읽습니다.</p>
 <div class="prompt"><p><strong>질문:</strong> 비중 0이면 목록의 통계도 전혀 안 읽나요?</p><details class="answer"><summary>예상 답변과 오답 메모</summary><p><strong>예상 답변:</strong> 비중 계산을 위한 통계는 읽고 이후 해당 목록의 링크 탐색을 건너뜁니다.</p><p><strong>오답이 생기는 이유:</strong> 목록 제어 레코드와 <code>BCB</code> 항목의 방문을 같은 순회로 생각하기 쉽습니다.</p></details></div>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. 기본 검사량이 1이면 전체 방문도 1 이하인가요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-03">03장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
-<article class="screen-script" id="s-03-scan-budget" data-source-screen="ko/seminar-3/03-daemon-architecture.html#scan-budget"><p class="screen-number">03장 · 13 / 37</p><h3><a href="ko/seminar-3/03-daemon-architecture.html#scan-budget">한 번의 후보 수집에는 상한이 있지만 데몬 실행 전체에는 횟수 상한이 없다</a></h3><p class="core"><strong>핵심:</strong> 한 수집의 정확한 방문 예산은 목록별 배정량을 더해 구합니다.</p><div class="spoken" aria-label="구두 대본">
-<p>기본 검사량은 프레임 수에 비율을 곱해 먼저 정수로 바꾸고, 압력 배수를 적용해 다시 정수로 바꿉니다. 32,768의 1%는 327이고 10배는 3,270입니다. 처음부터 10%를 곱한 3,276과 다릅니다. Checkpoint 중 배수는 1입니다. 200 MiB를 DB_PAGESIZE로 나눈 상한은 16 KiB에서 12,800입니다.</p>
-<p>목록별 배정은 가중치 몫을 정수로 만들고 양수 비중마다 최소 1을 줍니다. 기본량 1인데 양수 목록 20개면 총 20개까지 방문할 수 있습니다. 정확한 예산은 배정량의 합이며 상태 고정 예제의 실제 방문은 각 목록 <code>LRU3</code> 길이와 배정량 중 작은 값들의 합입니다.</p>
-<p>동시 목록 이동 때문에 같은 BCB를 다시 만날 수도 있습니다. Dirty 후보 수와 이웃을 포함한 제출 수도 별개입니다. 한 helper의 제한을 압력이 남아 다시 수집하는 데몬 태스크 전체의 반복 횟수 제한으로 확대하지 않겠습니다.</p>
+<article class="screen-script" id="s-03-scan-budget" data-source-screen="ko/seminar-3/03-daemon-architecture.html#scan-budget"><p class="screen-number">03장 · 13 / 37</p><h3><a href="ko/seminar-3/03-daemon-architecture.html#scan-budget">이번에 몇 개를 살펴볼지는 설정과 현재 상태로 정한다</a></h3><p class="core"><strong>핵심:</strong> 설정값, 시작할 때 정한 값, 매번 계산하는 값, 코드 상수를 구분하면 이번 검사량을 이해할 수 있습니다.</p><div class="spoken" aria-label="구두 대본">
+<p>먼저 표의 ‘어디서 정하는가’와 ‘언제 바뀌는가’를 보겠습니다. 풀의 프레임 수는 data_buffer_size 설정을 읽어 시작할 때 정합니다. 실행 중에 풀이 늘어나는 값은 아닙니다. 반면 기본 탐색 비율 data_buffer_flush_ratio는 숨김 시스템 파라미터이고, DBA가 실행 중에 바꿀 수 있습니다. 데몬은 수집할 때마다 그 값을 읽습니다. 기본값은 0.01입니다.</p>
+<p>압력 배수는 설정값이 아닙니다. 페이지 접근 요청과 재사용 프레임 요청의 카운터 표본으로 매번 계산합니다. Checkpoint라는 복구 진도 확보 작업이 진행 중이면 배수는 1입니다. 배수의 상한 10과 기준 한도 200 MiB는 코드에 고정된 숫자입니다. DB_PAGESIZE는 DB를 열 때 정하는 페이지의 사용 가능 크기이며, 16 KiB 전체에서 예약 영역을 뺀 값입니다.</p>
+<p>이 입력으로 기본 검사량을 구한 뒤 현재 목록 가중치로 나눕니다. 기본 검사량과 목록별 검사량은 둘 다 계산 결과입니다. 양수 가중치 목록에는 최소 1개씩 주므로, 기본량 1에 목록 20개라면 총 20개까지 살펴볼 수 있습니다. 자세한 식과 정수 변환 예제는 아래 펼침에 있습니다.</p>
+<p>한 번 살펴본 뒤에도 프레임을 기다리는 요청 등이 남으면 현재 상태로 다시 계산하고 수집할 수 있습니다. 한 작업 안에서 최대 몇 번만 수집하라는 횟수 카운터는 없습니다. 필요 조건이 사라지거나 수집 함수가 stop 힌트를 주면 반복을 끝냅니다. 따라서 이번 검사량과 수집을 반복하는 조건을 따로 봅니다.</p>
 </div>
-<p class="cue"><strong>화면 조작·강조:</strong> 정수 변환 순서와 기본량 1·목록 20 사례를 짚습니다.</p>
+<p class="cue"><strong>화면 조작·강조:</strong> 표에서 시작 설정 → 온라인 파라미터 → 런타임 계산 → 코드 상수를 짚고 기본량 1·목록 20 사례로 연결합니다.</p>
 <div class="prompt"><p><strong>질문:</strong> 기본 검사량이 1이면 전체 방문도 1 이하인가요?</p><details class="answer"><summary>예상 답변과 오답 메모</summary><p><strong>예상 답변:</strong> 양수 목록마다 최소 1을 배정하므로 합계가 더 클 수 있습니다.</p><p><strong>오답이 생기는 이유:</strong> 배분 전 기본량을 모든 목록의 최종 합계로 보기 쉽습니다.</p></details></div>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. Maintenance가 dirty 페이지를 전부 찾아 쓰나요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-03">03장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
 <article class="screen-script" id="s-03-scan-maintenance" data-source-screen="ko/seminar-3/03-daemon-architecture.html#scan-maintenance"><p class="screen-number">03장 · 14 / 37</p><h3><a href="ko/seminar-3/03-daemon-architecture.html#scan-maintenance">Maintenance는 리스트 통계를 읽고 구역 경계를 조정한다</a></h3><p class="core"><strong>핵심:</strong> Maintenance는 통계 배열을 읽고 넘치는 구역 경계를 조정합니다.</p><div class="spoken" aria-label="구두 대본">
@@ -806,17 +807,17 @@
 <p class="transition"><strong>전환:</strong> 전달 조건에 나왔던 quota와 zone 기준을 누가 만드는지 maintenance로 넘어가겠습니다.</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-05">05장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
 </section>
 <section class="run-sheet chapter" id="chapter-06"><p class="eyebrow">CHAPTER 06 · 24 SCREENS</p><h2>Maintenance의 활동 표본과 보존 정책</h2><details class="chapter-map"><summary>06장 전체 화면 목차</summary><ol>
-<li><a href="#s-06-workload">01. 같은 페이지를 다시 읽는데, 왜 디스크에서 또 가져올까?</a></li>
-<li><a href="#s-06-fixed-targets">02. 처음 정한 보존 목표를 계속 사용해도 될까?</a></li>
-<li><a href="#s-06-retention-targets">03. quota는 무엇의 목표일까?</a></li>
-<li><a href="#s-06-activity-samples">04. maintenance는 어떤 활동을 관찰할까?</a></li>
-<li><a href="#s-06-first-code-path">05. 활동 표본은 어떻게 교체 정책에 반영될까?</a></li>
-<li><a href="#s-06-quota-change">06. 보존 목표가 줄면 무엇이 달라질까?</a></li>
-<li><a href="#s-06-reuse-checks">07. 교체 후보가 되어도 바로 재사용할 수 없는 이유는?</a></li>
-<li><a href="#s-06-maintain">08. maintenance를 호출할 때마다 목표를 갱신할까?</a></li>
+<li><a href="#s-06-workload">01. 책이 가득 찬 책장을 떠올려 봅시다</a></li>
+<li><a href="#s-06-fixed-targets">02. 처음에는 두 묶음의 목표가 같습니다</a></li>
+<li><a href="#s-06-retention-targets">03. 먼저 private와 shared의 몫을 나눕니다</a></li>
+<li><a href="#s-06-activity-samples">04. 목록마다 예전 활동과 새 활동을 섞습니다</a></li>
+<li><a href="#s-06-first-code-path">05. 두 목록에 일곱 몫과 세 몫을 나눠 줍니다</a></li>
+<li><a href="#s-06-quota-change">06. 한 번 더 갱신하면 조금 더 바뀝니다</a></li>
+<li><a href="#s-06-reuse-checks">07. 숫자표를 줄여도 책이 지워지지는 않습니다</a></li>
+<li><a href="#s-06-maintain">08. 도우미가 “아직 기다리자”라고 할 수도 있습니다</a></li>
 <li><a href="#s-06-maintain-part-3">09. 갱신이 허용되어도 quota 숫자가 같을 수 있을까?</a></li>
 <li><a href="#s-06-maintain-part-4">10. 두 번 갱신해도 quota는 60일 수 있다</a></li>
-<li><a href="#s-06-chapter-recap">11. 이제 maintenance에 관해 무엇을 설명할 수 있을까?</a></li>
+<li><a href="#s-06-chapter-recap">11. 세고, 섞고, 나누고, 표지를 바꿉니다</a></li>
 <li><a href="#s-06-admission-guards">12. 어떤 조건에서 새 표본의 갱신을 허용할까?</a></li>
 <li><a href="#s-06-maintain-part-2">13. 활동이 적은 풀은 언제 갱신 조건을 통과할까?</a></li>
 <li><a href="#s-06-quota-from-samples">14. hit 표본으로 보존 용량의 몫을 어떻게 계산할까?</a></li>
@@ -831,35 +832,35 @@
 <li><a href="#s-06-replacement-protocol">23. quota를 고정해도 무엇을 계속 보호해야 할까?</a></li>
 <li><a href="#s-06-experiment">24. 이번 호출은 새 표본을 소비했을까?</a></li>
 </ol></details>
-<article class="screen-script" id="s-06-workload" data-source-screen="ko/seminar-3/06-maintenance.html#workload"><p class="screen-number">06장 · 01 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#workload">같은 페이지를 다시 읽는데, 왜 디스크에서 또 가져올까?</a></h3><p class="core"><strong>핵심:</strong> 보존 정책은 반복 조회와 큰 스캔이 같은 용량을 쓰는 문제를 다룹니다.</p><div class="spoken" aria-label="구두 대본">
+<article class="screen-script" id="s-06-workload" data-source-screen="ko/seminar-3/06-maintenance.html#workload"><p class="screen-number">06장 · 01 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#workload">책이 가득 찬 책장을 떠올려 봅시다</a></h3><p class="core"><strong>핵심:</strong> 보존 정책은 반복 조회와 큰 스캔이 같은 용량을 쓰는 문제를 다룹니다.</p><div class="spoken" aria-label="구두 대본">
 <p>이번에는 프레임 12개인 설명용 풀로 새로 시작합니다. 반복 조회는 같은 네 페이지를 읽고 큰 스캔은 다른 페이지를 계속 읽습니다. 모든 칸이 차 있으니 스캔은 기존 페이지의 자리를 받아야 합니다.</p>
 <p>곧 다시 읽을 네 페이지를 내보내면 반복 조회가 다시 가져오는 비용을 냅니다. 그렇다고 그 페이지들을 계속 남겨 스캔을 막을 수도 없습니다. 어느 정책 단위에 얼마를 남기려 할지 활동으로 조정하는 역할이 maintenance입니다.</p>
 </div>
 <p class="cue"><strong>화면 조작·강조:</strong> 12개 프레임과 반복 조회 4페이지·스캔을 짚습니다.</p>
 <div class="prompt"><p><strong>질문:</strong> 재사용 안전 조건만 있으면 좋은 보존 정책도 얻나요?</p><details class="answer"><summary>예상 답변과 오답 메모</summary><p><strong>예상 답변:</strong> 안전하게 바꿀 수 있어도 곧 다시 쓸 페이지를 고르면 비효율적일 수 있습니다.</p><p><strong>오답이 생기는 이유:</strong> 정확성과 정책 품질을 같은 판단으로 보기 쉽습니다.</p></details></div>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. 목표를 늘리면 여덟 페이지가 항상 남나요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-06">06장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
-<article class="screen-script" id="s-06-fixed-targets" data-source-screen="ko/seminar-3/06-maintenance.html#fixed-targets"><p class="screen-number">06장 · 02 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#fixed-targets">처음 정한 보존 목표를 계속 사용해도 될까?</a></h3><p class="core"><strong>핵심:</strong> 작업이 바뀌면 처음 정한 보존 목표가 맞지 않을 수 있습니다.</p><div class="spoken" aria-label="구두 대본">
+<article class="screen-script" id="s-06-fixed-targets" data-source-screen="ko/seminar-3/06-maintenance.html#fixed-targets"><p class="screen-number">06장 · 02 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#fixed-targets">처음에는 두 묶음의 목표가 같습니다</a></h3><p class="core"><strong>핵심:</strong> 작업이 바뀌면 처음 정한 보존 목표가 맞지 않을 수 있습니다.</p><div class="spoken" aria-label="구두 대본">
 <p>앞의 12개 풀 사례를 이어갑니다. 반복 조회가 이제 네 페이지가 아니라 여덟 페이지를 돌아가며 읽는다고 하겠습니다. 예전 보존 목표를 그대로 쓰면 현재 작업 변화에 대응하지 못할 수 있습니다.</p>
 <p>반대로 활동이 줄어든 목록이 이전 목표를 계속 붙잡는 문제도 있습니다. Maintenance는 관측한 활동으로 목표를 검토합니다. 미래의 접근을 알고 여덟 페이지를 모두 보장하는 방식은 아닙니다.</p>
 </div>
 <p class="cue"><strong>화면 조작·강조:</strong> 표의 4→8과 고정된 풀 용량 12를 비교합니다.</p>
 <div class="prompt"><p><strong>질문:</strong> 목표를 늘리면 여덟 페이지가 항상 남나요?</p><details class="answer"><summary>예상 답변과 오답 메모</summary><p><strong>예상 답변:</strong> 활동 추정과 경쟁하는 정책에 따라 달라지며 예약이 아닙니다.</p><p><strong>오답이 생기는 이유:</strong> 목표를 공간 보장으로 읽기 쉽습니다.</p></details></div>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. Quota 100이면 전용 프레임 100개가 예약돼 있나요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-06">06장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
-<article class="screen-script" id="s-06-retention-targets" data-source-screen="ko/seminar-3/06-maintenance.html#retention-targets"><p class="screen-number">06장 · 03 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#retention-targets">quota는 무엇의 목표일까?</a></h3><p class="core"><strong>핵심:</strong> Private quota는 공유 풀 안의 보존 목표입니다.</p><div class="spoken" aria-label="구두 대본">
+<article class="screen-script" id="s-06-retention-targets" data-source-screen="ko/seminar-3/06-maintenance.html#retention-targets"><p class="screen-number">06장 · 03 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#retention-targets">먼저 private와 shared의 몫을 나눕니다</a></h3><p class="core"><strong>핵심:</strong> Private quota는 공유 풀 안의 보존 목표입니다.</p><div class="spoken" aria-label="구두 대본">
 <p>Private와 shared는 같은 풀의 페이지를 관리하는 정책 목록입니다. Private는 세션과 연결되지만 여러 세션이 같은 목록을 사용할 수도 있습니다. 다른 요청의 접근을 막는 독점 권한은 아닙니다. Shared도 곧 스캔 전용이라는 뜻은 아닙니다.</p>
 <p>Quota는 private 목록에 얼마나 남기려는지 정한 목표이지 별도 프레임 예약이나 실제 목록 크기의 강제 상한은 아닙니다. Shared에는 별도로 계산하는 zone 목표가 있습니다. 숫자를 바꾸는 것과 실제 항목을 내리는 조건도 구별하겠습니다. 버퍼 풀의 전체 프레임 수를 늘리거나 줄이는 작업은 아닙니다.</p>
 </div>
 <p class="cue"><strong>화면 조작·강조:</strong> private·shared·quota 정의를 가리킵니다.</p>
 <div class="prompt"><p><strong>질문:</strong> Quota 100이면 전용 프레임 100개가 예약돼 있나요?</p><details class="answer"><summary>예상 답변과 오답 메모</summary><p><strong>예상 답변:</strong> 공유 풀의 보존 정책 목표입니다.</p><p><strong>오답이 생기는 이유:</strong> private라는 이름과 quota 수치가 소유권·예약량을 떠올리게 합니다.</p></details></div>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. Thread unfix 수를 목록별 활동 몫으로 바로 써도 될까요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-06">06장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
-<article class="screen-script" id="s-06-activity-samples" data-source-screen="ko/seminar-3/06-maintenance.html#activity-samples"><p class="screen-number">06장 · 04 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#activity-samples">maintenance는 어떤 활동을 관찰할까?</a></h3><p class="core"><strong>핵심:</strong> 갱신 허용에 쓰는 unfix 수와 몫 계산에 쓰는 hit는 다릅니다.</p><div class="spoken" aria-label="구두 대본">
+<article class="screen-script" id="s-06-activity-samples" data-source-screen="ko/seminar-3/06-maintenance.html#activity-samples"><p class="screen-number">06장 · 04 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#activity-samples">목록마다 예전 활동과 새 활동을 섞습니다</a></h3><p class="core"><strong>핵심:</strong> 갱신 허용에 쓰는 unfix 수와 몫 계산에 쓰는 hit는 다릅니다.</p><div class="spoken" aria-label="구두 대본">
 <p>표의 두 계수는 질문이 다릅니다. Thread별 final unfix는 충분한 활동이 쌓여 다시 계산할 때인지 판단하는 입력입니다. 목록별 hit는 어떤 목록에 활동 몫을 줄지 계산하는 입력입니다.</p>
 <p>일부 final-unfix 경로에서 표본을 등록하고, BCB의 hit_age는 같은 epoch에 반복 기여를 일반적으로 억제합니다. 따라서 같은 페이지를 열 번 읽었다고 hit 표본이 꼭 열 개는 아닙니다. 모든 fix나 SQL 행을 정확하게 세는 장부로 해석하지 않겠습니다.</p>
 </div>
 <p class="cue"><strong>화면 조작·강조:</strong> 두 표본의 용도와 <code>hit_age</code> 조건을 짚습니다.</p>
 <div class="prompt"><p><strong>질문:</strong> Thread unfix 수를 목록별 활동 몫으로 바로 써도 될까요?</p><details class="answer"><summary>예상 답변과 오답 메모</summary><p><strong>예상 답변:</strong> 두 계수의 집계 위치·단위·용도가 달라 별도 입력입니다.</p><p><strong>오답이 생기는 이유:</strong> 활동을 세는 두 숫자를 같은 카운터의 다른 이름으로 생각하기 쉽습니다.</p></details></div>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. 목표가 저장되면 페이지도 디스크에 썼나요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-06">06장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
-<article class="screen-script" id="s-06-first-code-path" data-source-screen="ko/seminar-3/06-maintenance.html#first-code-path"><p class="screen-number">06장 · 05 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#first-code-path">활동 표본은 어떻게 교체 정책에 반영될까?</a></h3><p class="core"><strong>핵심:</strong> 허용된 갱신에서 통계를 읽고 정책을 게시한 뒤 필요한 zone을 조정합니다.</p><div class="spoken" aria-label="구두 대본">
+<article class="screen-script" id="s-06-first-code-path" data-source-screen="ko/seminar-3/06-maintenance.html#first-code-path"><p class="screen-number">06장 · 05 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#first-code-path">두 목록에 일곱 몫과 세 몫을 나눠 줍니다</a></h3><p class="core"><strong>핵심:</strong> 허용된 갱신에서 통계를 읽고 정책을 게시한 뒤 필요한 zone을 조정합니다.</p><div class="spoken" aria-label="구두 대본">
 <p>새 그림에서 thread 카운터와 LRU별 hit 배열을 먼저 보겠습니다. Pgbuf_page_maintenance_execute는 열린 gate에서 pgbuf_adjust_quotas를 호출합니다. 갱신 조건을 통과하면 표본을 소비하고 목표를 계산합니다.</p>
 <p>필요한 목록에서는 mutex를 잡아 pgbuf_lru_adjust_zones로 경계를 조정합니다. 기준을 대입했다는 사실만으로 실제 이동을 판단하면 안 됩니다. 이 quota 경로는 페이지 바이트 복사나 <code>WAL</code> 강제, 페이지 I/O를 하지 않습니다. 경계 이동 중 현재 조건에 맞는 프레임을 직접 제안하는 분기는 별도 안전 검사를 거칩니다.</p>
 </div>
@@ -870,7 +871,7 @@
 <h4>Q&amp;A · maintenance가 페이지를 cold zone으로 옮길 때 페이지도 쓰나요?</h4><p>quota 조정은 list 메타데이터와 보존 선호를 바꿉니다. 페이지 바이트를 복사하거나 페이지 I/O를 수행하지 않습니다. 더 cold한 페이지에도 필요한 보존 작업과 보호된 재사용 검사가 남습니다.</p>
 </details>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. Quota가 40 줄었으니 항상 40개만 내리나요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-06">06장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
-<article class="screen-script" id="s-06-quota-change" data-source-screen="ko/seminar-3/06-maintenance.html#quota-change"><p class="screen-number">06장 · 06 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#quota-change">보존 목표가 줄면 무엇이 달라질까?</a></h3><p class="core"><strong>핵심:</strong> 호출을 허용하는 비교와 함수 안에서 맞추는 목표를 구별합니다.</p><div class="spoken" aria-label="구두 대본">
+<article class="screen-script" id="s-06-quota-change" data-source-screen="ko/seminar-3/06-maintenance.html#quota-change"><p class="screen-number">06장 · 06 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#quota-change">한 번 더 갱신하면 조금 더 바뀝니다</a></h3><p class="core"><strong>핵심:</strong> 호출을 허용하는 비교와 함수 안에서 맞추는 목표를 구별합니다.</p><div class="spoken" aria-label="구두 대본">
 <p>Private는 <code>LRU1</code>+LRU2가 quota를 넘을 때 조정 함수를 부릅니다. 하지만 내부에서는 두 zone threshold의 합계에 맞춥니다. LRU2의 bottom_2에서 시작하고 비어 있으면 bottom_1에서 시작해 초과 항목을 LRU3로 내립니다. 그 뒤 남은 LRU1을 LRU2로 줄입니다. 반드시 1→2→3만 거치는 것은 아닙니다.</p>
 <p>독립 private 예제에서는 quota가 100→60, count가 20/50/30, 새 기준은 3/3입니다. 70&gt;60이라 호출하지만 내부 목표 6에 맞추므로 64개를 LRU3로 내립니다. 중간 6/0/94에서 <code>LRU1</code> 세 개를 LRU2로 내려 3/3/94가 됩니다. 다른 초기 상태 20/10/70은 30≤60이라 이 호출에서는 그대로입니다.</p>
 <p>독립 shared 예제는 목표 60과 기본 비율로 threshold 24/3을 얻습니다. 초기 30/15/55의 합계 45를 27로 줄여 27/0/73, 이어 24/3/73이 됩니다. 두 예제 모두 대기 allocator와 동시 변경이 없어 전체 100개는 메모리에 남습니다.</p>
@@ -879,7 +880,7 @@
 <p class="cue"><strong>화면 조작·강조:</strong> Private와 shared 숫자 표를 각각 새로 시작해 펼칩니다. 조정 전→합계 조정→<code>LRU1</code> 조정의 산술을 읽습니다.</p>
 <div class="prompt"><p><strong>질문:</strong> Quota가 40 줄었으니 항상 40개만 내리나요?</p><details class="answer"><summary>예상 답변과 오답 메모</summary><p><strong>예상 답변:</strong> 호출 비교는 quota이고 내부 zone 목표 합계가 훨씬 작아 이동량이 다를 수 있습니다.</p><p><strong>오답이 생기는 이유:</strong> 함수 진입 기준을 내부 종료 기준으로도 쓰는 줄 알기 쉽습니다.</p></details></div>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. Quota 초과라면 dirty 바이트를 버릴 수 있나요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-06">06장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
-<article class="screen-script" id="s-06-reuse-checks" data-source-screen="ko/seminar-3/06-maintenance.html#reuse-checks"><p class="screen-number">06장 · 07 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#reuse-checks">교체 후보가 되어도 바로 재사용할 수 없는 이유는?</a></h3><p class="core"><strong>핵심:</strong> 더 차가운 구역에 들어가도 dirty·fix·대기 의무는 남습니다.</p><div class="spoken" aria-label="구두 대본">
+<article class="screen-script" id="s-06-reuse-checks" data-source-screen="ko/seminar-3/06-maintenance.html#reuse-checks"><p class="screen-number">06장 · 07 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#reuse-checks">숫자표를 줄여도 책이 지워지지는 않습니다</a></h3><p class="core"><strong>핵심:</strong> 더 차가운 구역에 들어가도 dirty·fix·대기 의무는 남습니다.</p><div class="spoken" aria-label="구두 대본">
 <p>LRU3는 교체 후보로 검토하는 위치입니다. Quota가 줄어 그곳으로 내려와도 현재 페이지의 기록 의무와 사용 보호가 사라지지는 않습니다. DIRTY와 <code>FLUSHING</code>, fix와 연결된 대기자 등은 현재 재사용을 막을 수 있습니다.</p>
 <p>제안하는 쪽은 현재 조건을 확인하고 <code>BCB</code> mutex 아래 다시 검사합니다. Allocator도 받을 때 확인합니다. 그 사이 새 fix가 제안을 취소할 수 있으므로 정책의 하강과 권한 획득을 따로 보겠습니다.</p>
 </div>
@@ -889,7 +890,7 @@
 <h4>Q&amp;A · quota를 넘으면 dirty 페이지도 버려도 되나요?</h4><p>아닙니다. quota 초과는 보존 정책상 그 도메인을 우선 공급원으로 선택하게 합니다. 남은 페이지 변경·사용 중인 권한·진행 중인 flush는 여전히 안전하지 않은 재사용을 막습니다.</p>
 </details>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. Pgbuf_adjust_quotas 호출 횟수가 epoch 증가량인가요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-06">06장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
-<article class="screen-script" id="s-06-maintain" data-source-screen="ko/seminar-3/06-maintenance.html#maintain"><p class="screen-number">06장 · 08 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#maintain">maintenance를 호출할 때마다 목표를 갱신할까?</a></h3><p class="core"><strong>핵심:</strong> 시도한 호출과 허용된 표본 갱신의 횟수는 다릅니다.</p><div class="spoken" aria-label="구두 대본">
+<article class="screen-script" id="s-06-maintain" data-source-screen="ko/seminar-3/06-maintenance.html#maintain"><p class="screen-number">06장 · 08 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#maintain">도우미가 “아직 기다리자”라고 할 수도 있습니다</a></h3><p class="core"><strong>핵심:</strong> 시도한 호출과 허용된 표본 갱신의 횟수는 다릅니다.</p><div class="spoken" aria-label="구두 대본">
 <p>데몬의 100 ms는 목표 실행 간격입니다. Quota 함수는 기능, 진행 표시, 시간과 활동량을 확인해 일찍 반환할 수 있습니다. 허용된 경우에만 표본을 소비하고 adjust_age를 늘립니다. 이 회차를 epoch라고 부르겠습니다.</p>
 <p>계산 결과 quota가 같아도 epoch는 증가합니다. 요청 스레드가 private 목록을 배정·해제할 때도 이 함수를 호출할 수 있으므로 모든 호출을 데몬 작업으로 귀속하지 않겠습니다.</p>
 </div>
@@ -919,7 +920,7 @@
 <h4>Q&amp;A · 선택한 quota가 60으로 유지되어도 두 갱신에서 페이지가 demote될 수 있나요?</h4><p>선택한 quota 하나로는 모든 list와 zone 임계값을 알 수 없습니다. 게시된 임계값과 실제 zone 이동을 별도로 관측해야 합니다. 이 trace는 수락된 epoch를 기록하며 전체 list 전이 이력은 아닙니다.</p>
 </details>
 <p class="transition"><strong>전환:</strong> 여기서 다음 질문으로 이어가겠습니다. 지금 배운 quota는 페이지의 독점 소유권인가요?</p><nav class="screen-links" aria-label="대본 위치"><a href="#chapter-06">06장 목차</a> · <a href="#route">전체 발표 순서</a></nav></article>
-<article class="screen-script" id="s-06-chapter-recap" data-source-screen="ko/seminar-3/06-maintenance.html#chapter-recap"><p class="screen-number">06장 · 11 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#chapter-recap">이제 maintenance에 관해 무엇을 설명할 수 있을까?</a></h3><p class="core"><strong>핵심:</strong> Maintenance는 보존 정책을 조정하고 현재 안전성 검사는 유지합니다.</p><div class="spoken" aria-label="구두 대본">
+<article class="screen-script" id="s-06-chapter-recap" data-source-screen="ko/seminar-3/06-maintenance.html#chapter-recap"><p class="screen-number">06장 · 11 / 24</p><h3><a href="ko/seminar-3/06-maintenance.html#chapter-recap">세고, 섞고, 나누고, 표지를 바꿉니다</a></h3><p class="core"><strong>핵심:</strong> Maintenance는 보존 정책을 조정하고 현재 안전성 검사는 유지합니다.</p><div class="spoken" aria-label="구두 대본">
 <p>지금까지 네 질문을 연결하겠습니다. 부하가 바뀌니 목표를 다시 검토합니다. Quota와 zone threshold, 후보 공급 힌트를 바꾸지만 실제 이동은 별도 조건입니다. 표본 갱신을 허용한 호출만 epoch를 늘립니다.</p>
 <p>목록이 어느 페이지를 내줄지 선호를 정해도 실제 프레임 재사용은 현재 사용과 기록 의무를 보호해야 합니다. 뒤 화면에서는 이 모델의 숫자 계산과 비용, 고정 리비전의 보조 경로 한계를 더 정확히 보겠습니다. 버퍼 풀의 전체 프레임 수를 늘리거나 줄이는 작업은 아닙니다.</p>
 </div>

@@ -2966,3 +2966,77 @@ the same counts as the exact final destination baseline. No human receipt was
 manufactured. Logs use `/tmp/flush-control-simple-359/final-integration-*`.
 Rebase conflict resolutions preserve all destination evidence-ledger entries
 and review metadata for other pages. No unrelated worktree was edited.
+
+## Candidate inspection inputs and repetition (2026-10-13)
+
+The reader found `03#scan-budget` difficult because it introduced a collection
+bound before explaining how its inputs are set. The paired screen now starts
+with the origin and change timing of each input: startup-cached pool size,
+the live hidden ratio parameter, sampled pressure and checkpoint state,
+compiled constants, database-format page size, and recalculated list weights.
+The two inspection budgets are identified as computed results. Exact arithmetic
+and continuation predicates remain in native disclosures; the visible text
+retains per-list minimum-one allocation and the stop-hint boundary. The original
+anchor remains; both editions, all contents maps and Korean script headings
+use the new heading. The selected five-chapter script explains the same inputs
+before discussing another collection.
+
+Pinned source was checked at `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`:
+
+| Input or decision | Verified source |
+| --- | --- |
+| Pool count from configuration, cached at startup with a minimum | `page_buffer.c:1713–1721`; `system_parameter.c:1169–1190` |
+| Hidden ratio default/range, online change permission, read on each daemon collection | `system_parameter.c:1158–1168,7324–7349`; `page_buffer.c:17040–17049` |
+| Counter sampling/reset, computed boost and two integer conversions | `page_buffer.c:2160–2203,3938–3971`; compiled boost ceiling at `302–305` |
+| Live checkpoint flag and recalculated list weights | `page_buffer.c:4220–4302,14127–14249` |
+| Per-list allocation, continuation and stop hint | `page_buffer.c:3803–3826,3978–3989,15414–15417,16634–16644,17030–17051` |
+| Initialized usable page size and startup restoration from the database header | `storage_common.h:90–101`; `storage_common.c:43–79`; `log_manager.c:1225–1245` |
+
+This check also corrected the inherited page-size substitution. `DB_PAGESIZE`
+names usable bytes after reserved header and trailer areas, whereas `IO_PAGESIZE`
+includes them. The 16 KiB I/O-page example therefore cannot substitute 16,384
+for `DB_PAGESIZE` and claim an exact 12,800-BCB cap. Both chapter-04 examples,
+the selected script and the canonical daemon evidence reference now use the
+actual formula. This supersedes the earlier 12,800-page cap wording in this
+review's `cost-part-2` entries. The separate elapsed-time example still uses
+12,800 assumed visits; it does not derive that number as a source cap.
+
+Technical verification used the task checkout served read-only through Copyparty
+at `http://127.0.0.1:3953`, with headless Chromium available:
+
+- Guide aggregate: all source, link, SVG and English checks pass; 43 Markdown
+  pages, 90 displayed SVGs, zero orphaned SVGs, 133 HTTP resources and 43 live-DOM
+  pages.
+- Focused Session 3 suite: 43 tests pass, with zero failures or skips.
+- Selected script: all 126 headings and anchors match the five audience
+  chapters in order. The changed screen pair and script pass nine layout and
+  keyboard-disclosure cases at 1440, 390 and 320 pixels, with no page overflow
+  or JavaScript errors. CSS motion was disabled for those layout checks.
+  Separate checks with JavaScript disabled pass on all three pages; native
+  disclosures open by keyboard. The Korean desktop rendering was inspected.
+- Bilingual aggregate: no technical, HTTP or live-DOM failure. After refreshing
+  only the three edited pairs' normalized fingerprints, the review gate still
+  reports 78 missing human receipts and 96 stale fingerprints elsewhere. All
+  three edited pairs retain `pending` review state. This is not an overall
+  aggregate pass or a human language-acceptance receipt.
+- Whitespace checks pass. Temporary aggregate, test and review logs are
+  `/tmp/scan-budget-value-origins-{guide,bilingual,tests,review}.log`.
+
+### Approved integration verification
+
+The task was rebased onto local main through `80ddcff`, preserving its updated
+scan-order explanation, daemon-session completion screen, maintenance story and
+shorter flush-control route. Conflicts were resolved by carrying only the new
+inspection-input explanation into the current chapter, retaining current screen
+numbers and regenerating the three affected pairs' fingerprints. The selected
+script also inherited nine maintenance heading mismatches from that main revision;
+its headings and local contents now match the chapter. All 106 selected-script
+heading/anchor pairs match the current five chapters in order.
+
+Integration checks pass all 44 focused tests with zero failures or skips. The
+guide aggregate passes all source gates, 132 HTTP resources and 43 live-DOM
+pages, with 89 displayed SVGs and zero orphaned SVGs. The served bilingual
+aggregate has no technical, HTTP or DOM failure; its 78 missing human review
+receipts and 96 stale fingerprints elsewhere remain disclosed. No human review
+receipt was added. Logs are
+`/tmp/scan-budget-value-origins-integration-{guide,bilingual,tests}.log`.
