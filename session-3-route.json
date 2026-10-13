@@ -25,8 +25,8 @@
     },
     {
       "file": "05-post-flush.html",
-      "en": "Finishing a flush does not claim its frame",
-      "ko": "Flush 완료만으로 프레임을 확보할 수는 없다"
+      "en": "Why a successful write does not immediately free a memory slot",
+      "ko": "쓰기를 마쳐도 메모리 칸을 바로 넘길 수 없는 이유"
     },
     {
       "file": "06-maintenance.html",

@@ -1,5 +1,13 @@
 # Session 3 readability: author and paired-review ledger
 
+The current post-flush explanation for first-time readers is recorded in
+[the work item 349 rewrite](post-flush-simple-rewrite.md). That refinement starts
+after the previously integrated item 343 revision. Its 30-screen chapter uses
+one page/frame story, a completed normal path, three separately reset cases,
+and later expandable source and policy detail. The original author rows below
+remain historical receipts; they do not certify this revision or human Korean
+acceptance.
+
 This is an author audit outside participant navigation. The rewrite makes the starting page, frame, actor and outstanding work visible before each causal example. English owns seminar wording; Korean preserves the same premises, guards and outcomes. Pinned source remains technical authority. Agent editorial review and automated checks do not supply human language acceptance; work item 55 remains pending.
 
 Work item 343 subsequently revises Chapter 05 into twelve first-pass screens and sixteen maintainer-analysis screens. Its [accepted outline, six new local-definition/reset entries and source qualifications](post-flush-readability-design.md) supplement the historical Chapter 05 ledger below. All original anchors, questions, source routes and trace snapshots are retained. Current page fingerprints remain pending human acceptance.
