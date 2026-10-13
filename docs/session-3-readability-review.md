@@ -2798,3 +2798,62 @@ The Maintainer Guide aggregate passed for 43 Markdown pages, 71 displayed SVGs, 
 Approved integration rebased this task onto local main through `45b9369`, preserving its daemon diagrams, quota examples, updated contents-to-script links, and beginner-friendly full-script wording. The new `my-presentation-script-session-3-03-07.html` companion also receives both complete spoken entries, numbered maps and screen counters; the selected delivery now has 126 screens, with README reflecting that total. The incoming full-script rewrite is byte-identical apart from this task's two added cues and map links.
 
 Integration checks passed all 31 Session 3/contents/definition tests without skips, the 126 selected-script targets and required entry structure, and six selected-script desktop/mobile/JavaScript/no-JavaScript combinations. The guide aggregate passed 43 pages, 77 displayed SVGs, 120 HTTP resources and 43 live DOM pages. The integrated full bilingual aggregate reports 178 existing review-record issues, all contained in the destination's 182 issues; refreshing this task's two pairs removes four stale fingerprints and introduces no new failure. After the incoming beginner-script rewrite, the exact spoken-cue recheck and audience/route contracts passed again. That focused cue test hung during Chromium shutdown after its assertions passed; terminating only its own browser process let the runner exit successfully with one passing test. Logs use `/tmp/session-3-waiter-origins-integration-*` and `/tmp/session-3-waiter-origins-final-cues.log`.
+
+## Work item 356: exact daemon limits in chapters 03–07
+
+This continuation starts from local main `a2895e9`. Five implementation agents
+(`limits03` through `limits07`) each owned one English/Korean chapter pair in
+one task checkout; the coordinator owns shared evidence, the cadence SVG,
+review metadata and validation. The agents verified the source checkout at
+CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912` and reviewed their actual paired
+diffs. This is an AI author audit, not a runtime experiment or human language
+acceptance. Work item 55 remains separate.
+
+| Chapter pair | Visible boundary additions and evidence route |
+| --- | --- |
+| [03 architecture](../en/seminar-3/03-daemon-architecture.html) / [Korean](../ko/seminar-3/03-daemon-architecture.html) | Pool and list initialization, compiled completion capacity, derived frame-waiter capacities, scheduling targets and resets, sampled pressure predicates and admission gates. Detailed queue boundaries route to Chapter 05. |
+| [04 page-flush](../en/seminar-3/04-page-flush.html) / [Korean](../ko/seminar-3/04-page-flush.html) | Interval, flush ratio, sorting and neighbor defaults; two truncations and pressure boost; base allowance versus per-list minimum; private target and one WAL retry. Essential settings move from disclosures beside the first dependent mechanism. |
+| [05 post-flush](../en/seminar-3/05-post-flush.html#completion-handoff) / [Korean](../ko/seminar-3/05-post-flush.html#completion-handoff) | All 8,192 pointer slots are usable. Fullness includes reservations, failed enqueue completes locally, failed consume can mean an unpublished head, and diagnostic size is a separate cursor sample. Early full-queue cases specify published pointers and no removal before insertion. Wait, priority and strict quota boundaries remain distinct from completion deadlines. |
+| [06 maintenance](../en/seminar-3/06-maintenance.html) / [Korean](../ko/seminar-3/06-maintenance.html) | Exact time/activity admission, integer sampling and quota caps, strict zone versus residency guards, startup list ranges and exceptions, effective AOUT state, and the backup's per-scan bound. VS-20 and VS-21 remain qualified source findings. |
+| [07 flush-control](../en/seminar-3/07-flush-control.html) / [Korean](../ko/seminar-3/07-flush-control.html) | Byte parsing and upward page conversion, refill truncation, adaptive branch comparisons and retained dirty high-water count, ten-wait escape, strict sync threshold and creation-time DWB size rounding. Calculated boundary examples are explicitly illustrative. |
+
+All original IDs, outer section headings, scenario labels, traces and navigation
+remain. No new authored single-letter notation was introduced. The coordinator
+corrected the [canonical daemon audit](../reference/page-buffer-daemon-lifecycle-audit.md),
+[flush actors](../reference/dirty-page-flush-actors.md),
+[replacement audit](../reference/replacement-policy-first-principles-audit.md),
+[source inventory](../source-inventory.md) and
+[uncertainty registry](../unresolved-or-version-sensitive-findings.md) where
+source verification exposed incomplete or inaccurate boundary wording. The
+existing shared cadence SVG now names the computed-zero-wait reset as well as
+consumed work and accepted wakes.
+
+Only the five affected page pairs receive fresh normalized fingerprints in
+`teaching-pages.json`; their human review state remains pending. An author
+comparison, a matching formula set or a technical browser pass supplies no
+human Korean-naturalness receipt.
+
+
+Technical receipts for this continuation:
+
+- Both aggregate validators ran against the task checkout served read-only at
+  `http://127.0.0.1:3940`, with headless Playwright available. The guide passes
+  all source/link/SVG/English gates, 114 HTTP resources and 43 live DOM pages.
+- The full repository suite passes all 262 tests, with zero failures or skips.
+  After aligning the four affected pairs' ordered inline-code projection,
+  39 focused validator/definition/contents tests pass and technical parity
+  passes for all 78 pairs.
+- The final served bilingual aggregate returns failure only for the exact same
+  174 review findings as unchanged main: 78 missing human receipts and 96 stale
+  fingerprints on other pairs. All affected fingerprints are current; no new
+  technical, HTTP or DOM finding remains. This is a disclosed review gate,
+  not an aggregate pass or human acceptance.
+- Original IDs and outer headings are preserved across all ten edited pages.
+  Pinned source paths and line ranges in changed hunks resolve against the
+  verified checkout. All six changed Markdown files pass the Copyparty source
+  checker; the task diff passes whitespace checks.
+- A focused rendered author inspection of the Korean full-queue screen confirms
+  that the capacity, cursor comparison and fallback remain visible with the
+  answer closed. The updated SVG's text stays within its viewBox; the inspected
+  pages have no JavaScript error. These are author observations, not participant
+  comprehension or engine-runtime evidence.

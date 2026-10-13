@@ -385,7 +385,7 @@ pressure](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7ca
 
 ### Default-size numerical example
 
-The hidden `pb_buffer_flush_ratio` default is 0.01. An iteration starts with
+The hidden registered `data_buffer_flush_ratio` default is 0.01. An iteration starts with
 `int(B * 0.01)` inspected-page budget, multiplies it by a miss-rate-dependent
 factor from 1 through 10 outside checkpoint, and caps the base result at 200 MiB
 worth of pages. Every LRU with positive priority nevertheless receives at least
@@ -493,9 +493,37 @@ post-flush handoff; the first later handoff supplies its normal wake.
 
 ### What one drain does
 
-`flushed_bcbs` is a lock-free circular queue constructed with capacity 8,192.
-The task consumes until the queue reports empty. For each pointer it locks the
-BCB and rechecks current facts:
+`flushed_bcbs` is a lock-free circular queue with compiled capacity 8,192 BCB
+pointers, not a configurable default. `PGBUF_FLUSHED_BCBS_BUFFER_SIZE` requests
+`8 * 1024` positions; the constructor rounds to the next power of two, which
+leaves this request unchanged. All 8,192 positions are usable: the cursor
+protocol does not reserve an extra empty slot. [Compiled size and
+construction](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L751),
+[queue initialization](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1855),
+[power-of-two allocation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/lockfree_circular_queue.hpp#L208-L218).
+
+The exact full test is `consume_cursor + capacity <= produce_cursor`, using
+separately sampled cursors. Reservations can advance the producer cursor before
+their pointer is published, so this is not a count of ready completion records.
+`produce()` returns false when that test passes. The page-flush caller does not
+retry queue insertion: it locks the BCB, finishes the old flush marker, and wakes
+attached flush waiters locally. Failure of another delegation prerequisite
+selects the same local-completion branch. [Full
+test](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/lockfree_circular_queue.hpp#L425-L429),
+[reservation and publication](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/lockfree_circular_queue.hpp#L266-L298),
+[delegation and local fallback](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10927-L10952).
+
+The task drains while `consume()` succeeds. A false return can mean either empty
+sampled cursors or a blocked head whose producer has not published its pointer;
+it does not establish that no completion work remains. `size()` also samples
+the cursors separately and includes reservations, so its result is a diagnostic
+observation rather than an exact ready-record count. Neither a failed consume
+nor a size sample bounds scheduling or completion time. [Consume
+conditions](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/lockfree_circular_queue.hpp#L334-L349),
+[sampled size](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/lockfree_circular_queue.hpp#L394-L407).
+
+For each successfully consumed pointer it locks the BCB and rechecks current
+facts:
 
 - no victim-invalidating flag other than the old `FLUSHING` flag;
 - zero current fixes;
@@ -594,9 +622,11 @@ Under the token mutex, each active update:
 6. broadcasts `waiter_cond` to waiting writers.
 
 Adaptive control is enabled by default. If tokens remained unused, the next
-budget drops by 10% of the remainder unless dirty pressure is increasing. If
-the bucket was exhausted, it grows by at least 50% of the previous interval
-budget or by the dirty-pressure suggestion. The computed result is floored at
+budget drops by the truncated integer 10% of the remainder unless the dirty
+suggestion is positive. If
+the balance is nonpositive (normally zero), it adds the larger of the truncated
+integer 50% of the previous interval budget and the dirty-pressure suggestion.
+The computed result is floored at
 40 MiB/s converted to the elapsed interval. With adaptive control disabled,
 the budget is the configured maximum rate times elapsed time; the pinned
 internal default is 10,000 pages/s. [Token replacement and
@@ -612,6 +642,28 @@ At 16 KiB per page, the 40 MiB/s floor is 2,560 pages/s, approximately 128
 tokens for a 50 ms interval. The non-adaptive 10,000-page/s default would be
 approximately 500 tokens per 50 ms. These are calculated examples; elapsed
 time, integer truncation, and adaptive feedback determine the actual budget.
+The adaptive branch does not clamp its result to the configured maximum rate.
+
+The external `max_flush_size_per_second` value is a byte-size rate converted
+upward to I/O pages: `ceil(bytes / IO_PAGESIZE)`. Validation applies to that
+converted integer, from one through `INT_MAX` pages/s. A positive subpage byte
+rate therefore becomes one page/s; zero is invalid. Fixed-mode refill truncates
+`pages_per_second * elapsed_microseconds / 1000000` on every update, without
+carrying fractional credit. At exactly 50 ms, rates of one through 19 pages/s
+generate zero tokens. A valid setting consequently does not promise a positive
+refill on every task entry. [Size
+conversion](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L6726-L6752),
+[converted range validation](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L8512-L8563),
+[rate registration](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L1854-L1865),
+[refill arithmetic](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/file_io.c#L861-L874).
+
+The dirty suggestion uses strict `dirties_cnt > num_buffers / 2`, with integer
+division, for its squared excess term. Its separate growth term compares the
+current count against a retained high-water count: `prev_dirties_cnt` changes
+only when the current count exceeds it. It is not the immediately preceding
+sample, and both integer terms can truncate to zero. These are source arithmetic
+and policy observations, not measured feedback stability. [Dirty
+suggestion](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14851-L14884).
 
 `fileio_write()` and `fileio_write_pages()` call `fileio_compensate_flush()`
 *after* successful OS writes. That helper then obtains tokens and may trigger a

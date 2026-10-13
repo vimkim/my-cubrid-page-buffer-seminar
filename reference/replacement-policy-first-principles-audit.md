@@ -604,11 +604,14 @@ Verified provider paths include:
 Flush creates candidates but does not itself decache pages. The page-flush path
 uses dynamically weighted list priorities, scans only LRU3, stores both BCB
 pointer and expected VPID, and rechecks before writing. Its configured scan
-count is `B * flush_ratio`, dynamically multiplied by up to 10 according to
-victim-request/fix-request rate, then capped at the number of pages equivalent
-to 200 MiB. Optional sequential mode sorts collected candidates by VPID before
+base count is `int(B * flush_ratio)`, dynamically multiplied by up to 10 according
+to victim-request/fix-request rate, truncated again, then capped at the number
+of pages equivalent to 200 MiB. Each positive-priority list receives at least
+one check after weighted distribution, so the cap is not a strict bound on
+total node visits across lists. Optional sequential mode sorts collected candidates by VPID before
 I/O.
-[flush scan sizing and sort](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3930-L4008)
+[flush scan sizing and sort](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3930-L4008),
+[per-list minimum](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3815-L3823).
 
 When every selected dirty page is blocked only by WAL and direct-victim waiters
 exist, the server path synchronously flushes the log through the largest needed

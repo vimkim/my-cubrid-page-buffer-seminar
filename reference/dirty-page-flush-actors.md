@@ -67,8 +67,10 @@ The direct-victim half of `pgbuf-maintain` must be separated into **intended
 role** and **verified executable control flow**. The function comment says
 `pgbuf_direct_victims_maintenance()` is a low-activity backup and initializes
 an outer continuation budget to five. That value is not a strict assignment
-maximum: one helper call can scan up to 1,000 LRU3 entries and assign multiple
-eligible BCBs before returning. But both outer `for` loops initialize `index` to the saved
+maximum: each panic-assignment scan can visit up to 1,000 LRU3 entries and assign
+multiple eligible BCBs. Its wrapper can perform a second scan from the list
+bottom if the hint scan assigns none and candidates and waiters remain.
+But both outer `for` loops initialize `index` to the saved
 start index and immediately require `index != start_index`; that condition is
 false on the first test, so neither loop body is entered as written. Quota
 adjustment still runs every maintenance iteration. The absence of direct
@@ -80,7 +82,8 @@ The uncertainty registry owns the status as `VS-20`; validation requires a
 pressure probe that distinguishes assignments by producer and confirms whether
 generated code, a supported build variant, or another path changes this
 control flow. [Pinned loop
-conditions](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9608-L9648).
+conditions](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9608-L9648),
+[per-scan bound and wrapper retry](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9550-L9689).
 
 Dirtying a page does **not** assign it to a particular flusher. `pgbuf_set_dirty_buffer_ptr()` only sets the BCB dirty flag, records which holder dirtied it for statistics, and increments statistics. The dirty BCB remains resident until one of several policies selects it. [Dirty transition](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11656-L11675), [dirty-flag update](https://github.com/CUBRID/cubrid/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16020-L16061).
 
