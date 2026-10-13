@@ -40,7 +40,7 @@ test("the maintenance anomaly is routed through one uncertainty owner", async ()
   assert.match(markdown, /index != start_index/);
   assert.match(markdown, /not a strict assignment\s+maximum/);
   assert.match(markdown, /status as `VS-20`/);
-  assert.match(findings, /\| `VS-20` \| \*\*Open source anomaly\*\*/);
+  assert.match(findings, /\| `VS-20`(?: \([^\n|]+\))? \| \*\*Open source anomaly\*\*/);
   assert.match(findings, /both private and shared loop bodies are therefore skipped as written/);
 });
 

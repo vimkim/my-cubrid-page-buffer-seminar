@@ -2,7 +2,7 @@
 
 The current post-flush explanation for first-time readers is recorded in
 [the work item 349 rewrite](post-flush-simple-rewrite.md). That refinement starts
-after the previously integrated item 343 revision. Its 30-screen chapter uses
+after the previously integrated item 343 revision. Its 29-screen chapter uses
 one page/frame story, a completed normal path, three separately reset cases,
 and later expandable source and policy detail. The original author rows below
 remain historical receipts; they do not certify this revision or human Korean

@@ -37,7 +37,8 @@ give another request its memory slot. The requested explanation must:
 
 ## Applied explanation and source boundaries
 
-The chapter contains 30 screens. The normal path introduces the page and frame
+The originally reviewed chapter contained 30 screens, before the later approved
+D27 omission preserved during integration. The normal path introduces the page and frame
 before the control record. A separate queue-handoff screen introduces post-flush
 and the pointer payload. A plain later-change screen precedes the detailed
 generation trace. Queue-full and generation traces move after the basic recap.
@@ -195,3 +196,15 @@ permit that optional reference while still requiring the same label and status.
 During these checks, `main` advanced to `8092c84`, which deliberately omits D27
 from the live Session 3 chapter. A second rebase under the same approval must
 preserve that omission and the corresponding route/disposition contract.
+
+The second rebase preserves the destination's D27 omission in both chapters,
+all three contents maps and the spoken script. The current chapter has 29
+screens and 38 DOM IDs. Its four state traces, the allocator-wait clarification
+and all 51 source URLs remain. The destination's other chapters, assets,
+dispositions, documentation and updated question contract are retained.
+
+The inherited VS-20 test comparison now accepts an optional parenthesized
+reference after the exact label, without accepting another label or changing
+the required `Open source anomaly` status. This one-line test correction
+preserves the previously integrated JIRA link; it changes no engine behavior
+or uncertainty classification.
