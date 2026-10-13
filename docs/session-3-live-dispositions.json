@@ -239,7 +239,7 @@
       "accepted; FLUSHING=0",
       "no P completion item",
       "local completion done",
-      "flush woken; B not assigned here"
+      "flush waiters woken; allocator B still waiting"
     ]
   },
   {
@@ -938,7 +938,7 @@
       "accepted; FLUSHING=0",
       "no P completion item",
       "local completion done",
-      "flush woken; B not assigned here"
+      "flush 대기자는 깨어남; allocator B는 계속 대기"
     ]
   },
   {
