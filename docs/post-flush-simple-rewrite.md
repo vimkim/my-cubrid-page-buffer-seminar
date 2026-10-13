@@ -155,3 +155,43 @@ Standards: 0 findings. Spec: 0 findings. No unresolved issue within either axis.
 The final record clarifies the integrity count as 37 DOM IDs plus four question
 IDs, rather than grouping the 41 identifiers under one ambiguous label. This
 changes the audit description only.
+
+## Approved local integration
+
+The user approved rebase and local integration on 2026-10-13. The destination
+checkout was clean on `main` at `548b380b2609bc48826332e3e4d7ad59a8d90c0d`.
+The three task commits were rebased onto that revision. Conflicts affected the
+paired chapter, the three contents maps and the fingerprint manifest.
+
+Resolution retains the first-time-reader explanation and current destination
+content together. The complete `why-no-allocator-assignment` clarification and
+its questions remain verbatim in the detailed queue-full screen. That screen's
+last snapshot follows the newer destination wording: flush waiters are awake,
+while the allocator remains waiting. All four trace snapshot values now equal
+the current destination baseline in each language. The other spoken chapters
+and all unrelated manifest entries were independently compared and retained
+verbatim. Existing daemon, page-flush, asset and uncertainty-registry changes
+are untouched by the task diff.
+
+The resolved chapter has 30 screens, 40 DOM IDs and 51 pinned source URLs in each
+language. It preserves the union of the task and current destination anchors
+and source routes. Fresh fingerprints cover only the changed chapter and paired
+contents; human acceptance remains pending. The post-rebase bilingual source
+aggregate has exactly the destination baseline's 174 human-review messages,
+with no added failure.
+
+Final rebase verification uses the same temporary read-only Copyparty endpoint
+and matching headless browser. Results are recorded below before fast-forward
+integration and removal of this task's checkout and branch.
+
+The first rebase passed the Guide aggregate (114 HTTP resources and 43 DOM
+pages) and bilingual served gate (351 resources and 158 pages). The complete
+suite passed 261 of 262 tests. Its one failure was reproduced independently on
+the destination checkout: the VS-20 ownership test required an undecorated
+table cell, while the destination had already added a JIRA link beside that
+label. The source status and ownership were unchanged. The comparison needs to
+permit that optional reference while still requiring the same label and status.
+
+During these checks, `main` advanced to `8092c84`, which deliberately omits D27
+from the live Session 3 chapter. A second rebase under the same approval must
+preserve that omission and the corresponding route/disposition contract.
