@@ -1,44 +1,69 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Adapt retention without authorizing reuse · Session 3</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>How maintenance changes quotas, with examples · Session 3</title>
 <link rel="stylesheet" href="../../assets/teach-course.css"><link rel="stylesheet" href="../../assets/seminar.css"><link rel="stylesheet" href="../../assets/session-3-traces.css"><link rel="stylesheet" href="../../assets/session-3-live.css"><script defer src="../../assets/seminar.js"></script><script defer src="../../assets/session-3-traces.js"></script></head>
 <body data-seminar data-session-3 data-session-3-traces><a class="skip-link" href="#seminar-content">Skip to content</a><header class="seminar-top"><strong>CUBRID / PAGE BUFFER</strong><nav aria-label="Seminar navigation"><a data-curriculum-link href="toc.html">Session 3 contents</a><a data-library-link href="../index.html#library">Topic library</a></nav></header>
 <nav class="language-switcher" data-language-switcher aria-label="Language"><span aria-current="page">EN</span> | <a href="../../ko/seminar-3/06-maintenance.html" hreflang="ko" lang="ko">KO</a></nav>
-<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">SESSION 3 · 2026-10-13 · 06 / 12</div><h1>Adapt retention without authorizing reuse</h1><p>CUBRID page-buffer daemons and PostgreSQL page replacement</p><p class="live-workload">A small set of pages is read repeatedly while a large scan and pending page updates fill the pool. Each constructed example starts independently. Explanations of policy benefits are Inference unless source intent establishes them.</p></header>
+<main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">SESSION 3 · 2026-10-13 · 06 / 12</div><h1>How maintenance changes quotas, with examples</h1><p>CUBRID page-buffer daemons and PostgreSQL page replacement</p><p class="live-workload">Start with a shelf full of books. Follow one quota calculation, one step at a time. Exact source rules are available in optional disclosures.</p></header>
 <div class="lesson-grid"><article class="lesson-main"><section class="section" id="workload"><div class="eyebrow">06 · 1 / 24</div>
-<h2>Why load the same page from disk again?</h2>
-<p>A page is a unit of database data. A frame is a memory slot that can hold one page. The buffer pool is the collection of these slots.</p>
-<p>For a teaching example, imagine 12 frames, all occupied. One request repeatedly reads the same four pages. A large scan runs alongside it, reading other pages in sequence.</p>
-<p>When the scan brings in its next page, an occupied slot must become available. If the page removed from that slot is one the repeating request soon needs, that request must load it again from disk.</p>
-<p>A full pool therefore needs a policy for <strong>which pages to keep longer</strong>. The scan also needs room to make progress.</p>
-<div class="callout">These 12 frames illustrate competition for space. They do not reproduce CUBRID's pool configuration or quota arithmetic.</div>
+<h2>Think of a shelf full of books</h2>
+<p>A database page is a piece of data. A <strong>frame</strong> is a place in memory that holds one page. Imagine a frame as one book place on a shelf. All the places together are the <strong>buffer pool</strong>.</p>
+<p>The shelf has a fixed size. To put a new book on a full shelf, we need to take another book out.</p>
+<p>The <strong>maintenance daemon</strong> is a helper that works in the background. It looks at signs of use and changes the numbers that say how much each group should try to keep.</p>
+<div class="callout">A <strong>quota</strong> is a target: “Try to keep this many pages for this group.” It does not reserve places, limit access or make a page safe to overwrite.</div>
 </section>
 <section class="section" id="fixed-targets"><div class="eyebrow">06 · 2 / 24</div>
-<h2>Can the original retention target stay fixed?</h2>
-<p><strong>Continue the teaching example: all 12 frames, the memory slots for pages, are occupied.</strong> The repeating request initially needed four pages. Its work changes: it now cycles through eight pages. The scan continues.</p>
-<table><thead><tr><th>Situation</th><th>Pages the repeating request needs</th><th>Pool capacity</th></tr></thead><tbody><tr><td>Before the change</td><td>4</td><td>12 frames</td></tr><tr><td>After the change</td><td>8</td><td>12 frames</td></tr></tbody></table>
-<p>A fixed retention target cannot reflect that change. A target can also become unsuitable when the activity associated with it falls. These are reasons to reconsider targets while work runs, instead of setting them only at startup.</p>
-<p>Maintenance performs that reconsideration using observed activity. It does not know future requests and does not guarantee that all eight pages will stay resident.</p>
-<div class="callout">The numbers describe a changing workload, not computed quotas. CUBRID's activity samples are not all page reads; more repeated reads do not necessarily produce a larger quota.</div>
+<h2>Start with two equal targets</h2>
+<p><strong>One constructed example begins here.</strong> There are 10,000 frames, all holding pages. CUBRID puts the pages into replacement lists: groups that help it decide what to keep.</p>
+<p data-teaching-def="Blue Green">There are four private lists and four shared lists. Only two private lists have activity. Call them the <strong>Blue list</strong> and the <strong>Green list</strong>. Private lists are associated with sessions; several sessions can use one. Shared lists provide common accounting. Every list uses the same pool.</p>
+<p>Before our next update, the stored private share is half the pool. Blue and Green have equal stored activity.</p>
+<table><thead><tr><th>Target before the update</th><th>Pages</th></tr></thead><tbody><tr><td>All private lists together</td><td>5,000</td></tr><tr><td>Blue list</td><td>2,500</td></tr><tr><td>Green list</td><td>2,500</td></tr></tbody></table>
+<p>We will calculate two accepted updates, each five seconds after the previous one. Each has 10,000 counted final unfixes: releases of the last fix protecting a page from reuse. So activity is not classified as low. No other update or concurrent counter change occurs.</p>
+<div class="callout">These are made-up inputs to the pinned code, not a runtime measurement. Five seconds makes the mixing easy to see; it is not the daemon’s normal timer interval. Target counts do not tell us how many pages each list actually holds.</div>
 </section>
 <section class="section" id="retention-targets"><div class="eyebrow">06 · 3 / 24</div>
-<h2>What is a quota a target for?</h2>
+<h2>First split private space from shared space</h2>
+<p data-teaching-def="Blue Green"><strong>Continue the example with 10,000 occupied frames.</strong> Blue and Green are its two active private lists. The helper reads each list’s hit samples and turns them into a per-second count. A sample is a selected sign of page use; it does not count every read.</p>
+<table><thead><tr><th>Group</th><th>New samples per second</th></tr></thead><tbody><tr><td>Blue private list</td><td>900</td></tr><tr><td>Green private list</td><td>100</td></tr><tr><td>All four shared lists together</td><td>1,000</td></tr></tbody></table>
+<p>Private lists contributed <strong>900 + 100 = 1,000</strong>. Shared lists also contributed <strong>1,000</strong>. Private is half the total.</p>
+<p>The old private share was also half. Mixing half with half still gives half. So the total private target stays at <strong>10,000 ÷ 2 = 5,000 pages</strong>.</p>
+<p>The other 5,000 is the input for shared-list targets. It is not a set of reserved empty places.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14379-L14433">Private share and total target</a></p>
+<details class="answer-disclosure"><summary>Optional · Exact policy and source</summary>
 <p>CUBRID groups resident pages into replacement lists. A list records where its pages stand in the replacement policy; it is not a separate allocation of memory slots.</p>
 <p>A <strong>private list</strong> is associated with sessions; several sessions can share one. A <strong>shared list</strong> provides common retention accounting. Both belong to the same buffer pool. Private does not mean exclusive page access, and shared does not mean scan pages.</p>
 <p>A <strong>quota</strong> is the target number of pages to retain for a private list. Its computed value is capped at <code>MIN(5000, num_buffers / 2)</code> pages, where <code>num_buffers</code> is pool capacity and division is integer division. Zero is a valid target. This is a cap on the target, not on actual residency or a reservation. Shared lists also have computed target sizes for their retention zones.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1071-L1077">Compiled quota and list limits</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14400-L14455"><code>pgbuf_adjust_quotas</code>: zero targets and quota caps</a></p>
 <p>Maintenance uses activity samples to recompute private-LRU quotas and private/shared LRU zone-size thresholds. Total buffer-pool frame capacity stays unchanged. A zone is a part of a replacement list with a particular retention role. When adjustment conditions permit, excess entries move toward the candidate zone.</p>
 <div class="callout">A changed target does not make a frame safe to overwrite. The paths that offer or reuse it must check its current users, waiters and pending write obligations under protection.</div>
+</details>
 </section>
 <section class="section" id="activity-samples"><div class="eyebrow">06 · 4 / 24</div>
-<h2>What activity can maintenance observe?</h2>
+<h2>Then mix each list’s old and new activity</h2>
+<p data-teaching-def="Blue Green"><strong>Continue the same update.</strong> Blue and Green are the two active private lists. Blue has more new activity than Green. Should we give Blue nearly all the private target right away?</p>
+<p>The code first mixes old and new activity. At our five-second interval, it takes <strong>half from the old value and half from the new value</strong>.</p>
+<table><thead><tr><th>List</th><th>Old activity</th><th>New count per second</th><th>Mixed activity</th></tr></thead><tbody><tr><td>Blue</td><td>500</td><td>900</td><td>(500 + 900) ÷ 2 = <strong>700</strong></td></tr><tr><td>Green</td><td>500</td><td>100</td><td>(500 + 100) ÷ 2 = <strong>300</strong></td></tr></tbody></table>
+<p>Think of ten counters: five blue and five green was the old split; nine blue and one green is the new split. Mixing equal amounts gives <strong>seven blue and three green</strong>.</p>
+<div class="callout">The mix depends on elapsed time. Five seconds gives half old and half new. At 500 ms, the code uses 95% old and 5% new. After at least ten seconds, it uses the new value directly.</div>
+<details class="answer-disclosure"><summary>What counts as a sign of use?</summary>
 <p>A replacement list groups resident pages for retention policy; its quota is a target page count. Maintenance needs evidence of activity to revise that target. It collects approximate samples while callers finish using pages.</p>
 <p>A <strong>fix</strong> protects a page's resident frame against reuse while a caller uses it. A <strong>final unfix</strong> releases the last current fix on that page. Selected final-unfix paths contribute to two different kinds of accounting:</p>
 <table><thead><tr><th>Sample</th><th>Question it helps answer</th></tr></thead><tbody><tr><td>Per-thread counted final unfixes</td><td>After at least 1 ms, have <code>num_buffers / 4</code> events accumulated, where <code>num_buffers</code> counts pool frames? Integer division gives 8,192 for a 32,768-frame example. At or after 500 ms, the activity count no longer rejects the update.</td></tr><tr><td>Per-list eligible hit samples</td><td>How should observed activity contribute to the lists' targets?</td></tr></tbody></table>
 <p>A BCB is the control record for one frame. An eligible list hit contributes 1 only when <code>hit_age &lt; adjust_age</code>, then records the current accepted-update count in <code>hit_age</code>. Further contributions in that period are normally suppressed. Both ages start at 0, so the first normal sample needs an accepted update first. Repeatedly reading one resident page therefore differs from counting every read.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14297-L14340"><code>pgbuf_adjust_quotas</code>: compiled admission gates</a></p>
 <div class="callout">A scan can touch many distinct frames, while repeated reads may revisit one. These samples alone do not prove which pages will be needed next or guarantee that repetition wins more retention.</div><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16601-L16610">List-hit sampling</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L6713-L6731">Counted final unfixes</a></p>
+</details>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14377">Activity mixing</a></p>
 </section>
 <section class="section" id="first-code-path"><div class="eyebrow">06 · 5 / 24</div>
-<h2>How do samples reach the replacement policy?</h2>
+<h2>Divide ten shares between the two lists</h2>
+<p data-teaching-def="Blue Green"><strong>Continue the same update.</strong> Blue and Green are the two active private lists. We have a private target of <strong>5,000 pages</strong> and mixed activity of <strong>700 Blue + 300 Green = 1,000</strong>.</p>
+<p>Divide the 5,000-page target into ten equal shares. Each share is 500 pages.</p>
+<table><thead><tr><th>List</th><th>Share of mixed activity</th><th>New quota</th></tr></thead><tbody><tr><td>Blue</td><td>7 out of 10</td><td>7 × 500 = <strong>3,500 pages</strong></td></tr><tr><td>Green</td><td>3 out of 10</td><td>3 × 500 = <strong>1,500 pages</strong></td></tr></tbody></table>
+<p>Blue’s target grows from 2,500 to 3,500. Green’s falls from 2,500 to 1,500. The buffer pool still has 10,000 frames.</p>
+<div class="callout">The code caps each private quota at 5,000 pages and half the pool. Neither cap reduces these numbers. These are target changes; they do not reserve or immediately empty frames.</div>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Does maintenance write pages when it moves them to a colder zone?</summary><p>Quota adjustment changes list metadata and retention preference. It copies no page bytes and performs no page I/O. A colder page still needs the relevant preservation and protected reuse checks.</p></details>
+</div>
+<details class="answer-disclosure"><summary>Optional · Follow the actual helper calls</summary>
 <p>The maintenance daemon is a background thread with a compiled <strong>100 ms start-to-start target</strong>. Scheduling and task duration can delay its starts. After the server's boot gate permits useful page-buffer work, it calls the quota helper. A quota is a list's target page count; zone thresholds describe target sizes within a list.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17146-L17161"><code>pgbuf_page_maintenance_daemon_init</code>: 100 ms looper</a></p>
 <ol><li>Check whether this call may consume a new sample set.</li><li>If accepted, read activity samples and recompute quota and zone thresholds.</li><li>Check whether a list needs zone adjustment. If so, adjust it under its list mutex, the lock that protects list changes.</li></ol>
@@ -46,23 +71,17 @@
   → pgbuf_adjust_quotas
     → pgbuf_lru_adjust_zones</pre><figcaption>Verified direct calls in pinned source, not a captured runtime stack. The final call is conditional; changing thresholds alone does not establish that pages moved.</figcaption></figure>
 <p>The quota helper changes metadata. It copies no page bytes, forces no write-ahead log and performs no page I/O. Its zone adjustment can also try a protected direct offer to a waiting request; the next screens separate that offer from merely changing a target.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16997-L17008">Maintenance entry</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14494">Target publication and adjustment guards</a></p>
-
-<div class="section-qna" data-reset-answers="">
-<details class="answer-disclosure"><summary>Q&amp;A · Does maintenance write pages when it moves them to a colder zone?</summary><p>Quota adjustment changes list metadata and retention preference. It copies no page bytes and performs no page I/O. A colder page still needs the relevant preservation and protected reuse checks.</p></details>
-</div>
-
-<p class="data-structure-bridge" data-teaching-def="VS-20">adjust_age counts accepted sample-update passes rather than elapsed time. The diagram separates statistics access from boundary adjustment. VS-20 records the separate backup loops whose bodies are skipped at this pin. Quota adjustment performs no page I/O.</p>
-<figure class="daemon-data-structures"><img class="diagram" src="../../assets/daemon-maintenance-data-structures.svg" alt="Maintenance reads thread unfix and per-list hit arrays, computes targets and adjusts only required list boundaries"><figcaption>Data structures and access order · pinned source schematic</figcaption></figure>
+</details>
 </section>
 <section class="section" id="quota-change"><div class="eyebrow">06 · 6 / 24</div>
-<h2>What changes when a retention target falls?</h2>
-<p>A quota is a private list's retention target. Its pages occupy three zones: <strong>LRU1</strong> favors retention, <strong>LRU2</strong> is intermediate, and <strong>LRU3</strong> supplies replacement candidates. These are positions in a list, not three separate memory pools.</p>
-<p>Suppose a new sample set produces a smaller quota. Maintenance writes that target and two private zone thresholds, each <code>int(quota * 0.05f)</code> pages; the cast discards the fractional part. The <code>count_lru*</code> fields count pages in the named zones; <code>threshold_lru*</code> fields are their target counts. It calls private zone adjustment only when <code>count_lru1 + count_lru2 &gt; quota</code>. Shared adjustment instead requires <code>count_lru1 + count_lru2 &gt; threshold_lru1 + threshold_lru2</code>. Equality does not trigger either call.</p>
-<table><thead><tr><th>Stage</th><th>What changes</th></tr></thead><tbody><tr><td>Publish the new target</td><td>Quota and zone thresholds change; no page is removed just by storing these values.</td></tr><tr><td>Adjust zones when the guard passes</td><td>Excess warmer entries move toward LRU3 under the list mutex. Without a successful direct offer, those entries remain resident.</td></tr><tr><td>Advertise a candidate source</td><td>A private list with at least one tracked candidate (<code>count_vict_cand &gt; 0</code>) and total resident count <code>count_lru1 + count_lru2 + count_lru3 &gt; quota</code> can be registered for victim discovery. This total-count guard differs from the warmer-zone adjustment guard.</td></tr></tbody></table>
-<p>The policy can now direct more replacement attention to that list. It has not created an empty frame merely by reducing quota. During demotion it can try a direct offer, whose safety checks are separate from the quota arithmetic.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14473">Private target and advertisement guards</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9993-L10047">Conditional zone movement</a></p>
-
-
-<p>Imagine one shelf with three labeled stretches: keep longer, middle, and consider replacing. Moving a book’s label does not erase its contents. The code first shrinks the first two stretches together toward LRU3, then shrinks LRU1 toward LRU2. A page can therefore move directly from LRU1 to LRU3.</p>
+<h2>Another update moves the targets a little further</h2>
+<p data-teaching-def="Blue Green"><strong>Continue five seconds later.</strong> Blue and Green are the two active private lists in the 10,000-frame example. The new per-second counts are again Blue 900, Green 100, and shared 1,000. The private share stays half, so the private target stays 5,000.</p>
+<p>Use the activity stored by the previous update as the old value:</p>
+<p>Blue: <strong>(700 + 900) ÷ 2 = 800</strong>.<br>Green: <strong>(300 + 100) ÷ 2 = 200</strong>.</p>
+<p>Now the split is eight shares for Blue and two for Green.</p>
+<table><thead><tr><th>When</th><th>Blue quota</th><th>Green quota</th></tr></thead><tbody><tr><td>Before both updates</td><td>2,500</td><td>2,500</td></tr><tr><td>After the first update</td><td>3,500</td><td>1,500</td></tr><tr><td>After the second update</td><td><strong>4,000</strong></td><td><strong>1,000</strong></td></tr></tbody></table>
+<p>The helper stores the new numbers. It also computes size targets for the parts of each replacement list. A bigger quota alone does not move colder pages into warmer parts.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14433-L14494">Per-list quotas and zone targets</a></p>
 <details id="exact-zone-order" class="answer-disclosure"><summary>Exact private/shared guards and movement order</summary>
 
 <p><code>count_lru1</code>, <code>count_lru2</code> and <code>count_lru3</code> count entries currently in each zone. <code>threshold_lru1</code> and <code>threshold_lru2</code> are target counts. <code>bottom_1</code> and <code>bottom_2</code> point to the colder end of their respective stretches of one linked list; <code>prev_BCB</code> walks toward warmer entries.</p>
@@ -88,8 +107,7 @@ pgbuf_lru_adjust_zone1(thread_p, lru_list, false);
 <p>The quota caller locks <code>lru_list->mutex</code> around movement; it publishes quota/threshold values before that lock. The separate <code>pgbuf_lru_adjust_zone2()</code> helper adjusts LRU2 alone, but this quota path calls the combined helper. It passes <code>min_one=false</code>, so a zero target can empty both warmer zones. Bigger targets alone do not promote colder entries.</p>
 <p>Ordinary demotion changes zone metadata in place; it does not copy the page or relink the entry. <code>pgbuf_bcb_change_zone()</code> uses compare-and-swap to update the encoded list/zone while preserving the other flags, decrements the old zone count and increments the new one. Entering LRU3 also updates candidate accounting when the flags permit it; this does not replace protected reuse checks. An ordinary fall records <code>bcb-&gt;tick_lru3 = lru_list-&gt;tick_lru3</code>, increments the list tick and resets that tick to 0 when it reaches <code>DB_INT32_MAX</code>. This list-local age is separate from quota epoch <code>adjust_age</code>.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15889-L15985">Encoded zone, flags and membership counts</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10113-L10121">Ordinary LRU3 tick assignment and wrap</a></p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1059-L1067">Combined shared-threshold comparison</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14494">Quota-path private/shared guards and list mutex</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9882-L10047">Zone boundaries and exact demotion order</a></p>
-</details>
-<details id="worked-private-zones" class="answer-disclosure"><summary>Private example · A smaller quota can demote much more than its decrease</summary>
+</details><details id="worked-private-zones" class="answer-disclosure"><summary>Private example · A smaller quota can demote much more than its decrease</summary>
 
 <p><strong>Independent constructed state:</strong> old quota 100 becomes 60. This private list has 100 entries, nobody is waiting for a direct victim, and no other thread changes the list during adjustment. New thresholds are <code>int(60*0.05f)=3</code> each. Since <code>20+50=70 &gt; 60</code>, the private call guard passes. Inside the helper, the target is <code>3+3=6</code>, not 60.</p>
 <table><thead><tr><th>Step</th><th>LRU1 / LRU2 / LRU3</th></tr></thead><tbody>
@@ -99,8 +117,7 @@ pgbuf_lru_adjust_zone1(thread_p, lru_list, false);
 <p>Move <code>70-6=64</code> entries toward LRU3: all 50 from LRU2, then 14 directly from LRU1. Six LRU1 entries remain. Move <code>6-3=3</code> of those to LRU2. Total residency stays 100. No page bytes are written or evicted in this no-waiter example.</p>
 <p><strong>Different independent starting state:</strong> the same new quota 60 and thresholds 3 / 3, but zone counts 20 / 10 / 70. The combined count is <code>20+10=30 ≤ 60</code>, so this quota call does not adjust zones. The counts remain 20 / 10 / 70 even though each warmer zone exceeds its threshold. A smaller threshold alone does not trigger this private call.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14463">Private guard differs from the inner target</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9993-L10047">Combined demotion then zone-1 adjustment</a></p>
-</details>
-<details id="worked-shared-zones" class="answer-disclosure"><summary>Shared example · The guard compares the sum of both thresholds</summary>
+</details><details id="worked-shared-zones" class="answer-disclosure"><summary>Shared example · The guard compares the sum of both thresholds</summary>
 
 <p><strong>Reset independently:</strong> one shared list’s calculated target falls from 100 to 60. Default ratios 0.4 / 0.05 give new thresholds <code>int(60*0.4f)=24</code> and <code>int(60*0.05f)=3</code>. It has 100 entries, no waiting allocator and no concurrent list changes.</p>
 <table><thead><tr><th>Step</th><th>LRU1 / LRU2 / LRU3</th></tr></thead><tbody>
@@ -113,27 +130,29 @@ pgbuf_lru_adjust_zone1(thread_p, lru_list, false);
 </details>
 </section>
 <section class="section" id="reuse-checks"><div class="eyebrow">06 · 7 / 24</div>
-<h2>Why is a replacement candidate not yet safe to reuse?</h2>
-<p>A frame holds a resident page; a quota is a retention target. An LRU3 position makes the page available for candidate consideration, not automatically for overwriting.</p>
-<p>A <strong>dirty</strong> page has changes still owed to the storage path. <strong>Flushing</strong> means work for an older page image remains in progress. A caller's fix or a waiter can also prevent reuse. A lower quota cannot erase these obligations.</p>
-<ol><li>The offering path checks candidate eligibility, obtains the BCB mutex and rechecks the protected current state. The BCB is the frame's control record.</li><li>If eligible and a request is waiting for a frame, it may offer the frame directly. That waiting request is an allocator.</li><li>The allocator checks the direct offer again before use. Another caller's intervening fix can invalidate it.</li></ol>
-<div class="callout">Quota adjustment can reach this offering path during zone demotion. Therefore neither a changed quota nor the function name tells us whether an allocator received a reusable frame.</div><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10059-L10097">Protected offer during demotion</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15606-L15626">Receiver recheck</a></p>
-
+<h2>A smaller label does not erase a book</h2>
+<p><strong>Start a separate example.</strong> A private list holds 100 pages. Its quota falls from 100 to 60. All 100 pages can still be in memory.</p>
+<p>Imagine three labels on its books: <strong>keep longer (LRU1)</strong>, <strong>middle (LRU2)</strong>, and <strong>consider replacing (LRU3)</strong>. These are parts of one list, not separate pools.</p>
+<p>If the first two parts together hold more than the new quota, the helper adjusts the labels. Its inner size targets are smaller than the quota: each of the first two parts gets 5% of 60, or 3 pages.</p>
+<table><thead><tr><th>State</th><th>Keep longer</th><th>Middle</th><th>Consider replacing</th></tr></thead><tbody><tr><td>Before adjustment</td><td>20</td><td>50</td><td>30</td></tr><tr><td>After adjustment</td><td>3</td><td>3</td><td>94</td></tr></tbody></table>
+<p>Here 20 + 50 is greater than 60, so adjustment runs. Assume nobody is waiting for a direct offer and no other thread changes the list. All 100 pages stay resident; more now have the “consider replacing” label.</p>
+<div class="callout">Before a page can be overwritten, the code must check its current identity, users, waiters and pending writes under protection. A dirty page still has changes to preserve. A flushing page still has an image being written. A small quota cannot remove those duties.</div>
+<p>During relabeling, the helper can also offer a suitable frame directly to a waiting request. A BCB is the frame’s control record. It checks the frame under that record’s lock; the receiver checks it again before reuse. That different branch can remove a page from the list.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14463">Private adjustment guard</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9993-L10120">Zone adjustment and optional direct offer</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15606-L15626">Receiver recheck</a></p>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Does being over quota make a dirty page disposable?</summary><p>No. Over-quota status makes a domain a preferred source under retention policy. Pending page changes, active use and outstanding flush work still prevent unsafe reuse.</p></details>
 </div>
 </section>
 <section class="section" id="maintain"><div class="eyebrow">06 · 8 / 24</div>
-<h2>Does every maintenance call update the targets?</h2>
+<h2>The helper can say “wait”</h2><p>The daemon aims to start work 100 ms apart. Each start asks whether it is time to update; it does not promise a new quota.</p><p>The helper can say “wait” if updates are disabled, another adjustment appears active, or too little time and activity have accumulated. Then it keeps the samples for later.</p><p>When the call is accepted, the helper consumes the samples and calculates targets. One accepted turn is an <strong>epoch</strong>. <code>adjust_age</code> counts these turns, even when the calculated quota stays the same. Request threads can also call this helper when assigning or releasing a private list.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14297-L14340">Update guards</a></p><div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Do all quota-helper calls come from the maintenance daemon?</summary><p>No. Private-list assignment and release can also call it in request threads. Caller identity matters when attributing adjustment CPU work, latency or accepted epochs to the daemon.</p></details>
+</div><details class="answer-disclosure"><summary>Optional · Exact policy and source</summary>
 <p>The maintenance daemon is a background thread that aims to start work 100 ms apart. Its boot gate must allow page-buffer work. Scheduling and the time spent working affect the actual starts; there is no ordinary explicit work wake.</p>
 <p>A call to the quota helper first checks whether private lists are enabled and another adjustment appears inactive. It always rejects elapsed time <code>&lt; 1 ms</code>. Before <code>500 ms</code>, it also rejects counted final unfixes <code>&lt; num_buffers / 4</code>, using integer division of pool frame count <code>num_buffers</code>. At exactly 1 ms the activity boundary can admit a call; at exactly 500 ms even zero counted events can pass these gates. A rejected call returns without consuming the samples.</p>
 <p>An accepted call resets activity counters, consumes list-hit samples and recomputes targets. Each accepted sampling update is an <strong>epoch</strong>, recorded by <code>adjust_age</code>. That count advances even if the new quota equals the old one.</p>
 <p>Request threads can also call this helper when assigning or releasing a private list, a session-associated policy group. A helper call is therefore neither necessarily a daemon pass nor proof of an accepted update.</p>
 <div class="callout">Distinguish three events: a call was attempted; the call accepted a new sample set; an allocator received a usable frame. One event alone does not establish the next.</div><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14297-L14340">Accepted update boundary</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14599-L14623">Request-thread callers</a></p>
-
-<div class="section-qna" data-reset-answers="">
-<details class="answer-disclosure"><summary>Q&amp;A · Do all quota-helper calls come from the maintenance daemon?</summary><p>No. Private-list assignment and release can also call it in request threads. Caller identity matters when attributing adjustment CPU work, latency or accepted epochs to the daemon.</p></details>
-</div>
+</details>
 </section>
 <section class="section" data-reset-answers="" id="maintain-part-3"><div class="eyebrow">06 · 9 / 24</div>
 <h2>Can an accepted update leave the quota unchanged?</h2>
@@ -180,21 +199,26 @@ pgbuf_lru_adjust_zone1(thread_p, lru_list, false);
 </div>
 </section>
 <section class="section" id="chapter-recap"><div class="eyebrow">06 · 11 / 24</div>
-<h2>What can we now explain about maintenance?</h2>
-<p>Maintenance revisits retention targets as observed activity changes. Private and shared replacement lists are policy groups within the same buffer pool; they do not grant exclusive page access.</p>
-<ol><li><strong>Why adjust?</strong> A fixed target can become poorly suited to changing work.</li><li><strong>What changes?</strong> Private-LRU quotas, private/shared LRU zone-size thresholds and candidate-source information. Movement occurs only when its adjustment guards pass.</li><li><strong>When is there an update?</strong> When a helper call accepts a new sample set, not on every timer tick or call.</li><li><strong>What still needs checking?</strong> Current identity, use, waiters and write obligations before a candidate can be safely received and reused.</li></ol>
-<p>The remaining screens make this model precise: exact admission conditions, sample calculations, startup inputs, CPU work and revision-specific backup findings. They elaborate the same mechanism; they do not change the meaning of quota.</p>
+<h2>Count, mix, split, then change the labels</h2>
+<p data-teaching-def="Blue Green">Blue and Green are the two active private lists in our worked example. Here is what the helper did:</p>
+<ol><li><strong>Count:</strong> collect selected signs of use from private and shared lists.</li><li><strong>Mix:</strong> blend old and new activity; brief intervals keep more of the old value.</li><li><strong>Split:</strong> find the total private target, then divide it among private lists. Apply each list’s caps.</li><li><strong>Relabel:</strong> store targets and adjust list zones when their guards pass. Check a page’s current state before any reuse.</li></ol>
+<p>In our worked example, Blue’s quota went <strong>2,500 → 3,500 → 4,000</strong>. Green’s went <strong>2,500 → 1,500 → 1,000</strong>. The pool stayed the same size.</p>
+<p>You have reached the end of the basic explanation. The remaining screens are optional source details; each starts with a short explanation and keeps precise rules inside a disclosure.</p>
+<p><a href="07-flush-control.html#workload">Continue to flush-control</a> · <a href="#quota-from-samples">Open the exact quota calculations</a></p>
 </section>
 <section class="section" id="admission-guards"><div class="eyebrow">06 · 12 / 24</div>
 <h2>Which conditions admit a new sample set?</h2>
+<p>The timer asks whether another update may start. The helper can say “wait” and leave the counts for later.</p>
+
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
 <p>The daemon targets starts 100 ms apart, with no ordinary explicit work wake. Actual starts depend on scheduling and task duration. Its boot gate must be open before either maintenance helper runs.</p>
 <p>A quota is a list’s target page count. The quota helper uses <strong>activity samples</strong>, approximate counts collected as callers release pages. A fix protects a resident page from reuse while a caller uses it. A final unfix releases its last current fix. Selected final-unfix paths contribute to per-thread counters; separate per-list hit samples describe which replacement lists were used.</p>
 <p>A call to <code>pgbuf_adjust_quotas()</code> returns before consuming these samples if:</p>
 <ul><li>Private quotas are disabled, or another adjustment appears active.</li><li>Elapsed time <code>diff_usec &lt; 1000</code> microseconds: less than 1 ms since the last accepted update.</li><li>Counted final unfixes <code>&lt; num_buffers / 4</code> <em>and</em> <code>diff_usec &lt; 500000</code> microseconds (500 ms). Here <code>num_buffers</code> counts pool frames; integer division rounds the activity threshold down.</li></ul>
 <p>An <strong>epoch</strong> is one accepted sampling update, counted by <code>adjust_age</code>. Only an accepted call resets the unfix counters, advances that count, consumes list-hit samples and recomputes policy. Private-list assignment and release can also call the helper in request threads, so helper calls are not all daemon executions.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14599-L14623">Foreground quota callers</a></p>
-
 <p>Think of an epoch as one accepted turn of counting the books on a shelf. A timer tick only asks whether another turn may begin. <code>adjust_age</code> counts accepted turns; it is neither a duration nor the amount by which a quota changed.</p>
+</details>
 <details id="exact-epoch" class="answer-disclosure"><summary>Exact admission, elapsed time and reset order</summary>
 
 <p><code>num_buffers</code> is the pool capacity in frames; <code>diff_usec</code> is elapsed microseconds since the last accepted update. One second is 1,000,000 microseconds. <code>unfix_sum</code> and <code>reset_unfix_sum</code> below are explanatory names for the two separate calls to <code>pgbuf_monitor_sum_pg_unfix(false)</code> and <code>pgbuf_monitor_sum_pg_unfix(true)</code>. Each sums counted final unfixes across thread counters, including the main thread.</p>
@@ -230,10 +254,12 @@ adjust_age = adjust_age + 1;
 </section>
 <section class="section" id="maintain-part-2"><div class="eyebrow">06 · 13 / 24</div>
 <h2>When does a quiet pool pass the activity gate?</h2>
+<p>A quiet pool can still update after enough time has passed. Low activity changes the calculation; it does not turn updates off.</p>
 <p data-teaching-def="B"><strong>Independent arithmetic example:</strong> let <strong>B</strong> be the number of frames in the buffer pool, here 32,768. Activity means counted releases of a page’s last current fix since the last accepted quota update; it is not a count of all reads or elapsed time.</p>
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
 <p>The admission threshold is <code>B/4 = 8,192</code> events. After at least 1 ms, reaching that count can admit an update before 500 ms. If the count stays below it, the time gate admits an attempt at or after 500 ms. A 100 ms daemon schedule usually reaches that point on its first attempt at or after 500 ms; this is no deadline guarantee.</p>
 <p>Once admitted, the helper resets the counters. Integer division is applied twice: <code>(B / 4) / 100 = 81</code>. Counts from 0 through 80 are low activity; exactly 81 is not. That classification changes the ratio calculation in the later sample calculation; it does not veto the already accepted update.</p>
-
+</details>
 <details id="admission-numbers" class="answer-disclosure"><summary>Try the exact boundaries with 32,768 frames</summary>
 
 <p><strong>Independent calls:</strong> each row starts with an enabled, idle helper and <code>adjust_age=8</code>; there is no concurrent update or wrap. The threshold is <code>32768 / 4 = 8192</code>; integer division gives <code>8192 / 100 = 81</code> for low activity. The unfix count is unchanged between the two observations in each row.</p>
@@ -252,13 +278,14 @@ adjust_age = adjust_age + 1;
 </section>
 <section class="section" id="quota-from-samples"><div class="eyebrow">06 · 14 / 24</div>
 <h2>How do sampled hits become a share of capacity?</h2>
+<p data-teaching-def="Blue Green">Blue and Green are the two active private lists in the worked example. Their story follows three steps: count per second, mix with old values, then divide the target. Open this for the exact arithmetic and more examples.</p>
+
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
 <p>A private-list quota is a retention target, not a reservation. The helper first reads and resets each list’s hit count, then computes <code>integer(1000000LL * lru_hits / diff_usec)</code> samples/second for that list, where <code>lru_hits</code> is its raw hit-sample count and <code>diff_usec</code> is elapsed microseconds. Each rate is rounded down before summing. An epoch is an accepted sampling update counted by <code>adjust_age</code>. The BCB, the control record for one resident frame, uses <code>hit_age</code> to normally count at most one eligible list hit per epoch.</p>
 <p>A <strong>ratio</strong> is a fraction of a total: 0.4 means 40%. The sampled private ratio asks what fraction of the observed private-plus-shared hit rate came from private lists.</p>
 <ol><li>Compute <code>private rate / (private rate + shared rate)</code>, using at least 1 for the shared rate to avoid division by zero. Clamp the sampled result to 0.01–0.998; a low-activity pass uses 0.01.</li><li>Smooth that ratio and each private list’s activity over a 10-second horizon. Short intervals mix old and new values; after at least 10 seconds, use the new sample directly.</li><li>Compute <code>int((num_buffers - invalid_cnt) * private_pages_ratio)</code> as the total private target <code>all_private_quota</code>, where <code>num_buffers</code> counts all pool frames, <code>invalid_cnt</code> counts unused frames and <code>private_pages_ratio</code> is the stored fraction. Each list’s share of total smoothed private activity is <code>new_lru_ratio</code>; its target is <code>int(new_lru_ratio * all_private_quota)</code>. The products/shares use <code>float</code>; each cast discards the fractional part. Apply caps of 5,000 pages and integer half-pool afterward. Zero total smoothed private activity produces zero quotas.</li></ol>
 <p>Occupied frames exclude unused slots on the invalid list. The stored private ratio starts at <code>1.0f</code>, so it may remain above the new sample’s 0.998 cap while smoothing; no second clamp follows smoothing. Caps and rounding leftovers are not redistributed. These are approximate policy inputs; neither a hit sample nor a computed share authorizes frame reuse.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14455">Sample rates, smoothing and quota calculation</a></p>
-
-
 <p>Like dividing shelf space between children, the helper asks which lists contributed activity. It blends the new counts with the old ones, so one busy interval does not immediately replace all earlier information. The exact arithmetic below retains the code’s rounding order.</p>
 <div id="worked-ratio-shift">
 <h3>Follow one update from sampled hits to published quotas</h3>
@@ -291,6 +318,7 @@ adjust_age = adjust_age + 1;
 <p>Shared targets subtract the original budget 6,250, rather than the published-quota sum 6,249. The helper stores shared zone thresholds; it does not assign a shared <code>quota</code> field here. Publishing these numbers neither reserves frames nor evicts pages. Zone movement still depends on the guards explained earlier.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14501">Rates → both smoothing paths → quotas → thresholds</a></p>
 </div>
+</details>
 <details id="exact-rates" class="answer-disclosure"><summary>Step 1 · Convert each list’s samples to an integer rate</summary>
 
 <p><code>i</code> is a list index. The drained <code>lru_hits</code> initially counts samples; after conversion it is samples per second. <code>monitor.lru_activity[i]</code> is an integer smoothed private activity in the same rate units. <code>diff_usec</code> is elapsed microseconds. The constants represent 1 second and 10 seconds.</p>
@@ -412,7 +440,6 @@ all three epochs:
 <p>The workload shifted toward the first private list. Its target grows over two accepted updates because activity is smoothed. The third update still consumes samples and advances the epoch even though both quotas remain unchanged. These target calculations do not predict actual resident-page counts.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14494">Arithmetic and publication sequence</a></p>
 </details>
-
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Are these hit counts the same as every buffer-cache access?</summary><p>No. Eligible list-hit sampling normally suppresses repeat contributions within an epoch, and the counters have open approximation limits. They estimate policy activity rather than record a complete access history.</p></details>
 <details class="answer-disclosure"><summary>Q&amp;A · Why smooth activity instead of immediately adopting the latest ratio?</summary><p>Smoothing mixes recent samples with prior state over the stated horizon, limiting abrupt target changes from short intervals. It also delays response to a changed workload; no optimal responsiveness is established here.</p></details>
@@ -420,6 +447,9 @@ all three epochs:
 </section>
 <section class="section" id="computed-policy"><div class="eyebrow">06 · 15 / 24</div>
 <h2>What limits the newly computed retention targets?</h2>
+<p>One busy private list cannot receive a quota above 5,000 pages or half the pool. Shared lists have their own zone-size targets.</p>
+
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
 <p>After consuming activity samples, maintenance publishes new quota and zone thresholds. A quota is a target number of pages; a threshold is the target size of one retention zone. Neither is a safety guarantee.</p>
 <p>Here <code>num_buffers</code> counts all pool frames, <code>all_private_quota</code> is the total private target before per-list caps, and <code>num_LRU_list</code> counts shared lists.</p>
 <table><thead><tr><th>Computed output</th><th>Rule at this pin</th></tr></thead><tbody>
@@ -428,9 +458,8 @@ all three epochs:
 <tr><td>Shared-list targets</td><td><code>MAX((num_buffers - all_private_quota) / num_LRU_list, 50)</code> pages per target. Integer division precedes the compiled 50-page floor; the remainder uses the total private target before per-list caps. Thresholds multiply that target by each cached ratio and truncate; defaults are 0.4 / 0.05.</td></tr></tbody></table>
 <p>Maintenance can advertise lists that have candidates. When their summed candidate count is <code>&gt;= int(0.1 * num_buffers)</code>, it sets <code>victim_rich</code>. A 32,768-frame example becomes rich at 3,276 candidates, including equality. This sampled sum is collected before any demotions in that pass. This is a supply hint, not proof that a particular frame can be reused. The helper copies no page bytes, forces no write-ahead log and performs no page I/O.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14400-L14511">Quota bounds, zone adjustment and supply hint</a></p>
-
-
 <p>Shared space is calculated from the original total private target, not the sum left after private caps. Think of the calculation as writing target numbers on shelf labels: those numbers do not partition the physical pool into reserved slots.</p>
+</details>
 <details id="exact-shared" class="answer-disclosure"><summary>Shared target, startup ratios and the 50-page floor</summary>
 
 <p><code>num_LRU_list</code> counts shared lists only. <code>avg_shared_lru_size</code> is a target in pages used to derive their thresholds. This helper writes shared thresholds; it does not assign a shared list’s <code>quota</code> field. <code>ratio_lru1</code> and <code>ratio_lru2</code> are cached startup fractions, normally 0.4 / 0.05.</p>
@@ -479,6 +508,9 @@ shared thresholds = 744 / 93;</code></pre>
 </section>
 <section class="section" id="startup-inputs"><div class="eyebrow">06 · 16 / 24</div>
 <h2>Which startup settings shape the pool?</h2>
+<p>The server chooses the pool size and number of lists when it starts. Changing a configuration value later does not rebuild these objects here.</p>
+
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
 <p>Maintenance recomputes quotas from cached structures and samples. It does not reread configuration on each pass. These server startup inputs lack <code>USER_CHANGE</code> permission, so ordinary <code>SET SYSTEM PARAMETERS</code> changes are rejected. Edit <code>cubrid.conf</code> and restart/reinitialize for their structural effect; a loader’s <code>RELOADABLE</code> flag does not rebuild the live pool.</p>
 <table><colgroup><col style="width:28%"><col></colgroup><thead><tr><th>Startup input</th><th>Meaning and default</th></tr></thead><tbody>
 <tr><td><code>data_buffer_size</code><br>Public input</td><td>Configurable byte size; default 32,768 I/O pages’ worth (512 MiB at 16 KiB/page). Conversion rounds bytes up to whole I/O pages and rejects more than <code>INT_MAX=2147483647</code> pages. Registration requires at least 1,024 pages; startup raises the converted count to at least <code>10 * MAX_NTRANS</code> frames. <code>data_buffer_pages</code> is the deprecated page-count alias.</td></tr>
@@ -486,48 +518,63 @@ shared thresholds = 744 / 93;</code></pre>
 <tr><td><code>max_clients</code><br>Public input</td><td>Configurable default 100; range 10–4,000 clients, inclusive. <code>MAX_NTRANS = css_get_max_conn() + 1</code> counts normal and reserved connections plus one system transaction; it is not simply <code>max_clients</code>. It affects automatic list counts and the pool minimum.</td></tr></tbody></table>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L6726-L6752"><code>prm_size_to_io_pages</code>: page rounding and integer limit</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L83-L84"><code>PGBUF_MINIMUM_BUFFERS</code></a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_common_impl.h#L48-L52"><code>MAX_NTRANS</code></a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/connection/connection_globals.c#L223-L241"><code>css_get_max_conn</code></a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/connection/connection_globals.h#L35"><code>CSS_MAX_CLIENT_COUNT=4000</code></a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/query/vacuum.h#L132"><code>VACUUM_MAX_WORKER_COUNT=50</code></a></p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1713-L1743">Pool startup cache</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L13949-L13985">Private-list count and modes</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L1169-L1190">Pool registration</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L4171-L4182">Private-chain registration</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L1569-L1580">Client-capacity registration</a></p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Why does accepting a configuration reload not resize the live pool?</summary><p>Reloadable registry handling and rebuilding cached storage are different mechanisms. These structural inputs lack ordinary online mutation permission; the described effect requires restart or reinitialization.</p></details>
 </div>
 </section>
 <section class="section" id="startup-policy"><div class="eyebrow">06 · 17 / 24</div>
 <h2>What is fixed, cached or recomputed?</h2>
+<p>Some rules are fixed in the code. Some values are saved at startup. Activity and targets change while the server runs.</p>
+
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
 <p>A zone ratio sets the fraction of a list target used by one retention zone. In the count formulas, <code>num_buffers</code> counts pool frames and <code>MAX_NTRANS</code> counts connection capacity plus one system transaction. These startup inputs initialize policy structures; the ratio settings are nonhidden but undocumented in the audited local manual.</p>
 <table><colgroup><col style="width:28%"><col></colgroup><thead><tr><th>Startup input</th><th>Effect at this pin</th></tr></thead><tbody>
 <tr><td><code>lru_hot_ratio</code><br><code>lru_buffer_ratio</code><br>Nonhidden</td><td>Configurable default fractions 0.4 / 0.05; inclusive range 0.05–0.90 each. Startup caches hot ratio in that range, then buffer ratio as <code>MIN(MAX(lru_buffer_ratio, 0.05f), 1.0f - 0.05f - ratio_lru1)</code>, where <code>ratio_lru1</code> is the cached hot fraction. This leaves a nominal ≥5% victim-zone share. Each threshold multiplies its list target by the cached ratio and truncates; private zones instead use compiled 0.05 each.</td></tr>
 <tr><td><code>num_LRU_chains</code><br>Hidden structural setting</td><td>Configurable range 0–1,000, inclusive. Default zero computes <code>MAX(4, MIN(MAX_NTRANS, num_buffers / 1000))</code> shared lists using integer division. Explicit 1–1,000 creates exactly that many; the four-list minimum applies only to automatic selection. The automatic branch has no 1,000-list clamp.</td></tr>
 <tr><td><code>data_aout_ratio</code><br>Nonhidden, forced inactive</td><td>Configurable default 0; inclusive range 0–3. AOUT remembers evicted page identities. Tuning forces zero, so its effective capacity is <strong>0 entries</strong>. Dormant initialization would cap <code>int(num_buffers * data_aout_ratio)</code> at 32,768 entries; this is not an active queue here.</td></tr></tbody></table>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L1794-L1805"><code>num_LRU_chains</code>: explicit range</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1731-L1740">Cached zone-ratio clamp</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5809-L5834"><code>pgbuf_initialize_aout_list</code>: inactive capacity and dormant cap</a></p>
-<details><summary>Example configuration · Automatic list counts</summary><p>With 32,768 effective frames, <code>max_clients=100</code>, HA off and both chain-count defaults, the one reserved administrator connection gives <code>css_get_max_conn()=101</code>, hence <code>MAX_NTRANS=102</code>. Automatic shared count is <code>MAX(4, MIN(102, 32768/1000))=32</code>; private count is <code>102+50=152</code>. HA and connection configuration can change these results.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/connection/connection_globals.c#L75-L110">Normal, administrator and HA connection rules</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/connection/connection_globals.c#L174-L179">HA-off reserved count</a></p></details>
 <p>The 100 ms period, 1/500 ms gates and 10-second smoothing horizon are <strong>compiled policy</strong>. Quotas, <code>adjust_age</code> and <code>private_pages_ratio</code> are <strong>computed runtime state</strong>. The private ratio starts at 1 with quotas enabled, then smooths toward bounded samples; it has no public knob.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L3754-L3777">Zone-ratio registration</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5748-L5766">Shared-list initialization</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14032-L14038">Initial private ratio</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L3463-L3474">AOUT registration</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L9985-L9986">Forced AOUT zero</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L7324-L7349">Online change validation</a></p>
+</details>
+<details><summary>Example configuration · Automatic list counts</summary><p>With 32,768 effective frames, <code>max_clients=100</code>, HA off and both chain-count defaults, the one reserved administrator connection gives <code>css_get_max_conn()=101</code>, hence <code>MAX_NTRANS=102</code>. Automatic shared count is <code>MAX(4, MIN(102, 32768/1000))=32</code>; private count is <code>102+50=152</code>. HA and connection configuration can change these results.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/connection/connection_globals.c#L75-L110">Normal, administrator and HA connection rules</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/connection/connection_globals.c#L174-L179">HA-off reserved count</a></p></details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Can setting data_aout_ratio activate ghost history at this pin?</summary><p>No. Parameter tuning forces the value to zero, so configuration alone cannot activate AOUT. A change to that engine behavior would require separate source and correctness review.</p></details>
 </div>
 </section>
 <section class="section" id="cost-model"><div class="eyebrow">06 · 18 / 24</div>
 <h2>Where does quota adjustment spend CPU and wait?</h2>
-<p>Quota adjustment operates on counters and list metadata, not on page contents. It can still delay a caller through CPU work and contention on list mutexes.</p>
+<p>The helper reads counters and changes list records. Its quota work performs no page I/O; it can spend CPU time and wait for list locks.</p>
 <p data-teaching-def="T L D">For this cost model, <strong>T</strong> counts per-thread unfix-counter shards (separate counters to sum), <strong>L</strong> counts private/shared LRU descriptors (list control records to visit), and <strong>D</strong> counts BCB entries (frame control records) demoted toward colder zones. These are work counts, not elapsed times.</p>
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
+<p>Quota adjustment operates on counters and list metadata, not on page contents. It can still delay a caller through CPU work and contention on list mutexes.</p>
 <ul><li>Feature, busy or first timing rejection takes <code>O(1)</code> work.</li><li>Checking activity sums the shards: <code>O(T)</code>.</li><li>An accepted update also visits lists and demotes overflow: <code>O(T + L + D)</code>, plus mutex waits.</li></ul>
 <p><code>O(…)</code> states how work grows with those counts; it does not bound scheduling or lock latency. No page copy, log force or page write occurs in quota adjustment. Fixed quotas remove sampling work but can respond poorly to workload changes; exact access accounting instead adds shared synchronization at access events.</p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Can maintenance delay a request even though it performs no page I/O?</summary><p>Yes. Its helper can run in a request thread and spend CPU on shards, lists and demotions, or wait on list mutexes. Absence of page I/O is not absence of latency.</p></details>
 </div>
 </section>
 <section class="section" id="maintenance-boundary"><div class="eyebrow">06 · 19 / 24</div>
 <h2>Can the backup call run without offering any frame?</h2>
-<p>An allocator is a request thread seeking a frame for a page. A <strong>direct victim</strong> is an eligible resident frame offered directly to a waiting allocator; the allocator must still check the offer before reuse. The maintenance backup is intended to search for such offers during low activity.</p>
+<p>The daemon also calls a separate helper intended to offer frames to waiting requests. That is a different job from calculating quotas.</p>
+<p class="data-structure-bridge" data-teaching-def="VS-20">adjust_age counts accepted sample-update passes rather than elapsed time. The diagram separates statistics access from boundary adjustment. VS-20 records the separate backup loops whose bodies are skipped at this pin. Quota adjustment performs no page I/O.</p>
+<figure class="daemon-data-structures"><img class="diagram" src="../../assets/daemon-maintenance-data-structures.svg" alt="Maintenance reads thread unfix and per-list hit arrays, computes targets and adjusts only required list boundaries"><figcaption>Data structures and access order · pinned source schematic</figcaption></figure>
 <p data-teaching-def="VS-20"><strong>VS-20</strong> is the uncertainty-registry entry for an anomaly in that backup’s loop conditions at the pinned revision. It identifies source behavior whose allocator impact remains unmeasured.</p>
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
+<p>An allocator is a request thread seeking a frame for a page. A <strong>direct victim</strong> is an eligible resident frame offered directly to a waiting allocator; the allocator must still check the offer before reuse. The maintenance backup is intended to search for such offers during low activity.</p>
 <div class="callout warn">Both the private and shared loops set their index to the saved start, then require the index to differ from that start before entering the body. Neither body executes as written, so this routine supplies no direct-victim assignments.</div>
 <p>Quota adjustment still runs separately. Page-flush, zone adjustment and other producer paths can offer frames, so skipped backup bodies alone do not prove that waiting allocators cannot progress.</p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Does the skipped backup also disable quota adjustment?</summary><p>No. They are sibling helper calls with different responsibilities. The source finding concerns backup loop bodies; the quota path can still consume samples and update retention targets.</p></details>
 </div>
 </section>
 <section class="section" id="source-guard"><div class="eyebrow">06 · 20 / 24</div>
 <h2>Why does the first loop comparison reject every visit?</h2>
+<p>At this pinned revision, the separate backup’s loop condition stops its bodies from running. The quota calculation still runs.</p>
 <p data-teaching-def="VS-20"><strong>VS-20</strong> is the registry reference for the skipped maintenance backup. In this private-loop excerpt, <code>prv_index</code> saves the starting list index and <code>index</code> is the current index. The <code>restarted</code> flag records wrapping around the list array and begins false. Assume an allocator, a request thread seeking a frame, is waiting. <code>nassigns</code>, the remaining continuation budget, starts at the compiled value 5; it is not an assignment count observed in this revision.</p>
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
 <pre><code>/* privates */
 for (index = prv_index, restarted = false;
      pgbuf_is_any_thread_waiting_for_direct_victim () &amp;&amp; nassigns &gt; 0 &amp;&amp; index != prv_index &amp;&amp; !restarted;
@@ -539,6 +586,7 @@ for (index = prv_index, restarted = false;
 <p class="live-source"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9629-L9635">page_buffer.c:9629–9635</a></p>
 <p>The compiled <code>DEFAULT_ASSIGNS_PER_ITERATION=5</code> initializes <code>nassigns</code>; <code>nassigns &gt; 0</code> only guards the next outer visit. In a repaired-loop counterfactual, a helper can assign several frames before subtracting its assignment count, so five is not a strict five-frame cap. Each panic scan visits at most <code>MAX_DEPTH=1000</code> LRU3 entries, including ineligible or locked entries. If its first scan assigns zero while candidates and waiters remain, the helper can retry from the list bottom: at most two scans, each with its own 1,000-entry cap. No scan-count limit bounds mutex waits or elapsed time. The pinned result remains zero outer-body entries and zero assignments from this backup.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9552-L9569"><code>pgbuf_panic_assign_direct_victims_from_lru</code>: visit cap</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9619-L9645"><code>pgbuf_direct_victims_maintenance</code>: budget and zero entries</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9659-L9689"><code>pgbuf_lfcq_assign_direct_victims</code>: retry and subtraction</a></p>
+</details>
 <details><summary>How does this finding depend on the revision?</summary><p>Separate <a href="https://github.com/CUBRID/CUBRID/commit/eb0a4cd7b003defec83c7f5f0e2d1f392c139a81">fix commit eb0a4cd7b003defec83c7f5f0e2d1f392c139a81</a> replaces these loops with explicit round-robin visits. This chapter retains the original pinned baseline; the other commit establishes a source correction, not measured allocator impact or a merged/deployed fix.</p></details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Why does the separate loop-fix commit not settle the latency question?</summary><p>It establishes a source correction on another revision. Allocator impact still depends on workload, eligible supply and other producers, so it needs a controlled comparison rather than a source diff alone.</p></details>
@@ -546,42 +594,58 @@ for (index = prv_index, restarted = false;
 </section>
 <section class="section" data-reset-answers="" id="maintenance-boundary-part-2"><div class="eyebrow">06 · 21 / 24</div>
 <h2>What would connect a skipped backup to allocator delay?</h2>
+<p>A skipped backup does not tell us why a request waited. We need evidence about the other frame suppliers too.</p>
+<p data-teaching-def="VS-20"><strong>VS-20</strong> names the uncertainty-registry finding that maintenance backup loops skip their bodies. An allocator is a thread waiting for a reusable frame; other paths can also offer it a direct victim.</p>
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
+<p class="callout warn">A source anomaly and a latency report are separate evidence. Neither records the other suppliers’ contribution. <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">Current uncertainty status</a>.</p>
+</details>
 <div class="session-question" data-audience-checkpoint="" data-question-id="Q13" data-reset-answers="" id="q13">
 <h3>Q13 · Source finding and operational cause</h3>
-<p data-teaching-def="VS-20"><strong>VS-20</strong> names the uncertainty-registry finding that maintenance backup loops skip their bodies. An allocator is a thread waiting for a reusable frame; other paths can also offer it a direct victim.</p>
+
 <p><strong>Independent diagnostic starting state:</strong> The pinned source establishes that the backup bodies are not entered. An operator reports allocator latency during low activity. No record shows whether other suppliers ran, had eligible candidates, made offers or had those offers revoked during that interval.</p>
 <p><strong>Prediction:</strong> What observation would test whether the skipped backup caused this delay?</p>
 <details class="answer-disclosure"><summary>Discuss, then reveal</summary><p>Put allocator waits, supplier executions, protected candidate eligibility, offers, revocations and receiving results on one timeline. Then compare the backup behavior while holding workload and configuration fixed. The source finding establishes skipped bodies; attributing delay requires the missing events. An allocator that successfully receives a frame from another supplier refutes a claim that all progress is impossible.</p><p class="optional-question"><strong>Optional follow-up:</strong> What evidence could demonstrate allocator progress despite skipped backup bodies?</p></details>
-</div><p class="callout warn">A source anomaly and a latency report are separate evidence. Neither records the other suppliers’ contribution. <a href="../../unresolved-or-version-sensitive-findings.md#b-current-pinned-revision-cleanup-and-proof-obligations">Current uncertainty status</a>.</p>
+</div>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Would observing one long allocator wait prove starvation?</summary><p>A long finite wait establishes delay under its conditions, not indefinite denial of progress. Record competing suppliers, candidate eligibility and successful or revoked offers before making a broader progress claim.</p></details>
 </div>
 </section>
 <section class="section" id="pacing-boundaries"><div class="eyebrow">06 · 22 / 24</div>
 <h2>Why can approximate samples guide policy but not reuse?</h2>
-<p>Activity counters estimate which lists deserve more retention. A BCB is a frame’s control record; its <code>hit_age</code> normally suppresses repeated list-hit samples within one accepted <code>adjust_age</code> epoch. These samples are not a complete history of page access.</p>
+<p>The counts are approximate. They help choose what to keep, but a protected current-state check must decide whether a frame can be reused.</p>
 <p data-teaching-def="VS-21"><strong>VS-21</strong> is the uncertainty-registry entry for open sampling anomalies. A quota comment mentions five minutes, but the executable gate compares 1 ms and 500 ms. Hit increments and resets use different synchronization; ordinary BCB reuse does not visibly reset <code>hit_age</code>; signed counter wrap has no explicit handling in this seam.</p>
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
+<p>Activity counters estimate which lists deserve more retention. A BCB is a frame’s control record; its <code>hit_age</code> normally suppresses repeated list-hit samples within one accepted <code>adjust_age</code> epoch. These samples are not a complete history of page access.</p>
 <p>The lecture follows the executable time gates. It claims no measured sampling error, intended error bound or observed failure from the other anomalies. Replacement must still lock and verify the current identity, users, waiters and pending updates before reusing a frame.</p>
 <p class="source-note"><a href="../../unresolved-or-version-sensitive-findings.md">Uncertainty registry</a> · <a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md">Sampling evidence</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9608-L9648">Separate backup loop guards</a></p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Why is approximate accounting acceptable for policy but not reuse permission?</summary><p>An inaccurate preference may choose an inefficient candidate. An inaccurate safety decision can overwrite protected or unpreserved bytes. Keep approximate policy inputs separate from current guarded authorization.</p></details>
 </div>
 </section>
 <section class="section" id="replacement-protocol"><div class="eyebrow">06 · 23 / 24</div>
 <h2>What must a fixed-quota alternative still protect?</h2>
+<p>Keeping quotas fixed would make the policy simpler, but it would stop these targets from following changes in activity. Reuse checks would still be needed.</p>
+
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
 <p><strong>Teaching alternative:</strong> remove automatic sampling and quota recomputation, but retain the safety checks for replacement. A policy domain is a private or shared retention-accounting group, not an exclusive page owner. Its fixed quota is a target number of resident pages.</p>
 <ol><li>Store a fixed share for each active domain and apply zone thresholds from that share.</li><li>Protect share changes and domain departure with an explicit administrative update; release a departing domain’s accounting without erasing resident pages.</li><li>Before actual reuse, retain protected identity and current-use checks. Dirty means resident updates still need propagation; flushing means older image work is in progress. Neither can be discarded just because a domain is over quota.</li><li>If no frame passes the checks, retain a flush/retry/wait path rather than overwriting an ineligible frame.</li></ol>
 <p>Fixed shares avoid sample/reset contention, but inactive domains can retain capacity while a newly active domain needs more. Exact activity accounting is another alternative, with synchronized per-event updates. Approximate counters reduce bookkeeping; no measured performance winner or accepted sampling-error bound is established here.</p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Can an idle domain keep capacity that active work needs?</summary><p>That is a policy risk of the proposed alternative: fixed shares do not automatically follow changing activity. Explicit share updates can address it, while safe replacement still preserves users and pending writes.</p></details>
 </div>
 </section>
 <section class="section" id="experiment"><div class="eyebrow">06 · 24 / 24</div>
 <h2>Did this call consume a new sample set?</h2>
+<p>To observe a real update, record whether the call was accepted, which samples it consumed and what targets it stored. The experiment below is a proposal, not an executed result.</p>
+
+<details class="answer-disclosure"><summary>Optional · Explanation and source rules</summary>
 <p><strong>Unexecuted proposal.</strong> Start a fresh workload, independently of the six-call trace. An epoch counts accepted <code>adjust_age</code> updates; quota is a list’s target page count.</p>
 <dl class="live-proposal"><dt>Hypothesis</dt><dd>Accepted sampling updates can return unchanged quota values.</dd><dt>Controlled change</dt><dd>Record pinned revision, build and pool/log/I/O settings, including DWB (double-write-buffer page-image staging). Hold workload distribution fixed, then vary only one domain’s activity. Reset separately for same-epoch BCB reuse (reusing a frame’s control record) and forced wrap.</dd><dt>Exact observation</dt><dd>Proposed probes: caller identity (daemon or private-list assignment/release), guard result, adjust_age, sample reset and quota publication. For backup impact, correlate allocator waits, loop entries and assignment producer.</dd><dt>Falsifier and limit</dt><dd>With no wrap or concurrent adjustment, an accepted sample-consuming pass without an adjust_age advance contradicts the explanation. Equal quotas alone do not. Sampling error and allocator impact need separate observations.</dd></dl>
 <p>Start collection through an appropriate runtime utility/API or optional hidden startup <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L4477-L4487"><code>stats_on</code></a> (default <code>false</code>); enable the relevant activation bits too. <code>extended_statistics_activation</code> is separately cached at startup; default 15 excludes victimization 16 and daemon 64. Counters do not supply the proposed per-call timeline; probes can affect timing.</p>
 <p class="live-source"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14251-L14511">Proposed source seam</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/perf_monitor.h#L59-L74">Statistics activation bits</a></p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Why identify both the caller and the accepted epoch?</summary><p>The helper can be called from foreground paths, and many calls return early. Together these observations show who performed sample-consuming work instead of attributing every call or unchanged quota to the daemon.</p></details>
 </div>

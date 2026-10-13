@@ -30,8 +30,8 @@
     },
     {
       "file": "06-maintenance.html",
-      "en": "Adapt retention without authorizing reuse",
-      "ko": "보존 목표를 바꾸어도 재사용 조건은 지켜야 한다"
+      "en": "How maintenance changes quotas, with examples",
+      "ko": "Maintenance는 quota를 어떻게 바꿀까요?"
     },
     {
       "file": "07-flush-control.html",

@@ -1,5 +1,9 @@
 # Maintenance chapter: explain the policy before its arithmetic
 
+> The later [simple worked-story revision](maintenance-simple-rewrite.md) replaces
+> the opening wording and heading inventory below while preserving its anchors
+> and source details. This record describes the earlier accepted revision.
+
 The maintenance chapter now explains why retention targets need reconsideration,
 what a target changes, and why candidate selection still requires protected
 checks. Exact timing, formulas, configuration, cost and revision-specific findings
