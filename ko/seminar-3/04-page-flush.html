@@ -4,7 +4,7 @@
 <nav class="language-switcher" data-language-switcher aria-label="언어"><span aria-current="page">KO</span> | <a href="../../en/seminar-3/04-page-flush.html" hreflang="en" lang="en">EN</a></nav>
 <main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">SESSION 3 · 2026-10-13 · 04 / 12</div><h1>기억한 후보를 현재 상태로 다시 검사하기</h1><p>CUBRID 페이지 버퍼 daemon과 PostgreSQL 페이지 교체</p><p class="live-workload">자주 쓰는 페이지 집합의 반복 읽기 + 대량 스캔 + dirty 페이지 압력. 각 사례는 독립된 시작 상태에서 진행합니다. 소스가 의도를 명시하지 않은 기능상 이유는 Inference(추론)로 설명합니다.</p></header>
 <div class="lesson-grid"><article class="lesson-main"><section class="section" id="workload">
-<div class="eyebrow">04 · 1 / 23</div><h2>기억한 후보를 왜 다시 검사해야 할까?</h2>
+<div class="eyebrow">04 · 1 / 24</div><h2>기억한 후보를 왜 다시 검사해야 할까?</h2>
 <p>요청에 필요한 페이지가 메모리에 없는데 모든 프레임이 이미 차 있습니다. <strong>프레임(frame)</strong>은 페이지 하나의 바이트를 담는 메모리 공간입니다. 백그라운드 서버 스레드인 page-flush는 나중에 프레임을 재사용할 수 있도록, 변경 내용을 기록할 수 있는 페이지를 찾습니다.</p>
 <p data-teaching-def="P F"><strong>시작 사례:</strong> <code>P</code>는 메모리에 올라와 있는 논리 페이지입니다. 그 프레임에는 아직 기록해야 할 변경된 바이트가 있습니다. 이런 페이지를 <strong>dirty</strong>라고 합니다. <code>F</code>는 이 프레임을 관리하는 <strong>buffer control block(BCB)</strong>의 주소입니다. BCB는 버퍼 풀이 소유하며 프레임의 페이지 식별자와 상태를 추적합니다. 그 안의 <code>VPID</code>는 현재 이 프레임에 있는 논리 페이지를 식별합니다.</p>
 <p>Page-flush는 교체 목록의 mutex를 잡은 상태에서 주소와 페이지 식별자를 저장합니다. <strong>Mutex</strong>는 보호하는 상태를 한 번에 한 스레드만 살펴보거나 바꿀 수 있게 합니다. Page-flush는 목록의 mutex를 놓은 뒤 BCB의 mutex를 잡습니다. 그 사이에 다른 스레드가 페이지를 사용하거나 프레임을 재사용할 수 있습니다.</p>
@@ -12,7 +12,7 @@
 <p class="live-source"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3780-L4165">고정 리비전의 수집과 재검사</a></p>
 </section>
 <section class="section" id="first-code-path">
-<div class="eyebrow">04 · 2 / 23</div><h2>선택한 사본은 어떤 호출을 거쳐 제출될까?</h2>
+<div class="eyebrow">04 · 2 / 24</div><h2>선택한 사본은 어떤 호출을 거쳐 제출될까?</h2>
 <p>현재의 적합성 검사를 통과한 cold dirty 페이지에서 시작합니다. 메모리에 변경 내용이 남아 있어 기록이 필요한 페이지입니다. <strong>Cold</strong>는 교체 정책상 보존 우선순위가 낮다는 뜻입니다. 아래 분기는 이웃 페이지를 묶지 않고 double-write buffer(DWB)도 거치지 않은 채 페이지 하나를 직접 씁니다. DWB는 페이지 사본을 하위 저장 경로에서 임시 보관하는 선택적 경로입니다.</p>
 <p>공통 helper는 이후의 writer가 바꿀 수 없는 페이지 바이트 사본, 즉 안정된 이미지를 확보합니다. 로그를 남기는 변경이라면, 복구가 그 페이지를 해석할 수 있도록 필요한 <strong>write-ahead log(WAL)</strong> 기록을 먼저 영속화합니다. 그 뒤 페이지 쓰기 경로에 이미지를 제출합니다.</p>
 <figure class="source-call-path"><pre>pgbuf_page_flush_daemon_task::execute
@@ -24,7 +24,7 @@
 <p class="source-note">소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17055">page_buffer.c:17029–17055</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4088">page_buffer.c:4040–4088</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10830-L10898">page_buffer.c:10830–10898</a></p>
 </section>
 <section class="section" id="trigger">
-<div class="eyebrow">04 · 3 / 23</div><h2>Worker는 언제 필요한 작업을 찾을까?</h2>
+<div class="eyebrow">04 · 3 / 24</div><h2>Worker는 언제 필요한 작업을 찾을까?</h2>
 <p><strong>Allocator</strong>는 요청한 페이지를 담을 프레임을 구하는 코드입니다. 탐색으로 재사용할 프레임을 찾지 못하면 다른 스레드가 제안하는 적합한 프레임, 즉 <strong>direct victim</strong>을 기다릴 수 있습니다. Page-flush는 이런 공급을 준비하도록 깨어날 수 있습니다.</p>
 <p>Worker는 처음 대기하기 전에 task를 한 번 실행합니다. 다만 복구가 작업을 허용할 때까지 <strong>boot gate</strong>가 실제 작업을 막습니다. 이후에는 타이머나 받아들여진 깨우기가 task의 다음 실행 기회를 줍니다. Gate가 열린 상태에서 waiter가 깨우기로 보고한 결과는 후보 helper를 최소 한 번 호출하게 합니다. 타이머 만료로 호출하려면 allocator가 기다리거나 표본으로 본 교체 압력이 높아야 합니다. 후자의 조건은 victim 요청이 10회를 넘고 hit ratio가 정책 목표인 99.9%보다 낮은 것입니다.</p>
 <p><code>page_flush_interval</code>의 기본값은 1,000 ms이며, 0이면 깨우기가 올 때까지 무기한 기다립니다. 일반 탐색이 실패하거나, 목록 끝의 clean 페이지를 제거한 뒤 dirty 페이지가 드러나거나, 선택한 탐색에서 재사용 가능한 프레임의 관리 레코드(BCB)를 찾지 못하면 할당·victim 코드가 깨우기를 호출합니다.</p>
@@ -32,14 +32,14 @@
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16971-L17049">주기와 task 조건</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_waiter.cpp#L200-L224">대기 시간 0의 반환값</a></p>
 </section>
 <section class="section" id="flush-loop-boundaries">
-<div class="eyebrow">04 · 4 / 23</div><h2>탐색 반복은 어떤 조건에서 계속되거나 끝날까?</h2>
+<div class="eyebrow">04 · 4 / 24</div><h2>탐색 반복은 어떤 조건에서 계속되거나 끝날까?</h2>
 <p>Page-flush daemon이 존재하는 상태에서 시작합니다. 포인터는 worker의 존재 여부를 나타냅니다. 복구 중에는 별도의 작업 허가 조건인 boot gate가 닫혀 있어 task가 바로 반환할 수 있습니다. 포인터가 NULL이 아니라는 사실만으로 유용한 작업이 진행되거나 요청자가 동기 대체 경로를 실행한다고 판단할 수 없습니다.</p>
 <ol><li><strong>진입.</strong> Gate가 열리면 <code>was_woken_up()</code> 결과가 후보 helper를 한 번 호출하게 합니다. 이 값은 작업 횟수가 아니라 대기의 반환 결과입니다. 실행이 설정 주기를 모두 사용하면 대기 시간이 0이 되고, 외부 깨우기 없이도 true를 반환합니다.</li><li><strong>계속.</strong> 첫 호출 뒤에도 현재 allocation waiter가 있거나 표본 hit ratio가 낮으면 내부 압력 반복을 계속할 수 있습니다. Task는 helper의 오류 반환값을 무시합니다. Task 진입이나 helper 반환만으로 이미지 제출 여부를 알 수 없으며, 오류는 성공적인 제출의 증거가 아닙니다.</li><li><strong>이번 탐색 종료.</strong> 검사량과 목록 우선순위 합이 양수인데도 탐색에서 dirty 후보를 찾지 못하면 <code>stop_iteration</code>을 설정합니다. Task는 allocator가 사용 가능한 victim을 찾을 기회를 주도록 내부 반복을 끝냅니다. 검사량이나 우선순위가 0인 경우에는 이 힌트가 생기지 않습니다.</li></ol>
 <div class="callout">탐색 종료 힌트와 daemon 종료용 stop 플래그는 다릅니다. 내부 압력 반복은 그 stop 플래그를 검사하지 않습니다. Worker가 종료하려면 실행 중인 task가 외부 반복으로 반환해야 합니다. 잠금, 복구 로그 강제 기록, 페이지 I/O가 반환을 늦출 수 있으므로 join 완료 시한은 도출할 수 없습니다.</div>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3978-L3989">후보가 없을 때의 힌트</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17049">Gate와 압력 반복</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17294-L17302">포인터 존재 여부</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_waiter.cpp#L200-L224">대기 시간 0</a></p>
 </section>
 <section class="section" data-reset-answers="" id="trigger-part-2">
-<div class="eyebrow">04 · 5 / 23</div><h2>Helper 진입 한 번으로는 왜 진행을 알 수 없을까?</h2>
+<div class="eyebrow">04 · 5 / 24</div><h2>Helper 진입 한 번으로는 왜 진행을 알 수 없을까?</h2>
 <div class="session-question" data-audience-checkpoint="" data-question-id="Q08" data-reset-answers="" id="q08">
 <h3>Q08 · 다음 진행 사건 찾기</h3>
 <p><strong>독립된 시작 상태:</strong> 복구가 boot gate를 열었습니다. Allocator는 재사용할 프레임을 기다립니다. Page-flush가 <code>SLEEPING</code>일 때 받아들인 깨우기로 <code>pgbuf_flush_victim_candidates()</code>에 한 번 진입합니다.</p>
@@ -49,10 +49,10 @@
 </div>
 </section>
 <section class="section" id="selection">
-<div class="eyebrow">04 · 6 / 23</div><h2>후보 관찰은 어떻게 flush 결정으로 이어질까?</h2>
+<div class="eyebrow">04 · 6 / 24</div><h2>후보 관찰은 어떻게 flush 결정으로 이어질까?</h2>
 <p>버퍼 풀이 가득 차 있고 cold dirty 페이지가 있는 상태에서 시작합니다. Dirty 페이지에는 아직 기록해야 할 변경된 바이트가 남아 있습니다. Page-flush는 먼저 공급 후보를 찾습니다. <strong>LRU 목록</strong>은 보존할 페이지의 순서를 관리하며, <code>LRU3</code>는 그중 cold victim 영역입니다.</p><p><strong>BCB</strong>는 프레임 하나의 관리 레코드이며, <code>VPID</code>는 그 프레임에 현재 담긴 논리 페이지를 식별합니다. 저장한 주소로 레코드를 찾을 수 있어도 이후의 페이지 식별자나 상태가 고정되는 것은 아닙니다.</p><ol><li><strong>탐색량 선택.</strong> 압력을 읽고 목록별 우선순위를 계산한 뒤 검사량을 목록들에 나눕니다.</li><li><strong>후보 기억.</strong> 한 번에 LRU mutex 하나를 잡고 cold 영역의 노드를 따라가며 dirty 후보의 BCB 주소와 VPID를 저장합니다.</li><li><strong>목록 보호 종료.</strong> Mutex를 놓습니다. 순차 쓰기를 위해 후보를 VPID로 정렬할 수 있지만 이 공백 동안 유지하는 예약은 없습니다.</li></ol><div class="callout">수집은 가능한 후보를 제공합니다. 이미지를 확보하기 전에 다음 보호 구간의 검사에서 현재 적합성을 확인해야 합니다.</div></section>
 <section class="section" id="selection-current-checks">
-<div class="eyebrow">04 · 7 / 23</div><h2>사본 확보를 허용하는 현재 조건은 무엇일까?</h2>
+<div class="eyebrow">04 · 7 / 24</div><h2>사본 확보를 허용하는 현재 조건은 무엇일까?</h2>
 <p>앞의 후보 수집 경로를 이어갑니다. 목록 보호를 끝낸 page-flush가 후보 하나의 BCB, 즉 프레임 관리 레코드를 잠급니다. <code>VPID</code>는 현재 페이지를 식별하고, <code>DIRTY</code>는 아직 저장소에 기록해야 할 메모리의 변경 내용을 나타냅니다. <code>FLUSHING</code>은 이전 이미지의 완료 처리가 아직 남아 있음을 나타냅니다.</p>
 <p><strong>Fix</strong>는 caller가 페이지를 계속 사용하는 동안 그 사용을 보호합니다. <code>fcnt</code>는 fix 개수입니다. <code>LRU3</code>는 cold 교체 영역입니다. <strong>WAL</strong>은 복구 로그이며, 이미지의 데이터를 제출하기 전에 그 이미지의 로그 위치까지 영속화돼 있어야 합니다.</p><ol start="4"><li><strong>현재 상태 검사.</strong> 각 BCB를 잠급니다. 저장한 식별자와 일치하고, 현재 DIRTY이며, 진행 중인 FLUSHING이 없고, 여전히 cold 영역이어야 합니다. Fixed-by-any helper는 현재 fix, 연결된 대기자, 작업을 막는 latch 상태도 거절하므로 단순히 <code>fcnt=0</code>인 것만으로는 부족합니다.</li><li><strong>복구 로그 검사.</strong> 필요한 WAL이 영속화되지 않았으면 후보를 건너뛰고 log-flush를 깨웁니다. 서버 모드에서 allocator가 direct victim을 기다리고 수집한 후보 전부가 WAL 때문에 건너뛰어졌다면, 그 후보들의 가장 큰 로그 위치까지 이 helper 호출에서 한 번 강제 기록한 뒤 같은 후보들을 다시 검사합니다.</li><li><strong>확보와 제출.</strong> 공통 flush 프로토콜은 안정된 이미지 하나와 그에 맞는 로그 위치를 보존합니다. 선택적인 페이지 이미지 임시 버퍼인 DWB 또는 직접 I/O로 제출하며, 적합한 인접 페이지를 이웃 묶음으로 함께 처리할 수 있습니다.</li></ol><div class="callout">BCB mutex는 메타데이터 검사를 보호합니다. 공통 helper를 호출하는 쪽은 사본 확보 중 충돌하는 내용 writer가 접근하지 못하게 해야 합니다. 메타데이터 잠금만으로 그 조건을 대신할 수는 없습니다.</div>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4064-L4079">후보 건너뛰기와 log-flush 깨우기:4064–4079</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4131-L4148">강제 기록과 재시도:4131–4148</a></p>
@@ -99,7 +99,7 @@
 </details>
 </section>
 <section class="section" data-reset-answers="" id="selection-part-2">
-<div class="eyebrow">04 · 8 / 23</div><h2>같은 페이지도 부적합한 후보로 바뀔 수 있을까?</h2>
+<div class="eyebrow">04 · 8 / 24</div><h2>같은 페이지도 부적합한 후보로 바뀔 수 있을까?</h2>
 <div class="session-question" data-audience-checkpoint="" data-question-id="Q07" data-reset-answers="" id="q07">
 <h3>Q07 · 공백에서도 페이지 식별자는 같다</h3>
 <p data-teaching-def="P"><strong>독립된 시작 상태:</strong> <code>P</code>는 쓰기 후보로 선택한 메모리의 페이지입니다. Dirty이며 cold victim 영역인 <code>LRU3</code>에 있습니다. Caller의 fix가 없고(<code>fcnt=0</code>), 이전 flush도 진행 중이지 않습니다(<code>FLUSHING=0</code>). Fix는 caller가 페이지를 계속 사용하는 동안 그 사용을 보호합니다.</p>
@@ -109,7 +109,7 @@
 </div>
 </section>
 <section class="section" id="selection-part-3">
-<div class="eyebrow">04 · 9 / 23</div><h2>현재의 fix는 왜 기억한 후보를 거절하게 할까?</h2>
+<div class="eyebrow">04 · 9 / 24</div><h2>현재의 fix는 왜 기억한 후보를 거절하게 할까?</h2>
 <div class="state-trace" data-state-trace="" id="candidate-state-trace"><h3>페이지 식별자는 같지만 reader가 사용 상태를 바꾼다</h3><p class="trace-assumptions" data-teaching-def="P F A Q"><strong>독립적으로 초기화한 사례:</strong> <code>P</code>는 메모리에 있는 dirty 페이지입니다. <code>F</code>는 그 프레임의 관리 레코드인 BCB의 주소입니다. <code>A</code>는 fix를 얻고 유지할 reader 스레드입니다. <code>Q</code>는 마지막의 식별자 변경 비교에만 쓰는 다른 페이지입니다.</p><p>페이지는 cold victim 영역인 <code>LRU3</code>에서 시작하며 fix가 없고(<code>fcnt=0</code>) 이전 flush도 없습니다(<code>FLUSHING=0</code>). Page-flush는 목록 mutex를 놓은 뒤 BCB mutex를 잡습니다. 그 사이에 reader가 실행됩니다. Fix는 계속되는 사용을 보호하며, <code>DIRTY=1</code>은 메모리 내용의 기록 의무가 남아 있음을 뜻합니다.</p>
 <p><strong>여기서 fix는 reader가 페이지를 사용할 권한을 얻는 동작입니다.</strong> Reader는 사용을 마칠 때 <code>unfix</code>로 그 권한을 반납합니다. <code>fcnt</code>는 아직 반납되지 않은 fix의 개수입니다. Reader의 fix가 남아 있는 동안에는 그 프레임을 다른 페이지로 재사용할 수 없습니다.</p>
 <p><strong>“후보를 거절한다”는 page-flush가 이번에 이 후보를 쓰지 않고 건너뛴다는 뜻입니다.</strong> Reader의 fix 요청을 거절하거나 reader의 사용 권한을 빼앗는 동작이 아닙니다. 이 page-flush 경로는 재사용 준비를 위해 cold dirty 페이지를 찾고, 현재 fix가 있는 페이지는 건너뜁니다. 수집할 때 관찰한 <code>fcnt=0</code>을 나중의 쓰기 허가로 사용할 수 없는 이유를 아래 순서로 살펴봅니다.</p>
@@ -144,27 +144,35 @@
   }</code></pre><p><code>||</code>는 둘 중 하나만 참이어도 분기로 들어간다는 뜻입니다. 이 사례에서는 LRU3 조건은 유지되지만 현재 fix 때문에 두 번째 항이 참입니다. <code>continue</code>는 후보 반복문의 다음 항목으로 이동합니다. <code>num_skipped_fixed_or_hot</code>는 fixed와 hot을 함께 세므로 이 카운터만으로 정확한 원인을 구별할 수는 없습니다.</p><p>서버 모드의 <code>pgbuf_is_bcb_fixed_by_any</code>는 현재 fix 수가 양수이거나, 연결된 대기자가 있거나, 이 호출처럼 두 번째 인자가 <code>false</code>일 때 latch가 <code>PGBUF_NO_LATCH</code>가 아니면 참입니다. 따라서 <code>fcnt=0</code>만으로 이 helper의 통과가 보장되지 않습니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9255-L9287">fixed-by-any:9255–9287</a></p></details>
 </section>
 <section class="section" id="handoff-problem">
-<div class="eyebrow">04 · 10 / 23</div><h2>주소와 페이지 식별자를 왜 함께 저장할까?</h2>
+<div class="eyebrow">04 · 10 / 24</div><h2>주소와 페이지 식별자를 왜 함께 저장할까?</h2>
 <p data-teaching-def="F P Q"><strong>독립된 설명 사례:</strong> <code>F</code>는 프레임 하나를 관리하는 버퍼 풀 소유 BCB의 주소입니다. <code>P</code>는 처음 그 프레임에 있는 논리 페이지이고, <code>Q</code>는 나중에 그 프레임에 들어올 수 있는 다른 페이지입니다. 프레임의 페이지 식별자가 바뀌어도 풀이 존재하는 동안 BCB 저장 공간은 유지됩니다.</p>
 <p><code>F/P</code>를 저장하면 어디를 볼지와 어떤 페이지를 관찰했는지를 함께 기록합니다. 나중의 <code>F/Q</code>는 관리 레코드의 주소는 같지만 VPID가 다르므로, 식별자 비교가 오래된 후보 추천을 거절합니다. 여전히 <code>F/P</code>여도 지금은 caller의 fix, 더 새로운 dirty 이미지, 더 hot한 영역, 다른 진행 중인 flush가 있을 수 있습니다.</p>
 <div class="callout"><strong>안전 검사</strong>는 현재 caller와 아직 끝나지 않은 쓰기 작업을 보호합니다. <strong>보존 정책</strong>은 cold 영역의 페이지를 선호하고, 이후 직접 제안 단계에서는 private 목록의 quota를 지킵니다. Quota는 교체 영역에서 보존하려는 목표 페이지 수이며 페이지의 독점 소유권을 주지 않습니다. Cold 상태는 영속성의 증거가 아닙니다.</div>
 <p><strong>Inference(추론):</strong> BCB 작업에 앞서 목록 mutex를 놓으면 목록 작업이 막히는 시간을 줄일 수 있습니다. 구현은 그 대신 나중에 후보를 재검사합니다. 저장한 관찰값이 미래의 상태를 예약해 주지는 않습니다.</p>
 </section>
+<section class="section" id="waiter-origins">
+<div class="eyebrow">04 · 11 / 24</div><h2>Flush 대기자와 프레임 대기자는 어디서 생길까?</h2>
+<p data-teaching-def="P Q">Page-flush를 사용할 수 있는 서버 모드를 가정합니다. <code>P</code>는 메모리에 있고 변경 내용을 아직 기록해야 하는 dirty 페이지입니다. <code>Q</code>는 메모리에 없는 다른 논리 페이지입니다. <strong>프레임</strong>은 페이지 하나를 담는 메모리 자리이고, <strong>allocator</strong>는 요청에 줄 프레임을 구하는 코드입니다.</p>
+<div class="table-scroll"><table><thead><tr><th>요청과 기다리게 된 이유</th><th>필요한 결과</th></tr></thead><tbody><tr><td><strong>Flush waiter · flush 대기자:</strong> dirty인 <code>P</code>에 완료를 기다리는 동기 flush를 요청했는데, 다른 스레드가 이미 P를 flush하고 있습니다.</td><td>P에서 진행 중인 flush의 완료 처리.</td></tr><tr><td><strong>Allocation waiter · 프레임 할당 대기자:</strong> <code>Q</code>를 읽으려는데 빈 프레임도 교체 가능한 프레임도 없습니다. 프레임 대기자로 등록하고 page-flush를 깨웁니다.</td><td>Q를 담을 적합한 프레임. 어느 페이지의 프레임이든 가능합니다.</td></tr></tbody></table></div>
+<p>대기자는 각 요청을 수행하던 서버 스레드입니다. <strong>Page-flush</strong>는 백그라운드에서 이미지를 제출합니다. 성공하면 직접 완료 처리를 하거나, BCB(프레임 관리 레코드)를 큐에 넣어 별도 스레드인 <strong>post-flush</strong>에 넘깁니다. 완료 처리는 flush 대기자를 깨우며, post-flush는 프레임을 할당 대기자에게 제안할 수 있는지도 검사합니다.</p>
+<div class="callout">특정 페이지의 flush가 끝나는 것과 재사용할 프레임을 얻는 것은 서로 다른 결과입니다.</div>
+<details><summary>소스: 대기 등록과 완료 처리</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8839-L8897">Flush 대기 등록</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8247-L8309">프레임 할당 대기 등록</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10927-L10952">직접 완료 처리와 큐 전달</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15496-L15553">Post-flush 완료 처리와 제안</a></p></details>
+</section>
 <section class="section" id="handoff-boundaries">
-<div class="eyebrow">04 · 11 / 23</div><h2>완료에 성공했는데 재사용은 왜 거절될까?</h2>
+<div class="eyebrow">04 · 12 / 24</div><h2>완료에 성공했는데 재사용은 왜 거절될까?</h2>
 <p>이미지 제출에 성공한 뒤의 작업을 미리 살펴봅니다. <strong>Post-flush</strong>는 BCB에 남은 이전 flush의 완료 처리를 끝내고, 프레임을 기다리는 allocator에 제안할 수 있습니다. BCB는 프레임 관리 레코드입니다. 제안 여부는 현재 상태로 결정하지만, 제안에 실패해도 이전 이미지의 완료 처리는 필요합니다. DIRTY는 메모리의 변경 내용을 기록할 의무가 남았다는 뜻이고, fix는 caller의 계속되는 사용을 보호합니다. Private 교체 목록은 정책상 한 영역에 속한 페이지를 관리하며, quota는 그 영역에서 보존하려는 목표 페이지 수입니다.</p>
 <div class="table-scroll"><table><thead><tr><th>제안·수령 단계의 현재 거절 조건</th><th>조건이 뜻하는 것</th></tr></thead><tbody><tr><td>작업을 막는 플래그 또는 새 DIRTY 의무</td><td>현재 프레임은 재사용에 부적합하지만 이전 flush의 완료 처리는 진행합니다.</td></tr><tr><td>Caller의 fix 또는 연결된 대기자</td><td>페이지 식별자가 같아도 현재 사용에 대한 보호가 재사용을 막습니다.</td></tr><tr><td>Cold victim 영역인 LRU3 밖</td><td>보존 정책이 이 프레임을 거절합니다. Clean이라는 조건만으로는 충분하지 않습니다.</td></tr><tr><td>Private 목록이 더 이상 quota를 초과하지 않음</td><td>정책이 해당 영역의 페이지를 보존합니다. 바이트가 손상됐다는 뜻은 아닙니다.</td></tr><tr><td>아직 기다리는 allocation waiter가 없음</td><td>배정할 수령자가 없습니다. 완료 처리와 flush 대기자 깨우기는 여전히 필요합니다.</td></tr><tr><td>수령 전에 제안이 무효화됨</td><td>수령자가 거절하고 재시도합니다. 제안을 게시했어도 이후의 적합성까지 보존되지는 않습니다.</td></tr></tbody></table></div>
 <p><strong>제안(offer)</strong>은 allocator가 사용할 수 있을지도 모르는 프레임을 알려 주는 것입니다. Allocator가 재사용할 프레임을 수령하려면 BCB mutex를 잡고 현재 상태를 검증해야 합니다. <a href="05-post-flush.html#handoff">다음 장에서 생산자·소비자·수령자를 따라가기 →</a></p>
 </section>
 <section class="section" id="handoff-boundaries-part-2">
-<div class="eyebrow">04 · 12 / 23</div><h2>두 종류의 대기자는 왜 다른 결과를 기다릴까?</h2>
-<p data-teaching-def="G G+1"><strong>독립된 시작 상태:</strong> <code>G</code>는 이미 쓰기를 위해 제출한 이전의 안정된 페이지 이미지입니다. <code>G+1</code>은 writer가 페이지를 다시 변경해 메모리에 만든 이후의 이미지입니다. 설명을 위한 표기이며 CUBRID에 저장된 세대 카운터가 아닙니다.</p>
-<p><strong>Flush waiter</strong>는 이전 이미지의 완료를 기다립니다. <strong>Allocation waiter</strong>는 재사용할 수 있는 적합한 프레임을 기다립니다. Writer가 새로운 DIRTY 의무를 만들었으며, 계속되는 사용을 보호하는 fix도 유지하고 있을 수 있습니다.</p>
+<div class="eyebrow">04 · 13 / 24</div><h2>두 종류의 대기자는 왜 다른 결과를 기다릴까?</h2>
+<p data-teaching-def="P Q G G+1"><strong>독립된 시작 상태:</strong> 논리 페이지 <code>P</code>가 프레임 하나에 있고, 다른 페이지 <code>Q</code>는 메모리에 없습니다. 다른 프레임도 모두 재사용할 수 없다고 가정합니다. <code>G</code>는 이미 쓰기를 위해 제출한 P의 이전 안정된 이미지입니다. Writer가 이후에 P를 다시 변경해 메모리에 <code>G+1</code> 이미지를 만들었으므로 새 DIRTY 작업이 남아 있습니다. G/G+1은 설명을 위한 표기이며 CUBRID에 저장된 세대 카운터가 아닙니다.</p>
+<p><strong>Flush waiter</strong>는 dirty인 P에 동기 flush를 요청한 뒤, P에서 진행 중인 flush가 끝나기를 기다리고 있습니다. 별도로 <strong>allocation waiter</strong>는 Q를 읽을 프레임이 필요합니다. Writer는 P의 계속되는 사용을 보호하는 fix도 유지하고 있을 수 있습니다.</p>
 <p>완료 처리는 이전 FLUSHING 상태를 지우고 flush waiter를 깨웁니다. 더 새로운 DIRTY 의무와 caller의 fix는 유지하므로 allocation waiter는 여전히 프레임을 받지 못할 수 있습니다. 이전 이미지 완료, 현재 clean 상태, 현재 적합성, 프레임 제안, 성공적인 수령은 각각 별개의 사건입니다.</p>
 <div class="callout">이 실행 순서는 앞의 추적을 이어가지 않습니다. 이미지 완료만으로 allocator의 진행을 알 수 없는 이유를 보여 줍니다. 소스 구조만으로 총 재시도 횟수나 allocator 지연의 상한을 얻을 수는 없습니다.</div>
 </section>
 <section class="section" id="cost">
-<div class="eyebrow">04 · 13 / 23</div><h2>주기를 바꾸면 실제로 무엇이 달라질까?</h2>
+<div class="eyebrow">04 · 14 / 24</div><h2>주기를 바꾸면 실제로 무엇이 달라질까?</h2>
 <p>Page-flush worker가 존재하고 복구가 gate를 연 상태라고 가정합니다. <strong>주기(interval)</strong>는 공유된 압력을 다음에 검사할 기회를 정합니다. Looper는 worker의 실행과 대기를 제어하는 객체입니다. 설정한 주기는 실행 시작 간격의 목표이며, 대기 시간에서 task 실행 시간을 뺍니다. DBA는 서버 설정을 변경할 권한이 있는 데이터베이스 관리자입니다.</p>
 <div class="table-scroll"><table><thead><tr><th>관리자 설정</th><th>기본값과 단위</th><th>변경 방법과 반영 시점</th></tr></thead><tbody><tr><td><code>page_flush_interval</code><br>등록된 서버 전체 정책 설정(숨김 아님)</td><td>1,000 ms; 0–2,147,483,647 밀리초(INT_MAX).<br>0이면 깨우기만 기다립니다.</td><td>DBA가 온라인 SQL로 변경하며 다음 looper 대기 시점에 읽습니다. 이 읽기를 위해 재시작할 필요는 없습니다.</td></tr></tbody></table></div>
 <p>DBA는 <code>SET SYSTEM PARAMETERS 'page_flush_interval=1000ms'</code>를 사용할 수 있습니다. 사용 중단 예정인 별칭 <code>page_flush_interval_in_msecs</code>는 밀리초 숫자를 그대로 받습니다. 변경은 실행 중인 서버의 파라미터 값을 담은 레지스트리에 반영되며 <code>cubrid.conf</code>를 수정하지 않습니다. 0을 양수 주기로 바꾸어도 이미 무기한 대기 중인 worker를 깨우지는 않습니다. 별도의 작업 깨우기가 오면 종료 요청을 받지 않은 worker는 그 대기를 벗어나고 다음 대기 시점에 새 주기를 읽습니다. 종료 깨우기가 오면 worker를 종료합니다. 종료 상태의 looper는 대기 설정을 읽기 전에 반환합니다.</p>
@@ -172,35 +180,35 @@
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L259-L273">등록된 이름</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L1806-L1829">정의와 기본값</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16971-L17049">대기 시 읽기와 내부 반복</a></p>
 </section>
 <section class="section" id="flush-policy-settings">
-<div class="eyebrow">04 · 14 / 23</div><h2>어떤 설정이 후보 탐색과 정렬을 바꿀까?</h2>
+<div class="eyebrow">04 · 15 / 24</div><h2>어떤 설정이 후보 탐색과 정렬을 바꿀까?</h2>
 <p>Gate가 열린 상태에서 후보 helper를 한 번 실행하는 경우입니다. 이 서버 전체 설정은 작업 선택을 바꿉니다. 페이지 식별자, 사용 소유권, WAL 안전 조건은 그대로 적용됩니다. 이 고정 리비전에서는 DBA(데이터베이스 관리자)가 실행 중인 서버의 파라미터 값인 레지스트리를 온라인으로 갱신할 수 있습니다. 갱신이 수락돼도 <code>cubrid.conf</code>는 수정되지 않습니다. 숨김 설정은 문서화된 관리자 계약이 아니라 내부 정책의 입력입니다.</p>
 <div class="table-scroll"><table><thead><tr><th>설정과 분류</th><th>기본값 / 범위 / 단위</th><th>소비 코드가 변경 값을 읽는 시점</th></tr></thead><tbody><tr><td><code>data_buffer_flush_ratio</code><br>숨김 후보 검사량 정책</td><td>0.01; 0.01–0.95; 비율</td><td>다음 후보 helper 호출에서 탐색량을 계산합니다. 압력에 따른 확대와 상한은 계속 적용됩니다. 관리자가 0을 지정하면 거절합니다.</td></tr><tr><td><code>data_buffer_sequential_victim_flush</code><br>숨김 순서 정책</td><td>true; 불리언</td><td>수집 후 다음 읽기에서 순차 쓰기를 위해 후보를 VPID로 정렬할지 선택합니다.</td></tr></tbody></table></div>
 <p>후보를 더 검사하거나 정렬해도 현재 식별자, 사용, dirty 상태, WAL 검사를 건너뛸 권한이 생기지는 않습니다.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L1158-L1168">비율 정의</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L4067-L4077">순서 정책 정의</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3938-L4008">검사량·수집·정렬의 설정 읽기</a></p>
 </section>
 <section class="section" id="flush-neighbor-settings">
-<div class="eyebrow">04 · 15 / 23</div><h2>선택한 한 페이지는 언제 이웃 묶음으로 이어질까?</h2>
+<div class="eyebrow">04 · 16 / 24</div><h2>선택한 한 페이지는 언제 이웃 묶음으로 이어질까?</h2>
 <p>현재 검사를 통과한 후보에서 시작합니다. <strong>이웃 묶음(neighbor batch)</strong>은 쓰기에 적합한 인접 페이지들을 함께 묶는 것입니다. 아래 설정은 공개된 서버 전체 입력입니다. DBA(데이터베이스 관리자)가 실행 중인 서버의 파라미터 값인 레지스트리를 온라인으로 갱신하면 이후 helper가 읽을 때 반영됩니다. <code>cubrid.conf</code>는 수정하지 않습니다.</p>
 <div class="table-scroll"><table><thead><tr><th>설정과 분류</th><th>기본값 / 범위 / 단위</th><th>다음 읽기에서의 효과</th></tr></thead><tbody><tr><td><code>data_buffer_neighbor_flush_pages</code><br>공개 이웃 탐색 폭</td><td>8; 0–32; 페이지</td><td>이후 후보·helper가 읽을 때 묶음 여부를 선택합니다. 1 또는 0이면 단일 페이지 경로를 선택합니다.</td></tr><tr><td><code>data_buffer_neighbor_flush_nondirty</code><br>공개 이웃 정책</td><td>false; 불리언</td><td>이후 이웃 helper가 읽을 때 dirty 이웃들을 연결하는 데 적합한 clean 페이지도 포함할 수 있습니다. 탐색 폭이 1 이하이면 묶음에 영향을 주지 않습니다.</td></tr></tbody></table></div>
 <p>여러 번 값을 읽으므로 실행 중인 묶음 전체가 한 시점의 설정값을 일괄 사용한다고 볼 수는 없습니다. 폭을 넓혀도 제출 페이지 수가 늘어난다는 보장은 없습니다. 현재 페이지 상태와 적합한 이웃의 존재 여부가 작업을 결정합니다.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L639-L640">등록된 이름</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L3942-L3964">설정 정의</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11859-L11925">이웃 설정 읽기와 탐색</a></p>
 </section>
 <section class="section" id="cost-part-2">
-<div class="eyebrow">04 · 16 / 23</div><h2>검사할 후보 수와 쓸 페이지 수는 왜 다를까?</h2>
+<div class="eyebrow">04 · 17 / 24</div><h2>검사할 후보 수와 쓸 페이지 수는 왜 다를까?</h2>
 <p><strong>독립된 크기 예:</strong> 512 MiB 풀에 16 KiB 페이지를 담으면 프레임이 32,768개입니다. MiB와 KiB는 각각 1,048,576바이트와 1,024바이트인 이진 단위입니다. 기본 탐색 비율 1%를 적용하면 먼저 정수 검사량 327개를 얻습니다. 압력에 따라 최대 10배로 확대하면 3,270개이며, 여전히 200 MiB 상한인 12,800페이지보다 작습니다. Checkpoint가 진행 중이면 이 확대를 적용하지 않습니다.</p>
 <p>이 숫자는 후보 검사량을 정합니다. 검사한 노드가 clean이거나, 이미 flushing 중이거나, 현재 사용 중이거나, 이전보다 hot해졌거나, WAL을 기다리면 이미지 제출로 이어지지 않을 수 있습니다. LRU 목록은 정책 영역의 페이지 보존 순서를 관리합니다. 목록별 우선순위가 검사량을 나누며, 선택적인 이웃 묶음은 적합한 추가 페이지를 쓸 수 있습니다.</p>
 <div class="table-scroll"><table><thead><tr><th>Page-flush 작업</th><th>작업량이 늘어나는 기준</th></tr></thead><tbody><tr><td>압력을 읽고 후보를 수집한다</td><td>스레드별 카운터 shard 수, 살펴보는 LRU 목록 수, 실제 검사한 노드 수에 비례합니다. Shard는 스레드별로 나눈 카운터이며 압력 표본을 만들 때 합산합니다.</td></tr><tr><td>설정이 켜져 있으면 저장한 후보를 정렬한다</td><td>후보 수에 그 수의 로그를 곱한 만큼 늘어납니다.</td></tr><tr><td>후보와 이웃 경로를 시도한다</td><td>후보 수에 가능한 이웃 탐색 폭을 곱한 만큼 늘어납니다.</td></tr></tbody></table></div>
 <p>이 설명은 자료구조를 처리하는 작업량입니다. 실제 경과 시간에는 목록·BCB 경합, WAL 강제 기록, DWB 슬롯 부족, 파일 I/O, 스레드 스케줄링이 더 큰 영향을 줄 수 있습니다.</p>
 </section>
 <section class="section" id="cost-part-3">
-<div class="eyebrow">04 · 17 / 23</div><h2>큐 용량으로는 왜 완료 시간을 제한할 수 없을까?</h2>
+<div class="eyebrow">04 · 18 / 24</div><h2>큐 용량으로는 왜 완료 시간을 제한할 수 없을까?</h2>
 <p>이미지 제출이 수락된 뒤 post-flush가 완료 큐에서 BCB 포인터를 꺼내 처리할 수 있습니다. 각 포인터는 프레임 관리 레코드를 가리키며, 페이지 바이트가 아니라 완료할 관리 작업을 전달합니다. 오래된 allocator 기록은 더 이상 기다리지 않는 요청을 가리킵니다. Flush waiter는 여전히 자기 이미지의 완료를 기다립니다.</p>
 <p>작업량은 실제로 꺼내 처리한 완료 항목 수, 살펴본 오래된 allocator 기록 수, 방문한 flush waiter 수에 따라 늘어납니다. 큐 용량은 한 순간에 저장할 수 있는 항목 수를 제한합니다. 비우는 동안 생산자가 다시 채울 수 있으므로 한 번 실행할 때 처리하는 총 항목 수의 상한은 아닙니다.</p>
 <p><strong>Compare-and-swap(CAS)</strong>는 공유 상태의 기존 값이 예상한 값과 같을 때만 그 값을 바꾸는 연산입니다. CAS 재시도, BCB·스레드 mutex 경합, 깨운 스레드의 스케줄링은 항목 수 외에 추가 비용을 만듭니다. 별도로 page-flush의 WAL과 페이지 I/O 대기는 완료 작업이 생기기 전까지의 시간을 늘립니다.</p>
 <div class="callout">실제 처리한 작업 수와 대기 시간을 따로 측정해야 합니다. 후보 검사량이 작거나 큐 용량이 제한돼 있어도 요청 지연이 짧다고 입증할 수는 없습니다.</div>
 </section>
 <section class="section" id="source-guard">
-<div class="eyebrow">04 · 18 / 23</div><h2>이 분기는 왜 서로 다른 세 상황을 함께 건너뛸까?</h2>
+<div class="eyebrow">04 · 19 / 24</div><h2>이 분기는 왜 서로 다른 세 상황을 함께 건너뛸까?</h2>
 <p>Page-flush가 후보의 BCB mutex를 막 잡은 시점에서 시작합니다. 저장한 후보 기록에는 앞서 본 BCB 주소와 선택한 페이지 식별자인 <code>VPID</code>가 있습니다. 주소는 여전히 관리 레코드를 가리키지만 페이지 식별자와 기록 상태는 바뀌었을 수 있습니다.</p>
 <p>이 분기는 현재 VPID가 다르거나, 더 이상 dirty가 아니거나, 이전 flush의 완료가 아직 남은 페이지를 거절합니다. <code>DIRTY</code>는 메모리 내용의 기록 의무가 남았다는 뜻입니다. <code>FLUSHING</code>은 확보한 이미지의 완료 처리가 남았다는 뜻입니다.</p><pre><code>      if (!VPID_EQ (&amp;bufptr-&gt;vpid, &amp;victim_cand_list[i].vpid) || !pgbuf_bcb_is_dirty (bufptr)
 	  || pgbuf_bcb_is_flushing (bufptr))
@@ -213,25 +221,25 @@
 <p>공통 카운터 <code>num_skipped_already_flushed</code>는 식별자 불일치를 포함한 세 원인을 합칩니다. 이름만으로 어느 전제가 깨졌는지 진단할 수 없습니다. 이후의 분기에서 cold 영역·사용 상태와 WAL 준비 여부를 각각 검사하므로, 이 분기만 통과했다고 flush나 재사용의 모든 허가를 얻은 것은 아닙니다.</p>
 </section>
 <section class="section" id="identity-gap-trace-screen">
-<div class="eyebrow">04 · 19 / 23</div><h2>식별자 비교만 제거하면 무엇이 달라질까?</h2>
+<div class="eyebrow">04 · 20 / 24</div><h2>식별자 비교만 제거하면 무엇이 달라질까?</h2>
 <div class="state-trace" data-state-trace="" id="identity-gap-trace"><h3>주소는 같지만 선택했던 페이지는 사라졌다</h3><p class="trace-assumptions" data-teaching-def="X P R"><strong>독립적으로 초기화한 사례:</strong> <code>X</code>는 프레임 하나의 관리 레코드인 버퍼 풀 소유 BCB의 주소입니다. <code>P</code>는 원래 그곳에 있던 논리 페이지이고, <code>R</code>는 나중에 그 프레임에 들어올 다른 논리 페이지입니다. 처음에는 dirty이며 caller의 fix가 없습니다.</p><p>Page-flush는 원래 주소와 VPID를 저장한 뒤 목록 보호를 해제합니다. 다른 주체가 이전 페이지의 작업을 안전하게 끝내고 프레임을 재사용합니다. 이후 새 페이지가 dirty이며 cold인 상태가 됩니다. 구현된 경로와 저장한 VPID 비교만 제거한 설명용 변형을 비교합니다. 양쪽 모두 현재 dirty, flushing, cold 영역, 사용, WAL 조건을 유지합니다.</p><div class="trace-controls" hidden=""><button data-trace-previous="" type="button">이전</button><button data-trace-next="" type="button">다음</button><button data-trace-reset="" type="button">사례 초기화</button><button data-trace-all="" type="button">전체 단계 보기</button><output aria-atomic="true" aria-live="polite"></output></div><ol class="trace-steps"><li data-trace-step="0"><h4>1. 후보를 추천한다</h4><dl class="trace-lanes"><div><dt>Remembered</dt><dd>X/P</dd></div><div><dt>Current X</dt><dd>P dirty, unfixed</dd></div><div><dt>With VPID guard</dt><dd>saved P</dd></div><div><dt>Without VPID guard</dt><dd>saved P</dd></div></dl><p class="trace-guard">조건: 목록 보호를 유지한다</p><p class="trace-change">변화: 두 경로가 같은 페이지 식별자를 저장한다</p></li><li data-trace-step="1"><h4>2. 보호 공백에서 페이지 식별자가 바뀐다</h4><dl class="trace-lanes"><div><dt>Remembered</dt><dd>X/P</dd></div><div class="trace-changed"><dt>Current X</dt><dd>R dirty, unfixed</dd></div><div class="trace-changed"><dt>With VPID guard</dt><dd>not yet checked</dd></div><div class="trace-changed"><dt>Without VPID guard</dt><dd>not yet checked</dd></div></dl><p class="trace-guard">조건: 유지하는 예약이 없다</p><p class="trace-change">변화: BCB 주소는 X로 유지되지만 현재 페이지 식별자는 R이다</p></li><li data-trace-step="2"><h4>3. 보호된 현재 상태를 검사한다</h4><dl class="trace-lanes"><div><dt>Remembered</dt><dd>X/P</dd></div><div><dt>Current X</dt><dd>R dirty, unfixed</dd></div><div class="trace-changed"><dt>With VPID guard</dt><dd>P != R: reject</dd></div><div class="trace-changed"><dt>Without VPID guard</dt><dd>R may be submitted as P candidate</dd></div></dl><p class="trace-guard">조건: 양쪽 모두 다른 조건 검사를 유지한다</p><p class="trace-change">변화: 비교를 제거한 경로는 이전 후보 추천에 따라 새 페이지를 쓸 수 있다. 현재 조건 검사는 여전히 새 이미지의 안전을 보호한다. 드러나는 문제는 잘못된 후보 연결이며 바이트 손상의 증거는 아니다</p></li></ol></div>
 </section>
 <section class="section" id="replacement-protocol">
-<div class="eyebrow">04 · 20 / 23</div><h2>예약으로 보호 공백의 경쟁을 막을 수 있을까?</h2>
+<div class="eyebrow">04 · 21 / 24</div><h2>예약으로 보호 공백의 경쟁을 막을 수 있을까?</h2>
 <p><strong>설명용 대안:</strong> 후보 수집 시점에서 시작합니다. 관찰값만 저장하는 대신 <strong>예약(reservation)</strong>을 설치합니다. Flush 결정이 끝날 때까지 경쟁하는 fix·재사용 경로가 따라야 하는 공유 상태입니다. 고정 리비전의 구현이 아니라 제안하는 프로토콜입니다.</p>
 <ol><li>목록과 BCB 보호 아래 선택한 페이지 식별자를 예약합니다. 모든 경쟁 경로는 식별자를 바꾸거나 충돌하는 사용을 허용하기 전에 이 예약을 확인해야 합니다.</li><li>예약과 필요한 객체를 살아 있게 하는 수명 참조를 유지하면서 목록 보호를 해제합니다.</li><li>내용 writer에 대한 필요한 보호를 확보합니다. 안정된 이미지 하나와 그에 맞는 WAL 위치를 확보한 뒤 제출합니다.</li><li>취소나 실패 시 아직 남은 쓰기·복구 정보를 보존하거나 복구합니다. 수명 참조를 놓기 전에 예약을 지워서 회수된 저장 공간에 예약이 남아 보이지 않도록 합니다.</li></ol>
 <p>예약은 공백 동안 페이지 식별자를 유지합니다. 그래도 내용 보호, WAL 순서, 올바른 완료 처리는 필요합니다. 검색, 재시도, 취소, 종료 경로가 모두 새 프로토콜을 따라야 합니다. 배제 시간이 길어지면 자주 쓰는 페이지의 접근이 지연될 수 있습니다. 현재 구현은 중간 변경을 허용하고 나중에 재검사합니다.</p>
 <p>선택적인 정렬에는 여전히 후보 저장 공간이 필요하며, 비교 횟수는 후보 수에 그 수의 로그를 곱한 만큼 늘어납니다. BCB 보호나 I/O를 기다리는 동안 LRU mutex를 유지하는 것은 별도의 대안이며 잠금 순서와 경합 비용이 따릅니다. 예약을 도입했다고 이 지름길이 정당화되지는 않습니다.</p>
 </section>
 <section class="section" id="flush-statistics">
-<div class="eyebrow">04 · 21 / 23</div><h2>카운터를 해석하기 전에 무엇을 켜야 할까?</h2>
+<div class="eyebrow">04 · 22 / 24</div><h2>카운터를 해석하기 전에 무엇을 켜야 할까?</h2>
 <p>Allocator가 기다릴 때 후보 거절과 수락된 쓰기의 지연을 구분하려고 합니다. <strong>통계 활성화 마스크</strong>는 서버가 기록할 상세 통계 종류를 선택합니다. 이것만으로 모든 수집이 시작되거나 페이지별 사건 타임라인이 생기는 것은 아닙니다.</p>
 <div class="table-scroll"><table><thead><tr><th>입력 / 분류</th><th>기본값과 변경 반영 시점</th><th>관측의 한계</th></tr></thead><tbody><tr><td><code>extended_statistics_activation</code><br>등록된 시작 시점 마스크</td><td>기본값 15는 비트 1, 2, 4, 8의 합이며 범위는 0–1023입니다. 초기화 때 값을 저장해 사용합니다. 일반 SQL 변경은 거절합니다.</td><td>기본값에는 victimization 비트 16과 daemon 비트 64가 없습니다. 초기화 전에 필요한 통계 종류를 설정합니다.</td></tr><tr><td><code>stats_on</code><br>숨김 시작 시점 수집 입력</td><td>false; 불리언. 초기화 때 읽으며 일반 SQL 변경은 거절합니다.</td><td>상시 수집을 위한 한 가지 선택입니다. 적합한 실행 중 통계 수집 유틸리티·API를 쓰는 경로도 있습니다. 카운터를 해석하기 전에 수집을 시작해야 합니다.</td></tr></tbody></table></div>
 <p>이 고정 리비전에서 시작 시점 입력을 일반적으로 온라인 변경하는 경로는 없습니다. 카운터 값이 없다는 것을 작업이 없다는 증거로 보기 전에 필요한 통계를 활성화하고 수집을 시작해야 합니다.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L4112-L4125">마스크 정의</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/perf_monitor.h#L59-L74">활성화 비트</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/perf_monitor.c#L3198-L3205">초기화 때의 읽기</a></p>
 </section>
 <section class="section" id="flush-diagnostics">
-<div class="eyebrow">04 · 22 / 23</div><h2>로그와 skip 합계에도 왜 사건 타임라인이 필요할까?</h2>
+<div class="eyebrow">04 · 23 / 24</div><h2>로그와 skip 합계에도 왜 사건 타임라인이 필요할까?</h2>
 <p>후보를 건너뛰는 모습이 보이지만 allocator는 여전히 기다립니다. <strong>BCB</strong>는 프레임 관리 레코드이며, 현재 <code>VPID</code>는 그 프레임의 논리 페이지 식별자입니다. 대기의 원인을 설명하려면 선택한 식별자와 이후의 거절 또는 수락된 제출을 관측으로 연결해야 합니다.</p>
 <div class="table-scroll"><table><thead><tr><th>진단 설정 / 분류</th><th>기본값과 변경 반영 시점</th><th>한계</th></tr></thead><tbody><tr><td><code>log_pgbuf_victim_flush</code><br>숨김 온라인 진단 설정</td><td>false; 불리언. DBA가 실행 중인 서버 파라미터를 바꾸면 이후 후보·helper의 로깅 설정 읽기에 반영됩니다.</td><td>디버그 메시지는 선택된 맥락을 보여 주지만 후보 선택부터 재사용까지의 완전한 타임스탬프 이력은 제공하지 않습니다.</td></tr></tbody></table></div>
 <p>Skip 카운터는 원인을 묶습니다. 하나는 식별자 불일치·더 이상 dirty 아님·이미 flushing 중을 합치고, 다른 하나는 fixed 또는 hot 후보를 합칩니다. Dirty 페이지에는 메모리 내용의 기록 의무가 남아 있고, fix는 현재 사용을 보호하며, hot 상태는 보존 정책을 나타냅니다. 합계만으로 한 페이지를 거절한 정확한 전제를 알 수 없습니다.</p>
@@ -239,10 +247,10 @@
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/system_parameter.c#L4444-L4487">진단 설정 정의</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3899-L3911">로깅 설정 읽기</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4047-L4054">원인을 묶는 거절 카운터</a></p>
 </section>
 <section class="section" id="experiment">
-<div class="eyebrow">04 · 23 / 23</div><h2>오래된 후보와 지연된 쓰기를 어떤 관측으로 구분할까?</h2>
+<div class="eyebrow">04 · 24 / 24</div><h2>오래된 후보와 지연된 쓰기를 어떤 관측으로 구분할까?</h2>
 <p><strong>아직 실행하지 않은 실험 제안:</strong> Page-flush가 dirty cold 페이지를 선택했고 충돌하는 사용이 없는 상태에서 시작합니다. 고정 리비전, 빌드, 풀·로그·DWB·I/O 설정, workload를 기록합니다. 목록 잠금 해제 → BCB 잠금 사이의 공백이 지난 뒤 저장한 VPID와 BCB의 현재 페이지 식별자를 비교합니다.</p>
 <dl class="live-proposal"><dt>가설</dt><dd>보호된 현재 상태 검사는 식별자나 적합성이 바뀐 후보 추천을 거절합니다. 거절한 후보 추천과 수락된 쓰기의 지연은 서로 다른 증거를 남깁니다.</dd><dt>통제하는 변화</dt><dd>그 공백에서 중간 동작을 실행합니다. 페이지 식별자, caller의 fix 수(<code>fcnt</code>), DIRTY 상태를 각각 독립적으로 바꿉니다. 매 실행 전에 같은 시작 상태를 복구합니다. Fix는 caller의 계속되는 사용을 보호하고 DIRTY는 메모리 내용의 기록 의무가 남았음을 나타냅니다.</dd><dt>정확한 관측</dt><dd>기존 skip 카운터는 거절 원인을 묶습니다. 저장·현재 VPID, 정확한 거절 분기, 확보한 LSA(이미지의 로그 위치), 영속화된 WAL 위치, 실제 제출 결과를 기록하는 후보별 probe를 추가하도록 제안합니다.</dd><dt>반증 기준과 한계</dt><dd>유지한 식별자 비교가 다른 현재 VPID를 수락한다면 식별자에 관한 주장이 깨집니다. 다른 현재 조건 검사를 유지하면서 비교만 제거하면 잘못된 후보 연결이 드러날 수 있습니다. 그 결과만으로 바이트 손상을 입증할 수는 없습니다.</dd></dl>
 <p>기존 카운터를 해석하기 전에 관련 통계 수집을 켭니다. 제안한 사건 연결은 추가 계측이 필요하며 기존 카운터가 이미 제공하는 정보가 아닙니다. 가능하면 경쟁 동작을 막지 않는 방식으로 관측합니다. Probe가 잡은 잠금이 보호 공백 자체를 만들거나 경쟁 동작을 막아서는 안 됩니다.</p>
 <p class="live-source"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3780-L4165">제안한 소스 관측 지점</a></p>
-</section></article><nav class="lesson-nav" aria-label="장의 화면"><a href="#workload">기억한 후보를 왜 다시 검사해야 할까?</a><a href="#first-code-path">선택한 사본은 어떤 호출을 거쳐 제출될까?</a><a href="#trigger">Worker는 언제 필요한 작업을 찾을까?</a><a href="#flush-loop-boundaries">탐색 반복은 어떤 조건에서 계속되거나 끝날까?</a><a href="#trigger-part-2">Helper 진입 한 번으로는 왜 진행을 알 수 없을까?</a><a href="#selection">후보 관찰은 어떻게 flush 결정으로 이어질까?</a><a href="#selection-current-checks">사본 확보를 허용하는 현재 조건은 무엇일까?</a><a href="#selection-part-2">같은 페이지도 부적합한 후보로 바뀔 수 있을까?</a><a href="#selection-part-3">현재의 fix는 왜 기억한 후보를 거절하게 할까?</a><a href="#handoff-problem">주소와 페이지 식별자를 왜 함께 저장할까?</a><a href="#handoff-boundaries">완료에 성공했는데 재사용은 왜 거절될까?</a><a href="#handoff-boundaries-part-2">두 종류의 대기자는 왜 다른 결과를 기다릴까?</a><a href="#cost">주기를 바꾸면 실제로 무엇이 달라질까?</a><a href="#flush-policy-settings">어떤 설정이 후보 탐색과 정렬을 바꿀까?</a><a href="#flush-neighbor-settings">선택한 한 페이지는 언제 이웃 묶음으로 이어질까?</a><a href="#cost-part-2">검사할 후보 수와 쓸 페이지 수는 왜 다를까?</a><a href="#cost-part-3">큐 용량으로는 왜 완료 시간을 제한할 수 없을까?</a><a href="#source-guard">이 분기는 왜 서로 다른 세 상황을 함께 건너뛸까?</a><a href="#identity-gap-trace-screen">식별자 비교만 제거하면 무엇이 달라질까?</a><a href="#replacement-protocol">예약으로 보호 공백의 경쟁을 막을 수 있을까?</a><a href="#flush-statistics">카운터를 해석하기 전에 무엇을 켜야 할까?</a><a href="#flush-diagnostics">로그와 skip 합계에도 왜 사건 타임라인이 필요할까?</a><a href="#experiment">오래된 후보와 지연된 쓰기를 어떤 관측으로 구분할까?</a></nav></div><nav class="lecture-navigation" data-lecture-nav aria-label="장 탐색"><a data-session-return href="toc.html">세션 3 목차</a><a rel="prev" href="03-daemon-architecture.html#workload">이전 장</a><a rel="next" href="05-post-flush.html#workload">다음 장</a></nav><footer class="footer">CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code> · PostgreSQL <code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code></footer></main>
+</section></article><nav class="lesson-nav" aria-label="장의 화면"><a href="#workload">기억한 후보를 왜 다시 검사해야 할까?</a><a href="#first-code-path">선택한 사본은 어떤 호출을 거쳐 제출될까?</a><a href="#trigger">Worker는 언제 필요한 작업을 찾을까?</a><a href="#flush-loop-boundaries">탐색 반복은 어떤 조건에서 계속되거나 끝날까?</a><a href="#trigger-part-2">Helper 진입 한 번으로는 왜 진행을 알 수 없을까?</a><a href="#selection">후보 관찰은 어떻게 flush 결정으로 이어질까?</a><a href="#selection-current-checks">사본 확보를 허용하는 현재 조건은 무엇일까?</a><a href="#selection-part-2">같은 페이지도 부적합한 후보로 바뀔 수 있을까?</a><a href="#selection-part-3">현재의 fix는 왜 기억한 후보를 거절하게 할까?</a><a href="#handoff-problem">주소와 페이지 식별자를 왜 함께 저장할까?</a><a href="#waiter-origins">Flush 대기자와 프레임 대기자는 어디서 생길까?</a><a href="#handoff-boundaries">완료에 성공했는데 재사용은 왜 거절될까?</a><a href="#handoff-boundaries-part-2">두 종류의 대기자는 왜 다른 결과를 기다릴까?</a><a href="#cost">주기를 바꾸면 실제로 무엇이 달라질까?</a><a href="#flush-policy-settings">어떤 설정이 후보 탐색과 정렬을 바꿀까?</a><a href="#flush-neighbor-settings">선택한 한 페이지는 언제 이웃 묶음으로 이어질까?</a><a href="#cost-part-2">검사할 후보 수와 쓸 페이지 수는 왜 다를까?</a><a href="#cost-part-3">큐 용량으로는 왜 완료 시간을 제한할 수 없을까?</a><a href="#source-guard">이 분기는 왜 서로 다른 세 상황을 함께 건너뛸까?</a><a href="#identity-gap-trace-screen">식별자 비교만 제거하면 무엇이 달라질까?</a><a href="#replacement-protocol">예약으로 보호 공백의 경쟁을 막을 수 있을까?</a><a href="#flush-statistics">카운터를 해석하기 전에 무엇을 켜야 할까?</a><a href="#flush-diagnostics">로그와 skip 합계에도 왜 사건 타임라인이 필요할까?</a><a href="#experiment">오래된 후보와 지연된 쓰기를 어떤 관측으로 구분할까?</a></nav></div><nav class="lecture-navigation" data-lecture-nav aria-label="장 탐색"><a data-session-return href="toc.html">세션 3 목차</a><a rel="prev" href="03-daemon-architecture.html#workload">이전 장</a><a rel="next" href="05-post-flush.html#workload">다음 장</a></nav><footer class="footer">CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code> · PostgreSQL <code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code></footer></main>
 <nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 조작"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav></body></html>
