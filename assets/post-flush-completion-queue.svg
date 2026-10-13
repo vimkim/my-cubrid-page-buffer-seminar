@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 490" role="img" aria-labelledby="title desc">
+<title id="title">The queue transfers completion work</title>
+<desc id="desc">Page-flush inserts a pointer to the BCB into flushed_bcbs and wakes post-flush. The queued item is a pointer, not page contents. The earlier FLUSHING marker remains until completion.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526563"/></marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 24px system-ui,sans-serif;fill:#172c2c}.text{font:22px system-ui,sans-serif;fill:#172c2c}.note{font:19px system-ui,sans-serif;fill:#526563}.mono{font:21px ui-monospace,monospace;fill:#172c2c}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dash{stroke-dasharray:7 5}</style></defs>
+<rect width="920" height="490" fill="#faf9f5"/>
+<text class="title" x="28" y="43" text-anchor="start">The queue transfers completion work</text>
+<text class="note" x="28" y="74" text-anchor="start">Constructed source scenario · CUBRID f799e05 · Not a runtime observation</text>
+<rect x="28" y="110" width="252" height="128" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="144" text-anchor="start">Page-flush</text>
+<text class="text" x="46" y="180" text-anchor="start">Write succeeded</text>
+<text class="text" x="46" y="210" text-anchor="start">Insert BCB pointer</text>
+<rect x="334" y="110" width="252" height="128" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="352" y="144" text-anchor="start">flushed_bcbs</text>
+<text class="text" x="352" y="180" text-anchor="start">BCB pointer queued</text>
+<text class="text" x="352" y="210" text-anchor="start">Work delegated</text>
+<rect x="640" y="110" width="252" height="128" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="658" y="144" text-anchor="start">Post-flush</text>
+<text class="text" x="658" y="180" text-anchor="start">Notified to run</text>
+<text class="text" x="658" y="210" text-anchor="start">Consume later</text>
+<path class="flow" d="M280 174H332"/>
+<text class="note" x="285" y="100" text-anchor="start">insert</text>
+<path class="flow" d="M586 174H638"/>
+<text class="note" x="588" y="100" text-anchor="start">consume</text>
+<rect x="334" y="294" width="252" height="102" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="352" y="328" text-anchor="start">Resident page P</text>
+<text class="text" x="352" y="364" text-anchor="start">BCB: FLUSHING = 1</text>
+<path class="flow dash" d="M460 242V290"/>
+<text class="note" x="475" y="273" text-anchor="start">pointer refers to this record</text>
+<text class="head" x="28" y="329" text-anchor="start">No page bytes</text>
+<text class="text" x="28" y="360" text-anchor="start">in this queue.</text>
+<text class="head" x="660" y="329" text-anchor="start">Allocator waits.</text>
+<text class="text" x="660" y="360" text-anchor="start">No new page write.</text>
+<rect x="28" y="408" width="864" height="56" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="444" text-anchor="start">Queued work is still unfinished; this is no frame offer.</text>
+</svg>

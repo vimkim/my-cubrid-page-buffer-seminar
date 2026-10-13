@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 570" role="img" aria-labelledby="title desc">
+<title id="title">A full queue leaves completion with page-flush</title>
+<desc id="desc">The copy write succeeded, but the completion queue is full. No BCB pointer for this page is inserted. The submitter retains completion responsibility, clears FLUSHING and wakes the flush waiter locally, without a direct allocator offer.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526563"/></marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 24px system-ui,sans-serif;fill:#172c2c}.text{font:22px system-ui,sans-serif;fill:#172c2c}.note{font:19px system-ui,sans-serif;fill:#526563}.mono{font:21px ui-monospace,monospace;fill:#172c2c}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dash{stroke-dasharray:7 5}</style></defs>
+<rect width="920" height="570" fill="#faf9f5"/>
+<text class="title" x="28" y="43" text-anchor="start">A full queue leaves completion with page-flush</text>
+<text class="note" x="28" y="74" text-anchor="start">Constructed source scenario · CUBRID f799e05 · Not a runtime observation</text>
+<rect x="28" y="110" width="352" height="125" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="144" text-anchor="start">Page-flush</text>
+<text class="text" x="46" y="180" text-anchor="start">Copy write succeeded</text>
+<text class="text" x="46" y="210" text-anchor="start">BCB for P: FLUSHING = 1</text>
+<rect x="542" y="110" width="350" height="125" rx="5" fill="#f8eee3" stroke="#ad5c16" stroke-width="2"/>
+<text class="head" x="560" y="144" text-anchor="start">Queue: FULL</text>
+<text class="text" x="560" y="180" text-anchor="start">Insertion fails</text>
+<text class="text" x="560" y="210" text-anchor="start">No item for this BCB</text>
+<path class="flow" d="M380 171H500"/>
+<text class="note" x="408" y="146" text-anchor="start">try insertion</text>
+<text class="title" x="511" y="181" text-anchor="start" style="fill:#ad5c16">×</text>
+<rect x="28" y="285" width="352" height="176" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="319" text-anchor="start">Local completion</text>
+<text class="text" x="46" y="355" text-anchor="start">Lock the BCB</text>
+<text class="text" x="46" y="385" text-anchor="start">FLUSHING: 1 → 0</text>
+<text class="text" x="46" y="415" text-anchor="start">Wake flush waiter</text>
+<path class="flow" d="M204 239V281"/>
+<text class="note" x="220" y="267" text-anchor="start">responsibility stays here</text>
+<rect x="542" y="285" width="350" height="176" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="560" y="319" text-anchor="start">Allocator still waits</text>
+<text class="text" x="560" y="355" text-anchor="start">No direct offer in this branch</text>
+<text class="text" x="560" y="385" text-anchor="start">No deferred item for P</text>
+<text class="text" x="560" y="415" text-anchor="start">Another supplier is needed</text>
+<rect x="28" y="488" width="864" height="56" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="524" text-anchor="start">Delegation failed after the copy write had succeeded.</text>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 535" role="img" aria-labelledby="title desc">
+<title id="title">A reader can revoke an existing offer</title>
+<desc id="desc">Allocator B has an offer for clean page P. Before receipt, reader A fixes P and retains its fix. B locks the BCB, rejects the revoked offer and retries. The page identity and contents remain unchanged; later unfix does not restore the old offer.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526563"/></marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 24px system-ui,sans-serif;fill:#172c2c}.text{font:22px system-ui,sans-serif;fill:#172c2c}.note{font:19px system-ui,sans-serif;fill:#526563}.mono{font:21px ui-monospace,monospace;fill:#172c2c}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dash{stroke-dasharray:7 5}</style></defs>
+<rect width="920" height="535" fill="#faf9f5"/>
+<text class="title" x="28" y="43" text-anchor="start">A reader can revoke an existing offer</text>
+<text class="note" x="28" y="74" text-anchor="start">Constructed source scenario · CUBRID f799e05 · Not a runtime observation</text>
+<rect x="28" y="110" width="252" height="183" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="144" text-anchor="start">1. Offer to B</text>
+<text class="text" x="46" y="180" text-anchor="start">P: clean, unused</text>
+<text class="text" x="46" y="210" text-anchor="start">Offer is pending</text>
+<text class="text" x="46" y="240" text-anchor="start">B has no frame yet</text>
+<rect x="334" y="110" width="252" height="183" rx="5" fill="#f8eee3" stroke="#ad5c16" stroke-width="2"/>
+<text class="head" x="352" y="144" text-anchor="start">2. A fixes P</text>
+<text class="text" x="352" y="180" text-anchor="start">Reader holds a fix</text>
+<text class="text" x="352" y="210" text-anchor="start">Offer is revoked</text>
+<text class="text" x="352" y="240" text-anchor="start">P is still clean</text>
+<rect x="640" y="110" width="252" height="183" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="658" y="144" text-anchor="start">3. B receives</text>
+<text class="text" x="658" y="180" text-anchor="start">Lock and recheck</text>
+<text class="text" x="658" y="210" text-anchor="start">Reject this offer</text>
+<text class="text" x="658" y="240" text-anchor="start">Retry allocation</text>
+<path class="flow" d="M280 200H332"/>
+<text class="note" x="285" y="321" text-anchor="start">before receipt</text>
+<path class="flow" d="M586 200H638"/>
+<text class="note" x="590" y="321" text-anchor="start">recheck</text>
+<rect x="28" y="332" width="864" height="96" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="366" text-anchor="start">If A later releases its fix</text>
+<text class="text" x="46" y="402" text-anchor="start">The old offer stays revoked. A new offer needs a new valid supplier step.</text>
+<rect x="28" y="453" width="864" height="56" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="489" text-anchor="start">Same identity and same bytes do not mean no current user.</text>
+</svg>

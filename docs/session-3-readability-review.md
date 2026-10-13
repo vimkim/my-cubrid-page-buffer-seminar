@@ -13,6 +13,57 @@ This is an author audit outside participant navigation. The rewrite makes the st
 
 Work item 343 subsequently revises Chapter 05 into twelve first-pass screens and sixteen maintainer-analysis screens. Its [accepted outline, six new local-definition/reset entries and source qualifications](post-flush-readability-design.md) supplement the historical Chapter 05 ledger below. All original anchors, questions, source routes and trace snapshots are retained. Current page fingerprints remain pending human acceptance.
 
+## Chapter 05 case visuals (work item 361)
+
+The paired `05-post-flush.html` pages now display thirteen small, shared English
+SVGs in `assets/`. Each figure follows its visible starting conditions and has
+localized alternative text and a claim-stating caption. The diagrams are
+constructed source scenarios, not runtime observations. They supplement the
+existing state traces; the full mechanism map stays in its native disclosure.
+
+- The continuing normal example has one figure each at
+  `successful-submission`, `completion-handoff`, `successful-offer`, and
+  `successful-receipt`. The offer diagram preserves the protected check and
+  offer/FLUSHING update before the common completion tail. The receipt diagram
+  separates receiver validation from later removal of the old lookup mapping.
+- Independent resets at `flush-waiter-completion`, `handoff-part-2`,
+  `redirty-case`, `post-part-3`, and `post-part-2` show, respectively, attached
+  flush-waiter exclusion, local completion after failed insertion, preserved
+  newer dirty work, reader revocation of an existing offer, and current-quota
+  rejection before creating an offer. Existing local definitions remain before
+  every diagram's teaching labels.
+- `flush-waiter-wakeup` shows FLUSH entries leaving the linked list while READ
+  and WRITE stay. `clean-unfix-handoff` separates ordinary release from a later
+  conditional supplier operation. Neither notification nor release establishes
+  allocator receipt.
+- `handoff-mechanism` explicitly resets to a **pre-write** candidate example;
+  the stable BCB address may represent a different VPID. It does not suggest
+  ordinary frame reuse while queued FLUSHING is outstanding.
+- `handoff-removal` compares the actual receiving check with two teaching
+  alternatives. An added visible premise before the figure establishes a
+  clean, unused eligible frame, the pending allocator, the new reader, and a
+  separate reset for each row. The later trace retains its own definitions.
+
+The source review uses pinned `page_buffer.c:10925–10952,15429–15660,9266–9309`
+for delegation, offer, completion, receipt, and waiter exclusion, plus the
+existing candidate-identity and release source routes. New figures preserve the
+write-path acceptance boundary and introduce no runtime or fairness claim.
+Text bounds and overlaps are checked in headless Chromium; the scrollable image
+region keeps labels readable at mobile width and the full-size link opens the
+standalone SVG. This author review supplies no human Korean review receipt.
+
+Validation: the guide source aggregate and the bilingual audience, link,
+technical, language/accessibility and static-interaction gates pass. Headless
+checks cover all thirteen SVG text bounds and 104 figure instances across
+EN/KO, desktop/mobile, and JavaScript/no-JavaScript modes, including keyboard
+scrolling, full-size links, disclosures and presentation navigation. The existing
+Session 3 browser suites pass 26 of 27 tests; the remaining failure is a local
+server request for the absent `/favicon.ico`. The served guide requests all 131
+resources successfully, but reports that same unrelated favicon render error.
+The full bilingual aggregate also retains its existing missing/stale human
+review receipts and root-page favicon error. These gates are disclosed rather
+than recorded as passing.
+
 ## Physical-page ownership
 
 Exactly 27 distinct clean-context authors own the 27 physical HTML pages. Revisions return to the original author. Every author used a separate sibling worktree and staged only the assigned HTML. Input and final author commits below are integration-history evidence; a continued author records the selected continuation input. Each original Korean dispatch contained the reviewed initial English rewrite. Later English corrections were returned to the same physical-page authors and compared again. Shared definitions, metadata, visuals, script and checks belong to the coordinator.

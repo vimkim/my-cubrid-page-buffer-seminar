@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 540" role="img" aria-labelledby="title desc">
+<title id="title">Passing current checks permits an offer</title>
+<desc id="desc">Post-flush holds the BCB mutex and checks the current frame. In this normal example the page is clean, unused, waiter-free, in shared LRU3 and otherwise eligible. Offering clears FLUSHING, but receipt remains separate.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526563"/></marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 24px system-ui,sans-serif;fill:#172c2c}.text{font:22px system-ui,sans-serif;fill:#172c2c}.note{font:19px system-ui,sans-serif;fill:#526563}.mono{font:21px ui-monospace,monospace;fill:#172c2c}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dash{stroke-dasharray:7 5}</style></defs>
+<rect width="920" height="540" fill="#faf9f5"/>
+<text class="title" x="28" y="43" text-anchor="start">Passing current checks permits an offer</text>
+<text class="note" x="28" y="74" text-anchor="start">Constructed source scenario · CUBRID f799e05 · Not a runtime observation</text>
+<rect x="28" y="105" width="864" height="292" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="139" text-anchor="start">Post-flush holds the BCB mutex</text>
+<rect x="46" y="159" width="410" height="175" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="64" y="193" text-anchor="start">Current page P passes</text>
+<text class="text" x="64" y="229" text-anchor="start">Clean; no user or attached waiter</text>
+<text class="text" x="64" y="259" text-anchor="start">Cold candidate region</text>
+<text class="text" x="64" y="289" text-anchor="start">Shared-list policy permits offer</text>
+<rect x="542" y="159" width="332" height="175" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="560" y="193" text-anchor="start">Live allocator found</text>
+<text class="text" x="560" y="229" text-anchor="start">Offer marker set</text>
+<text class="text" x="560" y="259" text-anchor="start">FLUSHING: 1 → 0</text>
+<text class="text" x="560" y="289" text-anchor="start">Pointer + notification</text>
+<path class="flow" d="M456 248H540"/>
+<text class="note" x="460" y="344" text-anchor="start">checks pass</text>
+<text class="text" x="46" y="373" text-anchor="start">Common tail: ensure FLUSHING is clear; check flush waiters; unlock.</text>
+<rect x="28" y="458" width="864" height="56" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="494" text-anchor="start">The frame is offered. The receiver must still validate it.</text>
+</svg>

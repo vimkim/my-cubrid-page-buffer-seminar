@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 540" role="img" aria-labelledby="title desc">
+<title id="title">A stable BCB address can hold a different page</title>
+<desc id="desc">This separate pre-write candidate example selects page P in frame F. Later, before this candidate is checked, the same BCB storage can represent page Q. Page-flush locks the BCB and compares the saved VPID with the current identity before writing.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526563"/></marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 24px system-ui,sans-serif;fill:#172c2c}.text{font:22px system-ui,sans-serif;fill:#172c2c}.note{font:19px system-ui,sans-serif;fill:#526563}.mono{font:21px ui-monospace,monospace;fill:#172c2c}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dash{stroke-dasharray:7 5}</style></defs>
+<rect width="920" height="540" fill="#faf9f5"/>
+<text class="title" x="28" y="43" text-anchor="start">A stable BCB address can hold a different page</text>
+<text class="note" x="28" y="74" text-anchor="start">Constructed source scenario · CUBRID f799e05 · Not a runtime observation</text>
+<rect x="28" y="110" width="352" height="154" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="144" text-anchor="start">At candidate selection</text>
+<text class="text" x="46" y="180" text-anchor="start">Frame F holds page P</text>
+<text class="text" x="46" y="210" text-anchor="start">Save the BCB pointer</text>
+<text class="text" x="46" y="240" text-anchor="start">Save P’s VPID</text>
+<rect x="542" y="110" width="350" height="154" rx="5" fill="#f8eee3" stroke="#ad5c16" stroke-width="2"/>
+<text class="head" x="560" y="144" text-anchor="start">Later, before writing</text>
+<text class="text" x="560" y="180" text-anchor="start">Same frame F / BCB address</text>
+<text class="text" x="560" y="210" text-anchor="start">Current page can be Q</text>
+<text class="text" x="560" y="240" text-anchor="start">Pointer alone is insufficient</text>
+<path class="flow" d="M380 183H540"/>
+<text class="note" x="417" y="161" text-anchor="start">time passes</text>
+<rect x="28" y="326" width="864" height="104" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="360" text-anchor="start">Page-flush locks the BCB and compares identities</text>
+<text class="text" x="46" y="396" text-anchor="start">Saved P ≠ current Q: reject the stale candidate before page writing.</text>
+<path class="flow" d="M717 268V305H460V322"/>
+<text class="note" x="550" y="295" text-anchor="start">revalidate</text>
+<rect x="28" y="458" width="864" height="56" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="494" text-anchor="start">This is a pre-write example, separate from the queued flush.</text>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 650" role="img" aria-labelledby="title desc">
+<title id="title">Three designs react differently to a new reader</title>
+<desc id="desc">From the same eligible offered frame, compare implemented receiving recheck, a teaching model without that check, and a teaching alternative that reserves the frame and blocks new fixes. The actual path rejects a revoked offer; alternatives have different permission rules.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526563"/></marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 24px system-ui,sans-serif;fill:#172c2c}.text{font:22px system-ui,sans-serif;fill:#172c2c}.note{font:19px system-ui,sans-serif;fill:#526563}.mono{font:21px ui-monospace,monospace;fill:#172c2c}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dash{stroke-dasharray:7 5}</style></defs>
+<rect width="920" height="650" fill="#faf9f5"/>
+<text class="title" x="28" y="43" text-anchor="start">Three designs react differently to a new reader</text>
+<text class="note" x="28" y="74" text-anchor="start">Pinned mechanism + two teaching alternatives · No measured results</text>
+<text class="head" x="28" y="120" text-anchor="start">Design</text>
+<text class="head" x="346" y="120" text-anchor="start">Reader attempts a fix</text>
+<text class="head" x="666" y="120" text-anchor="start">Allocator outcome</text>
+<rect x="28" y="152" width="272" height="94" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="186" text-anchor="start">Actual CUBRID</text>
+<rect x="346" y="152" width="272" height="94" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="364" y="186" text-anchor="start">Reader may fix</text>
+<rect x="664" y="152" width="228" height="94" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="682" y="186" text-anchor="start">Reject offer</text>
+<path class="flow" d="M300 203H344"/>
+<path class="flow" d="M618 203H662"/>
+<rect x="28" y="278" width="272" height="94" rx="5" fill="#f8eee3" stroke="#ad5c16" stroke-width="2"/>
+<text class="head" x="46" y="312" text-anchor="start">Unchecked model</text>
+<rect x="346" y="278" width="272" height="94" rx="5" fill="#f8eee3" stroke="#ad5c16" stroke-width="2"/>
+<text class="head" x="364" y="312" text-anchor="start">Reader may fix</text>
+<rect x="664" y="278" width="228" height="94" rx="5" fill="#f8eee3" stroke="#ad5c16" stroke-width="2"/>
+<text class="head" x="682" y="312" text-anchor="start">Overwrite</text>
+<path class="flow" d="M300 329H344"/>
+<path class="flow" d="M618 329H662"/>
+<rect x="28" y="404" width="272" height="94" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="438" text-anchor="start">Reserved model</text>
+<rect x="346" y="404" width="272" height="94" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="364" y="438" text-anchor="start">Reader waits</text>
+<rect x="664" y="404" width="228" height="94" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="682" y="438" text-anchor="start">Claim frame</text>
+<path class="flow" d="M300 455H344"/>
+<path class="flow" d="M618 455H662"/>
+<text class="text" x="28" y="548" text-anchor="start">The reservation alternative also needs cancellation and shutdown cleanup.</text>
+<rect x="28" y="568" width="864" height="56" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="604" text-anchor="start">The actual implementation permits new use, then rechecks.</text>
+</svg>

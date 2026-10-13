@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 590" role="img" aria-labelledby="title desc">
+<title id="title">Current quota can prevent creation of an offer</title>
+<desc id="desc">An otherwise eligible clean page belongs to a private replacement list of 80 pages. The quota changes from 60 to 100 before the consumer checks it. The list is no longer over quota. Post-flush clears FLUSHING but creates no offer.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526563"/></marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 24px system-ui,sans-serif;fill:#172c2c}.text{font:22px system-ui,sans-serif;fill:#172c2c}.note{font:19px system-ui,sans-serif;fill:#526563}.mono{font:21px ui-monospace,monospace;fill:#172c2c}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dash{stroke-dasharray:7 5}</style></defs>
+<rect width="920" height="590" fill="#faf9f5"/>
+<text class="title" x="28" y="43" text-anchor="start">Current quota can prevent creation of an offer</text>
+<text class="note" x="28" y="74" text-anchor="start">Constructed source scenario · CUBRID f799e05 · Not a runtime observation</text>
+<rect x="28" y="110" width="410" height="110" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="144" text-anchor="start">At queue insertion</text>
+<text class="text" x="46" y="180" text-anchor="start">Private list: 80 pages; quota: 60</text>
+<rect x="502" y="110" width="390" height="110" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="520" y="144" text-anchor="start">At consumption</text>
+<text class="text" x="520" y="180" text-anchor="start">Same 80 pages; new quota: 100</text>
+<path class="flow" d="M438 164H500"/>
+<text class="note" x="442" y="100" text-anchor="start">policy update</text>
+<rect x="46" y="258" width="300" height="38" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<rect x="46" y="258" width="240" height="38" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<path d="M226 243V308" stroke="#ad5c16" stroke-width="3"/>
+<text class="head" x="46" y="339" text-anchor="start">80 &gt; 60: over quota</text>
+<text class="note" x="46" y="372" text-anchor="start">Filled bar: pages   |   Line: quota</text>
+<rect x="520" y="258" width="300" height="38" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<rect x="520" y="258" width="240" height="38" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<path d="M820 243V308" stroke="#ad5c16" stroke-width="3"/>
+<text class="head" x="520" y="339" text-anchor="start">80 &lt; 100: retained</text>
+<text class="note" x="520" y="372" text-anchor="start">Filled bar: pages   |   Line: quota</text>
+<rect x="28" y="405" width="864" height="76" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="439" text-anchor="start">Consumer: no offer; clear earlier FLUSHING (1 → 0).</text>
+<rect x="28" y="508" width="864" height="56" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="544" text-anchor="start">An unused clean page can remain under retention policy.</text>
+</svg>

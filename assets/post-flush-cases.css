@@ -1,0 +1,11 @@
+.post-flush-case { margin: 1.5rem 0; }
+.post-flush-case-scroll { max-width: 100%; overflow-x: auto; }
+.post-flush-case .diagram { min-width: 680px; margin: 0; }
+.post-flush-case figcaption { margin-top: .6rem; color: var(--muted); font-size: .95rem; }
+.post-flush-case figcaption a { display: inline-block; margin-inline-start: .5rem; }
+.post-flush-mobile-hint { display: none; }
+.post-flush-case-scroll:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+@media (max-width: 700px) {
+  .post-flush-case-scroll { border: 1px solid var(--line); }
+  .post-flush-mobile-hint { display: block; margin-bottom: .5rem; color: var(--muted); font-size: .9rem; }
+}

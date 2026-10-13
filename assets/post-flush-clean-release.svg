@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" role="img" aria-labelledby="title desc">
+<title id="title">Releasing use is not handing over a frame</title>
+<desc id="desc">In a pool whose frames are all fixed, an allocator waits. Final unfix releases use of a clean page and can change replacement placement. It does not by itself promise a direct frame offer. Post-flush only consumes queued completion records.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526563"/></marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 24px system-ui,sans-serif;fill:#172c2c}.text{font:22px system-ui,sans-serif;fill:#172c2c}.note{font:19px system-ui,sans-serif;fill:#526563}.mono{font:21px ui-monospace,monospace;fill:#172c2c}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dash{stroke-dasharray:7 5}</style></defs>
+<rect width="920" height="500" fill="#faf9f5"/>
+<text class="title" x="28" y="43" text-anchor="start">Releasing use is not handing over a frame</text>
+<text class="note" x="28" y="74" text-anchor="start">Constructed source scenario · CUBRID f799e05 · Not a runtime observation</text>
+<rect x="28" y="110" width="252" height="154" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="144" text-anchor="start">Before release</text>
+<text class="text" x="46" y="180" text-anchor="start">Clean resident page</text>
+<text class="text" x="46" y="210" text-anchor="start">User holds a fix</text>
+<text class="text" x="46" y="240" text-anchor="start">Allocator waits</text>
+<rect x="334" y="110" width="252" height="154" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="352" y="144" text-anchor="start">Final unfix</text>
+<text class="text" x="352" y="180" text-anchor="start">No outstanding fix</text>
+<text class="text" x="352" y="210" text-anchor="start">Replacement order</text>
+<text class="text" x="352" y="240" text-anchor="start">may change</text>
+<rect x="640" y="110" width="252" height="154" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="658" y="144" text-anchor="start">New supplier</text>
+<text class="text" x="658" y="180" text-anchor="start">Find a candidate</text>
+<text class="text" x="658" y="210" text-anchor="start">Check current state</text>
+<text class="text" x="658" y="240" text-anchor="start">Then create an offer</text>
+<path class="flow" d="M280 186H332"/>
+<text class="note" x="284" y="290" text-anchor="start">release use</text>
+<path class="flow dash" d="M586 186H638"/>
+<text class="note" x="582" y="290" text-anchor="start">later opportunity</text>
+<rect x="28" y="310" width="864" height="80" rx="5" fill="#fff" stroke="#bccdc5" stroke-width="2"/>
+<text class="head" x="46" y="344" text-anchor="start">Post-flush processes its queue, not every released page.</text>
+<rect x="28" y="418" width="864" height="56" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="454" text-anchor="start">Clean and unfixed alone do not establish allocator receipt.</text>
+</svg>

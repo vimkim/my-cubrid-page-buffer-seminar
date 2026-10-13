@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 600" role="img" aria-labelledby="title desc">
+<title id="title">Finish the earlier copy; preserve new changes</title>
+<desc id="desc">After the earlier copy was accepted, a writer modifies the resident page and keeps its fix. Post-flush sees dirty and protected current state and makes no offer. Clearing the earlier FLUSHING leaves later DIRTY and use protection intact.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#526563"/></marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 24px system-ui,sans-serif;fill:#172c2c}.text{font:22px system-ui,sans-serif;fill:#172c2c}.note{font:19px system-ui,sans-serif;fill:#526563}.mono{font:21px ui-monospace,monospace;fill:#172c2c}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dash{stroke-dasharray:7 5}</style></defs>
+<rect width="920" height="600" fill="#faf9f5"/>
+<text class="title" x="28" y="43" text-anchor="start">Finish the earlier copy; preserve new changes</text>
+<text class="note" x="28" y="74" text-anchor="start">Constructed source scenario · CUBRID f799e05 · Not a runtime observation</text>
+<text class="head" x="28" y="120" text-anchor="start">Earlier copy</text>
+<text class="head" x="488" y="120" text-anchor="start">Current resident page P</text>
+<rect x="28" y="144" width="380" height="110" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="178" text-anchor="start">Write path accepted it</text>
+<text class="text" x="46" y="214" text-anchor="start">The copy does not change.</text>
+<rect x="488" y="144" width="404" height="110" rx="5" fill="#f8eee3" stroke="#ad5c16" stroke-width="2"/>
+<text class="head" x="506" y="178" text-anchor="start">Writer changes P</text>
+<text class="text" x="506" y="214" text-anchor="start">New contents; user keeps a fix</text>
+<path class="flow" d="M690 258V306"/>
+<text class="note" x="505" y="292" text-anchor="start">check state</text>
+<rect x="488" y="310" width="404" height="148" rx="5" fill="#f8eee3" stroke="#ad5c16" stroke-width="2"/>
+<text class="head" x="506" y="344" text-anchor="start">Do not offer this frame</text>
+<text class="text" x="506" y="380" text-anchor="start">DIRTY stays 1</text>
+<text class="text" x="506" y="410" text-anchor="start">Current use stays protected</text>
+<text class="text" x="506" y="440" text-anchor="start">Allocator receives no offer</text>
+<rect x="28" y="310" width="380" height="148" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="344" text-anchor="start">Finish earlier completion</text>
+<text class="text" x="46" y="380" text-anchor="start">FLUSHING: 1 → 0</text>
+<text class="text" x="46" y="410" text-anchor="start">Wake its attached flush waiter</text>
+<text class="text" x="46" y="440" text-anchor="start">Start no new page write</text>
+<path class="flow" d="M218 258V306"/>
+<text class="note" x="44" y="292" text-anchor="start">finish old flush</text>
+<rect x="28" y="518" width="864" height="56" rx="5" fill="#e7f0e9" stroke="#006b59" stroke-width="2"/>
+<text class="head" x="46" y="554" text-anchor="start">FLUSHING = 0 can coexist with DIRTY = 1.</text>
+</svg>
