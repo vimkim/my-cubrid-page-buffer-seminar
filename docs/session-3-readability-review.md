@@ -2884,8 +2884,9 @@ zero dirty suggestion, adds 64 and publishes 192; its 16 KiB/50 ms minimum is
 128. Neither example reports throughput.
 
 The single trace uses fixed mode at 140 pages/s, actual 50 ms intervals, an
-initialized bucket, and one ordinary participating writer with no log critical
-section. Its timeline is continuous: publish 7; successfully write 4 then charge
+initialized bucket whose timestamp-only daemon execution has already run, and
+one ordinary participating writer with no log critical section. Zero milliseconds
+marks a later refresh, not server startup. Its timeline is continuous: publish 7; successfully write 4 then charge
 to leave 3; replace 3 with 7; successfully write 9 more, consume 7 and wait for
 2; refresh to 7, wake, charge 2 and leave 5. OS-write counts total 13 at the end;
 unaccounted page charges are zero. No branch resets into a second writer.
@@ -2933,3 +2934,14 @@ are under `/tmp/flush-control-simple-359/`. No storage experiment was run.
 The task checkout is `/home/vimkim/gh/my-cubrid-page-buffer-seminar-flush-control-simple`,
 branch `docs/flush-control-simple`, based on `f5f5d6dc0a6f09d5b0906e544084af125f453b93`.
 Local integration into `main` requires the repository's one merge approval.
+
+
+The code-review Standards and Spec agents independently reviewed the task diff
+from `f5f5d6dc` through `84fa315`. Standards: zero actionable documented-standard
+violations or applicable code smells. Spec: zero material gaps, scope expansion
+or incorrect behavior. The final trace prerequisite explicitly places its zero
+point after the timestamp-only execution and names the participating file-write
+mode separately from the OS write. Its 78 focused browser checks pass again.
+Both presenter companions also pass desktop/mobile bounds with and without
+JavaScript. The current companion has 103 ordered source cues and 430 resolving
+local links; the full companion's links retain Markdown heading-anchor checks.
