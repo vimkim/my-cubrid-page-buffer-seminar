@@ -372,6 +372,8 @@ Focused post-correction checks PASS: diff whitespace, exact code/pre/href/data/d
 | --- | --- |
 | `workload` | Full pool, absent requested page, dirty resident candidate; defines frame, BCB address, VPID and mutex; separates address, identity and current permission. |
 | `first-code-path` | Eligible cold dirty page, single-page/direct-write branch; stable image, WAL-before-data, direct calls and DWB/direct submission boundary. |
+| `replacement-list` **added** | Notebook-copy analogy defines page/frame, dirty/clean, one of several private/shared linked BCB lists, and bottom/LRU3. Clean contains data and does not certify reuse or synchronized persistence. |
+| `tail-reveal` **added** | Independent two-entry LRU3 tail: unused, waiter-free, nonflushing dirty → eligible clean; no interference, protected clean recheck succeeds. Request thread detaches clean candidate, checks current dirty bottom, wakes page-flush if its object exists, and returns the selected candidate. Dirty state was already present; only the tail changes. |
 | `trigger` | Waiting allocator, direct-victim supply, gate-controlled task opportunities; initial task, finite timer/wake-only policy, pressure predicates and wake producers. |
 | `flush-loop-boundaries` **added** | Existing pointer versus gate permission; wait-result classification, forced first helper call, pressure continuation, ignored error, positive-budget/no-candidate hint, inner-loop versus shutdown stop. |
 | `trigger-part-2` | Independent Q08 setup: open gate, sleeping-worker wake, LSA 300 requirement versus durable 250; unfinished zero-submission observation and next-event reasoning. |
@@ -394,7 +396,7 @@ Focused post-correction checks PASS: diff whitespace, exact code/pre/href/data/d
 | `flush-diagnostics` **added** | Observed skipping plus remaining wait; hidden online logging default/read effect, grouped-counter limits, proposed timeline requirement. |
 | `experiment` | Independently restore the initial candidate for identity/fix/DIRTY interventions; hypothesis, precise probe fields, falsifier, configuration, collection and observer effects. Remains unexecuted. |
 
-All 17 old screen IDs remain. Navigation contains all 23 final screens in authored order, and each eyebrow uses that order. Original chapter/counterpart routes, source pins, source URLs, controls, native answer disclosures and no-JavaScript content remain. No displayed SVG is used by this page and no shared visual was edited.
+All 17 old screen IDs remain. Navigation contains all 26 current screens in authored order, and each eyebrow uses that order. Original chapter/counterpart routes, source pins, source URLs, controls, native answer disclosures and no-JavaScript content remain. No displayed SVG is used by this page and no shared visual was edited.
 
 ### Exact teaching-label ledger
 | Registered exact label | First-use screen / preceding visible definition | Local restatements |
@@ -415,7 +417,8 @@ All listed definitions are actual visible `<p data-teaching-def="...">` paragrap
 | --- | --- |
 | Frame / page-flush / dirty / BCB / VPID / mutex | `workload`: memory slot, background server thread, pending modified-byte write, control record, current logical identity, mutually exclusive metadata/list access. |
 | Cold / stable image / DWB / WAL / submission | `first-code-path`: low retention priority, immutable captured bytes, optional downstream staging, durable recovery log preceding data, configured DWB/direct boundary. |
-| Allocator / direct victim / boot gate / accepted wake | `trigger`: code needing a frame, eligible frame offered by another thread, recovery permission, another opportunity to check work. |
+| Clean / LRU list / bottom / LRU3 / allocator | `replacement-list` and `tail-reveal`: clear DIRTY flag, linked BCB replacement ordering, selected list tail, cold replacement zone, and frame-finding code run by the requesting server thread. The independent tail example restates dirty/clean, lists and actors locally. |
+| Direct victim / boot gate / accepted wake | `trigger`: eligible frame offered by another thread, recovery permission, another opportunity to check work. |
 | Wait-result / stop_iteration / shutdown stop | `flush-loop-boundaries`: zero-duration true return is not an external signal; no-candidate search hint differs from outer-loop termination and success. |
 | LSA / log-flush | `trigger-part-2`: ordered log position and the actor that can advance the required recovery-log boundary. |
 | LRU / LRU3 / fix / fcnt / DIRTY / FLUSHING | `selection` and `selection-current-checks`: retention ordering/cold zone, caller-use protection/count, pending resident write and outstanding captured-image completion. Each later trace restates relevant state. |
@@ -2497,3 +2500,64 @@ The author compared the paired premises, analogy, impact, source excerpts and re
 Pre-integration validation: 22 source/contents/definition tests and 27 existing Session 3/browser tests passed, with zero failures or skips. A further 54 focused checks covered the three new screen pairs in reading and presentation modes, native disclosures, 1920/390/320 widths, and no-JavaScript reading; no horizontal overflow or render error was found. The Maintainer Guide aggregate passed all source gates, 114 HTTP resources and live DOM checks for 43 pages. Technical parity passed for 78 pairs. The full served bilingual aggregate has only the 174 pre-existing review-record failures (78 pending human receipts and 96 stale historical fingerprints), so it is not reported as a full aggregate pass. Temporary harness, logs and screenshots are under `/tmp/page-flush-lost-wakeup-347/`.
 
 Approved integration: rebased onto clean local main `028b800`. Conflict resolution preserves all 28 main section bodies and all three approved screen bodies exactly apart from screen ordinals. It also preserves other chapters' contents/spoken changes and other authors' review ledger entries. The integration population is 31 chapter-03 screens. Repeated validation passed the same 22 source tests, all 27 existing browser tests and 54 focused new-screen checks with no failures or skips, plus the audience/technical contracts and the guide source/114 HTTP/43 DOM aggregate. The served bilingual aggregate retains only 78 pending human receipts and 96 stale historical fingerprints. The temporary reconstruction script failed once before the source was rebuilt; the final task files were checked explicitly for absent conflict markers and exact preservation of both source populations. Rebase verification logs use `/tmp/page-flush-lost-wakeup-347/rebase-*`.
+
+## Clean-tail wording follow-up (2026-10-13)
+
+Chapter 04 now has 26 screens. The paired `replacement-list` and `tail-reveal`
+screens precede `trigger` in the regular Session 3 HTML. They explain clean/dirty,
+the linked BCB list, the selected list's tail and the two search actors, using a
+notebook-copy analogy and a before/after table. No separate audience reference
+was added. All previous anchors, question IDs and trace outcomes remain.
+
+The tail example resets independently: the new requested page is absent, no
+unused frame remains, the selected LRU3 ends with dirty → clean, neither page has
+users/waiters/an ongoing flush, the clean candidate passes its protected recheck,
+and no competing thread intervenes. The request thread runs allocator/victim
+code, removes the clean BCB, checks the current tail, calls page-flush wake when
+that tail is dirty and the daemon object exists, then returns the selected
+candidate. The dirty page was already dirty; only its list position changes.
+Page-flush is a separate background thread looking for dirty write candidates.
+Clean means a clear DIRTY flag, not empty bytes, reuse permission or synchronized
+disk persistence.
+
+Source review used clean `page_buffer.c/.h` at CUBRID
+`f799e05d77d5300c6ea5753b4a6cc7caee6d8912`, including `9256–9312` for users and
+waiters, `9443–9479` for protected candidate removal/current-bottom wake, and
+`3789–3848` for the daemon's dirty-candidate collection. The actual wake condition
+also applies after removing a candidate away from the tail; both editions and the
+original trigger sentence retain this qualification. This is a constructed
+source explanation, with no new engine experiment or performance claim.
+
+Agent EN–KO editorial comparison retained the same object definitions, starting
+conditions, before/after order, actor responsibilities, source condition and
+completion limits. Both local menus, all three contents maps and the Korean
+spoken map include the two screens in chapter order. Changed chapter/contents
+fingerprints were refreshed using the aggregate's normalized fingerprint report;
+pending human review remains pending.
+
+Validation against the task checkout served at `http://127.0.0.1:3989`:
+
+- Session 3 live/browser, definition and contents suites: PASS, 31 tests, zero
+  failures or skips. Covers direct screen entry, keyboard navigation, native
+  answers, all trace outcomes/resets, spoken cues, mobile widths and no-JavaScript
+  access.
+- New-screen headless/source review: both languages, presentation and ordinary
+  reading, with and without JavaScript, at 1920/390/320 px; no horizontal overflow
+  or page errors. Korean projected screenshots were also inspected.
+- Maintainer Guide aggregate: PASS, 43 Markdown pages, relative links, 71 displayed
+  SVGs with no orphans, English prose, 114 HTTP resources and 43 live-DOM pages.
+- Bilingual aggregate: no unexpected failures; every non-review gate passed.
+  Explicit served gate: PASS, 351 HTTP resources and 158 live-DOM pages. Existing
+  review limitations remain 78 missing Korean human receipts and 96 historical
+  stale fingerprints; the changed pairs have current fingerprints.
+- `git diff --check` and this author ledger's Copyparty Markdown source/render
+  checks passed. No human language acceptance or participant mastery is claimed.
+
+Approved local integration: rebased onto `0c4db67`, preserving its new plain-language
+search-loop explanation and all other destination screen bodies and contents
+entries. Both new clean-tail screens retain their exact authored bodies. The
+local chapter menu also uses the search-loop screen's actual updated heading.
+Final integrated verification passed the 31 Session 3 live/definition/contents
+tests with no failures or skips, audience and technical contracts, and every
+non-review bilingual aggregate gate. The existing 78 missing human receipts and
+96 stale historical fingerprints remain the only bilingual aggregate failures.
