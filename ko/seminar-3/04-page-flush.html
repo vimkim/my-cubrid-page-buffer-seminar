@@ -111,26 +111,37 @@
 <section class="section" id="selection-part-3">
 <div class="eyebrow">04 · 9 / 23</div><h2>현재의 fix는 왜 기억한 후보를 거절하게 할까?</h2>
 <div class="state-trace" data-state-trace="" id="candidate-state-trace"><h3>페이지 식별자는 같지만 reader가 사용 상태를 바꾼다</h3><p class="trace-assumptions" data-teaching-def="P F A Q"><strong>독립적으로 초기화한 사례:</strong> <code>P</code>는 메모리에 있는 dirty 페이지입니다. <code>F</code>는 그 프레임의 관리 레코드인 BCB의 주소입니다. <code>A</code>는 fix를 얻고 유지할 reader 스레드입니다. <code>Q</code>는 마지막의 식별자 변경 비교에만 쓰는 다른 페이지입니다.</p><p>페이지는 cold victim 영역인 <code>LRU3</code>에서 시작하며 fix가 없고(<code>fcnt=0</code>) 이전 flush도 없습니다(<code>FLUSHING=0</code>). Page-flush는 목록 mutex를 놓은 뒤 BCB mutex를 잡습니다. 그 사이에 reader가 실행됩니다. Fix는 계속되는 사용을 보호하며, <code>DIRTY=1</code>은 메모리 내용의 기록 의무가 남아 있음을 뜻합니다.</p>
+<p><strong>여기서 fix는 reader가 페이지를 사용할 권한을 얻는 동작입니다.</strong> Reader는 사용을 마칠 때 <code>unfix</code>로 그 권한을 반납합니다. <code>fcnt</code>는 아직 반납되지 않은 fix의 개수입니다. Reader의 fix가 남아 있는 동안에는 그 프레임을 다른 페이지로 재사용할 수 없습니다.</p>
+<p><strong>“후보를 거절한다”는 page-flush가 이번에 이 후보를 쓰지 않고 건너뛴다는 뜻입니다.</strong> Reader의 fix 요청을 거절하거나 reader의 사용 권한을 빼앗는 동작이 아닙니다. 이 page-flush 경로는 재사용 준비를 위해 cold dirty 페이지를 찾고, 현재 fix가 있는 페이지는 건너뜁니다. 수집할 때 관찰한 <code>fcnt=0</code>을 나중의 쓰기 허가로 사용할 수 없는 이유를 아래 순서로 살펴봅니다.</p>
 <div class="trace-controls" hidden=""><button data-trace-previous="" type="button">이전</button><button data-trace-next="" type="button">다음</button><button data-trace-reset="" type="button">사례 초기화</button><button data-trace-all="" type="button">전체 단계 보기</button><output aria-atomic="true" aria-live="polite"></output></div><ol class="trace-steps">
 <li data-trace-step="0"><h4>1. Cold dirty P를 수집한다</h4><p><strong>주체 / 사건:</strong> LRU mutex를 잡은 page-flush</p><dl class="trace-lanes">
 <div><dt>Remembered candidate</dt><dd>BCB*=F; VPID=P</dd></div>
 <div><dt>Current BCB P</dt><dd>DIRTY=1; FLUSHING=0; LRU3; fcnt=0</dd></div>
 <div><dt>Protection / actor</dt><dd>LRU mutex held</dd></div>
 <div><dt>Submission</dt><dd>none</dd></div>
-</dl><p class="trace-guard"><strong>전이 조건:</strong> 수집 시점의 후보 상태를 관찰한다</p><p class="trace-change"><strong>변경 / 결과:</strong> BCB 주소와 페이지 식별자를 저장한다. 나중의 BCB 검사에 앞서 목록 mutex를 놓는다</p></li>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 수집 시점의 후보 상태를 관찰한다</p><p class="trace-change"><strong>변경 / 결과:</strong> BCB 주소와 페이지 식별자를 저장한다. 이때 fcnt=0을 관찰했지만, 후보 기록이 reader의 이후 fix를 막아 주지는 않는다. 나중의 BCB 검사에 앞서 목록 mutex를 놓는다</p></li>
 <li data-trace-step="1"><h4>2. 보호 공백에서 reader가 P를 fix한다</h4><p><strong>주체 / 사건:</strong> 목록 잠금 해제 후 reader A</p><dl class="trace-lanes">
 <div><dt>Remembered candidate</dt><dd>BCB*=F; VPID=P</dd></div>
 <div class="trace-changed"><dt>Current BCB P</dt><dd>DIRTY=1; FLUSHING=0; LRU3; fcnt=1</dd></div>
 <div class="trace-changed"><dt>Protection / actor</dt><dd>list unlocked; A holds fix</dd></div>
 <div><dt>Submission</dt><dd>none</dd></div>
-</dl><p class="trace-guard"><strong>전이 조건:</strong> 정상 fix가 현재 사용에 대한 보호를 확보한다</p><p class="trace-change"><strong>변경 / 결과:</strong> Reader가 fix를 유지하므로 fcnt가 0에서 1로 바뀐다. 저장한 페이지 식별자는 여전히 같지만 저장한 사용 상태는 이미 달라졌다</p></li>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 정상 fix가 현재 사용에 대한 보호를 확보한다</p><p class="trace-change"><strong>변경 / 결과:</strong> Reader가 fix를 유지하므로 fcnt가 0에서 1로 바뀐다. 이 사례에서는 DIRTY, FLUSHING, LRU3와 페이지 식별자는 그대로다. Reader는 P를 읽기만 해도 사용 권한을 보유하므로, “현재 아무도 사용하지 않는다”는 이전 관찰은 더 이상 맞지 않는다</p></li>
 <li data-trace-step="2"><h4>3. 보호된 재검사에서 거절한다</h4><p><strong>주체 / 사건:</strong> Page-flush가 BCB를 잠근다</p><dl class="trace-lanes">
 <div><dt>Remembered candidate</dt><dd>BCB*=F; VPID=P</dd></div>
 <div><dt>Current BCB P</dt><dd>DIRTY=1; FLUSHING=0; LRU3; fcnt=1</dd></div>
 <div class="trace-changed"><dt>Protection / actor</dt><dd>BCB mutex held</dd></div>
 <div class="trace-changed"><dt>Submission</dt><dd>rejected; none</dd></div>
-</dl><p class="trace-guard"><strong>전이 조건:</strong> 저장한 식별자, dirty 상태, 진행 중인 flush 없음, cold 영역, 충돌하는 fix·대기자·latch 없음이 필요하다. 그 뒤 WAL 준비 상태를 검사한다</p><p class="trace-change"><strong>변경 / 결과:</strong> 식별자 검사는 통과하지만 현재 fix 때문에 이 페이지를 거절한다. 대신 재사용으로 프레임의 페이지가 P에서 Q로 바뀌었다면 식별자 비교에서 거절한다</p></li>
+</dl><p class="trace-guard"><strong>전이 조건:</strong> 저장한 식별자, dirty 상태, 진행 중인 flush 없음, cold 영역, 충돌하는 fix·대기자·latch 없음이 필요하다. 이 검사를 모두 통과해야 다음 WAL 준비 상태 검사로 간다</p><p class="trace-change"><strong>변경 / 결과:</strong> 저장한 VPID=P와 현재 VPID=P가 같으므로 식별자 검사는 통과한다. 그러나 현재 fcnt=1이므로 pgbuf_is_bcb_fixed_by_any(bufptr, false)가 true를 반환한다. Page-flush는 BCB mutex를 풀고 다음 후보로 넘어간다. 이 후보의 이미지는 제출하지 않으며 P의 dirty 상태와 reader A의 fix는 유지된다</p></li>
 </ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 실제 실행에서 수집한 증거는 아닙니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4041-L4088">candidate recheck:4041–4088</a></p></div>
+<p><strong>식별자 검사는 “그때 본 페이지 P가 지금도 여기 있는가?”를 묻고, fix 검사는 “지금 그 페이지를 사용하는 caller가 있는가?”를 묻습니다.</strong> 같은 P여도 두 번째 질문의 답은 바뀔 수 있습니다. 대신 재사용으로 프레임의 페이지가 P에서 Q로 바뀌었다면 첫 번째 검사에서 거절합니다. Reader가 나중에 unfix해서 <code>fcnt=0</code>이 되더라도, 다시 쓰기 후보로 처리하려면 그 시점의 다른 조건도 함께 검사해야 합니다.</p>
+<div class="callout"><strong>왜 읽기만 하는 reader도 건너뛸까요?</strong> 이 경로의 helper는 reader와 writer를 구별하지 않고 현재 fix가 하나라도 있으면 후보를 제외합니다. 재사용을 준비하는 백그라운드 작업에서 현재 사용 중인 페이지를 건너뛰는 보수적인 선택입니다. Fix가 있는 페이지의 모든 flush가 금지되는 것은 아닙니다. 다른 flush 경로는 caller가 페이지 사본을 안전하게 확보하는 데 필요한 보호를 갖추고 실행할 수 있습니다. 여기서는 “지금 reader가 있다”는 사실만으로 이 후보가 page-flush의 현재 조건을 통과하지 못합니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10723-L10790">공통 flush helper의 caller 보호 전제</a></div>
+<details><summary>실제로 건너뛰는 소스 분기 보기</summary><pre><code>if (!PGBUF_IS_BCB_IN_LRU_VICTIM_ZONE (bufptr)
+    || pgbuf_is_bcb_fixed_by_any (bufptr, false))
+  {
+    PGBUF_BCB_UNLOCK (bufptr);
+    ++num_skipped_fixed_or_hot;
+    continue;
+  }</code></pre><p><code>||</code>는 둘 중 하나만 참이어도 분기로 들어간다는 뜻입니다. 이 사례에서는 LRU3 조건은 유지되지만 현재 fix 때문에 두 번째 항이 참입니다. <code>continue</code>는 후보 반복문의 다음 항목으로 이동합니다. <code>num_skipped_fixed_or_hot</code>는 fixed와 hot을 함께 세므로 이 카운터만으로 정확한 원인을 구별할 수는 없습니다.</p><p>서버 모드의 <code>pgbuf_is_bcb_fixed_by_any</code>는 현재 fix 수가 양수이거나, 연결된 대기자가 있거나, 이 호출처럼 두 번째 인자가 <code>false</code>일 때 latch가 <code>PGBUF_NO_LATCH</code>가 아니면 참입니다. 따라서 <code>fcnt=0</code>만으로 이 helper의 통과가 보장되지 않습니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9255-L9287">fixed-by-any:9255–9287</a></p></details>
 </section>
 <section class="section" id="handoff-problem">
 <div class="eyebrow">04 · 10 / 23</div><h2>주소와 페이지 식별자를 왜 함께 저장할까?</h2>
