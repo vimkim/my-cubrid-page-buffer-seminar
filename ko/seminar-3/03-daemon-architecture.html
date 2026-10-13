@@ -4,13 +4,40 @@
 <nav class="language-switcher" data-language-switcher aria-label="언어"><span aria-current="page">KO</span> | <a href="../../en/seminar-3/03-daemon-architecture.html" hreflang="en" lang="en">EN</a></nav>
 <main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">SESSION 3 · 2026-10-13 · 03 / 12</div><h1>가득 찬 풀에서 요청 진행을 돕는 네 백그라운드 작업</h1><p>CUBRID 페이지 버퍼 데몬과 PostgreSQL 페이지 교체</p><p class="live-workload">자주 다시 쓰는 페이지, 대량 스캔, 변경된 페이지가 유한한 풀을 채웁니다. 각 구성 예제의 실행 순서는 독립적으로 시작합니다. 성능 설명은 소스에 근거한 추론이며 측정 결과가 아닙니다.</p></header>
 <div class="lesson-grid"><article class="lesson-main"><section class="section" id="workload"><div class="eyebrow">03 · 1 / 25</div><h2>요청한 페이지를 담을 자리에 변경 내용이 남아 있다</h2><p><strong>독립적으로 구성한 시작 상태:</strong> 요청이 대량 스캔을 읽고 있지만, 서버가 페이지를 메모리에 모아 두는 페이지 버퍼는 가득 차 있습니다. <strong>프레임</strong>은 데이터베이스 페이지 한 장을 담는 메모리 자리입니다.</p>
-<p data-teaching-def="S3 S4"><code>S3</code>는 요청이 다음에 읽어야 할 스캔 페이지이며 메모리에 없습니다. <code>S4</code>는 이미 프레임에 있는 다른 페이지입니다. 지금은 아무도 사용하지 않지만 메모리 내용이 변경된 <strong>dirty 상태</strong>이므로, 그 변경 내용을 아직 페이지 저장장치로 보내야 합니다.</p>
+<p data-teaching-def="S3 S4">이 예제에서 <code>S3</code>와 <code>S4</code>는 서로 다른 데이터베이스 페이지의 이름입니다. <code>S3</code>는 요청이 다음에 읽어야 할 스캔 페이지이며 메모리에 없습니다. <code>S4</code>는 이미 프레임에 있는 다른 페이지입니다. 지금은 아무도 사용하지 않지만 메모리 내용이 변경된 <strong>dirty 상태</strong>이므로, 그 변경 내용을 아직 페이지 저장장치로 보내야 합니다.</p>
+<figure class="daemon-visual daemon-snapshot" aria-labelledby="daemon-snapshot-caption">
+<div class="daemon-snapshot-layout">
+<div class="daemon-page daemon-page-request"><span class="daemon-actor">요청 스레드가 읽을 페이지</span><strong><code>S3</code></strong><span>메모리에 없음</span></div>
+<div class="daemon-connection"><span>담을 프레임 필요</span><span aria-hidden="true">→</span></div>
+<div class="daemon-pool"><strong>메모리의 페이지 버퍼 · 빈 프레임 없음</strong><div class="daemon-pool-frames">
+<div class="daemon-page daemon-page-dirty"><span class="daemon-actor">재사용을 검토할 프레임</span><strong><code>S4</code></strong><span>사용 중 아님 · dirty</span><span>변경 내용 보존 필요</span></div>
+<div class="daemon-page daemon-page-other"><strong>나머지 프레임들</strong><span>다른 페이지로 차 있음</span></div>
+</div></div></div>
+<figcaption id="daemon-snapshot-caption">요청은 <code>S3</code>를 읽으려 하지만, 재사용하려는 메모리 자리는 <code>S4</code>가 차지하고 있습니다. 페이지 이름과 프레임은 다릅니다. 풀 크기는 생략한 개념도입니다.</figcaption>
+</figure>
+
 <p>서버는 dirty 페이지의 프레임을 그대로 덮어쓸 수 없습니다. 먼저 안전한 기록 경로로 변경 내용을 보존하고, 프레임이 여전히 사용되지 않으며 안전하게 재사용할 수 있는지 확인해야 합니다. 백그라운드 작업은 다음 요청이 자리 부족을 겪기 전에 이 준비를 도울 수 있습니다.</p>
 <div class="callout">페이지 바이트를 준비하는 일, 메모리 상태를 마무리하는 일, 보존 목표를 정하는 일, 기록 스레드의 속도를 조절하는 일은 서로 다릅니다. 다른 스레드로 옮겨도 각 작업의 안전 조건은 필요합니다.</div>
 <p class="live-source"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16971-L17255">고정 리비전의 전이</a></p></section><section class="section" id="why-background"><div class="eyebrow">03 · 2 / 25</div><h2>프레임을 미리 준비하면 요청 경로의 일을 줄일 수 있다</h2><p data-teaching-def="S3 S4"><strong>같은 시작 상태에서 갈라지는 두 실행 순서:</strong> <code>S3</code>는 요청이 필요로 하지만 메모리에 없는 페이지입니다. <code>S4</code>는 사용 중이 아니며 보존해야 할 변경 내용이 남은 상주 페이지입니다. 페이지 한 장을 담는 메모리 자리인 프레임은 모두 차 있습니다.</p>
-<ol><li><strong>필요할 때 준비:</strong> 요청 스레드가 S3를 필요로 함 → 빈 프레임이 없음을 확인 → S4 기록 처리 → 현재 재사용 조건 확인 → 확보한 프레임에 S3를 읽음.</li><li><strong>미리 준비:</strong> 별도 스레드가 S4 기록 처리 → 나중에 S3 요청 도착 → 현재 재사용 조건 확인 → 프레임을 재사용해 S3를 읽음.</li></ol>
+<p>여기서 <strong>데몬</strong>은 데이터베이스 서버 안에서 작업과 대기를 반복하는 백그라운드 스레드입니다. <strong>포그라운드</strong>는 요청을 처리하는 스레드를, <strong>백그라운드</strong>는 별도로 실행하는 스레드를 뜻합니다.</p>
+<figure class="daemon-visual daemon-schedules" aria-labelledby="daemon-schedules-caption">
+<div class="daemon-schedule-grid">
+<div class="daemon-schedule"><h3>필요할 때 준비</h3><ol class="daemon-timeline">
+<li class="daemon-request-step"><span class="daemon-actor">요청 스레드</span><strong><code>S3</code> 요청 도착</strong><span>빈 프레임 없음</span></li>
+<li class="daemon-write-step"><span class="daemon-actor">요청 스레드</span><strong><code>S4</code> 변경 내용 보존</strong><span>요청 후 안전한 기록 경로 처리</span></li>
+<li class="daemon-check-step"><span class="daemon-actor">요청 스레드</span><strong>현재 재사용 조건 확인</strong><span>여전히 사용 중이 아니며 안전한가?</span></li>
+<li class="daemon-request-step"><span class="daemon-actor">조건 확인을 통과한 경우</span><strong>같은 프레임에 <code>S3</code> 읽기</strong></li>
+</ol></div>
+<div class="daemon-schedule"><h3>백그라운드에서 미리 준비</h3><ol class="daemon-timeline">
+<li class="daemon-write-step"><span class="daemon-actor">백그라운드 스레드</span><strong><code>S4</code> 변경 내용 보존</strong><span>요청 전에 안전한 기록 경로 처리</span></li>
+<li class="daemon-request-step"><span class="daemon-actor">요청 스레드</span><strong><code>S3</code> 요청 도착</strong><span>기록 준비를 앞서 마친 후보가 있음</span></li>
+<li class="daemon-check-step"><span class="daemon-actor">요청 스레드</span><strong>현재 재사용 조건 확인</strong><span>여전히 사용 중이 아니며 안전한가?</span></li>
+<li class="daemon-request-step"><span class="daemon-actor">조건 확인을 통과한 경우</span><strong>같은 프레임에 <code>S3</code> 읽기</strong></li>
+</ol></div></div>
+<figcaption id="daemon-schedules-caption">각 열은 위에서 아래로 읽는 독립적인 실행 순서입니다. 같은 시작 상태로 초기화하며, 기록 준비를 요청 전으로 옮긴 차이를 보여 줍니다. 기록 처리만으로 프레임 재사용이 허용되지는 않습니다.</figcaption>
+</figure>
 <p>요청 스레드가 이 일을 모두 할 수도 있습니다. 두 번째 순서는 필요한 시점에 적절한 프레임이 준비되어 있을 때 읽기 경로에서 준비 비용을 덜어 줍니다. 성능 이점은 부하와 저장장치 지연에 달려 있습니다.</p>
-<p>여기서 <strong>데몬</strong>은 데이터베이스 서버 안에서 작업과 대기를 반복하는 백그라운드 스레드입니다. <strong>포그라운드</strong>는 요청을 처리하는 스레드를, <strong>백그라운드</strong>는 별도로 실행하는 스레드를 뜻합니다.</p></section><section class="section" id="why-background-part-2"><div class="eyebrow">03 · 3 / 25</div><h2>한 워커가 I/O를 기다리면 다른 일도 함께 기다린다</h2><p><strong>설계 질문:</strong> 백그라운드 스레드 하나가 dirty 페이지를 기록하고, 관리 상태를 마무리하고, 보존 목표를 조정한 다음 기록 속도를 조절한다고 가정해 봅시다. 이 스레드가 느린 로그 기록이나 페이지 기록을 기다리는 동안 나머지 세 작업은 실행할 수 없습니다.</p>
+</section><section class="section" id="why-background-part-2"><div class="eyebrow">03 · 3 / 25</div><h2>한 워커가 I/O를 기다리면 다른 일도 함께 기다린다</h2><p><strong>설계 질문:</strong> 백그라운드 스레드 하나가 dirty 페이지를 기록하고, 관리 상태를 마무리하고, 보존 목표를 조정한 다음 기록 속도를 조절한다고 가정해 봅시다. 이 스레드가 느린 로그 기록이나 페이지 기록을 기다리는 동안 나머지 세 작업은 실행할 수 없습니다.</p>
 <p>CUBRID는 이 작업들을 별도의 <strong>데몬</strong>에 맡깁니다. 각 데몬은 서버 안의 백그라운드 스레드로, 자기 태스크와 대기 정책을 갖습니다. 한 역할이 기다리는 동안 다른 역할이 실행할 수 있습니다. 이는 설계 선택이며, 측정으로 확인한 성능 보장은 아닙니다.</p>
 <p>네 역할이 모든 페이지가 거쳐야 하는 네 단계는 아닙니다. page-flush만 페이지 이미지를 제출합니다. Maintenance는 보존 정책을 바꾸고, flush-control은 참여하는 기록 스레드의 대기를 조절합니다. 이 책임들을 유지하도록 스케줄링한다면 워커 하나도 가능한 대안입니다.</p></section><section class="section" id="cadence"><div class="eyebrow">03 · 4 / 25</div><h2>네 작업은 서로 다른 네 종류의 상태를 바꾼다</h2><p data-teaching-def="S4"><strong>시작 상태:</strong> <code>S4</code>는 메모리에 있는 사용하지 않는 페이지이며, 변경 내용을 아직 기록해야 합니다. 이 페이지의 <strong>BCB</strong>는 프레임의 관리 레코드로, 현재 페이지 식별자와 사용 상태, flush 상태를 추적합니다.</p>
 <div class="journey"><article><strong>Page-flush</strong><h3>페이지 바이트 제출</h3><p>dirty 페이지를 확인하고 안정된 바이트를 복사한 뒤 안전한 기록 경로로 사본을 보냅니다. 제출만으로 프레임을 재사용할 수 있는 것은 아닙니다.</p></article><article><strong>Post-flush</strong><h3>관리 레코드 마무리</h3><p>제출 후 BCB를 다시 확인하고 이전 flush 상태를 마무리한 뒤 대기 스레드를 깨웁니다. 적절한 프레임을 기다리는 요청에 제안할 수도 있습니다.</p></article><article><strong>Maintenance</strong><h3>보존 목표 조정</h3><p>활동 표본을 바탕으로 <strong>quota</strong>(풀에서 차지할 목표 몫)와 <strong>zone</strong>(보존 선호도가 서로 다른 그룹)을 조정합니다.</p></article><article><strong>Flush-control</strong><h3>계속 기록하는 스레드의 속도 조절</h3><p>페이지 크기 단위의 공유 <strong>크레딧</strong> 잔액을 교체합니다. 참여하는 기록 스레드는 OS 기록이 성공한 뒤 크레딧을 소비하며, 이후 기다릴 수 있습니다.</p></article></div></section><section class="section" id="cadence-part-2"><div class="eyebrow">03 · 5 / 25</div><h2>page-flush만 페이지 이미지를 제출한다</h2><p>네 데몬은 서버 안의 백그라운드 작업입니다. 변경 내용을 아직 보존해야 하는 상주 페이지를 생각해 봅시다. 복사한 바이트를 기록하는 일과 프레임의 관리 레코드인 <strong>BCB</strong>를 마무리하는 일은 별개입니다. 나머지 두 역할은 그 페이지를 기록하는 대신 보존 정책과 기록 속도를 조절합니다.</p>
