@@ -41,16 +41,24 @@
 <details class="answer-disclosure"><summary>Q&amp;A · 타이머가 끝날 때마다 후보를 검사하나요?</summary><p>반드시 그렇지는 않습니다. 타이머로 진입한 경우 후보 helper를 호출하려면 관련 allocator 압력이나 표본 교체 압력 조건이 필요합니다. 타이머는 그 조건을 확인할 기회를 줍니다.</p></details>
 </div>
 </section>
-<section class="section" id="flush-loop-boundaries">
-<div class="eyebrow">04 · 4 / 24</div><h2>탐색 반복은 어떤 조건에서 계속되거나 끝날까?</h2>
-<p>Page-flush daemon이 존재하는 상태에서 시작합니다. 포인터는 worker의 존재 여부를 나타냅니다. 복구 중에는 별도의 작업 허가 조건인 boot gate가 닫혀 있어 task가 바로 반환할 수 있습니다. 포인터가 NULL이 아니라는 사실만으로 유용한 작업이 진행되거나 요청자가 동기 대체 경로를 실행한다고 판단할 수 없습니다.</p>
-<ol><li><strong>진입.</strong> Gate가 열리면 <code>was_woken_up()</code> 결과가 후보 helper를 한 번 호출하게 합니다. 이 값은 작업 횟수가 아니라 대기의 반환 결과입니다. 실행이 설정 주기를 모두 사용하면 대기 시간이 0이 되고, 외부 깨우기 없이도 true를 반환합니다.</li><li><strong>계속.</strong> 첫 호출 뒤에도 현재 allocation waiter가 있거나 표본 hit ratio가 낮으면 내부 압력 반복을 계속할 수 있습니다. Task는 helper의 오류 반환값을 무시합니다. Task 진입이나 helper 반환만으로 이미지 제출 여부를 알 수 없으며, 오류는 성공적인 제출의 증거가 아닙니다.</li><li><strong>이번 탐색 종료.</strong> 검사량과 목록 우선순위 합이 양수인데도 탐색에서 dirty 후보를 찾지 못하면 <code>stop_iteration</code>을 설정합니다. Task는 allocator가 사용 가능한 victim을 찾을 기회를 주도록 내부 반복을 끝냅니다. 검사량이나 우선순위가 0인 경우에는 이 힌트가 생기지 않습니다.</li></ol>
-<div class="callout">탐색 종료 힌트와 daemon 종료용 stop 플래그는 다릅니다. 내부 압력 반복은 그 stop 플래그를 검사하지 않습니다. Worker가 종료하려면 실행 중인 task가 외부 반복으로 반환해야 합니다. 잠금, 복구 로그 강제 기록, 페이지 I/O가 반환을 늦출 수 있으므로 join 완료 시한은 도출할 수 없습니다.</div>
+<section class="section" id="flush-loop-boundaries"><div class="eyebrow">04 · 4 / 24</div><h2>한 번 더 찾아볼까, 이번에는 멈출까?</h2>
+<p>깨끗한 그릇이 모자라서 설거지 도우미가 씻을 그릇을 찾는다고 생각해 보세요. 기다리는 사람이 있으면 더 찾아봅니다. 하지만 이번에 살펴본 곳에서 씻을 그릇을 못 찾았다면, 잠깐 물러나 다른 사람이 깨끗한 그릇을 찾아보게 합니다.</p>
+<p>이 비유에서 도우미는 <strong>page-flush</strong>입니다. 그릇에 해당하는 <strong>페이지</strong>는 데이터 한 덩어리이고, 페이지를 담는 메모리 자리는 <strong>프레임</strong>입니다. <strong>Dirty 페이지</strong>에는 아직 저장소 쪽에 기록해야 할 변경이 있습니다. Page-flush는 이런 페이지를 찾아 기록하는 일을 합니다. 먼저 서버의 복구 작업이 작업을 허용해야 합니다. 도우미가 있어도 아직 일을 시작할 수 없는 때가 있습니다.</p>
+<ol>
+<li><strong>먼저 한 번 찾아본다.</strong> 대기 결과가 “바로 일하자”이면 후보를 찾는 함수를 한 번 호출합니다. 다른 스레드가 깨워 줬을 때 이런 결과가 나오지만, 쉬는 시간이 0일 때도 나올 수 있습니다.</li>
+<li><strong>아직 도움이 필요하면 다시 찾는다.</strong> 프레임을 기다리는 요청이 있거나, 최근 요청 기록에서 메모리에 없는 페이지를 담을 자리를 자주 찾아야 했다면 반복합니다. 어느 조건도 해당하지 않으면 이번 반복을 끝냅니다.</li>
+<li><strong>찾아봤는데 후보가 없으면 이번에는 멈춘다.</strong> 검사할 분량과 대상 목록이 있었는데도 dirty 후보를 하나도 못 찾으면, 기다리는 요청이 남아 있어도 반복을 끝냅니다. 요청들이 재사용할 수 있는 프레임을 다시 찾아볼 기회를 주기 위해서입니다. 애초에 검사할 분량이나 대상 목록이 없었던 경우에는 이 중단 신호를 주지 않습니다.</li>
+</ol>
+<div class="callout"><strong>이번 찾기를 멈췄다고 모든 일이 끝난 것은 아닙니다.</strong> 모든 페이지의 기록이 끝났다거나, 바로 쓸 프레임이 생겼다거나, 도우미 자체가 종료됐다는 뜻은 아닙니다. 종료 요청도 이 내부 반복을 즉시 끊지는 못합니다.</div>
+<details><summary>코드에서는 이 조건을 어떻게 표현할까?</summary>
+<ul>
+<li><strong>작업 허가:</strong> 복구 중 <code>boot gate</code>가 닫혀 있으면 task는 바로 반환합니다. Daemon 포인터가 NULL이 아니라는 것은 객체가 있다는 뜻입니다. 그것만으로 실제 작업 진행이나 요청자의 동기 대체 경로 실행을 알 수는 없습니다.</li>
+<li><strong>첫 호출과 반복:</strong> <code>was_woken_up()</code>이 true이면 <code>force_one_run</code>으로 <code>pgbuf_flush_victim_candidates()</code>를 한 번 호출합니다. Task 실행이 설정 주기를 모두 사용해 대기 시간이 0이 된 때에도 이 결과가 나옵니다. 이후에는 <code>pgbuf_keep_victim_flush_thread_running()</code>이 프레임 대기자 또는 낮은 표본 hit ratio를 확인합니다. Hit ratio는 최근 요청 기록으로 페이지가 메모리에 있었던 비율을 추정한 값입니다. 낮다고 판단하는 조건은 victim 요청이 10회를 넘고 hit ratio가 99.9%보다 낮은 경우입니다.</li>
+<li><strong>후보 없음:</strong> 검사량 <code>check_count_lru</code>와 목록 우선순위 합 <code>lru_sum_flush_priority</code>가 모두 양수인데 후보 수가 0이면 <code>stop_iteration</code>을 설정하고 <code>break</code>합니다. 둘 중 하나라도 양수가 아니면 후보 수가 0이어도 이 신호는 생기지 않습니다.</li>
+<li><strong>기록 성공과 종료:</strong> Task는 후보 함수의 오류 반환값을 무시합니다. 함수에 진입하거나 반환했다는 기록만으로 페이지 사본이 성공적으로 제출됐다고 판단할 수 없습니다. Daemon 종료용 stop 플래그는 이 내부 반복에서 검사하지 않습니다. Task가 외부 반복으로 돌아가야 종료할 수 있으며, 잠금·복구 로그 강제 기록·페이지 I/O가 이를 늦출 수 있어 종료 완료 시한을 보장하지 않습니다.</li>
+</ul></details>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3978-L3989">후보가 없을 때의 힌트</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17049">Gate와 압력 반복</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17294-L17302">포인터 존재 여부</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_waiter.cpp#L200-L224">대기 시간 0</a></p>
-<div class="section-qna" data-reset-answers="">
-<details class="answer-disclosure"><summary>Q&amp;A · was_woken_up은 항상 다른 스레드가 신호를 보냈다는 뜻인가요?</summary><p>아닙니다. task 실행이 주기를 모두 사용해 대기 시간이 0이 된 경우에도 true를 반환할 수 있습니다. 외부 알림 횟수가 아니라 looper의 대기 결과로 해석해야 합니다.</p></details>
-</div>
-</section>
+<div class="section-qna" data-reset-answers=""><details class="answer-disclosure"><summary>Q&amp;A · 아직 기다리는 요청이 있는데 왜 멈추나요?</summary><p>이번에 살펴본 곳에서 기록할 후보를 못 찾았기 때문입니다. 요청이 기다린다고 같은 찾기를 바로 반복하는 대신, 요청 쪽이 재사용할 프레임을 다시 찾아보게 합니다. 이것이 빈 프레임을 찾을 거라는 보장은 아닙니다. 다른 곳에 dirty 페이지가 남아 있을 수도 있습니다.</p></details></div></section>
 <section class="section" data-reset-answers="" id="trigger-part-2">
 <div class="eyebrow">04 · 5 / 24</div><h2>Helper 진입 한 번으로는 왜 진행을 알 수 없을까?</h2>
 <div class="session-question" data-audience-checkpoint="" data-question-id="Q08" data-reset-answers="" id="q08">
