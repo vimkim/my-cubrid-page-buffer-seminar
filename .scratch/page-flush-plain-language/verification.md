@@ -72,7 +72,7 @@ The current registry includes a JIRA link beside VS-20, introduced on main at
 `| VS-20 | Open source anomaly |` (with Markdown formatting) and rejects the
 added issue annotation. Running that five-test file against the clean main
 checkout reproduced the identical failure (four pass, one fail). Neither that
-registry nor its validator is changed by this task. This is a understood
+registry nor its validator is changed by this task. This is an understood
 pre-existing formatting assertion failure, not an unexplained page-flush
 regression. Focused browser verification was repeated after the review fixes
 and passed on the final product.
@@ -115,9 +115,23 @@ to the repository or ignored with a broad rule.
 
 ## Integration state
 
-Implementation, proportionate checks and independent review are finished.
-Local-main integration awaits the one approval required by the user-provided
-Git workflow. The current local destination may have advanced after `2e0dc33`;
-approved integration must preserve those later changes and repeat checks only
-where reconciliation creates new concerns. Push and deployment are not part of
-this authorization.
+The user approved local integration on 2026-10-13. The task was rebased over
+`548b380`, then `8092c84` and finally `d275e0e` as local main advanced. Conflicts
+were confined to the shared contents maps, author review append and review
+fingerprints. The approved chapter 04 pair remains byte-for-byte identical to
+`d5fbe10`; all other current-main chapter entries, spoken sections, review records
+and page-pair metadata were checked for exact preservation.
+
+Local main was fast-forwarded to `e54a337`. After the final reconciliation,
+the Session 3 definition, contents and browser suites passed 43 tests with zero
+failures or skips. The guide aggregate passed all source checks, 114 HTTP
+resources and 43 DOM pages. The final merged bilingual aggregate reported only
+the same 78 pending human receipts and 96 stale historical fingerprints; no new
+failure appeared. The earlier broad-suite baseline limitation remains unchanged.
+
+Additional reconciliation logs use `/tmp/page-flush-348-rebase-*`,
+`/tmp/page-flush-348-final-integration-*` and `/tmp/page-flush-348-merged-*`.
+This final receipt changes no product text. Safe cleanup removes only this
+task's clean worktree and local branch after verifying the receipt commit is
+included on main. Temporary logs and the inspected screenshot remain outside
+the checkout. Push and deployment are outside this authorization.

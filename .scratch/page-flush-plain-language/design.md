@@ -1,8 +1,8 @@
 # Page-flush plain-language rewrite
 
 Status: accepted by the user's `yes` on 2026-10-13. The paired HTML rewrite,
-available verification and two-axis review are complete. Local integration
-awaits the repository's merge approval. See [verification](verification.md).
+available verification and two-axis review are complete. The user approved
+local integration, which is complete on main. See [verification](verification.md).
 This record retains the settled criteria, factual investigation and the proposal
 the user accepted before implementation.
 
