@@ -2945,3 +2945,24 @@ mode separately from the OS write. Its 78 focused browser checks pass again.
 Both presenter companions also pass desktop/mobile bounds with and without
 JavaScript. The current companion has 103 ordered source cues and 430 resolving
 local links; the full companion's links retain Markdown heading-anchor checks.
+
+
+Approved integration (work item 359): the user approved local rebase/merge.
+Main first advanced to `4237cc6`, then to `a29cf0e`. Both rebases preserve the
+approved English/Korean chapter-07 files byte for byte. Contents and both
+presenter companions preserve every other chapter body from the destination;
+only chapter 07 and the corresponding screen counts/maps are changed. The
+current 03–07 companion has 105 exact cues and 438 local links, including both
+new post-flush screens. The full companion has 511 resolving local links.
+
+The first integration passed 90 validator/Session 3 tests, zero failures or
+skips, and 78 focused browser checks. The final integration again passed all
+17 definition/contents unit tests, all 78 focused browser checks, technical
+parity and the audience/route contract. The guide aggregate passed 43 source
+and DOM pages, 89 displayed SVGs with zero orphans, and 132 HTTP resources.
+The final served bilingual aggregate has no non-human failures; its existing
+acceptance gaps are 78 pending Korean receipts and 96 stale fingerprints,
+the same counts as the exact final destination baseline. No human receipt was
+manufactured. Logs use `/tmp/flush-control-simple-359/final-integration-*`.
+Rebase conflict resolutions preserve all destination evidence-ledger entries
+and review metadata for other pages. No unrelated worktree was edited.
