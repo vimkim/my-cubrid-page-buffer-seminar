@@ -99,10 +99,90 @@
   },
   "evidence_limits": [
     "AI author readability/source review only; no human Korean-naturalness or semantic-acceptance receipt was created.",
-    "Performance and forced wake experiments remain unexecuted proposals.",
+    "The engine-level experiment in #experiment remains unexecuted; the independent waiter observation carried from main retains its own narrower limits.",
     "No immediate completion, bounded scheduling, queue draining at stop, or crash persistence is inferred from retained RAM items.",
     "Long projection screens allow vertical scrolling."
   ],
   "temporary_evidence_prefix": "/tmp/daemon-346-",
-  "integration": "Task changes locally committed for review; main integration requires approval. No push or deployment."
+  "integration": {
+    "approved": true,
+    "destination_before_merge": "2e0dc33d3707ff364dd2432316714e5bf8dbc221",
+    "rebased_content_commit": "9a83f6beed000012d5540893b0edfcfa3fccb86e",
+    "status": "Rebased and verified for the approved local fast-forward merge; no push or deployment.",
+    "current_sections_per_language": 31,
+    "current_native_qna_per_language": 27,
+    "unchanged_added_main_sections": [
+      "scan-scope",
+      "scan-page-flush",
+      "scan-maintenance",
+      "daemon-wakeup-risk",
+      "daemon-wakeup-source",
+      "daemon-wakeup-remedies"
+    ],
+    "existing_main_and_task_link_targets": "PASS: every id, href and src target preserved",
+    "tests": {
+      "pass": 59,
+      "fail": 0,
+      "skip": 0,
+      "log": "/tmp/daemon-346-integration-tests.log"
+    },
+    "changed_chapter_browser": {
+      "pages": [
+        {
+          "language": "ko",
+          "screens": 31,
+          "qna": 27,
+          "traceSteps": [
+            5,
+            3
+          ],
+          "projection": 1920,
+          "noJavaScriptWidths": [
+            390,
+            320
+          ]
+        },
+        {
+          "language": "en",
+          "screens": 31,
+          "qna": 27,
+          "traceSteps": [
+            5,
+            3
+          ],
+          "projection": 1920,
+          "noJavaScriptWidths": [
+            390,
+            320
+          ]
+        }
+      ],
+      "screenshots": [
+        "/tmp/daemon-346-integration-preview/ko-cadence-part-5-1920.png",
+        "/tmp/daemon-346-integration-preview/ko-cadence-loops-1920.png",
+        "/tmp/daemon-346-integration-preview/ko-daemons-removal-1920.png",
+        "/tmp/daemon-346-integration-preview/ko-queue-390.png",
+        "/tmp/daemon-346-integration-preview/en-cadence-part-5-1920.png",
+        "/tmp/daemon-346-integration-preview/en-cadence-loops-1920.png",
+        "/tmp/daemon-346-integration-preview/en-daemons-removal-1920.png",
+        "/tmp/daemon-346-integration-preview/en-queue-390.png"
+      ],
+      "errors": [],
+      "result": "PASS"
+    },
+    "guide_aggregate": "PASS: 43 source pages, 71 displayed SVGs, 114 HTTP resources and 43 live-DOM pages",
+    "guide_log": "/tmp/daemon-346-integration-guide-final.log",
+    "audience_technical_links": "PASS: 27 Session3 pages and 78 paired pages",
+    "full_bilingual_aggregate": {
+      "status": "FAIL",
+      "missing_human_review_receipts": 78,
+      "stale_historical_fingerprints": 96,
+      "other_failures": [
+        "FAIL: index.html: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "log": "/tmp/daemon-346-integration-site.log"
+    },
+    "human_review_receipt_created": false
+  },
+  "verification_phase": "Original task before approved integration; current integration results follow below."
 }
