@@ -309,6 +309,51 @@
   margin-block-end: 1rem;
 }
 
+.session-3-presentation .key-point {
+  padding: 1rem 1.25rem;
+  border-inline-start: 4px solid var(--teal);
+  background: var(--teal-soft);
+}
+
+.session-3-presentation .speaker-depth {
+  margin-block: 2rem 1rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.session-3-presentation .speaker-depth > summary {
+  padding: 1rem;
+  color: var(--navy);
+  font-size: 1rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.session-3-presentation .speaker-depth[open] > summary {
+  border-block-end: 1px solid var(--line);
+}
+
+.session-3-presentation .depth-content {
+  padding: 1.25rem;
+}
+
+.session-3-presentation .screen-cues {
+  margin-block: 1.25rem;
+  font-size: 0.9375rem;
+}
+
+.session-3-presentation .screen-cues > summary {
+  padding-block: 0.5rem;
+  cursor: pointer;
+}
+
+.session-3-presentation caption {
+  padding: 0.75rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-align: start;
+}
+
 @media (max-width: 650px) {
   .session-3-presentation body {
     font-size: 1.0625rem;
@@ -403,9 +448,13 @@
     border-inline-start-color: #777;
   }
 
-  /* Print the complete script, including answers closed in the reading view. */
+  /* Print answers; the detailed source script is included only when expanded. */
   .session-3-presentation details::details-content {
     content-visibility: visible;
+  }
+
+  .session-3-presentation :is(.speaker-depth, .screen-cues):not([open]) {
+    display: none;
   }
 
   .session-3-presentation .table-wrap {

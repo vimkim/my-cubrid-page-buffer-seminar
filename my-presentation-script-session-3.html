@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>페이지 버퍼 세미나 3회차 · 마지막 세션 발표 대본</title>
+  <title>페이지 버퍼 세미나 3회차 · 처음 듣는 사람도 따라가는 발표 대본</title>
   <link rel="stylesheet" href="assets/teach-course.css">
   <link rel="stylesheet" href="assets/seminar.css">
   <link rel="stylesheet" href="assets/session-3-presentation.css">
@@ -14,35 +14,54 @@
 <main class="shell">
   <header class="hero">
     <p class="eyebrow">PAGE BUFFER · SESSION 3 / FINAL · n HOURS</p>
-    <h1>Dirty 페이지에서<br>안전한 frame 재사용까지</h1>
-    <p>백그라운드 작업자 daemon의 상세 동작 · PostgreSQL의 버퍼 전략 · 세미나 마무리</p>
-    <p>앞선 두 세션은 각각 3시간과 4시간 동안 진행했습니다. 오늘은 페이지 버퍼 세미나의 마지막 세션입니다. 진행 시간은 n시간으로 열어 두고, 설명과 질문에 맞춰 조절합니다.</p>
+    <h1>메모리가 가득 찼을 때<br>새 데이터를 어떻게 넣을까?</h1>
+    <p>페이지와 메모리 칸부터 시작해 CUBRID의 백그라운드 작업과 PostgreSQL의 교체 전략까지 연결합니다.</p>
+    <p>앞선 세션의 용어나 WAL을 몰라도 시작할 수 있도록 필요한 말을 처음 나올 때 설명합니다. 오늘은 마지막 세션입니다. 진행 시간은 열어 두고, 설명과 질문에 맞춰 조절합니다.</p>
     <p><a href="docs/final-session-preparation.md?v">준비 계획과 소스 경로</a> · <a href="presenter-runbook.md?v">발표 진행 안내</a></p>
   </header>
 
   <nav class="route" id="route" aria-label="발표 순서">
-    <h2>오늘의 질문: 누가 재사용 가능한 frame을 만드는가?</h2>
-    <p><strong>발표자 안내:</strong> <a href="toc.html">세션 3 목차</a>에서 시작해 열두 발표 장을 순서대로 엽니다. 각 장에서는 한 번에 한 절에 집중할 수 있습니다. 아래의 전체 화면 링크는 실제 장의 절과 같은 순서로 배치했습니다. 예측 질문에 도착하면 답을 닫아 두고 참가자가 생각할 시간을 줍니다.</p>
+    <h2>오늘의 질문: 사용하던 메모리 칸을 언제 바꿔 써도 될까?</h2>
+    <p><strong>발표자 안내:</strong> 각 장의 기본 대본을 순서대로 읽습니다. 작은 예를 설명한 뒤 “잠깐 확인”에서 답을 닫아 두고 생각할 시간을 줍니다. 함수 이름, 설정 수치, 예외 처리는 각 장의 “더 깊이 보기”에 있습니다. <a href="toc.html">세션 3 목차</a>와 장별 전체 화면 링크는 자세한 화면을 찾을 때 사용합니다.</p>
     <p>이 대본의 실행 사례는 동작을 따져 보기 위해 구성했습니다. 실제 서버의 실행을 캡처한 기록은 아닙니다.</p>
     <ol>
-      <li><a href="#opening">앞선 두 세션 연결</a></li>
-      <li><a href="#generation">한 페이지, 두 세대</a></li>
-      <li><a href="#daemons">서로 다른 네 daemon</a></li>
-      <li><a href="#page-flush">Page-flush: 후보와 WAL</a></li>
-      <li><a href="#post-flush">Post-flush: 완료와 배정</a></li>
-      <li><a href="#maintenance">Maintenance: quota와 구역</a></li>
-      <li><a href="#pacing">Flush-control: write 이후의 속도 조절</a></li>
-      <li><a href="#postgres-model">PostgreSQL의 객체와 pin</a></li>
-      <li><a href="#postgres-clock">Clock sweep 직접 따라가기</a></li>
-      <li><a href="#postgres-ring">작업별 access-strategy ring</a></li>
-      <li><a href="#postgres-writeback">누가 dirty victim을 쓰는가?</a></li>
-      <li><a href="#closing">새 사례로 연결하고 마무리</a></li>
+      <li><a href="#opening">메모리가 가득 찼을 때 새 페이지를 읽으려면?</a></li>
+      <li><a href="#generation">11을 쓰는 동안 메모리 값이 12로 바뀐다면?</a></li>
+      <li><a href="#daemons">백그라운드에서 일하는 네 담당자</a></li>
+      <li><a href="#page-flush">쓰기 후보 목록은 다시 확인해야 한다</a></li>
+      <li><a href="#post-flush">쓰기를 마친 칸도 바로 넘길 수는 없다</a></li>
+      <li><a href="#maintenance">어떤 페이지를 더 오래 남겨둘까?</a></li>
+      <li><a href="#pacing">쓰기 작업이 계속 몰리지 않도록 속도를 조절한다</a></li>
+      <li><a href="#postgres-model">PostgreSQL에서도 사용 중인 칸은 보호한다</a></li>
+      <li><a href="#postgres-clock">Clock: 한 칸씩 보며 교체 후보를 찾는다</a></li>
+      <li><a href="#postgres-ring">큰 스캔은 최근에 쓴 칸부터 다시 살펴본다</a></li>
+      <li><a href="#postgres-writeback">Dirty 후보를 고르면 요청한 쪽이 쓸 수도 있다</a></li>
+      <li><a href="#closing">처음의 질문에 답하고 마무리하기</a></li>
     </ol>
     <p class="source">CUBRID 기준: <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code><br>PostgreSQL 기준: <code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code> (개발 리비전). 수치와 정책은 이 소스 버전을 기준으로 합니다.</p>
   </nav>
 
   <section class="run-sheet" id="opening">
-    <p class="eyebrow">01 · CONNECTION</p><h2>앞선 두 세션에서 오늘로</h2>
+    <p class="eyebrow">01 · CONNECTION</p><h2>메모리가 가득 찼을 때 새 페이지를 읽으려면?</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/01-opening.html#workload">없는 페이지를 읽으려면 안전한 메모리 자리가 필요하다</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> 새 데이터를 넣을 자리가 필요합니다. 그 자리에 있던 데이터를 안전하게 처리해야 자리를 바꿔 쓸 수 있습니다.</p>
+<p>데이터베이스는 데이터를 일정한 크기의 묶음으로 읽고 씁니다. 이 묶음이 <strong>페이지</strong>입니다. 저장장치에서 매번 읽으면 오래 걸리므로, 자주 쓰는 페이지를 메모리에 두고 다시 사용합니다. 이 메모리 공간을 <strong>버퍼 풀</strong>이라고 부릅니다.</p>
+<p>버퍼 풀을 여러 칸이 있는 선반으로 생각해 보겠습니다. 한 칸에는 페이지 하나가 들어갑니다. 이 한 칸이 <strong>frame</strong>입니다. 페이지는 데이터이고, frame은 그 데이터를 담는 자리입니다. 같은 자리에 나중에는 다른 페이지가 들어갈 수 있습니다.</p>
+<p>프로그램이 페이지를 쓰는 동안에는 그 자리를 바꾸면 안 됩니다. 프로그램 안에서 작업을 실행하는 흐름을 <strong>스레드</strong>라고 부릅니다. CUBRID의 스레드는 <strong>fix</strong>로 페이지 사용을 시작하고, <strong>unfix</strong>로 사용을 끝냅니다. Unfix해도 페이지가 메모리에서 바로 사라지지는 않습니다. 다음 요청이 다시 사용할 수 있습니다.</p>
+<p>여기에 한 가지가 더 있습니다. 메모리의 페이지를 변경했지만 그 변경을 아직 저장 경로에 보내야 한다면 <strong>dirty</strong>라고 부릅니다. 저장 경로에 보낼 변경이 남아 있지 않으면 <strong>clean</strong>입니다. 따라서 “아무도 사용하지 않는다”와 “변경을 다 보냈다”는 서로 다른 상태입니다.</p>
+<h3>작은 예: 새 페이지를 넣을 칸이 없다</h3>
+<ol class="example-steps">
+<li>모든 칸에 페이지가 들어 있습니다. 이제 메모리에 없는 새 페이지 Q를 읽으려 합니다.</li>
+<li>기존 페이지 P는 아무도 사용하지 않습니다. 하지만 P는 dirty입니다.</li>
+<li>P의 변경을 안전하게 처리하고, 그 사이 사용이나 변경이 다시 생겼는지 확인해야 P의 칸을 Q에 쓸 수 있습니다. 실제로는 교체 정책과 다른 보호 조건도 함께 확인합니다.</li>
+</ol>
+<div class="prompt"><p><strong>잠깐 확인:</strong> P를 마지막으로 쓰던 스레드가 unfix했습니다. 이것만으로 P의 칸에 Q를 덮어써도 될까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>아직 안 됩니다. Unfix는 사용을 끝낸 사건입니다. P가 dirty라면 기록해야 할 변경이 남아 있습니다. 그 변경을 처리한 뒤에도 현재 사용 상태를 다시 검사해야 합니다.</p></details></div>
+<p>오늘은 이 칸을 안전하게 준비하는 과정을 따라가겠습니다. 다음 장에서는 “페이지를 썼다”는 말이 정확히 어느 시점의 내용을 썼다는 뜻인지 보겠습니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/01-opening.html#workload">없는 페이지를 읽으려면 안전한 메모리 자리가 필요하다</a> · <a href="ko/seminar-3/01-opening.html#replacement-protocol">기다리는 요청 스레드가 변경 보존을 맡을 수도 있다</a> · <a href="ko/seminar-3/01-opening.html#experiment">요청을 실제로 막는 원인을 찾기</a>.</p>
 <p>먼저 오늘 사용할 말을 짚고 시작하겠습니다. 페이지는 식별자가 있는 데이터 단위입니다. Frame은 페이지 하나를 담는 메모리 공간입니다. BCB는 그 frame에 지금 어느 페이지가 들어 있는지, 누가 사용하고 있는지를 관리하는 구조입니다. 스레드가 페이지를 fix하면 사용하는 동안 그 frame을 다른 페이지로 바꿀 수 없습니다. 스레드는 사용을 마칠 때 unfix로 그 사용 권한을 반납합니다. Dirty는 페이지의 변경 내용을 아직 저장 경로로 전달해야 한다는 상태입니다. Hot set은 반복해서 읽는 페이지들의 모음입니다.</p>
     <p>이제 상황을 하나 만들겠습니다. 큰 스캔이 여러 페이지를 읽는 동안 writer, 즉 페이지를 변경하는 스레드가 변경 내용을 남겼습니다. 버퍼 pool의 모든 frame에는 이미 페이지가 들어 있습니다. 이때 스레드가 메모리에 없는 페이지 Q를 요청합니다. 페이지 P는 이미 메모리에 있습니다. 지금 P를 사용하는 스레드는 없지만, P에는 아직 기록해야 할 dirty 변경이 남아 있습니다.</p>
@@ -74,12 +93,36 @@
     <p class="cue"><strong>화면 안내:</strong> 대안의 전이: <a href="ko/seminar-3/01-opening.html#replacement-protocol">기다리는 요청 스레드가 변경 보존을 맡을 수도 있다</a>.</p><p>이번에는 frame을 기다리는 요청 스레드가 필요한 쓰기를 직접 맡는 대안을 가정하겠습니다. 요청 스레드는 먼저 후보의 페이지 식별 정보와 현재 사용 상태를 검사합니다. 후보 페이지가 dirty라면 적합한 페이지 내용이 바뀌지 않도록 필요한 보호를 확보합니다. 스레드는 그 내용에 필요한 로그를 먼저 영속화하고 페이지 이미지를 씁니다.</p>
     <p>쓰기와 완료 처리를 마친 뒤에는 후보의 현재 상태를 다시 검사합니다. 그 상태를 바탕으로 frame 획득을 다시 시도합니다. 쓰기가 실패하면 다시 기록해야 할 변경이 있다는 dirty 정보를 유지합니다. 요청 처리에 사용한 임시 자원은 정리합니다.</p><p>이것은 요청을 처리하는 foreground 경로에서 쓰기를 맡기는 설계 대안입니다. CUBRID의 모든 server fallback이 정확히 이 순서로 동작한다고 주장하는 설명은 아닙니다. 이 설계에서는 로그와 저장장치 I/O 시간이 요청의 대기 시간에 포함됩니다. 쓰기를 끝낸 뒤에도 스레드는 frame 재사용에 필요한 동기화를 확보해야 합니다. 그 상태에서 현재 조건에 적합한 clean frame을 얻어야 합니다.</p><p class="cue"><strong>화면 안내:</strong> 관측과 반증: <a href="ko/seminar-3/01-opening.html#experiment">요청을 실제로 막는 원인을 찾기</a>.</p><p>이제 실제 원인을 구분하기 위한 관측을 계획하겠습니다. 요청 스레드가 frame 할당을 기다리기 시작한 시각과 끝낸 시각을 기록합니다. 후보의 적합성은 필요한 보호를 잡은 상태에서 확인합니다. 그리고 어떤 공급자, 즉 frame을 준비하는 실행 주체가 실제 배정을 수행했는지 연결해서 기록합니다.</p>
     <p>Pool 전체에 clean 페이지가 몇 개 있다는 숫자만으로 이 요청이 받을 frame이 있다고 판단할 수는 없습니다. 이 요청에 배정할 수 있는 적합한 frame이 있는데도 요청 스레드가 다른 곳에서 기다린다면, 변경 기록이 요청을 막는다는 설명을 다시 검토해야 합니다. 이 관측 계획만으로 요청 사이의 공정성이나 전체 처리량을 입증할 수는 없습니다.</p>
+
+
+  </div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/01-opening.html#workload">없는 페이지를 읽으려면 안전한 메모리 자리가 필요하다</a></li><li><a href="ko/seminar-3/01-opening.html#objects">같은 메모리 자리에 나중에는 다른 페이지가 들어간다</a></li><li><a href="ko/seminar-3/01-opening.html#objects-map">페이지 식별 정보와 사용 기록을 따라가 보기</a></li><li><a href="ko/seminar-3/01-opening.html#journey">요청한 페이지는 보호된 접근 권한을 얻어야 사용할 수 있다</a></li><li><a href="ko/seminar-3/01-opening.html#journey-use">사용이 끝나도 변경 보존은 남을 수 있다</a></li><li><a href="ko/seminar-3/01-opening.html#journey-part-2">사용 종료만으로 변경 보존까지 끝나지는 않는다</a></li><li><a href="ko/seminar-3/01-opening.html#replacement-protocol">기다리는 요청 스레드가 변경 보존을 맡을 수도 있다</a></li><li><a href="ko/seminar-3/01-opening.html#experiment">요청을 실제로 막는 원인을 찾기</a></li><li><a href="ko/seminar-3/01-opening.html#experiment-observations">이번 할당을 막는 검사 조건을 관측하기</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 
   <section class="run-sheet" id="generation">
-    <p class="eyebrow">02 · FLUSH BRIDGE</p><h2>한 페이지, 두 세대</h2>
+    <p class="eyebrow">02 · FLUSH BRIDGE</p><h2>11을 쓰는 동안 메모리 값이 12로 바뀐다면?</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/02-flush-generations.html#workload">가득 찬 풀에서 변경된 페이지를 안전하게 기록하려면?</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> 이전 내용을 썼다고 해서, 그 뒤에 생긴 변경까지 저장된 것은 아닙니다.</p>
+<p>페이지 P 하나만 보겠습니다. 저장된 값은 10입니다. 프로그램이 메모리의 값을 11로 바꿨습니다. P는 이제 dirty입니다. 이 설명의 숫자는 한 필드의 값이며, 실제 페이지에는 다른 데이터와 관리 정보도 들어 있습니다.</p>
+<p><strong>Flush</strong>는 페이지 내용을 저장 경로에 보내는 작업입니다. 쓰는 도중 내용이 뒤섞이지 않도록, 쓰기를 맡은 스레드가 필요한 보호를 잡고 값 11인 시점의 안정된 사본을 확보했다고 하겠습니다.</p>
+<ol class="example-steps">
+<li>쓰기 스레드가 값 11의 사본을 확보합니다.</li>
+<li>그 사본을 보내는 동안, 변경 스레드가 메모리의 P를 12로 바꿉니다.</li>
+<li>11의 전달이 끝납니다. 그래도 메모리의 12는 아직 처리해야 할 변경으로 남아 있어야 합니다.</li>
+</ol>
+<p>여기서 11의 사본과 그 뒤의 변경을 구분해야 합니다. 심화 설명에서는 이를 <strong>G와 G+1</strong>이라고 부릅니다. 두 시점을 구분하는 설명용 이름이며, 엔진에 저장된 세대 번호는 아닙니다.</p>
+<p>안전하게 쓰기 위한 순서도 있습니다. <strong>WAL</strong>은 변경을 복구하기 위한 로그를 데이터 페이지보다 먼저 남기는 규칙입니다. 로그가 필요한 영구 페이지라면, 해당 변경의 로그가 먼저 영속화되어야 합니다. 영속화는 서버가 꺼져도 기록이 남도록 저장하는 일입니다. 실제 복구에는 필요한 로그와 살아남은 페이지 등이 함께 쓰입니다.</p>
+<p><strong>성공의 범위도 확인해야 합니다.</strong> CUBRID의 DWB(double-write buffer) 경로에서는 사본을 중간 메모리 영역에 접수한 시점에 page-buffer flush가 성공할 수 있습니다. 이때 원래 데이터 파일에 쓰고 영속화하는 일은 아직 남아 있을 수 있습니다. 사본 접수, 파일 쓰기, 영속화는 각각 다른 단계입니다.</p>
+<p>쓰기가 실패했다면 변경을 처리했다고 판단해서는 안 됩니다. 어떤 변경과 진행 상태가 남았는지 확인하고 다시 시도할 길을 확보해야 합니다. 아래의 상세 설명에서는 실패 경로와 아직 검증이 필요한 부분도 구분합니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> 11의 사본을 성공적으로 보냈습니다. 현재 메모리는 12입니다. P를 clean으로 처리해도 될까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>안 됩니다. 12라는 새 변경이 남아 있습니다. 완료 처리는 11에 대한 작업만 정리하고, 12를 나중에 다시 보낼 수 있도록 dirty 정보를 유지해야 합니다.</p></details></div>
+<p>이제 누가 사본을 보내고, 누가 완료를 정리하는지 역할을 나누어 보겠습니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/02-flush-generations.html#workload">가득 찬 풀에서 변경된 페이지를 안전하게 기록하려면?</a> · <a href="ko/seminar-3/02-flush-generations.html#replacement-protocol">사본 없는 대안은 I/O가 끝날 때까지 writer를 배제한다</a> · <a href="ko/seminar-3/02-flush-generations.html#experiment">이전 완료 전후에 이후 dirty 신호가 남는지 관찰한다</a>.</p>
 <p>이번 장의 사례는 앞 사례와 독립적으로 시작합니다. 요청 스레드는 아직 메모리에 없는 페이지 Q를 읽으려 합니다. 페이지 P는 메모리의 frame에 있고 dirty 상태입니다. Flusher는 P의 내용을 저장 경로로 보내는 실행 주체입니다. Writer는 P를 변경하는 실행 주체입니다.</p>
     <p>Flusher가 확보한 P의 사본을 G라고 부르겠습니다. 사본을 확보한 뒤 writer가 메모리의 P에 새 변경을 남기면 그 이후 변경을 G+1이라고 부르겠습니다. G와 G+1은 실행 순서를 설명하기 위한 이름입니다. 실제로 저장된 세대 번호는 아닙니다. Flusher가 G를 전달하는 동안 writer가 새 변경을 남길 수 있을 때, 완료 처리가 어떤 상태를 지워도 되는지 살펴보겠습니다.</p>
@@ -125,12 +168,35 @@
 
     <p class="cue"><strong>화면 안내:</strong> 대안의 전이: <a href="ko/seminar-3/02-flush-generations.html#replacement-protocol">사본 없는 대안은 I/O가 끝날 때까지 writer를 배제한다</a>.</p><p>이번에는 페이지 사본을 만들지 않는 대안을 생각해 보겠습니다. 쓰기를 맡은 스레드는 먼저 다른 writer가 페이지 내용을 바꾸지 못하도록 필요한 보호를 확보합니다. 쓰기 스레드는 제출할 페이지 내용을 변경되지 않는 상태로 유지합니다. 그 내용에 대응하는 페이지 LSA를 확인합니다. 그런 다음 필요한 로그를 먼저 영속화하는 WAL force를 수행합니다. 페이지 내용을 저장 경로에 제출하는 동안에도 다른 writer의 변경을 계속 막습니다.</p>
     <p>쓰기가 성공하면 스레드는 이번에 기록한 내용에 대한 완료 처리를 마칩니다. 그 뒤 다른 writer가 페이지를 변경하도록 허용합니다. 쓰기가 실패하면 나중에 다시 기록할 수 있도록 DIRTY와 oldest-unflush 정보를 남깁니다. 임시 상태를 정리하고 변경을 막던 보호를 해제합니다.</p><p>이것은 설명을 위해 구성한 대안입니다. 별도 이미지를 줄이는 대신 다른 writer가 로그와 저장장치 I/O를 기다려야 합니다. Immutable 버전 이미지, 즉 확보 뒤 내용이 바뀌지 않는 버전을 유지하는 대안도 있습니다. 그 대안에는 버전을 언제 해제할지 정하는 protocol이 추가로 필요합니다. 어느 대안이든 torn write를 처리하려면 저장과 복구 protocol을 따로 갖춰야 합니다.</p><p class="cue"><strong>화면 안내:</strong> 관측과 반증: <a href="ko/seminar-3/02-flush-generations.html#experiment">이전 완료 전후에 이후 dirty 신호가 남는지 관찰한다</a>.</p><p>이제 관측 지점을 추가하는 probe 계획을 보겠습니다. 사본의 LSA와 현재 페이지의 LSA를 각각 기록합니다. 사본 확보 전, writer의 새 변경 후, 이전 사본의 완료 후에 DIRTY와 FLUSHING을 기록합니다. DWB 수락, staging sync, home sync의 시각도 각각 기록합니다. 이전 완료 처리가 이후 변경의 기록까지 지운다면 새 변경을 남긴다는 설명에 반례가 됩니다. Crash 복구 결과를 해석하려면 오류를 넣은 fault 지점과 storage 가정이 필요합니다. Flag 기록만으로 영속화를 증명할 수는 없습니다.</p>
+
+
+  </div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/02-flush-generations.html#workload">가득 찬 풀에서 변경된 페이지를 안전하게 기록하려면?</a></li><li><a href="ko/seminar-3/02-flush-generations.html#flush-purpose">Flush는 안정된 페이지 사본을 저장 경로에 제출한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#flush-purpose-part-2">Dirty flag는 아직 기록해야 할 변경을 나타낸다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#flush-purpose-part-3">페이지 기록과 페이지 사용 해제는 서로 다른 일을 끝낸다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generation-meaning">고정된 사본이 있으면 이후 writer는 계속 진행할 수 있다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generation-meaning-part-2">두 flag가 이전 작업과 새 작업을 구별한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#why-flushing">이전 dirty 신호를 비워 새 변경을 기록할 자리를 만든다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#moments">복구 로그가 페이지 이미지보다 먼저 살아남아야 한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#moments-diagram">Commit과 페이지 전파가 넘는 경계는 다르다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#lsas">최신 로그 위치와 가장 오래된 미완료 변경은 다른 질문에 답한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#lsas-part-2">새 변경이 생기면 한 로그 경계만 앞으로 움직인다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#oldest-unflush-purpose">Checkpoint는 오래된 의무를 고르지만 현재 이미지를 기록한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#oldest-unflush-purpose-part-2">복구 진도를 잘못 기록한 경우와 WAL이 부족한 경우는 원인이 다르다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#oldest-unflush-purpose-part-3">Checkpoint의 재확인이 미완료 작업을 복구 범위에 남긴다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generation">보호를 풀기 전에 바이트와 로그 관리 정보를 함께 확보한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generation-part-2">Q02 · 제출할 사본에는 어느 로그 위치가 해당하는가?</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generation-part-3">이전 사본을 완료해도 이후 dirty 신호는 남긴다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generation-part-4">사본 확보 뒤 새 oldest-unflush 경계가 시작된다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#copy-versus-dwb">안정된 사본과 DWB가 해결하는 문제는 다르다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#copy-versus-dwb-part-2">선택한 경로에 따라 성공 반환의 의미가 달라진다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#flushing-versus-fsync">FLUSHING은 fsync의 진행 상태가 아니다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#copy-versus-dwb-part-3">Q04 · 완료 기록이 입증하는 사건은 무엇인가?</a></li><li><a href="ko/seminar-3/02-flush-generations.html#redirty">이전 완료 처리는 새 작업을 계속 드러내야 한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#redirty-part-2">Q03 · 값이 같아져도 로그 이력은 사라지지 않는다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generations-mechanism">호출자의 보호 조건이 사본을 신뢰할 수 있게 한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generations-removal">Dirty bit 하나로 처리하면 이후 writer의 작업을 지울 수 있다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generations-alternatives">안전한 대안은 바이트를 고정하고 해당 작업만 완료해야 한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generations-alternatives-part-2">Flush가 경쟁하면 이전 바이트가 마지막에 기록될 수 있다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generations-boundaries">로그 순서를 지켜도 페이지 쓰기가 원자적이 되는 것은 아니다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generations-boundaries-part-2">DWB는 중간 이미지를 먼저 보존하고 홈 페이지를 전파한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#generations-defense">D25 · 데이터 값이 같으면 다음 flush를 생략해도 될까?</a></li><li><a href="ko/seminar-3/02-flush-generations.html#replacement-protocol">사본 없는 대안은 I/O가 끝날 때까지 writer를 배제한다</a></li><li><a href="ko/seminar-3/02-flush-generations.html#experiment">이전 완료 전후에 이후 dirty 신호가 남는지 관찰한다</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 
   <section class="run-sheet" id="daemons">
-    <p class="eyebrow">03 · FOUR LOOPS</p><h2>네 daemon은 서로 다른 일을 한다</h2>
+    <p class="eyebrow">03 · FOUR LOOPS</p><h2>백그라운드에서 일하는 네 담당자</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/03-daemon-architecture.html#workload">읽을 페이지는 있는데 담을 빈자리가 없다</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> 사본 보내기, 완료 정리, 교체 정책 조정, 쓰기 속도 조절은 각각 다른 일입니다.</p>
+<p>빈 메모리 칸이 없고, 사용하지 않는 페이지 P에 dirty 변경이 남아 있다고 하겠습니다. 새 페이지를 요청한 스레드가 준비 작업을 전부 맡으면, 요청은 로그와 페이지 쓰기까지 기다릴 수 있습니다. 일부 작업을 미리 진행하는 백그라운드 스레드를 <strong>daemon</strong>이라고 부릅니다.</p>
+<p>CUBRID에서는 다음 네 담당자가 서로 다른 일을 합니다. 처음에는 이름과 맡은 일만 연결해 보세요.</p>
+<ul class="role-list">
+<li><strong>Page-flush:</strong> 교체 후보가 될 페이지의 변경 내용을 저장 경로에 보냅니다.</li>
+<li><strong>Post-flush:</strong> 넘겨받은 쓰기 완료를 정리하고, 지금 적합한 칸이면 기다리는 요청에 후보로 제안합니다.</li>
+<li><strong>Maintenance:</strong> 어떤 페이지를 얼마나 오래 메모리에 남겨둘지 교체 정책을 조정합니다.</li>
+<li><strong>Flush-control:</strong> 쓰기 이후에 사용할 처리 예산을 갱신해, 쓰기 흐름의 속도를 조절합니다.</li>
+</ul>
+<p>이 네 이름을 페이지가 반드시 통과하는 네 단계로 읽으면 안 됩니다. 예를 들어 쓰기를 맡은 스레드가 완료를 직접 정리하기도 합니다. 정책 조정과 속도 조절은 별도로 진행됩니다.</p>
+<p>작업할 상태는 공유 자료에 남아 있고, 다른 스레드가 담당자에게 <strong>wakeup</strong>, 즉 깨우는 알림을 보낼 수 있습니다. 알림을 보냈다는 사실만으로 작업이 완료됐다고 말할 수는 없습니다. 담당자가 실제로 실행됐는지, 상태를 바꿨는지 확인해야 합니다. 주기 역시 요청의 완료 시간을 보장하지 않습니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> Page-flush가 한 번 실행됐습니다. 새 페이지를 기다리는 요청은 반드시 진행할까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>반드시 진행하는 것은 아닙니다. 이번 실행에서 적합한 페이지를 못 찾았을 수 있습니다. 사본을 보냈어도 다른 스레드의 새 사용이나 변경 때문에 그 칸을 아직 넘길 수 없을 수도 있습니다.</p></details></div>
+<p>먼저 Page-flush가 어떤 페이지를 고르고, 왜 다시 검사하는지 보겠습니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/03-daemon-architecture.html#workload">읽을 페이지는 있는데 담을 빈자리가 없다</a> · <a href="ko/seminar-3/03-daemon-architecture.html#replacement-protocol">스레드 하나로 바꾸려면 기록 대기 중에도 다른 일을 해야 한다</a> · <a href="ko/seminar-3/03-daemon-architecture.html#experiment">깨우기 요청과 남은 작업을 시간 순서로 따로 기록한다</a>.</p>
 <p>이번 장은 새 페이지 요청에서 따로 시작합니다. Pool의 모든 frame에 페이지가 들어 있습니다. 읽으려는 페이지 S3는 아직 메모리에 없습니다. 다른 페이지 S4는 메모리에 있지만 지금 사용하는 스레드는 없습니다. S4에는 아직 기록하지 않은 dirty 변경이 남아 있습니다. Frame은 페이지 하나를 담는 메모리 공간이고, BCB는 그 공간의 현재 페이지와 사용 상태를 관리하는 구조입니다. 먼저 S4의 변경을 안전하게 기록하면 frame 재사용을 준비할 수 있습니다. 쓰기를 마친 뒤에도 재사용을 맡은 스레드는 현재 사용 상태를 다시 검사해야 합니다.</p>
 <p>S3를 요청한 스레드가 준비 작업을 모두 직접 맡는다고 생각해 보겠습니다. 그 스레드는 S4에 필요한 WAL을 보존하고, 페이지를 쓰고, BCB의 완료 처리를 마칠 때까지 기다릴 수 있습니다. WAL은 페이지보다 먼저 영속화해야 하는 변경 로그입니다.</p>
@@ -191,12 +257,35 @@
     <p>종료 시에는 새 작업을 넣는 producer를 먼저 닫습니다. 정해진 규칙에 따라 continuation을 끝내거나 취소합니다. 그 뒤 worker를 join하고 공유 상태를 해제합니다.</p><p>이것은 설명용 대안입니다. Foreground가 직접 처리하면 기다리는 시간이 caller의 지연으로 들어갑니다. 하나의 통합 worker가 blocking I/O를 수행하면 그 대기가 나머지 역할도 늦출 수 있습니다. 기다리는 동안 다른 일을 실행하는 nonblocking 대안에는 queue와 continuation, 취소를 맡는 주체, 스케줄링 정책이 추가로 필요합니다. I/O와 공정성에 관한 가정 없이 전체 처리 시간의 상한을 계산할 수는 없습니다.</p><p class="cue"><strong>화면 안내:</strong> 관측과 반증: <a href="ko/seminar-3/03-daemon-architecture.html#experiment">깨우기 요청과 남은 작업을 시간 순서로 따로 기록한다</a>.</p><p>먼저 기존 framework 통계로 loop 실행, wake, sleep 사건을 찾겠습니다. 추가 기록에는 작업을 공유 상태에 올린 시각, waiter 상태, task 진입 시각, 당시 실행 조건을 연결하겠습니다. Wake 횟수만 세면 어떤 작업을 처리했는지 알 수 없습니다. 이 사례의 전제에서 남아 있는 pending 작업을 다시 발견할 경로가 기록되지 않는다면, 제안한 진행 설명에 반례가 됩니다. 스케줄러가 멈춘 상황은 관측 시간에 영향을 줍니다. 유한한 기록만으로 영구적인 starvation, 즉 요청이 끝없이 처리 기회를 얻지 못하는 상태를 증명할 수는 없습니다.</p>
 <h3 id="daemon-statistics-cue">관측 전에 collection과 activation을 확인하기</h3><p>다음은 아직 실행하지 않은 실험 제안입니다. <code>extended_statistics_activation</code>의 기본 mask는 15입니다. 그 값에는 page-buffer victimization bit 16과 daemon bit 64가 들어 있지 않습니다. 엔진은 이 mask를 초기화 때 cache합니다. 일반 SQL로 바꾸려는 요청은 거절하므로 필요한 bit를 시작 설정에 포함해야 합니다. 통계 수집 자체도 활성 상태여야 합니다.</p>
     <p>Hidden 시작 옵션 <code>stats_on</code>의 기본값은 false입니다. 이 옵션으로 always-watching 수집을 켤 수 있습니다. 적절한 runtime 수집 utility나 API를 이용하는 방법도 있습니다. 이 설정만 켠다고 후보별 사건의 시각이 새로 기록되는 것은 아닙니다. 작업 공개, gate, waiter 상태, 실행 조건인 predicate, task 진입 시각을 기록할 probe는 추가로 구현해야 합니다. 관측하는 observer 자체가 실행 시간을 바꿀 수도 있습니다. 유한한 기록으로 latency의 상한이나 영구 starvation을 입증하지는 않겠습니다.</p>
+
+
+  </div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/03-daemon-architecture.html#workload">읽을 페이지는 있는데 담을 빈자리가 없다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#why-background">요청이 오기 전에 준비하면 요청이 할 일이 줄어든다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#why-background-part-2">기록을 기다리는 동안 다른 관리 작업도 해야 한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#cadence">네 스레드가 맡은 일을 구체적으로 나누어 보자</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#cadence-part-2">페이지 사본을 보내는 일과 관리 상태를 정리하는 일은 다르다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#cadence-part-3">깨어나면 먼저 지금 할 일이 있는지 확인한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#cadence-part-4">각 스레드는 필요한 시점에 다시 확인한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#cadence-part-5">깨우기 요청이 지나가도 처리할 대상은 목록에 남는다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#cadence-loops">처리 목록, 페이지 상태, 정책을 구분해서 확인한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#scan-scope">데몬마다 훑어보는 대상이 다르다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#scan-page-flush">Page-flush는 대상 LRU의 꼬리에서 링크를 따라간다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#scan-share">탐색 비중이 0이면 이번에는 그 리스트의 BCB를 보지 않는다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#scan-budget">한 번의 후보 수집에는 상한이 있지만 데몬 실행 전체에는 횟수 상한이 없다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#scan-maintenance">Maintenance는 리스트 통계를 읽고 구역 경계를 조정한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#scan-complexity">리스트 수와 실제 방문량으로 시간복잡도를 읽는다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#scan-queue-bound">완료 큐의 8,192개 용량은 처리 횟수 제한이 아니다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#scan-elapsed-time">예상 시간은 방문량과 대기 시간을 나누어 계산한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#plain-language-bridge">완료 처리를 기다리는 스레드와 속도를 조절받는 스레드는 다르다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#daemon">스레드는 작업을 한 번 실행한 뒤 기다린다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#daemon-part-2">잠들기 전에 보낸 깨우기는 나중을 위해 저장되지 않는다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#daemon-wakeup-risk">깨우기를 놓치면 필요한 작업도 잠들 수 있다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#daemon-wakeup-source">코드는 먼저 깨우기를 거절하고 나중에 기다린다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#daemon-wakeup-remedies">깨우기 요청을 기억하고 잠들기 전에 확인한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#lifecycle">만들기, 작업 허용하기, 종료 기다리기는 별도 단계다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#lifecycle-creation">필요한 메모리를 먼저 만들고 복구가 끝나면 작업을 허용한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#lifecycle-resources">스레드가 끝날 때까지 사용하는 객체를 유지해야 한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#lifecycle-errors">시작에 실패했을 때도 남은 객체를 정리해야 한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#lifecycle-part-2">종료를 요청해도 사용 중인 메모리를 바로 없애면 안 된다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#lifecycle-part-3">작업 허용과 깨우기를 시간 순서로 따라가 보자</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#lifecycle-part-4">join은 스레드가 정리를 마치고 끝난 뒤 반환한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#daemons-removal">처리 대상 목록을 없애고 깨우기만 보내면 무엇을 잃을까?</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#daemons-boundaries">복구 중 접근과 종료 후 접근을 각각 막아야 한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#daemons-defense">D26 · 50 ms 주기라고 300 ms 동안 여섯 번 완료한 것은 아니다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#replacement-protocol">스레드 하나로 바꾸려면 기록 대기 중에도 다른 일을 해야 한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#experiment-setup">카운터를 읽기 전에 수집이 켜져 있는지 확인한다</a></li><li><a href="ko/seminar-3/03-daemon-architecture.html#experiment">깨우기 요청과 남은 작업을 시간 순서로 따로 기록한다</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 
   <section class="run-sheet" id="page-flush">
-    <p class="eyebrow">04 · CREATE CLEAN SUPPLY</p><h2>Page-flush: 기억한 후보를 다시 검사한다</h2>
+    <p class="eyebrow">04 · CREATE CLEAN SUPPLY</p><h2>쓰기 후보 목록은 다시 확인해야 한다</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/04-page-flush.html#workload">왜 변경 내용을 미리 기록해 둘까?</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> “아까 적합했던 페이지”가 지금도 적합한지 확인한 뒤 씁니다.</p>
+<p>버퍼 풀에는 반복해서 쓰는 페이지와 한동안 쓰지 않은 페이지가 섞여 있습니다. CUBRID는 페이지 기록을 <strong>LRU 목록</strong>으로 관리하고, 목록 안의 구역에 따라 보존할 기회를 다르게 줍니다. <strong>LRU3</strong>는 교체 후보를 찾는 차가운 구역입니다. 차갑다는 말은 정책상 분류이며, 덮어써도 된다는 허가는 아닙니다.</p>
+<p>Page-flush는 대상 목록의 차가운 쪽에서 일부 항목을 살펴보고 dirty 후보를 기억합니다. 버퍼 풀의 모든 페이지를 매번 쓰는 작업은 아닙니다. <strong>BCB</strong>는 각 메모리 칸에 현재 어떤 페이지가 들어 있고 어떤 상태인지 관리하는 구조입니다. 후보에는 BCB와 당시의 페이지 식별 정보가 함께 기록됩니다.</p>
+<h3>작은 예: 목록을 만든 뒤 다른 사용자가 들어온다</h3>
+<ol class="example-steps">
+<li>페이지 P는 사용 중이 아니고, dirty이며, 차가운 구역에 있습니다. Page-flush가 P를 후보로 기억합니다.</li>
+<li>실제 쓰기 전에 다른 스레드가 P를 fix해 사용하기 시작합니다.</li>
+<li>Page-flush가 BCB를 잠그고 다시 확인합니다. 이 후보 경로에서는 사용 중인 P를 건너뜁니다.</li>
+</ol>
+<p>같은 검사에서 지금도 같은 페이지인지, dirty인지, 이미 다른 flush가 진행 중인지, 차가운 구역인지도 확인합니다. 잠금은 다른 스레드가 관련 관리 상태를 동시에 바꾸지 못하도록 보호하는 장치입니다.</p>
+<p>필요한 WAL이 아직 영속화되지 않았다면 로그 쓰기를 요청하고 후보를 건너뛸 수 있습니다. 일부 조건에서는 필요한 로그를 기다린 뒤 다시 시도하는 경로도 있습니다. <strong>핵심 순서는 로그 먼저, 해당 페이지 이미지 나중입니다.</strong> 적합한 후보가 없거나 중단 조건을 만나면 이번 작업은 끝날 수 있습니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> 후보를 기억할 때 아무도 P를 사용하지 않았습니다. 쓰기 직전의 사용 상태 검사를 생략해도 될까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>생략하면 안 됩니다. 목록을 만든 뒤 다른 스레드가 P를 사용했을 수 있습니다. 과거의 관찰은 현재 상태를 대신하지 못합니다.</p></details></div>
+<p>다음은 사본을 성공적으로 보낸 뒤의 처리입니다. 쓰기 완료와 칸을 넘기는 일은 여기서도 따로 봐야 합니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/04-page-flush.html#workload">왜 변경 내용을 미리 기록해 둘까?</a> · <a href="ko/seminar-3/04-page-flush.html#replacement-protocol">설계 대안: 후보를 예약하면 무엇이 더 필요할까?</a> · <a href="ko/seminar-3/04-page-flush.html#experiment">어디까지 진행됐는지 어떻게 확인할까?</a>.</p>
 <p>이번 장은 후보를 수집하는 독립적인 사례입니다. 페이지 P는 dirty이고 지금 사용하는 스레드는 없습니다. Page-flush 스레드는 LRU list lock을 잡습니다. P를 관리하는 BCB의 포인터와 P의 VPID를 기억합니다. VPID는 논리 페이지의 식별자입니다.</p>
     <p>Page-flush는 list lock을 놓은 뒤 나중에 BCB를 잠급니다. 그 사이 다른 스레드가 실행될 수 있습니다. BCB의 주소가 같아도 그 frame에 담긴 페이지나 사용 상태, dirty 상태는 바뀔 수 있습니다. 따라서 후보를 수집할 때 본 상태를 지금의 작업을 허가하는 근거로 그대로 사용할 수는 없습니다.</p>
@@ -257,12 +346,35 @@
     <p class="cue"><strong>화면 안내:</strong> 대안의 전이: <a href="ko/seminar-3/04-page-flush.html#replacement-protocol">설계 대안: 후보를 예약하면 무엇이 더 필요할까?</a>.</p><p>이번에는 후보를 예약하는 대안을 구성하겠습니다. 후보를 고르는 스레드는 list와 descriptor를 보호한 상태에서 예약을 설치합니다. 다른 fix·재사용 경로도 모두 이 예약을 따라야 합니다. 스레드는 예약한 identity를 기억하고 list 보호를 해제합니다. 예약 자체는 계속 유지합니다. 예약 protocol을 따르면서 페이지 바이트를 보호하고 이미지를 확보합니다.</p>
     <p>예약을 취소하거나 flush가 실패하면 아직 기록해야 할 작업 정보를 복구합니다. 그 뒤 예약과, 저장 공간을 사용 중이라고 유지하던 수명 기록을 정해진 순서로 해제합니다.</p><p>이것은 설명용 예약 대안입니다. 현재 identity를 관찰한 뒤 재검사하는 대신 예약으로 중간 변경을 제한합니다. 모든 fix·재사용 경로가 새 예약 상태를 따라야 합니다. 오랫동안 다른 접근을 막으면 자주 쓰는 hot 페이지의 접근도 늦출 수 있습니다. 후보 c개를 모아 정렬하려면 추가 공간과 O(c log c)의 비교가 필요합니다. 현재 구현은 예약을 계속 유지하는 대신 현재 상태를 다시 검사하는 비용을 사용합니다.</p><p class="cue"><strong>화면 안내:</strong> 관측과 반증: <a href="ko/seminar-3/04-page-flush.html#experiment">어디까지 진행됐는지 어떻게 확인할까?</a>.</p><p>기존 skip counter는 여러 후보 거절 이유를 한 숫자로 묶습니다. 추가할 후보별 probe에서는 수집 당시 VPID와 현재 VPID를 각각 기록하겠습니다. 실제 거절 분기, 사본 LSA, 영속화된 WAL 위치도 기록하겠습니다. VPID 검사를 제거한 뒤 다른 페이지를 원래 후보로 연결한 사건은 그 검사에 대한 제한된 반례입니다. 그것만으로 바이트 손상까지 입증하지는 않습니다. 관측용 lock이 원래 실행에는 없던 지연이나 보호 공백을 만들 수 있습니다. 그렇게 만들어진 사건을 원래 경로의 반례로 사용해서는 안 됩니다. Probe의 영향도 함께 기록해야 합니다.</p>
 <p>이 실험에서도 먼저 통계 수집이 활성 상태인지 확인하겠습니다. 후보의 상세 통계에는 시작 시 activation mask의 victimization bit 16이 필요합니다. Daemon의 상세 통계에는 bit 64가 필요합니다. 기본 mask 15에는 둘 다 없습니다. 기존 합계 counter와 아직 구현하지 않은 후보별 probe를 구분하겠습니다. Probe가 lock과 실행 시간에 미치는 영향도 함께 기록하겠습니다.</p>
+
+
+  </div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/04-page-flush.html#workload">왜 변경 내용을 미리 기록해 둘까?</a></li><li><a href="ko/seminar-3/04-page-flush.html#handoff-problem">누가 페이지와 메모리 자리를 관리할까?</a></li><li><a href="ko/seminar-3/04-page-flush.html#trigger">Page-flush는 언제 움직일까?</a></li><li><a href="ko/seminar-3/04-page-flush.html#selection">어떤 페이지부터 살펴볼까?</a></li><li><a href="ko/seminar-3/04-page-flush.html#selection-current-checks">골라 둔 페이지를 왜 다시 확인할까?</a></li><li><a href="ko/seminar-3/04-page-flush.html#first-code-path">왜 사본을 만들고 로그를 먼저 기록할까?</a></li><li><a href="ko/seminar-3/04-page-flush.html#handoff-boundaries">쓰기 작업이 끝나면 그 자리를 바로 쓸 수 있을까?</a></li><li><a href="ko/seminar-3/04-page-flush.html#candidate-races">다른 작업이 끼어들면 무엇이 달라질까?</a></li><li><a href="ko/seminar-3/04-page-flush.html#trigger-part-2">필요한 로그가 늦으면 무엇을 기다릴까?</a></li><li><a href="ko/seminar-3/04-page-flush.html#experiment">어디까지 진행됐는지 어떻게 확인할까?</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 
   <section class="run-sheet" id="post-flush">
-<p class="eyebrow">05 · COMPLETE AND REVALIDATE</p><h2>쓰기를 마쳐도 메모리 칸을 바로 넘길 수 없는 이유</h2>
+<p class="eyebrow">05 · COMPLETE AND REVALIDATE</p><h2>쓰기를 마친 칸도 바로 넘길 수는 없다</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/05-post-flush.html#workload">페이지를 썼는데, 왜 메모리 칸은 아직 못 줄까?</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> 이전 쓰기의 완료는 정리하되, 새 사용과 새 변경은 계속 보호합니다.</p>
+<p>페이지 P의 사본을 저장 경로에 성공적으로 보냈다고 하겠습니다. P의 관리 정보에는 아직 쓰기 작업이 진행 중이라는 표시가 남아 있습니다. 이 표시가 <strong>FLUSHING</strong>입니다. 완료 처리는 이 작업의 표시를 정리하고, 그 완료를 기다리는 스레드를 깨우는 일입니다.</p>
+<p>특정 조건에서는 Page-flush가 완료 처리를 Post-flush에 넘깁니다. <strong>Queue</strong>는 담당자가 나중에 처리할 항목을 넣는 대기 목록입니다. 이 큐에는 페이지 사본 자체가 아니라 BCB 포인터, 즉 관리 구조를 가리키는 참조가 들어갑니다.</p>
+<h3>작은 예: 큐에서 기다리는 동안 P가 다시 바뀐다</h3>
+<ol class="example-steps">
+<li>P의 값 11인 사본을 보냈습니다. BCB를 완료 큐에 넣습니다.</li>
+<li>Post-flush가 꺼내기 전에 다른 스레드가 P를 fix하고 값을 12로 바꿉니다.</li>
+<li>Post-flush는 BCB를 잠그고 현재 상태를 봅니다. 새 사용과 새 dirty 변경 때문에 이 칸을 기다리는 요청에 넘길 수 없습니다.</li>
+</ol>
+<p><strong>칸을 넘기지 못해도 이전 쓰기의 완료 처리는 합니다.</strong> 11에 대한 FLUSHING 표시를 정리하고 해당 flush를 기다리는 스레드를 깨웁니다. 12의 dirty 정보는 남깁니다. “이번 쓰기를 끝냈다”와 “다른 페이지에 쓸 칸을 얻었다”는 서로 다른 결과입니다.</p>
+<p>큐로 넘기는 조건이 안 맞거나 큐에 넣을 수 없다면, 쓰기를 맡은 스레드가 그 자리에서 완료를 정리합니다. Post-flush가 꼭 있어야 모든 쓰기가 끝나는 구조는 아닙니다. 적합한 칸을 기다리는 요청에 직접 제안하는 후보는 <strong>direct victim</strong>이라고 부릅니다. 제안을 받은 쪽도 실제 재사용 전에 현재 조건을 다시 확인해야 합니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> Post-flush가 큐 항목을 처리했습니다. 새 페이지 요청에 칸을 배정했다는 뜻일까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>그 뜻은 아닙니다. 완료는 정리했지만 현재 사용, 새 dirty 변경, 교체 정책 등의 조건 때문에 배정을 거절했을 수 있습니다.</p></details></div>
+<p>이제 교체 정책이 “어느 페이지를 더 남겨둘지” 정하는 쪽을 보겠습니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> <a href="ko/seminar-3/05-post-flush.html#workload">페이지를 썼는데, 왜 메모리 칸은 아직 못 줄까?</a>.</p>
 <p>페이지 P가 메모리 한 칸에 있습니다. 한 요청이 수정하고 사용을 끝냈습니다. 사본의 쓰기 호출도 성공했습니다. 그런데 새 페이지를 읽으려는 요청은 아직 칸을 받지 못했습니다. 그 칸의 기록을 마무리하고, 지금 넘겨도 되는지 확인해야 하기 때문입니다. 쓰기 경로가 중간 저장 영역에 사본을 받아둔 경우도 있으므로 최종 디스크 영속성과는 구별합니다.</p>
 <p class="cue"><strong>화면 안내:</strong> <a href="ko/seminar-3/05-post-flush.html#two-waits">“이번 쓰기를 마쳐 주세요”와 “빈 칸을 주세요”</a>.</p>
@@ -319,12 +431,31 @@
 <p>실험은 아직 실행하지 않은 제안입니다. 큐 삽입과 소비, FLUSHING 해제, 제안과 취소, 보호된 수신을 같은 BCB와 식별자로 연결합니다. 배정 카운터나 wake 횟수만으로 실제 수신을 판단하지 않습니다. 관측 코드가 순서를 바꾸는 비용도 기록합니다.</p>
 <h3 id="post-flush-reset-cue">대기 간격 변화는 칸 확보의 증거가 아니다</h3><p>완료 항목을 하나라도 소비하거나 앞선 wake를 받아들이면 대기 간격을 초기화할 수 있습니다. 기본 간격은 1, 10, 100 ms 뒤 무기한 wake 대기로 갑니다. 이는 완료 기한이 아닙니다. 큐 용량 8,192도 처리 시간의 상한은 아닙니다. 소비 중 새 항목이 들어올 수 있습니다.</p>
 <details class="answer-disclosure"><summary>기존 소스 위치 펼치기</summary><p class="source"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">완료 처리 인계 조건</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15556">소비자의 검사와 완료 처리</a></p></details>
+
+</div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/05-post-flush.html#workload">페이지를 썼는데, 왜 메모리 칸은 아직 못 줄까?</a></li><li><a href="ko/seminar-3/05-post-flush.html#two-waits">“이번 쓰기를 마쳐 주세요”와 “빈 칸을 주세요”</a></li><li><a href="ko/seminar-3/05-post-flush.html#successful-submission">1. 페이지 사본의 쓰기 호출이 성공한다</a></li><li><a href="ko/seminar-3/05-post-flush.html#completion-handoff">2. 메모리 칸의 기록을 마무리 담당자에게 넘긴다</a></li><li><a href="ko/seminar-3/05-post-flush.html#successful-offer">3. 지금 넘겨도 되는지 확인하고, 제안과 마무리를 한다</a></li><li><a href="ko/seminar-3/05-post-flush.html#successful-receipt">4. 받는 요청이 확인한 뒤, 이전 페이지를 빼고 칸을 쓴다</a></li><li><a href="ko/seminar-3/05-post-flush.html#flush-waiter-completion">한쪽 대기가 끝나도, 빈 칸을 기다리는 요청은 남는다</a></li><li><a href="ko/seminar-3/05-post-flush.html#handoff-part-2">다른 상황 1: 큐가 가득 차면 직접 마무리한다</a></li><li><a href="ko/seminar-3/05-post-flush.html#redirty-case">다른 상황 2: 사본을 쓴 뒤 원래 페이지가 다시 바뀐다</a></li><li><a href="ko/seminar-3/05-post-flush.html#post-part-3">다른 상황 3: 받기 전에 다른 요청이 페이지를 사용한다</a></li><li><a href="ko/seminar-3/05-post-flush.html#handoff">쓰기 성공에서 칸 확보까지, 무엇을 따로 확인할까?</a></li><li><a href="ko/seminar-3/05-post-flush.html#handoff-map">전체 그림은 기본 흐름을 읽은 뒤 펼쳐 본다</a></li><li><a href="ko/seminar-3/05-post-flush.html#post-flush-code-path">소스 찾기: 큐에 넣는 곳, 꺼내는 곳, 직접 마치는 곳</a></li><li><a href="ko/seminar-3/05-post-flush.html#waiter-storage">세 자료 구조에는 서로 다른 것이 들어 있다</a></li><li><a href="ko/seminar-3/05-post-flush.html#flush-waiter-wakeup">페이지의 대기 목록에서 flush 대기자만 깨운다</a></li><li><a href="ko/seminar-3/05-post-flush.html#allocator-wakeup">칸을 기다리는 요청에게 제안하고 깨우는 순서</a></li><li><a href="ko/seminar-3/05-post-flush.html#post">큐의 기록은 과거이고, 넘길지 판단하는 기준은 현재다</a></li><li><a href="ko/seminar-3/05-post-flush.html#handoff-part-3">상태로 확인하기: 큐가 가득 찬 경우</a></li><li><a href="ko/seminar-3/05-post-flush.html#post-part-4">상태로 확인하기: 이전 사본과 새 수정은 다르다</a></li><li><a href="ko/seminar-3/05-post-flush.html#post-part-2">안전한 칸이어도, 현재 보유 정책이 전달을 막을 수 있다</a></li><li><a href="ko/seminar-3/05-post-flush.html#post-part-5">상태로 확인하기: 정책상 거절과 제안 취소를 구별한다</a></li><li><a href="ko/seminar-3/05-post-flush.html#clean-unfix-handoff">사용을 끝낸 페이지가 바로 다른 요청에게 가는 것은 아니다</a></li><li><a href="ko/seminar-3/05-post-flush.html#clean-unfix-handoff-part-2">나중에 반납해도, 취소된 제안이 저절로 살아나지는 않는다</a></li><li><a href="ko/seminar-3/05-post-flush.html#handoff-mechanism">같은 메모리 주소가 같은 페이지를 뜻하지는 않는다</a></li><li><a href="ko/seminar-3/05-post-flush.html#handoff-removal">상태로 확인하기: 재검사가 reader의 사용을 지킨다</a></li><li><a href="ko/seminar-3/05-post-flush.html#handoff-alternatives">예약을 유지하면 무엇을 더 책임져야 할까?</a></li><li><a href="ko/seminar-3/05-post-flush.html#handoff-alternatives-part-2">큐의 크기만으로 처리 시간을 알 수 없는 이유</a></li><li><a href="ko/seminar-3/05-post-flush.html#replacement-protocol">대안 설계에서도 마무리 책임과 재사용 허가는 나눈다</a></li><li><a href="ko/seminar-3/05-post-flush.html#experiment">실제로 확인하려면 쓰기, 마무리, 제안, 수신을 따로 기록한다</a></li></ol></details>
+<a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
 </section>
 
 
   <section class="run-sheet" id="maintenance">
-    <p class="eyebrow">06 · POLICY ADAPTATION</p><h2>Maintenance: 100 ms 시도와 quota 갱신</h2>
+    <p class="eyebrow">06 · POLICY ADAPTATION</p><h2>어떤 페이지를 더 오래 남겨둘까?</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/06-maintenance.html#workload">같은 페이지를 다시 읽는데, 왜 디스크에서 또 가져올까?</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> 메모리에 남길 기회를 조정하는 정책과, 안전하게 덮어쓸 수 있는지는 별도 판단입니다.</p>
+<p>반복해서 읽는 작업과 많은 페이지를 한 번씩 읽는 큰 스캔이 함께 실행된다고 하겠습니다. 스캔이 새 페이지를 계속 넣으면, 곧 다시 쓸 페이지가 밀려날 수 있습니다. Maintenance는 사용 통계를 바탕으로 페이지를 얼마나 남길지 목표를 조정합니다.</p>
+<p>CUBRID에는 <strong>private/shared LRU</strong>라는 교체 정책 목록이 있습니다. Private라는 이름이 붙어도 특정 사용자의 독점 메모리 공간은 아닙니다. 여러 실행 문맥이 같은 목록을 사용할 수 있습니다. <strong>Quota</strong>는 private 목록이 보존할 페이지 수의 목표입니다. 목록 안의 구역별 목표도 함께 조정합니다.</p>
+<h3>작은 예: 목표보다 많이 보존한 목록</h3>
+<p>한 private 목록의 quota가 100페이지이고, 현재 130페이지가 들어 있다고 하겠습니다. 이는 목표보다 30페이지 더 보존하고 있다는 뜻입니다. 그래서 교체 후보를 내놓을 때 정책 판단에 영향을 줍니다. 이 숫자는 quota의 의미를 설명하는 예이며, 실제 갱신 공식을 계산한 결과는 아닙니다.</p>
+<p><strong>“30페이지를 즉시 비워도 된다”는 뜻은 아닙니다.</strong> 각 후보가 사용 중인지, dirty인지 등 현재 조건을 별도로 검사해야 합니다. 반대로 clean이라고 해도 정책상 더 보존할 페이지일 수 있습니다.</p>
+<p>Maintenance는 주기적으로 갱신을 시도하지만, 매번 quota가 바뀌지는 않습니다. 직전 갱신 후의 시간과 활동량 같은 조건을 통과해야 합니다. 구역 목표가 줄면 페이지 기록을 다음 구역으로 옮길 수도 있습니다. 이런 정책 조정 자체가 페이지 변경을 저장하거나 frame 재사용을 승인하지는 않습니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> Quota를 줄이면 메모리 칸이 그 즉시 같은 수만큼 비어날까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>그렇지 않습니다. 남길 목표를 바꾼 것입니다. 실제 칸을 재사용하려면 후보를 찾고 현재 사용과 변경 상태 등 필요한 조건을 확인해야 합니다.</p></details></div>
+<p>마지막 담당자는 페이지 선택이 아니라, 쓰기가 계속 이어지는 속도를 조절합니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> <a href="ko/seminar-3/06-maintenance.html#workload">같은 페이지를 다시 읽는데, 왜 디스크에서 또 가져올까?</a> → <a href="ko/seminar-3/06-maintenance.html#fixed-targets">처음 정한 보존 목표를 계속 사용해도 될까?</a> → <a href="ko/seminar-3/06-maintenance.html#retention-targets">quota는 무엇의 목표일까?</a>.</p>
 <p>12개 프레임이 모두 찬 교육용 예제로 시작하겠습니다. 같은 네 페이지를 반복해서 읽는 요청과 다른 페이지를 차례로 가져오는 스캔이 함께 실행됩니다. 스캔에 자리를 내주면서 곧 다시 쓸 페이지를 내보내면, 반복 조회는 디스크에서 그 페이지를 다시 가져와야 합니다. 그 요청이 나중에 여덟 페이지를 돌아가며 읽으면, 처음 정한 목표가 바뀐 작업에 맞는지도 다시 검토해야 합니다. 이 숫자는 실제 CUBRID quota 계산이 아닙니다.</p>
 <p>교체 목록은 같은 버퍼 풀 안의 페이지를 정책에 따라 묶습니다. Private 목록은 세션과 연결되지만 페이지 접근을 독점하지 않으며, 여러 세션이 같은 목록을 쓸 수도 있습니다. Shared 목록이 스캔 페이지를 뜻하는 것도 아닙니다. Quota는 private LRU에 남기려는 페이지 수의 목표입니다. Maintenance는 이 quota와 private/shared LRU의 영역별 크기 기준을 조정하며, 버퍼 풀의 전체 프레임 수는 바꾸지 않습니다. Quota는 예약해 둔 칸 수나 즉시 재사용을 허용하는 값은 아닙니다.</p>
@@ -376,12 +507,35 @@
 
     <p class="cue"><strong>화면 안내:</strong> 대안의 전이: <a href="ko/seminar-3/06-maintenance.html#replacement-protocol">quota를 고정해도 무엇을 계속 보호해야 할까?</a>.</p><p>이번에는 각 활성 정책 domain에 고정된 share, 즉 보존 몫을 배정하는 대안을 구성하겠습니다. 정책을 관리하는 스레드는 그 몫에 맞추어 zone과 보존 정책을 적용합니다. 재사용 경로에서는 필요한 보호를 잡고 identity, 사용 상태, dirty, flush 상태를 검사합니다. 이 검사들은 계속 유지합니다. Domain을 종료하면 관련 기록을 정리합니다. Quota를 바꾸는 작업은 별도의 관리 회차에서 수행합니다.</p><p>이것은 설명용 대안입니다. 고정된 몫을 사용하면 sampling과 reset 과정의 경합을 줄일 수 있습니다. 하지만 남는 용량을 활용하지 못하거나 workload 변화에 늦게 대응할 수 있습니다. 활동량을 정확히 기록하려면 사건마다 동기화된 갱신이 필요합니다. 근사 counter는 기록 비용을 줄이는 선택입니다. 어느 쪽이 성능에서 우수한지, 오차를 얼마나 허용할지는 여기서 측정하지 않았습니다.</p><p class="cue"><strong>화면 안내:</strong> 관측과 반증: <a href="ko/seminar-3/06-maintenance.html#experiment">이번 호출은 새 표본을 소비했을까?</a>.</p><p>추가할 probe에는 갱신 guard의 검사 결과와 adjust_age를 기록하겠습니다. Sample 교환과 reset, 새 quota를 공개한 사건도 기록합니다. Direct 배정은 producer별로 구분합니다. VS-20에서는 daemon loop 횟수보다 문제의 반복문 본문에 진입한 횟수를 확인해야 합니다. Quota 숫자가 같은 기록만으로 갱신 조건을 통과하지 않았다고 결론 내릴 수는 없습니다. VS-21의 sample 오차와 VS-20의 allocator 영향은 통제된 관측 전까지 미측정으로 남겨 두겠습니다.</p>
 <p>Maintenance를 관측할 때도 먼저 통계 수집을 활성화하고 필요한 시작 시 activation bit를 설정해야 합니다. 기본 mask 15에는 victimization bit 16과 daemon bit 64가 없습니다. Daemon loop 횟수만 보면 갱신을 수락한 epoch를 누가 호출했는지 알 수 없습니다. Foreground 호출과 daemon 호출을 나누어 기록하는 추가 timeline은 아직 실행하지 않은 제안입니다.</p>
+
+
+</div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/06-maintenance.html#workload">같은 페이지를 다시 읽는데, 왜 디스크에서 또 가져올까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#fixed-targets">처음 정한 보존 목표를 계속 사용해도 될까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#retention-targets">quota는 무엇의 목표일까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#activity-samples">maintenance는 어떤 활동을 관찰할까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#first-code-path">활동 표본은 어떻게 교체 정책에 반영될까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#quota-change">보존 목표가 줄면 무엇이 달라질까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#reuse-checks">교체 후보가 되어도 바로 재사용할 수 없는 이유는?</a></li><li><a href="ko/seminar-3/06-maintenance.html#maintain">maintenance를 호출할 때마다 목표를 갱신할까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#maintain-part-3">갱신이 허용되어도 quota 숫자가 같을 수 있을까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#maintain-part-4">두 번 갱신해도 quota는 60일 수 있다</a></li><li><a href="ko/seminar-3/06-maintenance.html#chapter-recap">이제 maintenance에 관해 무엇을 설명할 수 있을까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#admission-guards">어떤 조건에서 새 표본의 갱신을 허용할까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#maintain-part-2">활동이 적은 풀은 언제 갱신 조건을 통과할까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#quota-from-samples">hit 표본으로 보존 용량의 몫을 어떻게 계산할까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#computed-policy">새 보존 목표에는 어떤 한계가 있을까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#startup-inputs">서버 시작 시 어떤 설정으로 풀을 구성할까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#startup-policy">무엇이 고정값이고, 저장한 설정값이며, 계산한 값일까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#cost-model">quota 조정은 어디에서 CPU를 쓰고 기다릴까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#maintenance-boundary">보조 함수를 호출해도 프레임을 하나도 제안하지 못할까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#source-guard">첫 루프 조건에서 모든 방문이 막히는 이유는?</a></li><li><a href="ko/seminar-3/06-maintenance.html#maintenance-boundary-part-2">보조 경로가 allocator 지연의 원인인지 어떻게 확인할까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#pacing-boundaries">대략적인 표본으로 정책은 정해도 재사용은 결정할 수 없는 이유는?</a></li><li><a href="ko/seminar-3/06-maintenance.html#replacement-protocol">quota를 고정해도 무엇을 계속 보호해야 할까?</a></li><li><a href="ko/seminar-3/06-maintenance.html#experiment">이번 호출은 새 표본을 소비했을까?</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
 </section>
 
   <section class="run-sheet" id="pacing">
-    <p class="eyebrow">07 · POST-WRITE PACING</p><h2>Flush-control: write 이후의 속도를 조절한다</h2>
+    <p class="eyebrow">07 · POST-WRITE PACING</p><h2>쓰기 작업이 계속 몰리지 않도록 속도를 조절한다</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/07-flush-control.html#workload">쓰기 성공 뒤에도 writer가 기다리는 이유는?</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> 이 경로에서는 먼저 쓰고, 그 뒤 필요하면 기다립니다.</p>
+<p>변경된 페이지가 많이 쌓이면 여러 스레드가 계속 쓰기를 수행할 수 있습니다. CUBRID의 <strong>Flush-control</strong>은 공유 처리 예산을 이용해 이 흐름의 속도를 조절합니다. 예산 단위를 <strong>token</strong>이라고 부릅니다. Token은 데이터를 안전하게 재사용해도 된다는 허가가 아니라 속도 조절용 숫자입니다.</p>
+<p>이 경로의 순서가 중요합니다. 해당 file-I/O 호출은 먼저 운영체제에 페이지를 씁니다. 그 뒤 token을 사용하고, 부족하면 쓰기를 한 스레드가 기다릴 수 있습니다. 이번 쓰기 전에 입장권을 받는 구조로 설명하면 실제 순서와 달라집니다.</p>
+<h3>작은 예: 쓰기는 끝났지만 스레드는 기다린다</h3>
+<ol class="example-steps">
+<li>스레드가 한 페이지를 씁니다.</li>
+<li>쓰기 이후 token을 요청했지만 처리 예산이 부족합니다. 스레드가 기다립니다.</li>
+<li>Flush-control이 새 예산을 계산하고 대기 스레드들을 깨웁니다. 스레드는 예산을 다시 확인합니다.</li>
+</ol>
+<p>새 예산은 이번 간격에 사용할 값으로 교체됩니다. 이전에 안 쓴 예산을 계속 저축하는 방식은 아닙니다. 적응형 설정은 직전 활동에 따라 예산을 조정하고, 고정 설정은 설정된 rate와 실제 시간 간격으로 계산합니다.</p>
+<p><strong>이것을 엄격한 장치 I/O 상한으로 해석하면 안 됩니다.</strong> 일부 호출은 대기를 생략하고, 재시도에서 빠져나오는 경로도 있습니다. 운영체제 write의 반환과 데이터가 영속화된 시점도 다릅니다. 정확한 설정과 예외는 아래 상세 대본에서 확인할 수 있습니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> Token 대기가 보입니다. 그러면 페이지 write가 아직 시작되지 않았다고 말할 수 있을까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>말할 수 없습니다. 설명한 경로에서는 write 이후에 token 대기가 발생합니다. 어디에서 기다리는지 순서를 확인해야 합니다.</p></details></div>
+<p>CUBRID의 역할을 연결했습니다. 이제 PostgreSQL에서도 같은 사용 보호와 안전한 교체 문제를 찾아보겠습니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/07-flush-control.html#workload">쓰기 성공 뒤에도 writer가 기다리는 이유는?</a> · <a href="ko/seminar-3/07-flush-control.html#replacement-protocol">쓰기 전 제한에는 어떤 상태가 더 필요할까요?</a> · <a href="ko/seminar-3/07-flush-control.html#experiment">어떤 기록이 쓰기 뒤 정산이라는 설명을 반증할까요?</a>.</p>
 <p>Clean frame을 더 많이 준비하면 요청의 병목이 저장장치로 옮겨갈 수 있습니다. 이번 장에서는 write 속도를 어떻게 조절하는지 보겠습니다. 고정 CUBRID 경로는 OS write를 수행한 뒤 token을 차감합니다. 따라서 token daemon이 조절하는 것은 이미 끝난 write의 허가가 아니라 이후 작업의 진행 속도입니다. 회차마다 예산을 교체하는 정책과 credit을 누적하는 정책은 순간적인 burst가 다릅니다. 속도 제한을 제거한 경우도 비교할 수 있습니다. 어느 정책에서도 WAL 순서와 보호된 재사용 검사는 수행해야 합니다.</p>
 
@@ -431,12 +585,30 @@
 
     <p class="cue"><strong>화면 안내:</strong> 대안의 전이: <a href="ko/seminar-3/07-flush-control.html#replacement-protocol">쓰기 전 제한에는 어떤 상태가 더 필요할까요?</a>.</p><p>이번에는 OS write 전에 예산을 예약하는 대안을 구성하겠습니다. Writer는 byte나 page의 비용을 정의하고 필요한 allowance, 즉 허용량을 예약합니다. 예산 보충이나 로그 진행에 필요한 lock을 보유한 채로는 기다리지 않게 합니다. 예약한 뒤 WAL 순서를 지켜 write를 수행합니다. 제출 전에 취소하면 예약한 credit을 돌려줍니다. 일부만 쓴 partial write 이후에는 미리 정한 오류 규칙에 따라 실제 작업량을 기록합니다.</p><p>이것은 설명용 대안입니다. Write 진입을 조절하려면 예약과 취소 상태를 추가로 관리해야 합니다. 로그 진행과 credit 보충이 서로 기다리는 의존 순환을 막지 못하면 deadlock이 생길 수 있습니다. Credit을 누적하면 이전에 모아 둔 양만큼 burst를 허용합니다. 회차마다 교체하면 그 회차의 allowance를 사용합니다. Pacing을 제거하면 저장장치에 대한 경쟁이 달라질 수 있습니다. 이 비교는 실제 장치 I/O의 엄격한 상한을 측정한 결과가 아닙니다.</p><p class="cue"><strong>화면 안내:</strong> 관측과 반증: <a href="ko/seminar-3/07-flush-control.html#experiment">어떤 기록이 쓰기 뒤 정산이라는 설명을 반증할까요?</a>.</p><p>관측에서는 OS write가 반환한 시각과 그 뒤 token을 차감한 시각을 연결하겠습니다. Token 교체와 broadcast, condition wait의 시작과 반환, 대기를 끝낸 이유도 기록하겠습니다. Compensation 통계만으로 그 앞의 write가 얼마나 걸렸는지 알 수는 없습니다. 관측한 경로에서 token 차감이 OS write보다 앞섰다면 고정 경로에 대한 설명의 반례가 됩니다. Wait 반환 뒤 열 번 재시도하는 경로에도 한 번의 무한 대기가 가능하면 유한한 지연 상한을 증명할 수 없습니다. 시간에 관한 주장은 실제 기록한 관측의 범위로 한정하겠습니다.</p>
 <p>Control 통계를 볼 때도 수집 활성 상태와 필요한 시작 시 activation bit를 확인하겠습니다. 기본 mask 15에는 daemon bit 64가 없습니다. 수집 설정만 켜면 OS write, token wait, broadcast의 인과관계가 자동으로 기록되는 것은 아닙니다. 추가 probe와 사용한 build·설정을 기록해야 합니다. 관측이 실행에 미친 observer effect도 기록해야 합니다. Retry 횟수로 시간 상한을 대신 계산하지는 않겠습니다.</p>
+
+
+  </div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/07-flush-control.html#workload">쓰기 성공 뒤에도 writer가 기다리는 이유는?</a></li><li><a href="ko/seminar-3/07-flush-control.html#memory-write-and-flush">RAM 변경과 파일 쓰기는 서로 다른 단계입니다</a></li><li><a href="ko/seminar-3/07-flush-control.html#flush-workloads">어떤 작업에서 dirty 페이지를 파일에 쓰나요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#credit-code-path">어떤 작업이 잔액을 갱신할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#control-initialize">Token 공유에는 어떤 자원이 먼저 필요할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#control-init-errors">선택적인 control 생성에 실패하면 어떻게 될까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#control">Writer는 쓰기 뒤 credit을 어떻게 소비할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#token-waiter-wakeup">Token 대기자는 공유 condition variable에서 기다린다</a></li><li><a href="ko/seminar-3/07-flush-control.html#control-part-2">다음 예산은 왜 이전 잔액을 교체할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#control-part-3">이미 끝난 쓰기는 credit을 어떻게 소비할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#control-policy">어떤 설정 변경이 다음 갱신에 반영될까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#control-feedback">피드백은 다음 예산을 어떻게 바꿀까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#fast-storage">디스크가 빨라지면 설정한 쓰기 속도를 높여야 할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#unlimited-tokens">Token을 사실상 무제한으로 주면 무엇을 얻고 잃을까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#soft">어떤 쓰기가 credit 부족을 우회할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#soft-part-2">두 writer는 왜 부족분을 다르게 처리할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#control-retirement">누가 언제 bucket을 파괴할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#outside">다른 어떤 주체가 쓰기와 동기화를 맡을까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#sync-policy">설정 변경이 수락되면 저장 자원도 바뀔까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#pacing-removal">남은 credit을 저장하면 집중된 쓰기는 어떻게 달라질까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#pacing-defense">D28 · 같은 quota나 열 번의 재시도로 정체를 판단할 수 있을까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#source-guard">어떤 대입이 이전 예산을 버릴까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#replacement-protocol">쓰기 전 제한에는 어떤 상태가 더 필요할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#statistics-setup">카운터를 해석하려면 무엇부터 켜야 할까요?</a></li><li><a href="ko/seminar-3/07-flush-control.html#experiment">어떤 기록이 쓰기 뒤 정산이라는 설명을 반증할까요?</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 
   <section class="run-sheet" id="postgres-model">
-    <p class="eyebrow">08 · TRANSFER THE MODEL</p><h2>PostgreSQL: pin과 credit을 먼저 나눈다</h2>
+    <p class="eyebrow">08 · TRANSFER THE MODEL</p><h2>PostgreSQL에서도 사용 중인 칸은 보호한다</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/08-postgresql-buffers.html#workload">메모리의 같은 주소가 왜 계속 같은 페이지를 가리켜야 할까?</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> “지금 사용 중인가?”와 “조금 더 남겨둘까?”는 다른 숫자로 관리합니다.</p>
+<p>PostgreSQL도 여러 요청이 공유 버퍼 풀의 페이지를 사용합니다. 요청을 처리하는 서버 프로세스를 <strong>backend</strong>라고 부릅니다. 페이지 데이터를 담는 메모리 칸과, 그 칸의 상태를 기록하는 <strong>BufferDesc</strong>라는 관리 구조가 있습니다. CUBRID의 frame과 BCB를 떠올리면 역할을 연결하기 쉽습니다.</p>
+<p>Backend가 페이지를 사용하는 동안 칸이 다른 페이지로 바뀌지 않도록 잡는 것이 <strong>pin</strong>입니다. 사용을 마치면 unpin합니다. Pin은 재사용을 막는 사용 보호입니다. 여러 backend가 같은 페이지를 pin할 수 있으며, pin만으로 다른 스레드나 프로세스의 데이터 변경까지 막는 것은 아닙니다. 페이지 내용을 읽거나 바꾸는 데에는 별도의 <strong>content lock</strong>이 필요합니다.</p>
+<p>한편 <strong>usage_count</strong>는 페이지를 조금 더 보존할 기회를 나타내는 제한된 값입니다. 여기서는 이 값을 <strong>credit</strong>이라고 부르겠습니다. 현재 사용자 수나 전체 접근 횟수가 아닙니다. 일반 경로에서는 한 backend의 첫 pin이 credit을 올릴 수 있지만, 같은 backend의 중첩 pin마다 올리지는 않습니다.</p>
+<h3>작은 예: 사용 보호는 끝났지만 보존 기회는 남는다</h3>
+<p>Backend A가 P를 pin하고 읽은 뒤 unpin했습니다. 다른 pin도 없다고 하겠습니다. P는 지금 사용 중이 아니지만 credit은 양수일 수 있습니다. 그래서 교체 정책은 P에게 보존 기회를 한 번 더 줄 수 있습니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> P의 credit이 0입니다. 다른 backend가 P를 pin하고 있어도 교체해도 될까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>안 됩니다. Credit은 보존 정책에 쓰는 값입니다. 현재 사용을 보호하는 pin이 남아 있으면 그 칸을 다른 페이지로 바꿀 수 없습니다.</p></details></div>
+<p>다음 장에서는 pin과 credit을 보고 후보를 고르는 Clock을 작은 표로 따라가겠습니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/08-postgresql-buffers.html#workload">메모리의 같은 주소가 왜 계속 같은 페이지를 가리켜야 할까?</a> · <a href="ko/seminar-3/08-postgresql-buffers.html#replacement-protocol">모든 pin이 공유 참조 수를 갱신하게 하면 어떨까?</a> · <a href="ko/seminar-3/08-postgresql-buffers.html#experiment">Pin 규칙은 어떻게 검증할 수 있을까?</a>.</p>
 <p>PostgreSQL 사례는 앞의 CUBRID 실행과 독립적으로 시작합니다. Backend는 요청을 처리하는 실행 주체입니다. Descriptor는 frame에 담긴 페이지와 사용 상태를 관리하는 구조입니다. Backend가 페이지를 pin하면 사용하는 동안 그 frame을 다른 페이지에 재사용할 수 없습니다. 페이지 바이트를 읽거나 바꿀 때는 content lock이라는 별도의 보호를 얻습니다. <code>usage_count</code>는 최근 사용을 제한된 수치로 기억하는 교체 정책 값입니다. 이 값을 보존 credit이라고 부르겠습니다. 현재 pin이 있는지와 보존 credit이 높은지는 서로 다른 질문입니다.</p>
 
@@ -479,12 +651,34 @@
 <p>Read stream은 곧 사용할 페이지를 미리 읽고 pin하는 경로입니다. PostgreSQL은 pool 크기와 최대 backend 수를 바탕으로 backend별 권고 pin 예산을 계산합니다. 이 예산을 사용하는 read stream은 작업 strategy의 제한과 남은 예산을 함께 확인합니다. 이를 바탕으로 아직 사용하지 않을 페이지를 미리 확보하는 양을 줄입니다.</p>
     <p>Stream이 현재 pin한 buffer를 하나도 보유하지 않는 경우에는 예외가 있습니다. 남은 예산이 0이어도 작업이 진행하도록 하나를 더 허용합니다. 이 정책은 아직 반납하지 않은 pin의 양을 조절합니다. 모든 resident 페이지를 나누는 client별 quota나 모든 pin의 엄격한 상한은 아닙니다.</p>
 <p class="source">추가 근거와 버전 경계: <a href="docs/research/postgresql-multiclient-buffers.md?v">동시 client의 pin, I/O 수명, 예산에 대한 고정 소스 기록</a>. 상세 설명은 위 장별 화면의 고정 source 링크로 확인합니다.</p>
+
+
+  </div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/08-postgresql-buffers.html#workload">메모리의 같은 주소가 왜 계속 같은 페이지를 가리켜야 할까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#postgres-model">Pin은 어떻게 페이지를 메모리에 유지할까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#multiclient-faq">여러 클라이언트가 쓰는 페이지는 어떻게 보호할까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#io-lifetime-pin">공유 참조 수가 backend 수보다 많을 수 있는 이유는?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#postgres-model-part-2">Q16 · Pin 세 번을 중첩하면 무엇이 늘어날까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#postgres-model-part-3">Q17 · Pin한 주소는 바로 읽어도 될까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#postgres-model-part-4">상태 추적 · 어느 backend가 아직 재사용을 막고 있을까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#clock-problem">중첩 사용은 왜 private 기록으로 충분할까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#clock-problem-part-2">각 상태는 어떤 질문에 답할까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#clock-problem-part-3">크레딧 0만으로는 왜 재사용할 수 없을까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#multiclient-coordination">동시 요청은 같은 페이지를 어떻게 찾고 사용할까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#backend-pin-budget">각 backend는 얼마나 앞서 페이지를 pin해야 할까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#clock-removal">교체 과정에 사용자가 보이지 않으면 무엇이 깨질까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#clock-removal-trace-screen">상태 추적 · Clock에 아직 사용자가 보일까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#replacement-protocol">모든 pin이 공유 참조 수를 갱신하게 하면 어떨까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#experiment">Pin 규칙은 어떻게 검증할 수 있을까?</a></li><li><a href="ko/seminar-3/08-postgresql-buffers.html#experiment-observations">어떤 관측이면 pin 규칙이 틀렸다고 할 수 있을까?</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 
   <section class="run-sheet" id="postgres-clock">
-    <p class="eyebrow">09 · CLOCK TRACE</p><h2>Clock sweep: hand가 무엇을 바꾸는가?</h2>
+    <p class="eyebrow">09 · CLOCK TRACE</p><h2>Clock: 한 칸씩 보며 교체 후보를 찾는다</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/09-clock-sweep.html#workload">가득 찬 풀에서 스캔이 확보할 후보를 찾습니다</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> 사용 중이면 지나가고, 보존 기회가 남았으면 하나 줄이고, 둘 다 없으면 후보로 잡습니다.</p>
+<p><strong>Clock sweep</strong>은 메모리 칸을 원형 순서로 훑는 교체 정책입니다. 다음에 볼 위치를 시계바늘처럼 움직이는 <strong>hand</strong>로 나타냅니다. Pin은 현재 사용 보호이고, credit은 페이지에 남은 보존 기회입니다.</p>
+<p>설명을 위해 칸 A, B, C 세 개만 보겠습니다. 실제 PostgreSQL 버퍼 풀의 크기를 나타내는 표는 아닙니다. Hand는 A부터 시작하며, 이 예 동안 다른 backend의 상태 변경은 없다고 가정합니다. C의 페이지는 clean입니다.</p>
+<div class="table-wrap"><table><caption>독립적인 세 칸 예: 처음 A → B → C를 방문</caption><thead><tr><th scope="col">칸의 시작 상태</th><th scope="col">Clock의 행동</th></tr></thead><tbody>
+<tr><td>A: pin 있음, credit 0</td><td>누군가 사용 중이므로 지나갑니다.</td></tr>
+<tr><td>B: pin 없음, credit 2</td><td>Credit을 1로 줄이고 지나갑니다.</td></tr>
+<tr><td>C: pin 없음, credit 0</td><td>자신의 pin을 얻어 교체 후보로 잡습니다.</td></tr>
+</tbody></table></div>
+<p>여기서 C를 고른 것은 후보를 확보한 단계입니다. 기존 페이지를 제거하고 새 페이지를 넣는 모든 처리가 끝난 것은 아닙니다. Dirty 후보라면 쓰기도 필요합니다. 다른 backend가 기존 페이지를 새로 사용하거나 변경하면, 뒤의 검사에서 재사용을 포기할 수 있습니다.</p>
+<p>실제 공유 상태는 여러 backend가 동시에 바꿀 수 있습니다. PostgreSQL은 상태가 그대로인지 확인하면서 원자적으로 갱신하고, 충돌하면 다시 확인합니다. 위 표는 정책을 이해하기 위한 순서이며 동시 실행을 모두 재현한 시뮬레이션은 아닙니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> 위 예에서 A의 pin이 나중에 모두 반납됐고 credit은 0으로 남았습니다. Hand가 다시 A에 오면 후보로 잡을 수 있을까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>현재도 다른 pin이 없고 credit이 0이라면 후보로 잡을 수 있습니다. 하지만 실제 재사용까지는 필요한 쓰기와 현재 상태 검사 등이 남아 있습니다.</p></details></div>
+<p>큰 스캔이 매번 전역 Clock을 통해 새 후보를 찾으면 다른 페이지에 영향을 줄 수 있습니다. 다음 장에서는 스캔이 먼저 돌아볼 작은 목록을 보겠습니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/09-clock-sweep.html#workload">가득 찬 풀에서 스캔이 확보할 후보를 찾습니다</a> · <a href="ko/seminar-3/09-clock-sweep.html#replacement-protocol">재사용 검사를 유지하면서 정확한 최근 순서를 만듭니다</a> · <a href="ko/seminar-3/09-clock-sweep.html#experiment">탐색 결과를 바꾸는 사건을 관찰합니다</a>.</p>
 <p>이번 장에서는 descriptor 배열에서 다음 교체 후보를 찾겠습니다. Descriptor는 frame의 현재 페이지와 사용 상태를 관리하는 구조입니다. 여러 allocator가 탐색할 때 공유 cursor인 atomic hand가 각자 방문할 위치를 나누어 줍니다. Atomic 연산은 한 번의 나눌 수 없는 변경으로 처리됩니다. CAS는 compare-and-swap입니다. 앞서 읽은 상태가 그대로일 때만 원하는 새 상태로 바꾸는 연산입니다.</p>
     <p>Allocator는 방문한 frame이 사용 중이면 건너뜁니다. 사용 중이지 않지만 보존 credit이 있으면 credit을 줄입니다. 조건이 맞으면 자신의 pin을 확보합니다. Credit 0을 읽었다는 관찰만으로 pin을 얻은 것은 아닙니다. Pin을 만드는 상태 변경에 성공해야 후보를 확보한 것입니다.</p>
@@ -528,12 +722,31 @@
 <p>공유 hand를 사용할 때 전체 탐색을 하나의 mutex 안에서 차례로 수행하지는 않습니다. Atomic 증가가 allocator마다 방문할 위치를 줍니다. 배열 끝을 넘은 회차의 기록은 짧은 spinlock으로 보호합니다. 각 descriptor의 상태 변경에는 CAS를 사용합니다.</p>
     <p>앞의 네-frame 표와 별개의 경합 사례를 보겠습니다. D는 pin과 credit이 모두 0인 descriptor입니다. A는 D를 확보하려는 allocator이고 B는 D를 사용할 다른 backend입니다. 진행 중인 I/O와 별도의 I/O 수명 pin은 없습니다. A가 상태 0을 읽은 뒤 B가 먼저 pin을 얻어 유지합니다. 그러면 A의 기대 상태는 과거 값입니다. A의 CAS가 실패하고, 다시 읽으면 B의 pin이 있으므로 이 방문에서는 D를 확보하지 못합니다.</p>
 <p>메모리에 있는 resident 페이지를 일반 hit로 사용하는 경로는 hand를 전진시키지 않습니다. 하지만 miss가 많아 여러 allocator가 탐색하면 hand에서 경합할 수 있습니다. 한 descriptor에 접근이 몰리면 CAS 재시도가 생길 수 있습니다. Credit 때문에 같은 descriptor를 다시 방문하는 비용도 있습니다. 이런 비용은 client 수와 workload를 정해 측정해야 합니다. 동시 사용을 안전하게 보호한다는 사실만으로 성능 우위를 주장하지는 않겠습니다.</p>
+
+
+  </div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/09-clock-sweep.html#workload">가득 찬 풀에서 스캔이 확보할 후보를 찾습니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-claim">관찰한 상태를 어떻게 보호된 확보로 바꿀까요?</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#postgres-credit">첫 pin은 상한이 있는 재사용 크레딧을 더합니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-credit-aging">Hand는 확보를 시도하기 전에 크레딧을 씁니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#postgres-first-trace">Hand의 한 번 방문에는 세 가지 결과가 있습니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-call-path">페이지 miss는 victim 경로를 거쳐 Clock에 도달합니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#postgres-first-trace-part-2">Pin은 선택을 막고 크레딧은 선택을 미룹니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#postgres-first-trace-part-3">0에 도달해도 확보는 이후 방문에 남습니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#postgresql">새로 들이기, 다시 사용하기, 선택하기는 다른 상태를 바꿉니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#postgresql-part-2">Q18 · 0을 읽은 뒤 다른 backend가 먼저 pin할 수 있습니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#postgresql-part-3">오래된 기대 상태로는 pin을 얻을 수 없습니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-mechanism">소스는 소유권과 보유 선호를 분리합니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#concurrent-clock-hand">공유 hand는 동시 할당자에게 검사 위치를 나눠 줍니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#concurrent-clock-race">Hand 위치를 받았다고 후보가 예약되지는 않습니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-alternatives">정확한 LRU는 접근 순서 유지 비용을 냅니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-alternatives-part-2">선호를 바꿔도 재사용 안전성은 유지할 수 있습니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-costs">비용을 비교하기 전에 방문과 재시도를 셉니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-boundaries">동시 변경 없는 풀에서는 방문 상한을 구할 수 있습니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-interference">동시 사용은 앞선 탐색 전제를 바꿉니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#clock-defense">D29 · usage_count≤5이면 여섯 순회가 보장될까요?</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#source-guard">감소 성공은 pin 관찰 예산을 복원합니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#fresh-clock-trace-screen">새 sweep에서 aging과 소유권을 나눕니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#replacement-protocol">재사용 검사를 유지하면서 정확한 최근 순서를 만듭니다</a></li><li><a href="ko/seminar-3/09-clock-sweep.html#experiment">탐색 결과를 바꾸는 사건을 관찰합니다</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 
   <section class="run-sheet" id="postgres-ring">
-    <p class="eyebrow">10 · WORKLOAD STRATEGIES</p><h2>Ring: 공유 frame의 ID를 작업별로 기억한다</h2>
+    <p class="eyebrow">10 · WORKLOAD STRATEGIES</p><h2>큰 스캔은 최근에 쓴 칸부터 다시 살펴본다</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/10-strategy-rings.html#workload">스캔은 왜 앞서 사용한 프레임을 다시 찾을까?</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> Ring은 다시 사용할 칸의 ID를 기억하는 목록입니다. 그 칸들을 독점하는 공간은 아닙니다.</p>
+<p>큰 스캔은 많은 페이지를 한 번씩 읽습니다. 이때 새 칸을 계속 얻으면 자주 쓰는 다른 페이지가 밀려날 수 있습니다. PostgreSQL의 일부 작업은 <strong>access-strategy ring</strong>을 사용합니다. Backend가 작업을 위해 순환하는 작은 목록이며, 항목에는 공유 메모리 칸의 <strong>buffer ID</strong>가 들어 있습니다.</p>
+<h3>작은 예: 세 칸의 ID를 기억한다</h3>
+<p>설명용 ring에 A, B, C라는 공유 칸 ID가 들어 있다고 하겠습니다. 실제 ring 크기는 작업과 설정에 따라 다릅니다. 스캔은 A → B → C → A 순서로 목록을 봅니다. A 차례에 A가 사용 중이 아니고 credit이 0 또는 1이면 자신의 pin을 얻어 후보로 잡을 수 있습니다.</p>
+<p>다른 backend가 A를 pin하고 있으면 ring도 A를 재사용할 수 없습니다. Pin이 없어도 credit이 1보다 높으면 이 ring 후보를 거절합니다. 그런 경우 전역 Clock에서 후보를 찾고, 선택한 칸의 ID로 해당 ring 항목을 바꿉니다.</p>
+<p>따라서 ring이 있으면 스캔이 최근 사용한 칸을 다시 활용할 기회가 생깁니다. 하지만 스캔이 그 칸들만 쓰거나 다른 작업에 영향을 전혀 주지 않는다는 보장은 아닙니다. Ring에는 페이지 바이트가 들어 있지 않으며, 다른 ring이 같은 칸 ID를 기억할 수도 있습니다.</p>
+<p>또 한 가지 조건이 있습니다. 이 기준 리비전의 <strong>bulk-read</strong> 전략은 ring에서 고른 dirty 영구 페이지에 추가 WAL 영속화가 필요하면 그 후보를 거절할 수 있습니다. Pin과 credit 검사를 통과했다고 반드시 그 칸을 쓰는 것은 아닙니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> 내 ring이 A의 ID를 기억합니다. 다른 backend가 A를 쓰고 있어도 내 작업에 우선권이 생길까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>우선권이 생기지 않습니다. Ring은 공유 칸의 ID를 기억합니다. 현재 pin과 credit 등 필요한 조건을 확인해야 합니다.</p></details></div>
+<p>이제 Clock이나 ring에서 고른 후보가 dirty일 때 누가 기록하는지 보겠습니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/10-strategy-rings.html#workload">스캔은 왜 앞서 사용한 프레임을 다시 찾을까?</a> · <a href="ko/seminar-3/10-strategy-rings.html#replacement-protocol">스캔 용량 분리에는 공유 식별자와 실패 처리 규칙이 필요하다</a> · <a href="ko/seminar-3/10-strategy-rings.html#experiment">어떤 관측으로 ring 설명을 반증할 수 있을까?</a>.</p>
 <p>이번 장은 반복 읽기와 긴 scan이 경쟁하는 새로운 사례입니다. H1과 H2는 반복해서 읽는 hot 페이지입니다. S1, S2, S3는 scan이 한 번씩 읽을 별도의 페이지입니다. Access-strategy ring은 이 작업이 다음에 다시 사용할 후보의 공유 buffer ID를 작은 배열에 기억합니다. ID를 기억한 backend가 해당 frame을 독점하는 것은 아닙니다. 현재 사용은 pin으로 보호합니다. Credit은 얼마나 보존할지 정하는 선호입니다. NORMAL, BULKREAD, BULKWRITE, VACUUM은 서로 다른 strategy의 이름입니다.</p>
 
@@ -578,12 +791,34 @@
 <p>다음 사례는 앞의 두-ring 사례와 독립적으로 시작합니다. Scan의 ring slot이 공유 frame D를 가리킵니다. D에는 pin이 없고 credit은 1입니다. 진행 중인 I/O와 별도의 I/O 수명 pin도 없습니다. 다른 backend B가 기본 strategy로 D를 처음 pin합니다. B는 credit을 2로 올린 뒤 pin을 반납합니다. Scan이 그 slot을 다시 보기 전까지 Clock이 credit을 줄이거나 다른 상태를 바꾸는 사건은 없습니다.</p>
     <p>Scan은 이제 D의 pin 0과 credit 2를 봅니다. Pin이 없어도 credit이 높으므로 ring 후보를 거절하고 global Clock에서 다른 후보를 찾습니다. B가 아직 pin을 유지하는 경우에는 그 pin만으로도 재사용이 막힙니다.</p>
 <p>Credit은 이후 Clock 방문 등으로 줄어들 수 있습니다. B의 영구 소유권이나 현재 사용자 수를 표시하는 숫자는 아닙니다. Ring은 frame ID를 기억합니다. 그 frame의 페이지 identity를 예약하지는 않습니다. 각 ring의 크기를 pool의 1/8로 제한해도 모든 ring의 합계 압력까지 제한하는 것은 아닙니다. Global fallback까지 묶어 client별 용량 quota를 적용하는 정책으로 읽을 수도 없습니다.</p>
+
+
+  </div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/10-strategy-rings.html#workload">스캔은 왜 앞서 사용한 프레임을 다시 찾을까?</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#postgres-ring">로컬 슬롯은 공유 pool의 프레임을 가리킨다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#ring-eligibility">공유 상태를 확인해야 ID로 후보를 확보할 수 있다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#ring-other-backend">일반 읽기가 스캔 페이지의 즉시 교체를 늦춘다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#postgres-ring-part-2">프레임 ID를 유지해도 이전 페이지가 유지되지는 않는다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#ring-wal-escape">BULKREAD는 비용이 큰 dirty 항목에서 벗어날 수 있다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#postgres-ring-part-3">같은 후보를 골라도 전략에 따라 다음 동작이 달라진다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#postgres-ring-part-4">Fallback은 거절한 페이지 대신 슬롯의 ID를 바꾼다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#rings-problem">Dirty 후보를 다룰 각 실행은 어디서 시작할까?</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#postgres-ring-part-5">로컬 슬롯을 거절해도 공유 dirty 페이지는 남는다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#postgres-ring-part-6">Ring 크기는 pin 반납과 I/O 완료 시간을 고려한다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#rings-alternatives">다른 스캔 정책은 비용을 다른 곳으로 옮긴다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#ring-costs">ID 배열 크기가 제한돼도 전체 할당 작업은 제한되지 않는다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#d30-defense">Pin이 없어도 credit 때문에 프레임을 거절할 수 있다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#two-rings-trace-screen">먼저 성공한 pin이 다른 ring의 후보 확보를 막는다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#replacement-protocol">스캔 용량 분리에는 공유 식별자와 실패 처리 규칙이 필요하다</a></li><li><a href="ko/seminar-3/10-strategy-rings.html#experiment">어떤 관측으로 ring 설명을 반증할 수 있을까?</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 
   <section class="run-sheet" id="postgres-writeback">
-    <p class="eyebrow">11 · WRITEBACK OWNERS</p><h2>Clock이 dirty 페이지를 골랐다면 누가 쓰는가?</h2>
+    <p class="eyebrow">11 · WRITEBACK OWNERS</p><h2>Dirty 후보를 고르면 요청한 쪽이 쓸 수도 있다</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/11-writeback-and-reuse.html#workload">요청에는 프레임이 필요하지만 기존 페이지도 보존해야 한다</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> 후보 선택, 변경 기록, 실제 재사용을 차례로 확인합니다.</p>
+<p>PostgreSQL의 backend A가 새 페이지를 넣기 위해 기존 페이지 P를 후보로 잡았다고 하겠습니다. P는 dirty입니다. Clock은 dirty라는 이유만으로 모든 후보를 제외하지 않습니다. 필요한 경우 칸을 요청한 A가 P의 변경을 직접 씁니다. 이렇게 변경을 저장 경로에 쓰는 일을 <strong>writeback</strong>이라고 부릅니다.</p>
+<ol class="example-steps">
+<li>A가 후보 P의 pin을 얻습니다. 아직 다른 사용자가 P를 새로 사용하는 것까지 막은 것은 아닙니다.</li>
+<li>A는 필요한 content lock을 기다리지 않는 방식으로 얻으려 합니다. 얻지 못하면 후보를 놓고 다시 찾습니다.</li>
+<li>필요한 WAL 순서를 지키고 P를 씁니다. 쓰기 뒤 기존 페이지 식별 정보와 칸의 연결을 없애기 전에 현재 상태를 다시 검사합니다.</li>
+</ol>
+<p><strong>쓰기 뒤에도 재사용이 거절될 수 있습니다.</strong> 다른 backend B가 P를 새로 pin하거나 다시 변경할 수 있기 때문입니다. 마지막 검사에서는 A의 pin 하나만 남았는지, 새 dirty 변경이 없는지 등을 확인합니다. B가 변경 후 unpin했더라도 dirty가 남으면 재사용할 수 없습니다.</p>
+<p>백그라운드 담당자도 있습니다. <strong>Background writer</strong>는 교체에 도움이 될 clean 후보를 준비하는 일을 합니다. <strong>Checkpointer</strong>는 복구의 기준점을 만들기 위해 필요한 페이지 기록과 저장 작업을 진행합니다. 둘이 있다고 해서 요청 backend의 쓰기 경로가 없어지는 것은 아닙니다.</p>
+<p>CUBRID의 목록·구역·quota와 PostgreSQL의 Clock·credit·ring은 페이지를 남기는 방법이 다릅니다. 공통 질문은 같습니다. 누가 쓰고, 어떤 상태를 다시 확인한 뒤 칸을 바꿀까요? 어느 쪽이 더 빠른지는 작업과 저장장치를 맞춘 실제 측정이 필요합니다.</p>
+<div class="prompt"><p><strong>잠깐 확인:</strong> A의 쓰기가 끝난 뒤 B가 P를 변경하고 unpin했습니다. A가 바로 P의 칸을 바꿔 써도 될까요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><p>안 됩니다. B의 사용은 끝났지만 새 변경이 남았습니다. 이전 쓰기의 성공으로 그 새 변경까지 처리했다고 볼 수 없습니다.</p></details></div>
+<p>마지막으로 이 규칙을 처음의 “빈 칸이 없는 요청”에 적용해 보겠습니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/11-writeback-and-reuse.html#workload">요청에는 프레임이 필요하지만 기존 페이지도 보존해야 한다</a> · <a href="ko/seminar-3/11-writeback-and-reuse.html#replacement-protocol">기존 페이지를 예약해 중간 변경을 막는다</a> · <a href="ko/seminar-3/11-writeback-and-reuse.html#experiment">쓰기와 invalidation 사이의 공백을 관측하기</a>.</p>
 <p>이번에는 dirty victim을 쓰는 별도 사례입니다. Backend A가 페이지 P를 교체 후보로 pin했습니다. P는 dirty이므로 아직 기록해야 할 변경이 남아 있습니다. Backend B는 같은 P를 다시 사용할 수 있는 다른 실행 주체입니다. A가 후보의 pin을 얻었어도 frame 재사용이 끝난 것은 아닙니다.</p>
     <p>Mapping은 기존 페이지 identity와 frame의 연결입니다. A는 이 연결을 없애기 전에 페이지 바이트를 보호하고, 필요한 WAL을 보존하고, writeback을 수행할 수 있습니다. A가 바이트 보호를 푼 뒤에는 B가 P에 새 변경을 남길 수 있습니다.</p>
@@ -631,12 +866,35 @@
 <p>PostgreSQL 18의 <code>pg_stat_io</code>로 작업 context별 I/O를 관찰할 수 있습니다. <code>pg_buffercache</code>는 개별 buffer 상태를 관찰하는 경로입니다. 두 경로가 모든 client의 전체 접근 이력을 제공하는 것은 아닙니다.</p>
     <p><code>pinning_backends</code>는 공유 refcount를 그대로 표시합니다. 따라서 진행 중인 비동기 I/O가 frame을 보호하는 수명 pin도 포함될 수 있습니다. Buffer를 차례로 관측하므로 pool 전체를 같은 순간에 읽은 snapshot도 아닙니다. Hand 방문, CAS 재시도, ring 후보 거절의 원인은 추가 probe가 필요합니다. 이 설명에서 benchmark 결과나 client별 용량 공정성을 입증하지는 않겠습니다.</p>
 <p class="source">비교 근거와 관측 범위: <a href="docs/research/postgresql-multiclient-buffers.md?v">CUBRID의 migration·boost와 PostgreSQL 버전별 관측 기록</a>. 이 기록도 성능 측정 결과는 아닙니다.</p>
+
+
+  </div>
+</details>
 <details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/11-writeback-and-reuse.html#workload">요청에는 프레임이 필요하지만 기존 페이지도 보존해야 한다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#dirty">어느 엔진이 프레임을 선택해도 dirty 변경은 보존해야 한다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#dirty-write-order">바이트를 보호한 뒤 페이지보다 로그를 먼저 쓴다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#dirty-new-pin">보호 아래 연결을 제거하기 전까지 다른 사용자가 찾을 수 있다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#dirty-part-2">다른 backend가 떠나도 새 변경은 남는다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#dirty-part-3">재사용 후보를 마련하는 예산은 checkpoint 작업을 대신하지 못한다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#dirty-part-4">나중에 생긴 변경이 재사용을 막는다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#dirty-part-5">세 쓰기 주체는 서로 다른 결과를 목표로 한다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#domains-versus-credit">용량 그룹과 페이지 credit은 서로 다른 정보를 기억한다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#promotion-two-meanings">Domain 이동과 같은 목록 안의 boost는 다르다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#postgres-tradeoffs">순서 관리가 줄면 세밀한 최근 사용 정보도 잃는다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#postgres-tradeoffs-part-2">탐색 경로가 짧아도 대기가 짧다고 보장하지는 않는다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#test-multiclient-claim">조건을 통제한 혼합 작업으로 정책을 비교하기</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#rings-mechanism">Ring이 pin을 확보해도 쓰기 경로에서 거절될 수 있다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#rings-removal">Dirty 검사를 없애면 새 작업을 잃는다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#rings-boundaries">페이지 쓰기, 빈 프레임, checkpoint 완료는 서로 다른 결과다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#rings-boundaries-part-2">Checkpoint 완료에는 페이지 쓰기 이후 작업도 필요하다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#d31-defense">이후 변경을 보존하는 검사를 방어하기</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#source-guard">소스는 다른 사용자나 미완료 쓰기 중 하나만 있어도 거절한다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#replacement-protocol">기존 페이지를 예약해 중간 변경을 막는다</a></li><li><a href="ko/seminar-3/11-writeback-and-reuse.html#experiment">쓰기와 invalidation 사이의 공백을 관측하기</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 
   <section class="run-sheet" id="closing">
-    <p class="eyebrow">12 · FINAL WORKSHOP</p><h2>새 실행 순서에 적용하고, 페이지 버퍼 세미나를 마친다</h2>
+    <p class="eyebrow">12 · FINAL WORKSHOP</p><h2>처음의 질문에 답하고 마무리하기</h2>
+<p class="cue"><strong>대표 화면:</strong> <a href="ko/seminar-3/12-final-defense.html#workload">이미지가 완료돼도 할당자는 계속 기다릴 수 있습니다</a>. 먼저 아래 기본 대본으로 설명하고, 더 자세한 질문이 나오면 상세 대본을 펼칩니다.</p>
+<div class="beginner-route">
+<p class="key-point"><strong>핵심:</strong> 사용이 끝났는지, 어떤 변경을 처리했는지, 지금 재사용해도 되는지를 각각 확인합니다.</p>
+<p>마지막 예를 새로 시작하겠습니다. 버퍼 풀이 가득 찼습니다. 새 페이지 Q를 요청한 스레드는 칸을 기다립니다. 기존 페이지 P의 값 11인 사본을 성공적으로 보냈습니다. 그런데 완료를 정리하기 전에 다른 스레드가 P를 사용하고 값을 12로 바꿨습니다.</p>
+<div class="prompt"><p><strong>함께 풀어보기:</strong> 세 가지만 말해 보세요. ① 어떤 쓰기가 끝났나요? ② 무엇이 아직 남았나요? ③ P의 칸을 Q에 넘기려면 무엇을 확인해야 하나요?</p><details class="answer"><summary>생각한 뒤 답 보기</summary><ol><li>값 11인 사본의 전달이 끝났습니다. 전달 성공이 어느 저장 단계까지 뜻하는지도 확인해야 합니다.</li><li>현재 페이지에 값 12의 새 dirty 변경이 남아 있습니다. 다른 스레드의 사용도 남아 있을 수 있습니다.</li><li>새 변경을 안전하게 처리하고, 필요한 보호를 잡은 상태에서 현재 사용과 다른 재사용 조건을 확인해야 합니다. 이전 완료 처리는 새 변경을 지워서는 안 됩니다.</li></ol></details></div>
+<h3>페이지 하나의 여정을 말로 연결해 보세요</h3>
+<ol class="example-steps">
+<li><strong>찾고 사용하기:</strong> 원하는 페이지를 찾습니다. 없으면 담을 칸을 마련합니다. Fix나 pin으로 사용하는 동안 칸을 보호하고, 내용 접근에 필요한 보호도 얻습니다.</li>
+<li><strong>변경하고 반납하기:</strong> 변경에 필요한 로그와 dirty 상태를 남깁니다. Unfix나 unpin으로 사용을 끝냅니다. 기록해야 할 변경은 여전히 남을 수 있습니다.</li>
+<li><strong>기록하고 완료하기:</strong> 필요한 WAL 순서에 따라 해당 시점의 내용을 저장 경로에 보냅니다. 그 작업의 완료를 정리하면서 이후의 새 변경은 유지합니다.</li>
+<li><strong>다시 검사하고 교체하기:</strong> 현재 사용, dirty 상태, 정책과 다른 보호 조건을 확인합니다. 조건을 만족할 때 기존 페이지와 칸의 연결을 바꾸고 새 페이지에 사용합니다.</li>
+</ol>
+<p>요청이 계속 기다린다면 “flush가 몇 번 됐나”에서 한 단계 더 들어가 보세요. 쓰기를 실제로 했는지, 완료를 정리했는지, 후보 제안이 있었는지, 현재 상태 검사에서 거절됐는지 순서대로 확인합니다. P 하나의 거절 이유를 알아도 버퍼 풀 전체의 대기 원인이 밝혀진 것은 아닙니다. 다른 후보와 실제 대기 지점도 확인해야 합니다.</p>
+<p>오늘의 예는 이해를 위해 구성한 순서입니다. 실제 서버의 실행 기록이나 성능 측정 결과는 아닙니다. 아래 상세 대본에는 소스를 따라가는 질문과 진단 사례가 있습니다. 기본 흐름을 설명할 수 있게 된 뒤 원하는 부분부터 이어가면 됩니다.</p>
+<p>세 번의 세미나를 마치겠습니다. 모든 함수와 수치를 외우기보다 <strong>“누가 사용 중인가, 어떤 내용까지 기록했는가, 지금 바꿔 써도 되는가”</strong>를 먼저 물어보세요. 이 세 질문을 기준으로 소스를 읽으면 복잡한 구현에서도 길을 찾기 쉬워집니다.</p>
+</div>
+<details class="speaker-depth">
+<summary>더 깊이 보기 · 소스 흐름, 설정, 예외와 심화 질문</summary>
+<div class="depth-content">
 <p class="cue"><strong>화면 안내:</strong> 전용 발표 장: <a href="ko/seminar-3/12-final-defense.html#workload">이미지가 완료돼도 할당자는 계속 기다릴 수 있습니다</a> · <a href="ko/seminar-3/12-final-defense.html#replacement-protocol">이미지 기록과 현재 재사용 권한을 구분합니다</a> · <a href="ko/seminar-3/12-final-defense.html#experiment">어떤 관측이 이 진단 설명에 반례가 되나요?</a>.</p>
 <p>마지막 장에서는 새 frame이 필요한 요청으로 돌아오겠습니다. 각 사례는 독립적으로 초기화합니다. 결합 trace의 Q는 frame을 구하는 allocator입니다. P는 메모리 frame의 페이지입니다. G는 제출한 사본이고 G+1은 그 뒤의 변경을 구분하는 설명용 이름입니다.</p>
     <p>아래 사례 A에서는 writer A와 allocator B를 따로 정의하겠습니다. PostgreSQL 사례도 별도로 시작합니다. 그 사례의 R은 ring이 가리키는 dirty 페이지이고 H는 다른 backend가 pin한 hot 페이지입니다. Flush 성공이라는 말만 들으면 어떤 이미지가 어느 저장 단계까지 처리됐는지 알 수 없습니다. 구체적인 작업과 완료 범위를 찾아보겠습니다.</p>
@@ -690,10 +948,15 @@
     <p class="cue"><strong>화면 안내:</strong> 새 진단 순서: <a href="ko/seminar-3/12-final-defense.html#diagnosis-start">1단계: 완료 소비자가 실행됐나요?</a> → <a href="ko/seminar-3/12-final-defense.html#diagnosis-current">2단계: 왜 이 프레임을 제안하지 않았나요?</a> → <a href="ko/seminar-3/12-final-defense.html#diagnosis-limit">3단계: 전체 정체를 어디까지 설명했나요?</a> → <a href="ko/seminar-3/12-final-defense.html#closure">현재 재사용 판단에는 각각의 보호 조건이 필요합니다</a>.</p><p>진단 사례에서는 처음부터 원인 하나를 정하지 않겠습니다. 먼저 다음 관측을 선택하고, 그에 따라 구성한 결과를 공개하겠습니다. P에 새 dirty 변경이 있다는 사실을 확인해도 전체 정체가 P 하나 때문이라고 결론 내릴 수는 없습니다. 아직 가능한 설명들을 구분할 다음 관측을 제안하겠습니다. 그 뒤 전체 페이지 여정을 다시 연결하고 마치겠습니다.</p>
 <p class="cue"><strong>화면 안내:</strong> 대안의 전이: <a href="ko/seminar-3/12-final-defense.html#replacement-protocol">이미지 기록과 현재 재사용 권한을 구분합니다</a>.</p><p>이번에는 완료 기록을 명시적으로 다루는 대안을 구성하겠습니다. 각 기록에 어떤 페이지 이미지인지 적습니다. 이미지를 수락한 단계, write한 단계, 영속화한 단계를 각각 명시합니다. 완료 처리는 그 기록이 가리키는 진행 중 이미지만 정리합니다.</p>
     <p>현재 frame을 재사용하려면 새로 필요한 보호를 잡고 적합성을 확인해야 합니다. 새 사용이나 아직 기록하지 않은 dirty 변경이 있으면 재사용을 거절합니다. 실패한 기록 작업은 해당 작업을 다시 시도합니다. 이전 완료 기록을 현재 재사용의 승인으로 사용하지는 않습니다.</p><p>이것은 설명용 대안입니다. Ticket과 version을 언제까지 유지할지 기록하고 취소를 맡는 주체를 정해야 합니다. 그만큼 metadata가 필요합니다. 모든 단계를 계속 직렬화하는 방식은 오랫동안 다른 접근을 막는 또 다른 대안입니다. 어느 방식에서도 WAL 순서, 이미지 일관성, 이후 변경의 기록, identity의 사용 수명을 보존해야 합니다. 남은 작업을 다시 발견해 진행할 경로도 갖춰야 합니다.</p><p class="cue"><strong>화면 안내:</strong> 관측과 반증: <a href="ko/seminar-3/12-final-defense.html#experiment">어떤 관측이 이 진단 설명에 반례가 되나요?</a>.</p><p>관측에서는 현재 사용과 dirty 상태를 queue 소비에 연결하겠습니다. Frame을 준비한 producer의 배정과 allocator의 수신 결과도 연결하겠습니다. 관측하지 않은 사건은 실제 기록처럼 만들지 않고 필요한 probe를 제안하겠습니다. 여러 원인이 같은 관측과 일치하면 유일한 근본 원인을 찾았다고 말할 수 없습니다. Observer가 추가한 비용, 스케줄러 제어, 제한된 관찰 시간도 runtime 결론의 범위를 제한합니다.</p>
-<details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/12-final-defense.html#workload">이미지가 완료돼도 할당자는 계속 기다릴 수 있습니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-mechanism">경계마다 보호하는 책임이 다릅니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-removal-setup">Writer가 반납해도 새 변경의 전달 의무는 남습니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-removal">이전 이미지는 완료하고 새 dirty 작업은 유지합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-alternatives">대안은 각 기록이 허용하는 행동을 명시해야 합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-costs">검사를 없애면 작업과 대기가 다른 곳으로 옮겨갑니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-boundaries">일어나지 않은 첫 전이를 찾습니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-boundaries-part-2">한 후보의 거절 이유만으로 전체 대기를 설명할 수 없습니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-defense">D32 · 새 dirty 작업과 정책상 남겨 둔 clean 페이지를 구별합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-defense-part-2">D33 · 재검사를 없애려면 대체 보호가 필요합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#diagnosis-start">1단계: 완료 소비자가 실행됐나요?</a></li><li><a href="ko/seminar-3/12-final-defense.html#diagnosis-current">2단계: 왜 이 프레임을 제안하지 않았나요?</a></li><li><a href="ko/seminar-3/12-final-defense.html#diagnosis-limit">3단계: 전체 정체를 어디까지 설명했나요?</a></li><li><a href="ko/seminar-3/12-final-defense.html#replacement-protocol">이미지 기록과 현재 재사용 권한을 구분합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#experiment">어떤 관측이 이 진단 설명에 반례가 되나요?</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey">사용·반납·재사용을 거치는 식별자를 따라갑니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-2">Q23 · 한 완료의 수령 결과까지 추적합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-3">Q24 · API 이름을 믿기 전에 보장 범위를 정의합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-4">마지막 CUBRID 사례: 완료된 페이지를 writer가 계속 사용합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-5">마지막 PostgreSQL 사례: ring 항목을 거절해도 공유 페이지는 유지됩니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-6">세대를 고려한 페이지 여정을 완성합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#closure">현재 재사용 판단에는 각각의 보호 조건이 필요합니다</a></li></ol></details>
+
 <p>이것으로 세 번의 페이지 버퍼 세미나를 마치겠습니다. 실제 변경이나 장애를 만날 때는 먼저 상태를 누가 관리하는지 확인해 보세요. 그다음 어떤 조건에서 상태가 바뀌는지 소스를 따라가면 됩니다. 모든 세부사항을 한 번에 외우기보다, 필요한 근거를 찾고 자신의 설명을 검증하는 방법을 가져가시면 좋겠습니다.</p>
+
+  </div>
+</details>
+<details class="screen-cues"><summary>이 장의 전체 화면과 정확한 절 링크</summary><ol><li><a href="ko/seminar-3/12-final-defense.html#workload">이미지가 완료돼도 할당자는 계속 기다릴 수 있습니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-mechanism">경계마다 보호하는 책임이 다릅니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-removal-setup">Writer가 반납해도 새 변경의 전달 의무는 남습니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-removal">이전 이미지는 완료하고 새 dirty 작업은 유지합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-alternatives">대안은 각 기록이 허용하는 행동을 명시해야 합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-costs">검사를 없애면 작업과 대기가 다른 곳으로 옮겨갑니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-boundaries">일어나지 않은 첫 전이를 찾습니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-boundaries-part-2">한 후보의 거절 이유만으로 전체 대기를 설명할 수 없습니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-defense">D32 · 새 dirty 작업과 정책상 남겨 둔 clean 페이지를 구별합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#synthesis-defense-part-2">D33 · 재검사를 없애려면 대체 보호가 필요합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#diagnosis-start">1단계: 완료 소비자가 실행됐나요?</a></li><li><a href="ko/seminar-3/12-final-defense.html#diagnosis-current">2단계: 왜 이 프레임을 제안하지 않았나요?</a></li><li><a href="ko/seminar-3/12-final-defense.html#diagnosis-limit">3단계: 전체 정체를 어디까지 설명했나요?</a></li><li><a href="ko/seminar-3/12-final-defense.html#replacement-protocol">이미지 기록과 현재 재사용 권한을 구분합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#experiment">어떤 관측이 이 진단 설명에 반례가 되나요?</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey">사용·반납·재사용을 거치는 식별자를 따라갑니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-2">Q23 · 한 완료의 수령 결과까지 추적합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-3">Q24 · API 이름을 믿기 전에 보장 범위를 정의합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-4">마지막 CUBRID 사례: 완료된 페이지를 writer가 계속 사용합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-5">마지막 PostgreSQL 사례: ring 항목을 거절해도 공유 페이지는 유지됩니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#session-page-journey-part-6">세대를 고려한 페이지 여정을 완성합니다</a></li><li><a href="ko/seminar-3/12-final-defense.html#closure">현재 재사용 판단에는 각각의 보호 조건이 필요합니다</a></li></ol></details>
 <a class="back" href="#route">발표 순서로 돌아가기 ↑</a>
-  </section>
+</section>
 </main>
+<script src="assets/session-3-script.js" defer></script>
 </body>
 </html>
