@@ -2384,3 +2384,82 @@ Chapter 04 has 24 screens. All prior section IDs, questions, state traces and so
 The author compared the actual English and Korean definitions, table, daemon relationship and revised scenario. Headless projection screenshots were inspected in both languages; core content and the closed source disclosure remain readable. This is an AI author review, not a human language-acceptance receipt.
 
 Validation on the final product text, served read-only from this worktree at `http://127.0.0.1:8947`: the Session 3, contents and definition suites passed all 31 tests with no skips, covering direct entry, reading/projection, mobile access, no-JavaScript access, disclosures, traces and spoken cue targets. Technical parity passed for all 78 pairs. The Maintainer Guide aggregate passed for 43 pages, 114 HTTP resources and 43 live-DOM pages. The full bilingual aggregate reported only the same 174 review-record failures documented for starting main (78 pending human receipts and 96 stale historical fingerprints); it is not a full aggregate pass. Focused prior-section preservation and `git diff --check` passed. Temporary verification logs and screenshots use the `/tmp/flush-waiter-*` prefix.
+
+## Daemon traversal explanation (2026-10-13)
+
+Chapter 03 adds three paired screens after `cadence-loops`: `scan-scope`,
+`scan-page-flush`, and `scan-maintenance`. The chapter now has 28 screens. Both
+local maps, all three contents maps, and the Korean spoken companion include the
+new screens in order. The spoken explanation distinguishes per-list statistics
+from BCB visits rather than leaving “search” without an object or stopping rule.
+
+The author checked the actual English/Korean additions against CUBRID
+`f799e05d77d5300c6ea5753b4a6cc7caee6d8912` in the pinned local worktree:
+
+- `page_buffer.c:14127–14249,3765–3859`: page-flush computes list weights from
+  sizing/quota information, enumerates shared then private indices, skips zero
+  weights, locks one target list, and walks `bottom` / `prev_BCB` within LRU3 and
+  a list-specific allowance. Clean visits consume that allowance.
+- `page_buffer.c:3934–4083,17030–17051`: allowance calculation, saved dirty
+  candidates and current protected rechecks, and pressure-driven recollection.
+  Per-list minimums mean the base allowance is not an exact global visit cap.
+  The separate foreground 1,000-node scan cap is not imported into this path.
+- `page_buffer.c:3663–3703,11815–11950`: explicit flush-all walks BCB storage;
+  optional neighbor batching looks up nearby identities through the hash.
+- `page_buffer.c:14260–14511,9897–10055`: an accepted quota update reads every
+  list's counters, updates private then shared settings, and moves excess BCBs
+  from protected-zone boundaries. Threshold reduction can move many nodes.
+- `page_buffer.c:9617–9648`: the separate direct-victim maintenance backup
+  skips both list-loop bodies at this pin (VS-20). Quota/zone work remains
+  active; this source anomaly is not runtime proof of allocator starvation.
+- `page_buffer.c:15491–15556,17089–17143`: post-flush consumes supplied BCB
+  pointers until no queue item is returned; control updates pacing credits.
+
+The 100,000-BCB/20-list comparison, two-visit candidate example, and 30-to-25
+zone reduction are constructed explanations, not new runtime observations.
+Every one of the original 25 section bodies and both existing state traces is
+preserved apart from screen counters. The existing anchors remain available.
+The author compared the actual paired prose, examples, safeguards and source
+routes and inspected the three Korean projection screenshots. This is an agent
+editorial review, not a human language-acceptance receipt. Only the chapter and
+paired contents fingerprints are refreshed; human-review state remains pending.
+
+Verification uses the isolated task worktree, served at
+`http://127.0.0.1:3965`. The definition, contents and Session 3 suite passed all
+31 tests with no skips. Final focused headless checks passed 50 combinations of
+new screens, both languages, reading/presentation modes, 1920/1366/390/320 widths,
+native disclosures and no-JavaScript access, with no page errors or horizontal
+overflow. The three Korean projected sections are 962/965/1034 px tall; the
+English maintenance screen is 1117 px tall and requires a little vertical
+scrolling at 1920×1080. No font or layout override was introduced.
+
+The guide aggregate passed source checks for 43 pages and 71 SVGs, HTTP requests
+for 114 resources, and live DOM for 43 pages. Logs/screenshots use the
+`/tmp/daemon-search-*` prefix. The bilingual aggregate's final outcome is recorded
+below; its baseline already has 174 human-review/history failures. No review
+receipt or engine performance result is claimed. Concurrent main integration
+of reader Q&A is preserved for the authorized rebase/merge step.
+
+Final bilingual verification: technical parity passed all 78 pairs; the audience
+and Session 3 contracts passed 78 pairs and 27 routed pages. The served gate
+passed 351 HTTP resources and 158 live-DOM pages. The full aggregate exits 1
+with exactly the same 174 review-record failures as current main: 78 pending
+human receipts and 96 stale historical fingerprints. There is no added failure;
+this is not a full aggregate pass. The local verification server supplied a
+disposable favicon for Chromium's implicit request; that serving fixture and the
+renderer symlink are removed before the task commit. No product asset is added.
+
+Approved local integration follow-up: the task was rebased over the reader-Q&A
+commit `1d1a886`, then over the concurrently advanced main `eca2a5f` (including
+post-flush wake ownership and flush-control wording). Conflict resolution keeps
+all 25 current-main section bodies, including their Q&A, byte-for-byte apart
+from counters. All three approved new explanation screens remain exact. The
+latest chapter 07 contents/spoken changes and unrelated review entries survive.
+After the first rebase, all 31 integrated tests and 50 focused browser checks
+passed; the guide source/114 HTTP/43 DOM checks also passed. On the latest base,
+the 50 focused checks and three selected source/served-route tests passed again,
+as did technical parity, the audience/Session 3 contracts and guide source
+checks. The latest bilingual source aggregate retains exactly the existing 174
+review-record failures. Logs use `/tmp/daemon-search-rebase-*` and
+`/tmp/daemon-search-latest-*`; the first-rebase browser receipts are not relabeled
+as a complete repeat on the later base.
