@@ -8,6 +8,8 @@
 .daemon-page-dirty { border-color:var(--amber); background:var(--amber-soft); }
 .daemon-page-other { align-content:center; border-style:double; border-width:4px; }
 .daemon-actor { color:var(--muted); font-size:.85em; }
+.daemon-handoff { padding:1rem; border:2px solid var(--ink); }
+.daemon-handoff-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; margin-top:.8rem; }
 .daemon-connection { display:grid; justify-items:center; gap:.2rem; font-size:.9em; }
 .daemon-connection > span:last-child { font-size:2rem; color:var(--teal); line-height:1; }
 .daemon-pool { min-width:0; padding:1rem; border:2px solid var(--ink); }
@@ -23,7 +25,7 @@
 .daemon-timeline > .daemon-write-step { background:var(--amber-soft); border-color:var(--amber); }
 .daemon-timeline > .daemon-check-step { border:2px dashed var(--ink); }
 @media(max-width:700px) {
-  .daemon-snapshot-layout,.daemon-schedule-grid { grid-template-columns:1fr; }
+  .daemon-snapshot-layout,.daemon-schedule-grid,.daemon-handoff-grid { grid-template-columns:1fr; }
   .daemon-connection > span:last-child { transform:rotate(90deg); }
   .daemon-schedule-grid { gap:2rem; }
 }

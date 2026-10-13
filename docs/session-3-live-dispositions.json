@@ -119,9 +119,9 @@
     "target": "en/seminar-3/03-daemon-architecture.html#daemon-state-trace",
     "terminal": [
       "open",
-      "stop → wake → join",
-      "alive through join; teardown later",
-      "thread ended"
+      "stop request → wake → cleanup → exit",
+      "alive through join; freed later",
+      "thread exit confirmed"
     ]
   },
   {
@@ -133,10 +133,10 @@
     ],
     "target": "en/seminar-3/03-daemon-architecture.html#daemons-defense-trace",
     "terminal": [
-      "drain F when loop checks queue",
-      "cannot discover F",
-      "claim pending under protocol",
-      "later sleep needs producer/check coordination"
+      "check list and take F for processing",
+      "no record to find F",
+      "claim target and update count under coordinated rules",
+      "coordinate final check with the next wait"
     ]
   },
   {
@@ -817,10 +817,10 @@
     ],
     "target": "ko/seminar-3/03-daemon-architecture.html#daemon-state-trace",
     "terminal": [
-      "open",
-      "stop → wake → join",
-      "alive through join; teardown later",
-      "thread ended"
+      "열림",
+      "종료 요청 → 깨우기 → 정리 → 종료",
+      "join 반환까지 유지; 해제는 이후",
+      "스레드 종료 확인"
     ]
   },
   {
@@ -832,10 +832,10 @@
     ],
     "target": "ko/seminar-3/03-daemon-architecture.html#daemons-defense-trace",
     "terminal": [
-      "drain F when loop checks queue",
-      "cannot discover F",
-      "claim pending under protocol",
-      "later sleep needs producer/check coordination"
+      "목록을 확인해 F를 꺼내 처리",
+      "F를 찾을 기록 없음",
+      "조율된 절차로 대상을 맡고 수량 갱신",
+      "다음 대기 전 확인과 등록도 조율 필요"
     ]
   },
   {

@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-13",
+  "work_item": 346,
+  "document_base": "1d1a886",
+  "branch": "docs/daemon-architecture-plain-language",
+  "source_pin": "f799e05d77d5300c6ea5753b4a6cc7caee6d8912",
+  "scope": [
+    "en/seminar-3/03-daemon-architecture.html",
+    "ko/seminar-3/03-daemon-architecture.html"
+  ],
+  "preservation": {
+    "sections_per_language": 25,
+    "native_qna_per_language": 26,
+    "question_ids": [
+      "Q05",
+      "Q06",
+      "D26"
+    ],
+    "trace_ids": [
+      "daemon-state-trace",
+      "daemons-defense-trace"
+    ],
+    "trace_steps": [
+      5,
+      3
+    ],
+    "prior_ids_and_link_targets": "preserved; one process-boundary figure ID added"
+  },
+  "automated_checks": {
+    "guide_source": "PASS: 43 pages, 71 displayed SVGs, 0 orphaned",
+    "guide_served": "PASS: 114 HTTP resources, 43 live-DOM pages",
+    "bilingual_source_gates": "PASS: audience, inventory, navigation, links, technical, language/accessibility and static behavior; 78 pairs",
+    "source_and_validator_tests": {
+      "passed": 44,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/tmp/daemon-346-source-tests-final.log"
+    },
+    "session3_browser_suite": {
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/tmp/daemon-346-live-final.log"
+    },
+    "changed_chapter_browser": {
+      "pages": [
+        {
+          "language": "ko",
+          "screens": 25,
+          "qna": 26,
+          "traceSteps": [
+            5,
+            3
+          ],
+          "projection": 1920,
+          "noJavaScriptWidths": [
+            390,
+            320
+          ]
+        },
+        {
+          "language": "en",
+          "screens": 25,
+          "qna": 26,
+          "traceSteps": [
+            5,
+            3
+          ],
+          "projection": 1920,
+          "noJavaScriptWidths": [
+            390,
+            320
+          ]
+        }
+      ],
+      "screenshots": [
+        "/tmp/daemon-346-preview/ko-cadence-part-5-1920.png",
+        "/tmp/daemon-346-preview/ko-cadence-loops-1920.png",
+        "/tmp/daemon-346-preview/ko-daemons-removal-1920.png",
+        "/tmp/daemon-346-preview/ko-queue-390.png",
+        "/tmp/daemon-346-preview/en-cadence-part-5-1920.png",
+        "/tmp/daemon-346-preview/en-cadence-loops-1920.png",
+        "/tmp/daemon-346-preview/en-daemons-removal-1920.png",
+        "/tmp/daemon-346-preview/en-queue-390.png"
+      ],
+      "errors": [],
+      "result": "PASS"
+    },
+    "shared_svg_text_geometry": "PASS: no text outside the viewBox in the three displayed daemon SVGs",
+    "bilingual_aggregate_with_server": {
+      "status": "FAIL",
+      "missing_human_review_receipts": 78,
+      "stale_historical_fingerprints": 96,
+      "live_dom_failure": "Unchanged index.html triggers browser request for missing /favicon.ico. Confirmed console error URL separately; changed chapter has no relevant render errors.",
+      "served_http_resource_failures": 0,
+      "log": "/tmp/daemon-346-site-all-served.log"
+    },
+    "diff_whitespace": "PASS"
+  },
+  "evidence_limits": [
+    "AI author readability/source review only; no human Korean-naturalness or semantic-acceptance receipt was created.",
+    "Performance and forced wake experiments remain unexecuted proposals.",
+    "No immediate completion, bounded scheduling, queue draining at stop, or crash persistence is inferred from retained RAM items.",
+    "Long projection screens allow vertical scrolling."
+  ],
+  "temporary_evidence_prefix": "/tmp/daemon-346-",
+  "integration": "Task changes locally committed for review; main integration requires approval. No push or deployment."
+}

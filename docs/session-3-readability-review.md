@@ -2561,3 +2561,23 @@ Final integrated verification passed the 31 Session 3 live/definition/contents
 tests with no failures or skips, audience and technical contracts, and every
 non-review bilingual aggregate gate. The existing 78 missing human receipts and
 96 stale historical fingerprints remain the only bilingual aggregate failures.
+
+## Follow-up: explain daemon work before naming its abstractions (2026-10-13)
+
+Chapter 03 was rewritten in both languages for readers with basic programming and array/list knowledge. It introduces pages, frames and request threads before background roles; then explains the concrete BCB completion handoff before naming the queue, producer and consumer. The shared-memory explanation explicitly refers to RAM inside one CUBRID server process rather than interprocess OS shared memory. A native HTML diagram shows page-flush, the BCB-address list and post-flush inside that process boundary. Shared English SVG labels were simplified while retaining their mechanism and evidence boundaries.
+
+### Definition and reset ledger
+
+| Screen | Current premises and responsibility |
+| --- | --- |
+| `03-daemon-architecture.html#workload` and `#why-background` | S3 is absent and needed by the request; S4 is unused, resident and dirty; all frames are occupied. The alternatives reset to the same snapshot. Preparation never replaces the current reuse check. |
+| `03-daemon-architecture.html#cadence-part-5` | Illustrates a conditional page-flush handoff after successful submission. Defines BCB as the frame management record; queue entries are addresses, not page copies. The add → wake → later check sequence retains the distinction between work retention and progress. |
+| `03-daemon-architecture.html#lifecycle-part-3` | Fresh page-flush scenario, period 0, permission initially closed. Defines waiter states before controls. No additional wake until step 4. Stop, worker cleanup, thread exit and join remain distinct; the pool survives through join. |
+| `03-daemon-architecture.html#daemons-removal` | Fresh independent three-design comparison. F names a BCB address, page-flush is the producer and post-flush the consumer. The count alternative additionally retains targets and ownership, and coordinates the final check with wait registration. Step 3 explicitly assumes a later check opportunity rather than deriving it from the lost wake. |
+| `03-daemon-architecture.html#experiment` | Unexecuted proposal. Reset page-flush and post-flush separately: the former retains allocation-request pressure, the latter BCB-address completion work. Collection and category selection precede interpretation of counts; proposed event instrumentation is not runtime evidence. |
+
+All 25 original section anchors, the three question IDs, the two state-trace IDs and the original link targets remain. All 26 native Q&As were rewritten. Trace outcomes now use Korean on the Korean page, including generated status text; the four affected outcome records were synchronized in `session-3-live-dispositions.json`. Local navigation, all three contents maps and the Korean spoken screen map carry the current headings. Only the changed chapter/contents fingerprints were refreshed; human review remains pending.
+
+Source checks used CUBRID `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`: `page_buffer.c:1855` (queue allocation), `10925–10952` (conditional handoff and local fallback), `15496–15553` (consume, recheck, completion), `16971–17255` (tasks and wait policies); `thread_waiter.cpp:76–101` (unsaved running wake); `thread_daemon.cpp:53–105,208–245` (thread creation, stop/join and worker cleanup); `boot_sr.c:2405–2441,2770–2783,3086–3114` (recovery and teardown); `thread_manager.hpp:425–474` (creation failure); and `file_io.c:678–713,839–894` (bucket publication and replacement). VS-20's source-visible skipped backup loops remain qualified by unmeasured runtime impact.
+
+This is an AI author readability/source review, not a human language-acceptance receipt. The author inspected actual English/Korean projection screenshots and mobile Korean reading, including the process-boundary diagram and the shared control-loop SVG. Long projected screens retain vertical scrolling. Verification results and explicit gate limits are recorded in `session-3-daemon-plain-language-checks.json`; temporary logs and screenshots use `/tmp/daemon-346-*`.
