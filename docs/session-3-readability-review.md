@@ -158,7 +158,7 @@ The page has 22 marked visible definition paragraphs. Local restatements precede
 
 - P/Q: `workload`.
 - G/G+1: `generation-meaning`, `generation-meaning-part-2`, `why-flushing`, `moments-diagram`, `generation`, `generation-part-3` (inside `flush-state-trace`), `generation-part-4`, `redirty`, `generations-mechanism`, `generations-alternatives-part-2`, `experiment`.
-- G: `generation-part-2` (inside `q02`), `copy-versus-dwb`, `copy-versus-dwb-part-2`, `copy-versus-dwb-part-3` (inside `q04`), `redirty-part-2` (inside `q03`), `generations-defense` (inside `d25`).
+- G: `generation-part-2` (inside `q02`), `copy-versus-dwb`, `copy-versus-dwb-part-2`, `flushing-versus-fsync`, `copy-versus-dwb-part-3` (inside `q04`), `redirty-part-2` (inside `q03`), `generations-defense` (inside `d25`).
 - P: `lsas-part-2`, `oldest-unflush-purpose-part-2`.
 - P/A/B/C/G/G+1: `oldest-unflush-purpose`, before its SVG.
 - A/B/G/G+1: `generation-part-4`, before its SVG.
@@ -173,14 +173,14 @@ In the competing-flush counterexample, G+1 is explicitly a newer stable image of
 | writer, flusher | `workload`: thread modifying bytes; thread sending changes toward storage. |
 | flush, image, stable copy | `flush-purpose`: copy of page bytes at one protected moment, sent toward persistent page storage. |
 | BCB, DIRTY, propagation | `flush-purpose-part-2`: buffer control block is frame metadata; DIRTY records resident changes needing sending toward storage. |
-| FLUSHING | `flush-purpose-part-3`: the copied image’s outstanding page-buffer operation. Restated before tables and traces. |
+| FLUSHING | `flush-purpose-part-3`: the copied image’s outstanding page-buffer operation. Restated before tables and traces; `flushing-versus-fsync` explicitly distinguishes it from OS synchronization-call progress. |
 | checkpoint, unfix, commit, eviction | `flush-purpose-part-3`: recovery boundary and relevant propagation; release of granted use; transaction durability protocol; removal from a frame. Commit is developed at `moments`. |
 | protection, WRITE latch, BCB mutex | `generation-meaning` introduces exclusion during capture; `generation`/`generations-mechanism` distinguish metadata protection from excluding a byte-modifying WRITE owner. `moments-diagram` defines WRITE latch before the visual. |
 | WAL, log, durable | `moments`: recovery log must survive before the logged page image; durable is bounded by crash/storage assumptions and differs from OS write return. |
 | LSA, copied page LSA | `moments` introduces copied-page target as latest included logged-change position; `moments-diagram` restates; `lsas` expands log sequence address and simplified ordered positions. |
 | oldest-unflush, dirty run, redo start | `lsas` explains beginning of pending history and recovery replay start; `lsas-part-2` gives no-flush numeric example; checkpoint screens restate relevant values. |
 | DWB, direct write, home location | `moments-diagram` defines double-write staging; `copy-versus-dwb`/part2 explain its role, direct home route, slots and completion differences. |
-| torn write, slot/block, sync/fsync | `copy-versus-dwb` defines partial page replacement; `q04` defines synchronization request; `generations-boundaries` gives sector crash premise; `generations-boundaries-part-2` defines slot and grouped block before ordered protocol. |
+| torn write, slot/block, sync/fsync | `copy-versus-dwb` defines partial page replacement; `flushing-versus-fsync` defines fsync/fdatasync as OS file-synchronization calls and distinguishes them from the BCB FLUSHING job; `q04` restates synchronization request; `generations-boundaries` gives sector crash premise; `generations-boundaries-part-2` defines slot and grouped block before ordered protocol. |
 | receipt | `q04`: record naming the observed event; does not imply downstream durability. |
 | re-dirty | `redirty`: setting resident dirty signal after an earlier copy was captured. |
 | TDE, VS-12 | `redirty-part-2`: transparent data encryption; uncertainty-registry reference for a candidate requiring fault-injection evidence. |
@@ -210,6 +210,7 @@ In the competing-flush counterexample, G+1 is explicitly a newer stable image of
 | generation-part-4 | Independent clean80; A100/B140; capturedG140/oldest100; laterG+1 at170. Explicitly different from preceding trace; moved two-LSA visual. |
 | copy-versus-dwb | Stable captured G; compare snapshot isolation with DWB torn-write protection and direct/temporary bypass. |
 | copy-versus-dwb-part-2 | Two independent route comparisons for ready G; acceptance versus OS return, retained valid recovery image versus direct route. |
+| flushing-versus-fsync | Independent captured permanent G awaiting DWB acceptance; WAL requirement and successful dwb_add_page versus slot copy alone. Visible explanation defines the BCB job and OS synchronization calls: FLUSHING can clear before DWB staging/home writes, while WAL or synchronous full-block DWB synchronization can occur while it is set. Wrapper selection of fsync/fdatasync is pinned source behavior, not a new runtime receipt. |
 | copy-versus-dwb-part-3 / q04 | Independent receipt observes DWB acceptance and FLUSHING clear, no later mutation and no home/fsync/restart observations. |
 | redirty | Independent submitted G plus later DIRTY G+1; success preserves newer debt; ordinary error restores captured oldest/DIRTY conservatively; early preparation exits excluded from universal rollback. |
 | redirty-part-2 / q03 | Independent G40/120, writer41→40, current180/DIRTY1; rule and premises visible before prediction; VS-12/TDE caveat retained. |
@@ -222,6 +223,8 @@ In the competing-flush counterexample, G+1 is explicitly a newer stable image of
 | generations-defense / d25 | Independent G40/120 then later41→40/180; selected-field equality optimization, even durable180 insufficient; bounded complete-equivalence/acknowledgement proof and discriminating probes. |
 | replacement-protocol | Independent teaching no-copy design; dirty permanent page/no competing flush; exclude writers through WAL/submission, preserve obligation on failure, define cleanup owner, lifetime/contention/torn-write boundary. |
 | experiment | Independent unexecuted controlled writer-between-capture-and-completion proposal; pin/settings, exact flag/LSA events, downstream timestamps, falsifier and observer/crash limitations. |
+
+The 2026-10-13 FLUSHING/syscall clarification adds `flushing-versus-fsync` as screen 21, bringing this chapter to 33 screens. Its permanent-page G setup is independent of the preceding route comparison. All contents maps and the spoken screen map include it before Q04. The earlier 32-section review record below describes the prior content; this addition retains pending human-review status and supplies no new runtime observation.
 
 ### Korean author comparison: Paired semantic review
 This is an agent's editorial/technical meaning comparison, not an authorized human language receipt.
