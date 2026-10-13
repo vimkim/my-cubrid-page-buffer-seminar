@@ -4,7 +4,7 @@
 <nav class="language-switcher" data-language-switcher aria-label="언어"><span aria-current="page">KO</span> | <a href="../../en/seminar-3/05-post-flush.html" hreflang="en" lang="en">EN</a></nav>
 <main class="course-shell" id="seminar-content"><header class="hero"><div class="eyebrow">세션 3 · 2026-10-13 · 05 / 12</div><h1>쓰기를 마쳐도 메모리 칸을 바로 넘길 수 없는 이유</h1><p>페이지 한 개의 쓰기부터 안전한 메모리 재사용까지</p><p class="live-workload">메모리 칸 하나의 정상 흐름을 먼저 따라갑니다. 이후의 각 사례는 명시한 시작 상태로 되돌립니다. 모두 소스를 바탕으로 구성한 설명이며 실제 실행 관측은 아닙니다.</p></header>
 <div class="lesson-grid"><article class="lesson-main">
-<section class="section" id="workload"><div class="eyebrow">05 · 1 / 29</div><h2>페이지를 썼는데, 왜 메모리 칸은 아직 못 줄까?</h2>
+<section class="section" id="workload"><div class="eyebrow">05 · 1 / 31</div><h2>페이지를 썼는데, 왜 메모리 칸은 아직 못 줄까?</h2>
 <p data-teaching-def="P">데이터베이스는 데이터를 일정한 크기의 덩어리로 읽고 씁니다. 이 덩어리를 <strong>페이지</strong>라고 합니다. 지금 볼 페이지의 이름은 <strong>P</strong>입니다. P는 메모리의 한 칸에 들어 있습니다. 페이지 한 개를 담는 이 칸을 <strong>프레임</strong>이라고 합니다.</p>
 <p>한 요청이 P의 내용을 바꾼 뒤 사용을 끝냈습니다. 백그라운드 작업자가 바뀐 내용을 복사해서 쓰기 경로로 보냈고, 그 호출이 성공했습니다. 메모리 내용을 쓰기 경로로 보내는 작업을 <strong>flush</strong>라고 부릅니다.</p>
 <p>다른 요청은 새 페이지를 읽을 칸이 필요합니다. 그런데 쓰기 호출이 끝났다고 P가 있던 칸이 저절로 비지는 않습니다. 그 칸에는 여전히 P가 있고, 프로그램의 마무리 작업도 남아 있습니다.</p>
@@ -13,10 +13,10 @@
 <p>사례들은 소스를 바탕으로 구성한 설명입니다. 실제 실행을 측정한 결과가 아닙니다. 먼저 <a href="#successful-submission">정상 흐름</a>을 읽고, 세 가지 다른 상황을 비교합니다. 소스와 세부 정책은 <a href="#post-flush-code-path">뒤의 상세 설명</a>에서 펼쳐 볼 수 있습니다.</p>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">조건부 위임과 직접 완료</a></p></details>
 </section>
-<section class="section" id="two-waits"><div class="eyebrow">05 · 2 / 29</div><h2>“이번 쓰기를 마쳐 주세요”와 “빈 칸을 주세요”</h2>
+<section class="section" id="two-waits"><div class="eyebrow">05 · 2 / 31</div><h2>“이번 쓰기를 마쳐 주세요”와 “빈 칸을 주세요”</h2>
 <p>프레임 옆에는 “어떤 페이지가 있는가, 누가 사용하는가, 어떤 작업이 남았는가”를 관리하는 기록이 있습니다. 이 제어 기록의 이름이 <strong>BCB</strong>(buffer control block)입니다.</p>
 <p>BCB의 <code>FLUSHING</code> 표시는 이번 flush의 마무리가 아직 남았다는 뜻입니다. 쓰기 호출이 성공한 뒤에도 마무리 담당자가 이 표시를 지워야 합니다.</p>
-<p>프로그램 안에서 작업을 따로 진행하는 실행 흐름을 <strong>스레드</strong>라고 합니다. 기다리는 스레드들은 서로 다른 결과가 필요합니다.</p>
+<p>프로그램 안에서 작업을 따로 진행하는 실행 흐름을 <strong>스레드</strong>라고 합니다. Flush 대기자와 allocator는 기존 요청 스레드가 페이지 버퍼 함수를 실행하면서 맡는 역할의 이름입니다. 대기 등록 코드도 그 요청 스레드가 직접 실행합니다. 기다리는 스레드들은 서로 다른 결과가 필요합니다.</p>
 <table><thead><tr><th scope="col">누가 기다리나요?</th><th scope="col">무엇을 기다리나요?</th></tr></thead><tbody>
 <tr><td><strong>Flush 대기자</strong>(flush 완료를 기다리는 요청 스레드)</td><td>“이 페이지에서 이미 진행 중인 flush가 끝나기를 기다립니다.” 그 flush의 마무리가 끝나서 대기 절차를 이어갈 수 있기를 기다립니다.</td></tr>
 <tr><td><strong>Allocator</strong>(프레임 할당 요청 스레드)</td><td>“다른 페이지를 읽어 담을 프레임을 주세요.” 자신이 넘겨받아 쓸 수 있는 프레임을 기다립니다.</td></tr>
@@ -25,14 +25,41 @@
 <p>다음 정상 사례에는 이 프레임에 연결된 대기자가 없습니다. 연결된 flush 대기자가 있으면 이번 검사에서 칸을 직접 제안하지 않습니다. 그 경우는 정상 흐름을 읽은 뒤 <a href="#flush-waiter-completion">따로 살펴봅니다</a>.</p>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9274-L9284">연결된 대기자의 제안 차단</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15496-L15556">소비자의 완료 처리</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15598-L15660">보호된 수신</a></p></details>
 </section>
-<section class="section" id="successful-submission"><div class="eyebrow">05 · 3 / 29</div><h2>1. 페이지 사본의 쓰기 호출이 성공한다</h2>
+<section class="section" id="flush-waiter-registration"><div class="eyebrow">05 · 3 / 31</div><h2>요청 스레드는 어떻게 flush 대기자가 될까?</h2>
+<p><strong>독립적인 시작 상태입니다.</strong> 페이지가 프레임에 있습니다. 다른 스레드가 이전 사본을 flush하는 중이고, 그 뒤 새 수정이 생겨 메모리의 페이지는 다시 dirty입니다. 새 수정은 아직 기록해야 합니다.</p>
+<p><strong>누구에게 요청하나요?</strong> 요청 스레드는 페이지 버퍼 함수를 호출해 이 페이지를 동기 flush하려 합니다. 동기 호출은 필요한 flush를 바로 진행할 수 없을 때 호출한 스레드가 기다린다는 뜻입니다.</p>
+<ol><li>페이지 버퍼 코드가 이미 진행 중인 flush를 확인합니다. 또 다른 flush를 동시에 시작하면 이전 사본이 새 사본을 덮어쓸 수 있습니다.</li><li>같은 요청 스레드가 등록 코드를 실행합니다. 자기 스레드 기록을 이 페이지의 BCB 대기 목록에 연결하고, flush 완료를 기다린다고 표시합니다.</li><li>요청 스레드는 잠듭니다. 나중에 완료 처리를 맡은 제출 스레드 또는 post-flush가 flush 대기 항목을 목록에서 꺼내고 깨웁니다.</li></ol>
+<p>원래 스레드는 대기에서 돌아와 호출 경로를 이어갑니다. 깨웠다는 사실만으로 새 수정까지 기록됐다거나 프레임을 재사용해도 된다고 판단할 수 없습니다.</p>
+<details class="answer-disclosure"><summary>등록 경로와 다른 대기 원인 펼치기</summary>
+<pre><code>pgbuf_flush_with_wal
+  → pgbuf_bcb_safe_flush_force_unlock
+    → pgbuf_bcb_safe_flush_internal
+      → pgbuf_block_bcb(..., PGBUF_LATCH_FLUSH, ...)</code></pre>
+<p><code>pgbuf_block_bcb</code>는 호출자의 서버 스레드 기록인 <code>THREAD_ENTRY</code>에 <code>request_latch_mode = PGBUF_LATCH_FLUSH</code>를 저장합니다. 그 기록을 <code>BCB.next_wait_thrd</code> 목록 끝에 연결한 뒤 <code>THREAD_PGBUF_SUSPENDED</code> 상태로 기다립니다. <code>pgbuf_wake_flush_waiters</code>는 이 요청 모드인 항목을 제거하고 깨웁니다.</p>
+<p>다른 스레드가 페이지 수정을 보호하는 write latch를 갖고 있어도 동기 호출자는 기다릴 수 있습니다. 이때 helper는 <code>PGBUF_BCB_ASYNC_FLUSH_REQ</code>를 설정해 그 사용자가 unfix로 사용을 반납할 때 flush하도록 요청합니다. 반대로 페이지가 dirty가 아니면 helper는 바로 돌아옵니다. FLUSHING을 보았다는 사실만으로 flush 대기자가 되지는 않습니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3590-L3618">호출자와 동기 flush</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8810-L8905">대기 결정</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7051-L7106">자기 등록과 대기</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10972-L11019">Flush 대기자 깨우기</a></p></details>
+</section>
+<section class="section" id="allocator-registration"><div class="eyebrow">05 · 4 / 31</div><h2>프레임을 찾던 요청은 언제 할당 대기자가 될까?</h2>
+<p><strong>독립적인 시작 상태입니다.</strong> Page-flush가 있는 서버 모드에서, 요청에 필요한 저장된 페이지가 버퍼 풀에 없습니다. 요청 스레드는 페이지 버퍼 모듈에 fix를 호출합니다. Fix는 페이지 내용을 보호받으며 사용할 권한을 얻는 호출입니다.</p>
+<p>페이지를 찾지 못한 경로는 먼저 그 페이지를 담을 프레임이 필요합니다. <strong>같은 요청 스레드가 프레임 할당 코드를 실행하며, 이 역할을 allocator라고 부릅니다.</strong> 프레임을 바로 구한 allocator는 기다리지 않습니다.</p>
+<ol><li>먼저 invalid 목록에서 사용하지 않는 프레임을 찾습니다.</li><li>없으면 메모리의 기존 페이지 중 보호 아래 교체 검사를 통과하는 프레임을 찾습니다.</li><li>두 탐색이 모두 실패하면 풀의 별도 할당 대기 큐에 자기 스레드 기록을 등록합니다. 후보 공급을 돕도록 page-flush를 깨운 뒤 잠듭니다.</li></ol>
+<p>나중에 post-flush 같은 공급자가 적합한 프레임을 제안하고 요청 스레드를 깨울 수 있습니다. 요청 스레드는 그 제안을 검사한 뒤 재사용해야 합니다. 어느 페이지의 프레임을 받아도 됩니다. 이 요청이 필요한 것은 공간이지, 특정 페이지 하나의 flush 완료가 아닙니다.</p>
+<details class="answer-disclosure"><summary>페이지를 못 찾은 경로, 등록과 대기 조건 펼치기</summary>
+<pre><code>pgbuf_fix_release
+  → pgbuf_claim_bcb_for_fix
+    → pgbuf_allocate_bcb</code></pre>
+<p><code>pgbuf_allocate_bcb</code>는 <code>pgbuf_get_bcb_from_invalid_list</code>, <code>pgbuf_get_victim</code> 순서로 호출합니다. 일반 서버 대기 경로에서는 <code>produce(thread_p)</code>로 호출자를 <code>direct_victims.waiter_threads_high_priority</code> 또는 <code>waiter_threads_low_priority</code> 큐에 넣습니다. 두 큐는 서버 스레드 기록의 포인터를 담으며, 각 페이지의 BCB 대기 목록과 별개입니다.</p>
+<p>호출자는 <code>pgbuf_wakeup_page_flush_daemon</code>을 실행한 뒤, 시간 제한이 있는 <code>THREAD_ALLOC_BCB_SUSPENDED</code> 상태로 기다립니다. 공급자는 <code>pgbuf_assign_direct_victim</code>으로 BCB를 제안하고 아직 기다리는 요청을 깨웁니다. 요청은 <code>pgbuf_get_direct_victim</code>으로 받아서 재검사하며, 제안이 무효화됐으면 다시 시도합니다. Page-flush를 사용할 수 없거나 standalone 모드이면 이 큐 대신 요청 측에서 flush하고 다시 찾는 경로를 따릅니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2408-L2423">Fix 중 페이지를 못 찾음</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8393-L8478">프레임 확보 경로</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8180-L8367">탐색, 자기 등록과 대기</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15429-L15478">제안과 깨우기</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15598-L15623">보호된 수령</a></p></details>
+</section>
+<section class="section" id="successful-submission"><div class="eyebrow">05 · 5 / 31</div><h2>1. 페이지 사본의 쓰기 호출이 성공한다</h2>
 <p data-teaching-def="P"><strong>정상 사례의 시작입니다.</strong> 페이지 <strong>P</strong>가 프레임 한 칸에 있습니다. 바뀐 내용의 사본을 쓰는 백그라운드 스레드를 <strong>page-flush</strong>라고 합니다. 다른 요청인 allocator는 쓸 칸을 기다립니다. 이 사례가 끝날 때까지 다른 요청은 P의 상태를 바꾸지 않습니다.</p>
 <p><strong>일어난 일:</strong> Page-flush가 P의 사본을 쓰기 경로로 보냈고, 호출이 성공했습니다. 그 뒤 P에 새 수정은 없습니다. 이렇게 추가로 써야 할 수정이 없는 상태를 <strong>clean</strong>이라고 합니다.</p>
 <p><strong>남은 일:</strong> P는 여전히 그 칸에 있습니다. 제어 기록인 BCB에는 <code>FLUSHING=1</code>이 남아 있습니다. 1은 이번 flush의 마무리가 아직 남았다는 뜻입니다.</p>
 <p><strong>지금 결과:</strong> 사본의 쓰기 호출은 성공했습니다. 마무리는 아직 끝나지 않았고, allocator도 칸을 받지 못했습니다. <a href="#completion-handoff">다음 단계</a>에서 같은 칸을 계속 따라갑니다.</p>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">완료 처리를 게시하거나 직접 마치는 분기</a></p></details>
 </section>
-<section class="section" id="completion-handoff"><div class="eyebrow">05 · 4 / 29</div><h2>2. 메모리 칸의 기록을 마무리 담당자에게 넘긴다</h2>
+<section class="section" id="completion-handoff"><div class="eyebrow">05 · 6 / 31</div><h2>2. 메모리 칸의 기록을 마무리 담당자에게 넘긴다</h2>
 <p data-teaching-def="P"><strong>같은 정상 사례를 이어갑니다.</strong> 페이지 <strong>P</strong>의 사본 쓰기는 성공했습니다. 그 칸의 제어 기록인 BCB에는 마무리가 남았다는 <code>FLUSHING=1</code>이 있습니다. Allocator는 아직 칸을 기다립니다.</p>
 <p>마무리를 도와주는 별도 백그라운드 스레드가 <strong>post-flush</strong>입니다. 두 스레드 사이에는 처리할 항목을 넣고 꺼내는 <strong>큐</strong>가 있습니다. 이 큐의 이름은 <code>flushed_bcbs</code>입니다.</p>
 <p><strong>넘기는 것:</strong> Page-flush는 큐에 <strong>BCB 포인터</strong>를 넣습니다. 포인터는 “어느 칸의 기록을 처리할지” 가리킵니다. 페이지 내용의 사본을 이 큐로 다시 보내는 것이 아닙니다.</p>
@@ -41,7 +68,7 @@
 <p><strong>지금 결과:</strong> 마무리 담당자가 바뀌었습니다. 마무리 자체는 아직 남았고 allocator도 계속 기다립니다. Post-flush는 이 항목을 처리하면서 새 페이지 쓰기를 시작하지 않습니다.</p>
 
 </section>
-<section class="section" id="successful-offer"><div class="eyebrow">05 · 5 / 29</div><h2>3. 지금 넘겨도 되는지 확인하고, 제안과 마무리를 한다</h2>
+<section class="section" id="successful-offer"><div class="eyebrow">05 · 7 / 31</div><h2>3. 지금 넘겨도 되는지 확인하고, 제안과 마무리를 한다</h2>
 <p data-teaching-def="P"><strong>같은 정상 사례입니다.</strong> 페이지 <strong>P</strong>의 제어 기록인 BCB 포인터가 큐에 있습니다. P에는 새 수정이 없고, 현재 사용하는 요청도 없습니다. BCB에 연결된 대기자나 다른 재사용 방해 표시도 없습니다. P는 교체 후보 구역에 있고 현재 정책도 이 칸의 전달을 허용합니다. Allocator는 계속 기다립니다.</p>
 <p><strong>왜 다시 볼까요?</strong> 큐에 넣은 뒤 다른 요청이 페이지를 쓰거나 수정할 수 있기 때문입니다. 쓰기 성공은 과거의 사본에 관한 결과입니다. 지금 메모리 칸의 상태까지 보장하지 않습니다.</p>
 <p>Post-flush는 큐에서 포인터를 꺼냅니다. 이어 BCB에 잠금을 잡고 현재 상태를 확인합니다. 이 잠금인 <strong>mutex</strong>는 상태에 대한 검사와 결정을 함께 보호합니다.</p>
@@ -51,7 +78,7 @@
 <details class="answer-disclosure"><summary>이번 사례의 정확한 교체 정책 보기</summary><p>P는 shared LRU3에 있습니다. LRU는 페이지 교체 순서를 관리하는 목록이며, LRU3는 그중 차가운 교체 후보 구역입니다. Shared 목록이므로 private 목록의 보유 목표인 quota 검사는 적용되지 않습니다. 미반납 사용 보호인 fix도 없습니다.</p></details>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15429-L15556">소스 순서대로 보는 제안과 완료 처리</a></p></details>
 </section>
-<section class="section" id="successful-receipt"><div class="eyebrow">05 · 6 / 29</div><h2>4. 받는 요청이 확인한 뒤, 이전 페이지를 빼고 칸을 쓴다</h2>
+<section class="section" id="successful-receipt"><div class="eyebrow">05 · 8 / 31</div><h2>4. 받는 요청이 확인한 뒤, 이전 페이지를 빼고 칸을 쓴다</h2>
 <p data-teaching-def="P"><strong>같은 정상 사례의 마지막입니다.</strong> Post-flush가 페이지 <strong>P</strong>의 칸을 allocator에게 제안하고 BCB 잠금을 풀었습니다. P에는 새 수정도 새 사용자도 없습니다. 연결된 대기자가 없고, 제안도 취소되지 않았습니다.</p>
 <p><strong>왜 또 확인할까요?</strong> 제안과 수신 사이에도 다른 요청이 먼저 P를 사용할 수 있습니다. “제안했다”와 “받았다”는 서로 다른 시점입니다.</p>
 <ol><li><strong>Allocator가 자기 제안 포인터를 가져옵니다.</strong> 그 칸의 BCB를 잠그고 제안이 취소되지 않았는지 확인합니다.</li><li><strong>현재 교체 조건을 다시 확인합니다.</strong> 이번에는 통과합니다. Allocator는 BCB를 교체 목록에서 빼고, 잠금을 유지한 채 할당 절차에 넘깁니다.</li><li><strong>할당 절차가 이전 페이지의 식별자를 제거합니다.</strong> P를 찾을 때 이 칸으로 연결되던 이전 매핑을 지웁니다. 그 뒤 요청한 새 페이지를 위한 칸으로 확보할 수 있습니다.</li></ol>
@@ -59,7 +86,7 @@
 <p>다음 사례들은 이 성공 이후에 이어지는 사건이 아닙니다. 각 사례의 시작 상태를 새로 설정합니다.</p>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15598-L15660">수신 검사</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8369-L8399">이후 victimization</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8480-L8486">요청한 식별자로 확보</a></p></details>
 </section>
-<section class="section" id="flush-waiter-completion"><div class="eyebrow">05 · 7 / 29</div><h2>한쪽 대기가 끝나도, 빈 칸을 기다리는 요청은 남는다</h2>
+<section class="section" id="flush-waiter-completion"><div class="eyebrow">05 · 9 / 31</div><h2>한쪽 대기가 끝나도, 빈 칸을 기다리는 요청은 남는다</h2>
 <p data-teaching-def="P"><strong>별개의 시작 상태입니다.</strong> 페이지 <strong>P</strong>의 사본 쓰기가 성공했고 BCB 포인터가 완료 큐에 들어 있습니다. P에는 새 수정이나 사용자가 없습니다. 교체 정책과 다른 표시도 전달을 막지 않습니다. 이번에는 flush의 마무리를 기다리는 스레드가 BCB에 연결돼 있습니다. Allocator는 별도로 칸을 기다립니다.</p>
 <p><strong>일어난 일:</strong> Post-flush가 BCB를 잠그고 검사합니다. 연결된 flush 대기자가 있으므로 이번 검사에서는 allocator에게 칸을 제안하지 않습니다.</p>
 <p><strong>그래도 하는 일:</strong> Post-flush는 이전 <code>FLUSHING</code> 표시를 지우고 flush 대기자를 목록에서 빼서 깨웁니다. 그 뒤 BCB 잠금을 풉니다.</p>
@@ -67,7 +94,7 @@
 <p>한 페이지의 flush를 기다리는 스레드와 칸을 찾는 allocator는 다른 등록 경로를 사용합니다. Flush 대기자에게 알렸다는 사실로 allocator의 칸 확보를 판단하면 안 됩니다.</p>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9274-L9284">대기자가 제안을 막는 이유</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15544-L15553">완료 처리와 flush 대기자 wake</a></p></details>
 </section>
-<section class="section" id="handoff-part-2"><div class="eyebrow">05 · 8 / 29</div><h2>다른 상황 1: 큐가 가득 차면 직접 마무리한다</h2>
+<section class="section" id="handoff-part-2"><div class="eyebrow">05 · 10 / 31</div><h2>다른 상황 1: 큐가 가득 차면 직접 마무리한다</h2>
 <div class="session-question" data-audience-checkpoint="" data-question-id="Q09" data-reset-answers="" id="q09"><h3>Q09 · 다른 담당자에게 넘길 자리가 없다</h3>
 <p data-teaching-def="P"><strong>새로 시작하는 사례입니다.</strong> Page-flush가 페이지 <strong>P</strong>의 사본을 썼고 호출이 성공했습니다. 그 칸의 BCB에는 <code>FLUSHING=1</code>이 남아 있고 flush 대기자가 연결돼 있습니다. Post-flush도 있고 allocator도 기다립니다. 그러나 완료 작업 큐가 가득 찼습니다.</p>
 <p><strong>문제:</strong> BCB 포인터를 큐에 넣을 수 없습니다. 맡길 항목을 게시하지 못했으므로 post-flush에 마무리 책임이 넘어가지 않습니다.</p>
@@ -77,7 +104,7 @@
 <details class="answer-disclosure"><summary>설명 보기</summary><p>페이지 쓰기 호출은 이미 성공했습니다. 실패한 것은 다음 담당자에게 마무리를 넘기는 일입니다. 쓰기 실패와 위임 실패를 따로 기록해야 누가 무엇을 처리했는지 알 수 있습니다.</p></details></div>
 
 </section>
-<section class="section" id="redirty-case"><div class="eyebrow">05 · 9 / 29</div><h2>다른 상황 2: 사본을 쓴 뒤 원래 페이지가 다시 바뀐다</h2>
+<section class="section" id="redirty-case"><div class="eyebrow">05 · 11 / 31</div><h2>다른 상황 2: 사본을 쓴 뒤 원래 페이지가 다시 바뀐다</h2>
 <p data-teaching-def="P"><strong>새로 시작하는 사례입니다.</strong> 페이지 <strong>P</strong>의 사본 쓰기가 성공했고 BCB 포인터도 큐에 들어갔습니다. 다른 스레드가 P를 수정하고 계속 사용합니다. P에는 이전 사본에 없던 새 내용이 생겼습니다. 이번 flush의 마무리를 기다리는 스레드도 BCB에 연결돼 있습니다. Allocator는 별도로 칸을 기다립니다.</p>
 <p><strong>왜 넘길 수 없나요?</strong> 이전에 쓴 사본에는 새 수정이 없습니다. 지금 칸을 덮어쓰면 그 수정을 잃을 수 있고, 사용하는 스레드의 권한도 침해합니다. 보존할 수정이 남은 상태를 <strong>dirty</strong>라고 합니다.</p>
 <p><strong>Post-flush가 하는 일:</strong> BCB를 잠그고 현재 dirty 상태와 사용 보호를 확인합니다. 칸은 제안하지 않습니다. 그래도 이전 사본의 flush 마무리는 끝내고 <code>FLUSHING</code>을 지웁니다. 연결된 flush 대기자를 깨웁니다.</p>
@@ -85,7 +112,7 @@
 <p>뒤의 <a href="#post-part-4">상태 추적</a>에서 사본과 현재 페이지를 따로 표시해 확인할 수 있습니다.</p>
 
 </section>
-<section class="section" id="post-part-3"><div class="eyebrow">05 · 10 / 29</div><h2>다른 상황 3: 받기 전에 다른 요청이 페이지를 사용한다</h2>
+<section class="section" id="post-part-3"><div class="eyebrow">05 · 12 / 31</div><h2>다른 상황 3: 받기 전에 다른 요청이 페이지를 사용한다</h2>
 <div class="session-question" data-audience-checkpoint="" data-question-id="Q11" data-reset-answers="" id="q11"><h3>Q11 · 제안 뒤에도 상태는 바뀔 수 있다</h3>
 <p data-teaching-def="P A B"><strong>새로 시작하는 사례입니다.</strong> 페이지 <strong>P</strong>는 프레임에 있고 추가로 써야 할 수정이 없는 clean 상태입니다. <strong>B</strong>는 그 칸을 제안받은 allocator입니다. <strong>A</strong>는 P를 읽으려는 스레드입니다. 이전 flush의 마무리는 이미 끝났습니다.</p>
 <p>B가 받기 전에 A가 P의 사용 권한을 얻습니다. 프레임을 사용하는 동안 재사용을 막는 이 권한을 <strong>fix</strong>라고 합니다. A는 fix를 유지합니다. 이런 새 fix는 B에게 한 제안을 취소할 수 있습니다.</p>
@@ -95,7 +122,7 @@
 <details class="answer-disclosure"><summary>설명 보기</summary><p>아닙니다. 읽기 요청도 fix로 사용을 보호합니다. 받는 쪽은 페이지 식별자뿐 아니라 현재 사용과 제안 취소도 확인해야 합니다. 소스에서는 <code>pgbuf_get_direct_victim</code>이 이 수신 검사를 합니다.</p></details></div>
 
 </section>
-<section class="section" id="handoff"><div class="eyebrow">05 · 11 / 29</div><h2>쓰기 성공에서 칸 확보까지, 무엇을 따로 확인할까?</h2>
+<section class="section" id="handoff"><div class="eyebrow">05 · 13 / 31</div><h2>쓰기 성공에서 칸 확보까지, 무엇을 따로 확인할까?</h2>
 <p>앞의 사례를 정리합니다. 아래 표는 사건들의 의미를 구분합니다. 별개 사례의 상태를 합친 실행 순서가 아닙니다.</p>
 <table><thead><tr><th scope="col">사건</th><th scope="col">알 수 있는 것</th><th scope="col">아직 알 수 없는 것</th></tr></thead><tbody>
 <tr><td>사본 쓰기 호출 성공</td><td>쓰기 경로가 그 사본을 받아들였습니다.</td><td>최종 디스크 영속성, 현재 칸의 재사용 가능 여부</td></tr>
@@ -108,14 +135,14 @@
 <p>여기까지가 기본 흐름입니다. 뒤에서는 <a href="#post-flush-code-path">각 단계를 만드는 자료 구조와 소스</a>를 살펴봅니다. 필요할 때 세부 설명을 펼쳐 읽을 수 있습니다.</p>
 
 </section>
-<section class="section" id="handoff-map"><div class="eyebrow">05 · 12 / 29</div><h2>전체 그림은 기본 흐름을 읽은 뒤 펼쳐 본다</h2>
+<section class="section" id="handoff-map"><div class="eyebrow">05 · 14 / 31</div><h2>전체 그림은 기본 흐름을 읽은 뒤 펼쳐 본다</h2>
 <p>이 그림은 쓰기, 마무리 위임, 현재 검사, 제안과 수신을 한 번에 보여줍니다. 기본 흐름을 확인한 뒤 갈림길을 찾아볼 때 사용합니다.</p>
 <p>그림에서 프레임은 페이지 한 개의 메모리 칸, BCB는 그 칸의 제어 기록, allocator는 칸을 찾는 요청입니다. Fix는 사용 보호입니다. LRU3는 차가운 교체 후보 구역이고 private quota는 목록의 보유 목표입니다. WAL은 페이지 기록보다 먼저 보존해야 하는 복구 로그입니다. DWB는 최종 볼륨 쓰기 전에 사본을 받는 중간 저장 영역입니다.</p>
 <p><strong>계속 기억할 점:</strong> Post-flush는 큐에 있는 기록의 마무리를 맡습니다. 새 페이지 쓰기를 하지 않습니다. 현재 조건 때문에 칸을 제안하지 못해도 이전 flush를 마무리합니다.</p>
 <details class="answer-disclosure"><summary>위임과 직접 완료의 전체 그림 펼치기</summary><img alt="조건부 page-flush/post-flush 인계와 직접 완료 분기" class="diagram" src="../../assets/page-flush-post-flush-handoff.svg"/></details>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">위임</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15429-L15660">소비자와 수신자</a></p></details>
 </section>
-<section class="section" id="post-flush-code-path"><div class="eyebrow">05 · 13 / 29</div><h2>소스 찾기: 큐에 넣는 곳, 꺼내는 곳, 직접 마치는 곳</h2>
+<section class="section" id="post-flush-code-path"><div class="eyebrow">05 · 15 / 31</div><h2>소스 찾기: 큐에 넣는 곳, 꺼내는 곳, 직접 마치는 곳</h2>
 <p><strong>여기부터는 상세 설명입니다.</strong> Page-flush는 쓰기 성공 뒤 남은 마무리를 맡길 수 있습니다. Post-flush는 같은 서버 프로세스 안의 별도 스레드입니다. 큐에 넣는 쪽을 생산자, 꺼내는 쪽을 소비자라고 부릅니다.</p>
 <p>실제로 작업을 넘기는 경계는 <code>flushed_bcbs</code> 큐입니다. 깨우기는 알림이고, 큐 항목이 어떤 BCB를 처리해야 하는지 기록합니다. 알림 함수가 소비자 함수를 직접 호출하지 않습니다.</p>
 <p>소비자가 처리하기 전까지 BCB 저장 공간이 유효해야 합니다. 버퍼 풀은 큐와 BCB 저장 공간을 소유합니다. 아직 남은 <code>FLUSHING</code> 표시가 일반적인 프레임 재사용을 막습니다.</p>
@@ -129,7 +156,7 @@
 </details>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17072-L17080">page_buffer.c:17072–17080</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15496-L15556">page_buffer.c:15496–15556</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10929-L10954">큐 삽입과 직접 완료 처리</a></p></details>
 </section>
-<section class="section" id="waiter-storage"><div class="eyebrow">05 · 14 / 29</div><h2>세 자료 구조에는 서로 다른 것이 들어 있다</h2>
+<section class="section" id="waiter-storage"><div class="eyebrow">05 · 16 / 31</div><h2>세 자료 구조에는 서로 다른 것이 들어 있다</h2>
 <p>“큐에서 꺼내 깨운다”만으로 설명하면 누구를 어디서 꺼내는지 모호합니다. 아래 세 곳을 구별합니다. 스레드의 관리 기록은 <code>THREAD_ENTRY</code>, 한 프레임의 제어 기록은 BCB입니다.</p>
 <table><thead><tr><th scope="col">저장하는 것</th><th scope="col">저장 장소</th><th scope="col">사용하는 목적</th></tr></thead><tbody>
 <tr><td>한 페이지의 접근이나 flush를 기다리는 스레드</td><td>그 BCB에 연결된 목록</td><td>그 페이지의 대기자를 찾습니다.</td></tr>
@@ -148,7 +175,7 @@
 <p class="data-structure-bridge">next_wait_thrd는 해당 페이지를 기다리는 스레드들을 잇는 링크입니다. bcb_victims는 스레드 인덱스별 제안 BCB 포인터 슬롯입니다. 큐 소비, flush 대기자 알림, allocator 제안과 보호된 수신은 각각 다른 연산입니다.</p>
 <figure class="daemon-data-structures"><img class="diagram" src="../../assets/daemon-post-flush-data-structures.svg" alt="Post-flush의 BCB 포인터 완료 큐, 페이지의 연결 대기 목록, allocator 큐와 thread별 제안 슬롯"><figcaption>자료구조와 접근 순서 · 고정 소스에 근거한 개념도</figcaption></figure>
 </section>
-<section class="section" id="flush-waiter-wakeup"><div class="eyebrow">05 · 15 / 29</div><h2>페이지의 대기 목록에서 flush 대기자만 깨운다</h2>
+<section class="section" id="flush-waiter-wakeup"><div class="eyebrow">05 · 17 / 31</div><h2>페이지의 대기 목록에서 flush 대기자만 깨운다</h2>
 <p><strong>독립적인 목록 예시입니다.</strong> 한 BCB에 페이지를 읽으려는 요청, flush 마무리를 기다리는 요청, 페이지를 수정하려는 요청이 함께 연결돼 있습니다. 마무리 함수는 이 중 flush 대기자만 꺼내 깨웁니다.</p>
 <pre><code>READ → FLUSH → WRITE → FLUSH
 READ → WRITE</code></pre>
@@ -160,7 +187,7 @@ READ → WRITE</code></pre>
 <p>Post-flush와 제출자의 직접 완료 경로가 이 helper를 함께 사용합니다.</p></details>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7051-L7106">page_buffer.c:7051–7106</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10972-L11019">page_buffer.c:10972–11019</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L11635-L11650">page_buffer.c:11635–11650</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_entry.cpp#L506-L543">thread_entry.cpp:506–543</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10908-L10952">page_buffer.c:10908–10952</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15544-L15553">page_buffer.c:15544–15553</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L7459-L7589">page_buffer.c:7459–7589</a></p></details>
 </section>
-<section class="section" id="allocator-wakeup"><div class="eyebrow">05 · 16 / 29</div><h2>칸을 기다리는 요청에게 제안하고 깨우는 순서</h2>
+<section class="section" id="allocator-wakeup"><div class="eyebrow">05 · 18 / 31</div><h2>칸을 기다리는 요청에게 제안하고 깨우는 순서</h2>
 <p>쓸 칸을 찾지 못한 allocator는 페이지의 BCB 목록이 아니라 별도 대기 큐에 등록됩니다. 칸을 공급하는 스레드는 그 큐에서 아직 기다리는 요청을 찾습니다. 이미 대기를 끝낸 기록이면 건너뜁니다.</p>
 <p>공급자는 요청에게 제안할 BCB 포인터를 기록하고 알립니다. 이 과정은 요청의 잠금으로 보호합니다. 소스에서는 알림 호출이 포인터 기록보다 먼저 나오지만, 받는 스레드도 같은 잠금을 얻어야 대기에서 돌아올 수 있습니다. 포인터 기록을 마치기 전에 수신을 진행할 수 없습니다.</p>
 <p><strong>남은 확인:</strong> 깨어난 allocator는 자기 포인터를 가져오고 BCB를 잠가 취소 여부와 현재 조건을 검사합니다. 알림은 곧바로 프레임을 확보했다는 뜻이 아닙니다.</p>
@@ -171,7 +198,7 @@ READ → WRITE</code></pre>
 <p>수신 함수 <code>pgbuf_get_direct_victim</code>은 원자 연산으로 자기 포인터 슬롯을 비우고 BCB를 잠급니다. 거절되면 할당 경로가 다시 후보를 구합니다.</p></details>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8253-L8309">page_buffer.c:8253–8309</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15429-L15478">page_buffer.c:15429–15478</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15566-L15623">page_buffer.c:15566–15623</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_entry.cpp#L609-L622">thread_entry.cpp:609–622</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_entry.cpp#L554-L597">thread_entry.cpp:554–597</a></p></details>
 </section>
-<section class="section" id="post"><div class="eyebrow">05 · 17 / 29</div><h2>큐의 기록은 과거이고, 넘길지 판단하는 기준은 현재다</h2>
+<section class="section" id="post"><div class="eyebrow">05 · 19 / 31</div><h2>큐의 기록은 과거이고, 넘길지 판단하는 기준은 현재다</h2>
 <p>BCB 포인터를 큐에 넣어도 페이지의 상태가 얼어붙지는 않습니다. Post-flush가 꺼내기 전에 다른 요청이 사용하거나 수정할 수 있습니다. 그래서 BCB를 잠근 뒤 <strong>현재 상태</strong>로 결정합니다.</p>
 <ul><li>보존할 새 수정이나 다른 방해 표시가 있으면 제안하지 않습니다.</li><li>사용 보호인 fix나 BCB에 연결된 대기자가 있으면 제안하지 않습니다. Flush 대기자도 이 검사에 포함됩니다.</li><li>현재 교체 구역과 목록의 보유 정책이 허용하지 않으면 제안하지 않습니다.</li><li>조건을 통과해도 실제로 기다리는 allocator가 있어야 제안할 수 있습니다.</li></ul>
 <p><strong>제안을 거절해도 마무리는 합니다.</strong> 이전 FLUSHING 표시를 지우고 flush 대기자가 있으면 깨웁니다. 이후의 dirty 수정은 그대로 남깁니다.</p>
@@ -181,7 +208,7 @@ READ → WRITE</code></pre>
 <p>이 간격은 컴파일된 정책이며 완료 기한이 아닙니다. Post-flush만 켜고 끄거나 주기를 정하는 독립적인 공개 설정은 없습니다. 대기 간격 초기화는 칸 확보의 증거가 아닙니다.</p></details>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17072-L17084">항목 소비에 따른 초기화</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_looper.cpp#L208-L223">Wake에 따른 초기화</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17193-L17202">컴파일된 대기 간격</a></p></details>
 </section>
-<section class="section" id="handoff-part-3"><div class="eyebrow">05 · 18 / 29</div><h2>상태로 확인하기: 큐가 가득 찬 경우</h2>
+<section class="section" id="handoff-part-3"><div class="eyebrow">05 · 20 / 31</div><h2>상태로 확인하기: 큐가 가득 찬 경우</h2>
 <p>앞의 <a href="#handoff-part-2">큐가 가득 찬 사례</a>를 상태 표로 다시 봅니다. 아래에서 별개의 시작 상태로 되돌립니다. 각 단계는 사본 쓰기, 큐 삽입, 직접 마무리를 구분합니다.</p>
 <div class="state-trace" data-state-trace="" id="queue-full-state-trace"><h3>큐가 가득 차면 제출한 호출자가 직접 완료한다</h3><p class="trace-assumptions" data-teaching-def="P G B">Q09를 별도로 다시 시작합니다. <strong>P</strong>는 프레임의 페이지입니다. <strong>G</strong>는 성공적으로 제출한 사본의 설명용 이름이며 저장된 카운터가 아닙니다. <strong>B</strong>는 칸을 기다리는 allocator입니다. BCB는 칸의 제어 기록이고 FLUSHING=1은 마무리가 남았다는 뜻입니다. 제출자는 page-flush이며 post-flush도 있습니다. 큐가 가득 찼고 새 수정은 없습니다. Flush 대기자는 이전 마무리를 기다립니다.</p>
 <div class="trace-controls" hidden=""><button data-trace-previous="" type="button">이전</button><button data-trace-next="" type="button">다음</button><button data-trace-reset="" type="button">사례 초기화</button><button data-trace-all="" type="button">전체 단계 보기</button><output aria-atomic="true" aria-live="polite"></output></div><ol class="trace-steps">
@@ -216,7 +243,7 @@ READ → WRITE</code></pre>
 <details class="answer-disclosure"><summary>Q&amp;A · 그러면 B는 나중에 어떻게 프레임을 받나요?</summary><p>이후 page-flush가 후보를 탐색할 때, 현재 clean이고 재사용할 수 있는 프레임을 직접 제안할 수 있습니다. Post-flush가 다른 완료 항목에서 적격 프레임을 공급할 수도 있습니다. 이 경로들은 각 검사를 통과했을 때만 <code>pgbuf_assign_direct_victim</code>을 호출합니다. 공급자는 아직 기다리는 allocator를 찾아야 하고, B는 받은 제안을 다시 검사해야 합니다. 그 프레임이 P가 있던 프레임일 필요는 없습니다. 이 사례는 P가 나중에 제안된다거나 B가 정해진 시간 안에 받는다고 보장하지 않습니다.</p><p><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15505-L15533">Post-flush 공급 경로</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3833-L3843">Page-flush의 후보 탐색</a> · <a href="#successful-receipt">Allocator의 수신 검사</a></p></details>
 </div>
 </section>
-<section class="section" id="post-part-4"><div class="eyebrow">05 · 19 / 29</div><h2>상태로 확인하기: 이전 사본과 새 수정은 다르다</h2>
+<section class="section" id="post-part-4"><div class="eyebrow">05 · 21 / 31</div><h2>상태로 확인하기: 이전 사본과 새 수정은 다르다</h2>
 <p>앞의 <a href="#redirty-case">새 수정 사례</a>를 상태 표로 다시 봅니다. 각 단계에서 ‘이전 사본의 마무리’와 ‘현재 페이지에 남은 일’을 나란히 확인합니다. 아래에서는 별개의 시작 상태로 되돌립니다.</p>
 <div class="state-trace" data-state-trace="" id="post-flush-state-trace"><h3>현재 프레임을 제안하지 않고 이전 flush를 완료하기</h3><p class="trace-assumptions" data-teaching-def="P A B G G+1">새로 시작합니다. <strong>P</strong>는 프레임의 페이지, <strong>A</strong>는 수정하는 writer, <strong>B</strong>는 칸을 기다리는 allocator입니다. <strong>G</strong>는 이전 사본, <strong>G+1</strong>은 그 뒤 수정된 내용을 구별하는 설명용 이름입니다. 저장된 세대 카운터가 아닙니다. DIRTY=1은 보존할 수정이 남았다는 뜻입니다. FLUSHING=1은 이전 마무리가 남았다는 뜻입니다. fcnt는 미반납 fix 수이며 fix는 사용 중 재사용을 막습니다. 처음에는 clean, fcnt=0, 차가운 LRU3 상태입니다. Flush 대기자가 연결돼 있습니다. 큐 삽입 뒤 소비 전에 A가 수정하고 fix를 유지합니다.</p>
 <div class="trace-controls" hidden=""><button data-trace-previous="" type="button">이전</button><button data-trace-next="" type="button">다음</button><button data-trace-reset="" type="button">사례 초기화</button><button data-trace-all="" type="button">전체 단계 보기</button><output aria-atomic="true" aria-live="polite"></output></div><ol class="trace-steps">
@@ -247,7 +274,7 @@ READ → WRITE</code></pre>
 </ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 실제 실행을 관측한 증거가 아닙니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">handoff:10925–10952</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15556">consumer:15487–15556</a></p></div>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">handoff:10925–10952</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15556">consumer:15487–15556</a></p></details>
 </section>
-<section class="section" id="post-part-2"><div class="eyebrow">05 · 20 / 29</div><h2>안전한 칸이어도, 현재 보유 정책이 전달을 막을 수 있다</h2>
+<section class="section" id="post-part-2"><div class="eyebrow">05 · 22 / 31</div><h2>안전한 칸이어도, 현재 보유 정책이 전달을 막을 수 있다</h2>
 <div class="session-question" data-audience-checkpoint="" data-question-id="Q10" data-reset-answers="" id="q10"><h3>Q10 · 목록을 얼마나 남겨둘지 목표가 바뀐다</h3>
 <p data-teaching-def="P G"><strong>별개의 시작 상태입니다.</strong> 페이지 <strong>P</strong>는 프레임에 있습니다. <strong>G</strong>는 성공적으로 제출한 사본의 설명용 이름이며 실제 저장된 카운터가 아닙니다. BCB 포인터가 큐에 있고 이전 FLUSHING은 남아 있습니다. P는 추가로 쓸 수정이 없는 clean 상태이며 현재 사용자, 연결된 대기자, 다른 방해 표시가 없습니다. 차가운 교체 후보 구역인 LRU3에 있습니다.</p>
 <p>P는 세션과 연결된 <strong>private 목록</strong>에 있습니다. 이는 교체 정책의 분류이며 페이지의 독점 소유권은 아닙니다. 목록에는 80페이지가 있습니다. 얼마나 남겨둘지 정하는 보유 목표인 <strong>quota</strong>가 소비 전에 60에서 100으로 바뀝니다. Allocator는 계속 칸을 기다립니다.</p>
@@ -257,7 +284,7 @@ READ → WRITE</code></pre>
 <details class="answer-disclosure"><summary>설명 보기</summary><p>그 조건은 안전성에 필요하지만 보유 정책까지 통과했다는 뜻은 아닙니다. 큐 삽입 당시의 quota를 쓰면 현재 목표를 무시합니다. 정책상 제안을 거절해도 이전 flush를 마무리할 책임은 남습니다.</p></details></div>
 
 </section>
-<section class="section" id="post-part-5"><div class="eyebrow">05 · 21 / 29</div><h2>상태로 확인하기: 정책상 거절과 제안 취소를 구별한다</h2>
+<section class="section" id="post-part-5"><div class="eyebrow">05 · 23 / 31</div><h2>상태로 확인하기: 정책상 거절과 제안 취소를 구별한다</h2>
 <p>정책 검사는 <strong>제안을 만들기 전</strong>에 막습니다. 새 fix는 <strong>이미 만든 제안을 받기 전</strong>에 취소할 수 있습니다. 아래 표는 두 경우를 따로 시작합니다. 3단계는 앞 단계의 연속이 아니라 새로운 제안 사례의 시작입니다.</p>
 <div class="state-trace" data-state-trace="" id="offer-state-trace"><h3>Allocator가 프레임을 받지 못하는 두 독립 사례</h3><p class="trace-assumptions" data-teaching-def="P G A B">서로 별개인 두 사례로 시작합니다. <strong>P</strong>는 프레임의 페이지이고 <strong>G</strong>는 제출한 사본의 설명용 이름이며 저장된 카운터가 아닙니다. <strong>A</strong>는 quota 사례, <strong>B</strong>는 제안 취소 사례의 이름입니다. BCB는 칸의 제어 기록입니다. fcnt는 미반납 fix 수, LRU3는 차가운 교체 구역, clean은 보존할 새 수정이 없는 상태입니다. A는 private 목록의 크기 80, quota가 60에서 100으로 바뀐 상태이며 사용자·연결된 대기자·다른 방해 표시는 없습니다. B는 3단계에서 크기 80, quota 60, clean이고 적격한 칸과 실제 allocator 대기자로 새로 시작합니다. 제안 뒤 reader가 fix합니다. Retagging은 새 페이지 식별자를 붙이는 일이며, high-priority retry는 더 높은 우선순위로 다시 칸을 구하는 절차입니다.</p><p class="trace-assumptions">Quota 사례: private 교체 목록에 80페이지가 있고, 소비 전에 보유 quota가 60에서 100으로 바뀝니다. Clean이고 fix가 없는 페이지에는 연결된 대기자나 다른 배정 방해 플래그가 없으며, 이전 <code>FLUSHING</code>이 설정된 채 큐에 있습니다. 제안 사례: 3단계에서 목록 크기 80, quota 60, clean이며 적격한 프레임, 실제 allocator 대기자가 있는 상태로 다시 시작합니다. 유효한 제안을 게시한 뒤 allocator가 받기 전에 reader가 페이지를 fix합니다.</p>
 <div class="trace-controls" hidden=""><button data-trace-previous="" type="button">이전</button><button data-trace-next="" type="button">다음</button><button data-trace-reset="" type="button">사례 초기화</button><button data-trace-all="" type="button">전체 단계 보기</button><output aria-atomic="true" aria-live="polite"></output></div><ol class="trace-steps">
@@ -288,7 +315,7 @@ READ → WRITE</code></pre>
 </ol><p class="trace-caption">소스 근거: 구성한 실행 순서이며 실제 실행을 관측한 증거가 아닙니다. <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15512-L15545">quota guard:15512–15545</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15592-L15660">receiver:15592–15660</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8315-L8325">allocator retry:8315–8325</a></p></div>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15512-L15545">quota guard:15512–15545</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15592-L15660">receiver:15592–15660</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8315-L8325">allocator retry:8315–8325</a></p></details>
 </section>
-<section class="section" id="clean-unfix-handoff"><div class="eyebrow">05 · 22 / 29</div><h2>사용을 끝낸 페이지가 바로 다른 요청에게 가는 것은 아니다</h2>
+<section class="section" id="clean-unfix-handoff"><div class="eyebrow">05 · 24 / 31</div><h2>사용을 끝낸 페이지가 바로 다른 요청에게 가는 것은 아니다</h2>
 <p><strong>별개의 시작 상태입니다.</strong> 모든 프레임에 사용을 보호하는 fix가 남아 있습니다. Allocator는 칸을 구하지 못해 기다립니다. 이후 읽기 요청들이 페이지 사용을 반납합니다. 이 반납이 <strong>unfix</strong>입니다.</p>
 <p>페이지에 보존할 수정이 없으면 clean입니다. Fix가 하나도 남지 않으면 unfixed입니다. 두 조건이 맞아도 “사용 반납”과 “다른 요청에게 전달”은 서로 다른 일입니다.</p>
 <p>일반적인 마지막 unfix는 페이지의 교체 순서를 바꾸거나 목록을 옮길 수 있습니다. 반납한 페이지가 계속 차가운 후보로 남는다는 보장은 없습니다. Post-flush는 완료 큐만 처리하며 반납한 clean 페이지 전체를 찾아다니지 않습니다.</p>
@@ -299,13 +326,13 @@ READ → WRITE</code></pre>
 <p>수정하지 않은 WRITE fix를 반납하는 경우도 원래 페이지가 이미 clean이어야 이 사례에 해당합니다.</p></details>
 
 </section>
-<section class="section" id="clean-unfix-handoff-part-2"><div class="eyebrow">05 · 23 / 29</div><h2>나중에 반납해도, 취소된 제안이 저절로 살아나지는 않는다</h2>
+<section class="section" id="clean-unfix-handoff-part-2"><div class="eyebrow">05 · 25 / 31</div><h2>나중에 반납해도, 취소된 제안이 저절로 살아나지는 않는다</h2>
 <p><strong>사용 반납 사례를 이어갑니다.</strong> Clean 페이지의 사용자들이 fix를 반납했습니다. Allocator는 여전히 칸이 필요합니다. 이전에 제안이 취소됐다면 받는 쪽은 취소 여부를 확인하고 다시 확보 절차를 따라야 합니다. 페이지 이름이 같거나 fix가 줄었다는 사실만으로 옛 제안을 믿으면 안 됩니다.</p>
 <p>다른 공급 경로가 새 제안을 만들 수는 있습니다. 그러나 어느 경로가 이번 대기를 풀었는지는 그 경로의 실제 실행과 현재 조건을 확인해야 합니다.</p>
 <p data-teaching-def="VS-20"><strong>VS-20</strong>은 고정 리비전의 maintenance 보조 경로에 관한 불확실성 목록의 항목 이름입니다. 그 함수의 두 반복문은 소스대로라면 본문에 들어가지 않습니다. 따라서 이 보조 경로가 칸을 공급한다고 가정하면 안 됩니다. 다른 공급 경로는 남아 있으므로 무기한 대기를 증명한 것도 아닙니다.</p>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="../../advanced/replacement-progress.md#who-supplies-a-waiter-after-a-clean-unfix">배정 주체별 정식 경로와 소스 근거</a> · <a href="../lessons/0006c-follow-maintenance-and-pacing.html">VS-20</a></p></details>
 </section>
-<section class="section" id="handoff-mechanism"><div class="eyebrow">05 · 24 / 29</div><h2>같은 메모리 주소가 같은 페이지를 뜻하지는 않는다</h2>
+<section class="section" id="handoff-mechanism"><div class="eyebrow">05 · 26 / 31</div><h2>같은 메모리 주소가 같은 페이지를 뜻하지는 않는다</h2>
 <p data-teaching-def="F P Q"><strong>별개의 후보 사례입니다.</strong> <strong>F</strong>는 프레임이라는 메모리 칸입니다. <strong>P</strong>는 처음 쓰기 후보로 골랐던 페이지이고, <strong>Q</strong>는 나중에 같은 칸을 차지할 수 있는 다른 페이지입니다. BCB 저장 주소는 유지돼도 그 칸의 페이지나 상태는 바뀔 수 있습니다.</p>
 <p>현재 페이지를 식별하는 값은 <strong>VPID</strong>입니다. 후보를 고를 때 P였다는 기록만으로 이후에도 P라고 판단할 수 없습니다. Page-flush는 쓰기 전에 BCB를 잠그고 기억한 식별자와 현재 식별자를 비교합니다.</p>
 <p>식별자가 같아도 검사할 것이 남습니다. 사용 중인지, 보존할 수정이 있는지, 이미 다른 flush가 진행 중인지, 현재 교체 구역이 맞는지도 봅니다. 로그를 쓰는 페이지 경로에서는 필요한 복구 로그를 페이지 기록보다 먼저 보존하는 <strong>WAL</strong> 조건도 지켜야 합니다.</p>
@@ -313,7 +340,7 @@ READ → WRITE</code></pre>
 <details class="answer-disclosure"><summary>식별자 비교만 없앤 경우 생각해 보기</summary><p>다른 검사를 유지한 채 식별자 비교만 없애면, 현재 Q가 들어 있는 칸을 처음 고른 P의 후보처럼 처리할 수 있습니다. 이 반례는 선택 대상이 잘못 연결됨을 보여줍니다. 그 자체로 데이터 손상을 관측한 것은 아닙니다. Dirty나 사용 보호 검사를 없애는 반례는 안전성 결과가 다릅니다.</p></details>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4088">page_buffer.c:4040–4088</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15660">page_buffer.c:15487–15660</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10925-L10952">조건부 위임과 직접 완료 분기</a></p></details>
 </section>
-<section class="section" id="handoff-removal"><div class="eyebrow">05 · 25 / 29</div><h2>상태로 확인하기: 재검사가 reader의 사용을 지킨다</h2>
+<section class="section" id="handoff-removal"><div class="eyebrow">05 · 27 / 31</div><h2>상태로 확인하기: 재검사가 reader의 사용을 지킨다</h2>
 <p>실제 구현은 수신 때 다시 검사합니다. 아래에서는 이 검사를 없앤 설명용 모델과 새 사용을 막는 예약 대안도 비교합니다. 모두 같은 출발 조건에서 시작합니다. 설명용 대안은 현재 CUBRID 구현이나 측정 결과가 아닙니다.</p>
 <p>검사를 없앤 모델은 reader가 쓰는 칸을 덮어쓸 수 있습니다. 예약 대안은 새 reader를 기다리게 하는 대신 그 경쟁을 피합니다. 두 대안은 다른 권한 규칙을 요구합니다.</p>
 <div class="state-trace" data-state-trace="" id="handoff-defense-trace"><h3>Reader는 식별자를 바꾸지 않고 사용 보호를 바꿀 수 있다</h3><p class="trace-assumptions" data-teaching-def="F P G A">새 비교를 시작합니다. <strong>F</strong>는 프레임, <strong>P</strong>는 현재 페이지, <strong>G</strong>는 완료된 사본의 설명용 이름이며 저장된 카운터가 아닙니다. <strong>A</strong>는 P를 읽으려는 reader입니다. fcnt는 미반납 fix 수이며 fix는 사용을 보호합니다. 생산자가 clean이고 적격한 F를 allocator에게 제안한 상태입니다. 이 시작 상태에서 실제 수신 검사, 검사 제거 모델, 새 사용을 막는 연속 예약 대안을 비교합니다. Retagging은 페이지 식별자를 바꾸는 일입니다.</p><p class="trace-assumptions">이 시작 상태에서 세 설계를 비교합니다. 구현은 수신 시 재검사합니다. 제거 모델은 그 보호된 무효화·적격성 검사만 없앱니다. 설명용 대안은 프레임을 계속 예약하여 새 fix를 막습니다. 세 설계 모두 생산자 검사는 유지합니다. Reader의 fix 시도가 세 결과를 갈라놓는 사건입니다.</p>
@@ -323,14 +350,14 @@ READ → WRITE</code></pre>
 <li data-trace-step="2"><h4>3. Allocator가 수신</h4><dl class="trace-lanes"><div class="trace-changed"><dt>보호된 수신자</dt><dd>lock; reject; retry</dd></div><div class="trace-changed"><dt>검사 없는 수신자</dt><dd>retag despite A's use</dd></div><div class="trace-changed"><dt>연속 예약 대안</dt><dd>claim under retained exclusion</dd></div><div class="trace-changed"><dt>현재 F / 주체</dt><dd>P retained by safe path</dd></div></dl><p class="trace-guard"><strong>조건 / 가정:</strong> 재검사 없는 모델은 이전 제안을 영구적인 권한으로 신뢰</p><p class="trace-change"><strong>변경 / 결과:</strong> 검사를 생략하면 수명·식별자 보호를 위반할 수 있음. 안전한 경로는 거절하거나 A의 새 사용을 막음</p></li></ol><p class="trace-caption"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4088">page_buffer.c:4040–4088</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15660">page_buffer.c:15487–15660</a></p></div>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4088">page_buffer.c:4040–4088</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15487-L15660">page_buffer.c:15487–15660</a></p></details>
 </section>
-<section class="section" id="handoff-alternatives"><div class="eyebrow">05 · 26 / 29</div><h2>예약을 유지하면 무엇을 더 책임져야 할까?</h2>
+<section class="section" id="handoff-alternatives"><div class="eyebrow">05 · 28 / 31</div><h2>예약을 유지하면 무엇을 더 책임져야 할까?</h2>
 <p data-teaching-def="F"><strong>새로 시작하는 설계 대안입니다.</strong> <strong>F</strong>는 clean이고 제안 조건을 통과하는 페이지가 든 프레임입니다. Allocator가 받기 전에 다른 요청이 fix할 수 있어서 현재 구현은 다시 검사합니다.</p>
 <p>대안은 칸을 넘길 때까지 새 사용자를 막는 <strong>연속 예약</strong>입니다. 새 reader가 들어오지 못하면 같은 경쟁을 피할 수 있습니다. 대신 그 reader는 기다리거나 다시 조회해야 합니다.</p>
 <p><strong>새 책임:</strong> 모든 조회·fix 경로가 예약을 따라야 합니다. 받는 요청이 취소하거나 사라지거나 서버가 종료돼도 예약을 풀 담당자가 있어야 합니다. 예약 기록이 가리키는 BCB의 수명도 유지해야 합니다.</p>
 <details class="answer-disclosure"><summary>잠금 비용과 직접 완료 분기 비교</summary><p>쓰기 I/O 내내 LRU 목록 잠금을 잡아두면 관계없는 목록 작업도 저장장치를 기다립니다. 예약은 어디를 얼마나 오래 막을지 따로 설계해야 합니다.</p><p>실제 <a href="#handoff-part-2">직접 완료 분기</a>는 다른 문제를 처리합니다. 위임할 수 없을 때 제출자가 flush를 마무리하고 대기자를 깨웁니다. 칸을 제안할 의무는 없습니다. Post-flush 없이 마무리를 유지할 수 있지만, 이 분기 자체가 같은 프레임을 배정하지는 않습니다.</p></details>
 
 </section>
-<section class="section" id="handoff-alternatives-part-2"><div class="eyebrow">05 · 27 / 29</div><h2>큐의 크기만으로 처리 시간을 알 수 없는 이유</h2>
+<section class="section" id="handoff-alternatives-part-2"><div class="eyebrow">05 · 29 / 31</div><h2>큐의 크기만으로 처리 시간을 알 수 없는 이유</h2>
 <p>큐가 동시에 담을 수 있는 항목 수와 한 회차에 처리하는 총 항목 수는 다릅니다. Post-flush가 꺼내는 동안 page-flush가 새 항목을 넣을 수 있습니다. 따라서 큐 용량을 처리량이나 완료 시간의 상한으로 쓰면 안 됩니다.</p>
 <p>오래된 allocator 대기 기록을 건너뛰는 일, flush 대기자를 깨우는 일, 잠금 경합과 스케줄링도 비용을 더합니다. 아래 수식은 작업 수의 구조를 나타낼 뿐 실제 시간을 측정한 값은 아닙니다.</p>
 <p data-teaching-def="T L K C N">탐색 식의 <strong>T</strong>는 읽을 스레드별 카운터 조각 수, <strong>L</strong>은 방문한 목록 수, <strong>K</strong>는 검사한 목록 항목 수입니다. <strong>C</strong>는 정렬할 후보 수, <strong>N</strong>은 후보마다 살필 이웃 페이지 수입니다.</p>
@@ -338,19 +365,19 @@ READ → WRITE</code></pre>
 <details class="answer-disclosure"><summary>작업 수 식과 종료 조건 펼치기</summary><p>정렬과 이웃 검사가 있는 탐색 경로의 작업 수는 <code>O(T + L + K + C log C + C·N)</code>입니다. 큐 소비와 대기자 처리는 <code>O(Q + S + W)</code>를 더합니다. 원자 연산 재시도와 저장장치 지연도 실제 시간에 영향을 줍니다.</p><p><code>fcnt=0</code>은 미반납 fix가 없다는 관측입니다. 연결된 대기자나 다른 조건까지 통과했다는 뜻은 아닙니다. BCB mutex 아래 검사가 실제 결정을 보호합니다. 큐 소비 반복문은 데몬 stop 플래그를 검사하지 않으므로 stop 요청만으로 완료 기한이나 전 항목 처리가 보장되지는 않습니다.</p></details>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9266-L9309">Fix·대기자를 포함한 적격성</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15496-L15556">큐 drain</a></p></details>
 </section>
-<section class="section" id="replacement-protocol"><div class="eyebrow">05 · 28 / 29</div><h2>대안 설계에서도 마무리 책임과 재사용 허가는 나눈다</h2>
+<section class="section" id="replacement-protocol"><div class="eyebrow">05 · 30 / 31</div><h2>대안 설계에서도 마무리 책임과 재사용 허가는 나눈다</h2>
 <p><strong>새로 시작하는 설계 대안입니다.</strong> 사본의 쓰기 호출은 성공했습니다. 제출자에게는 마무리 책임이 있고, allocator에게는 사용할 칸이 필요합니다. 두 일을 별도 기록으로 관리한다고 가정합니다.</p>
 <p><strong>완료 ticket</strong>은 어떤 이전 사본의 마무리가 남았는지 기록합니다. <strong>재사용 예약</strong>은 현재 검사에 따라 칸을 넘겨받을 허가를 기록합니다. 두 기록은 가리키는 BCB의 수명을 유지해야 합니다.</p>
 <ol><li>칸을 못 넘겨도 각 완료 기록은 정확히 한 번 처리합니다.</li><li>현재 상태를 보호된 채 검사한 뒤에만 예약을 만듭니다.</li><li>새 사용으로 예약을 취소해도 이전 쓰기의 마무리는 취소하지 않습니다.</li><li>받는 요청은 유효한 예약을 원자적으로 소비하거나 재시도합니다. 취소와 종료에는 기록과 저장 공간을 정리할 담당자가 필요합니다.</li></ol>
 <p><strong>이것은 설명용 설계의 요구 사항</strong>입니다. 고정 리비전의 큐가 이런 ticket과 예약을 구현한다는 뜻은 아닙니다. 실제 구현은 이미 위임 실패 시 직접 완료하는 경로를 갖고 있습니다.</p>
 
 </section>
-<section class="section" id="experiment"><div class="eyebrow">05 · 29 / 29</div><h2>실제로 확인하려면 쓰기, 마무리, 제안, 수신을 따로 기록한다</h2>
+<section class="section" id="experiment"><div class="eyebrow">05 · 31 / 31</div><h2>실제로 확인하려면 쓰기, 마무리, 제안, 수신을 따로 기록한다</h2>
 <p data-teaching-def="P G"><strong>아직 실행하지 않은 실험 제안입니다.</strong> <strong>P</strong>는 프레임에 있는 페이지입니다. <strong>G</strong>는 성공적으로 제출한 사본의 설명용 이름이며 저장된 카운터가 아닙니다. Allocator는 칸을 기다립니다. 큐가 가득 찬 경우, 새 수정이 생긴 경우, 제안 뒤 reader가 fix한 경우를 각각 새로 시작합니다.</p>
 <p><strong>확인할 가설:</strong> 이전 flush의 마무리가 끝나도 allocator는 칸을 못 받을 수 있습니다. 이 둘을 구별해야 대기의 원인을 찾을 수 있습니다.</p>
 <p><strong>기록할 사건:</strong> 같은 BCB와 페이지 식별자를 기준으로 큐 삽입·소비, 이전 FLUSHING 해제, 제안 거절 이유, 제안 게시·취소, allocator의 보호된 수신 결과를 연결합니다. 생산자의 배정 카운터나 wake 횟수만으로 수신 성공을 판단하지 않습니다.</p>
 <p><strong>반증 기준:</strong> 소비자가 일반적인 제안 거절 뒤 정상 반환했는데 이전 FLUSHING이 남아 있다면, 마무리를 한다는 설명과 맞지 않습니다. 관측 코드를 넣는 비용도 기록해야 합니다. 잠금 안의 기록이 실행 순서를 바꿀 수 있습니다.</p>
 <details class="answer-disclosure"><summary>실험 통제와 통계 활성화 조건 펼치기</summary><p>고정 리비전 전체, 빌드, 풀·로그 설정, 쓰기 경로와 workload를 기록합니다. DWB는 최종 볼륨 전에 사본을 받는 중간 영역입니다. 사본 제출 성공은 유지하고 각 실행에서 바꿀 사건만 따로 바꿉니다.</p><p>상세 카운터를 읽으려면 통계 수집을 활성화하고 시작 시 <code>extended_statistics_activation</code> 마스크를 설정합니다. 이 값은 초기화 때 캐시됩니다. 기본값 15에는 victimization 비트 16과 데몬 비트 64가 없습니다. 활성화된 카운터도 프레임별 인과 이력은 아닙니다. 별도 probe는 사건을 기록할 관측 코드의 제안이며 실행했다고 주장하지 않습니다.</p></details>
 <details class="answer-disclosure"><summary>소스와 관련 설명 펼치기</summary><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15420-L15656">제안한 소스 관측 지점</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/perf_monitor.h#L59-L74">활성화 비트</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/perf_monitor.c#L3198-L3205">시작 시 통계 상태</a></p></details>
-</section></article><nav class="lesson-nav" aria-label="이 장의 화면"><a href="#workload">페이지를 썼는데, 왜 메모리 칸은 아직 못 줄까?</a><a href="#two-waits">“이번 쓰기를 마쳐 주세요”와 “빈 칸을 주세요”</a><a href="#successful-submission">1. 페이지 사본의 쓰기 호출이 성공한다</a><a href="#completion-handoff">2. 메모리 칸의 기록을 마무리 담당자에게 넘긴다</a><a href="#successful-offer">3. 지금 넘겨도 되는지 확인하고, 제안과 마무리를 한다</a><a href="#successful-receipt">4. 받는 요청이 확인한 뒤, 이전 페이지를 빼고 칸을 쓴다</a><a href="#flush-waiter-completion">한쪽 대기가 끝나도, 빈 칸을 기다리는 요청은 남는다</a><a href="#handoff-part-2">다른 상황 1: 큐가 가득 차면 직접 마무리한다</a><a href="#redirty-case">다른 상황 2: 사본을 쓴 뒤 원래 페이지가 다시 바뀐다</a><a href="#post-part-3">다른 상황 3: 받기 전에 다른 요청이 페이지를 사용한다</a><a href="#handoff">쓰기 성공에서 칸 확보까지, 무엇을 따로 확인할까?</a><a href="#handoff-map">전체 그림은 기본 흐름을 읽은 뒤 펼쳐 본다</a><a href="#post-flush-code-path">소스 찾기: 큐에 넣는 곳, 꺼내는 곳, 직접 마치는 곳</a><a href="#waiter-storage">세 자료 구조에는 서로 다른 것이 들어 있다</a><a href="#flush-waiter-wakeup">페이지의 대기 목록에서 flush 대기자만 깨운다</a><a href="#allocator-wakeup">칸을 기다리는 요청에게 제안하고 깨우는 순서</a><a href="#post">큐의 기록은 과거이고, 넘길지 판단하는 기준은 현재다</a><a href="#handoff-part-3">상태로 확인하기: 큐가 가득 찬 경우</a><a href="#post-part-4">상태로 확인하기: 이전 사본과 새 수정은 다르다</a><a href="#post-part-2">안전한 칸이어도, 현재 보유 정책이 전달을 막을 수 있다</a><a href="#post-part-5">상태로 확인하기: 정책상 거절과 제안 취소를 구별한다</a><a href="#clean-unfix-handoff">사용을 끝낸 페이지가 바로 다른 요청에게 가는 것은 아니다</a><a href="#clean-unfix-handoff-part-2">나중에 반납해도, 취소된 제안이 저절로 살아나지는 않는다</a><a href="#handoff-mechanism">같은 메모리 주소가 같은 페이지를 뜻하지는 않는다</a><a href="#handoff-removal">상태로 확인하기: 재검사가 reader의 사용을 지킨다</a><a href="#handoff-alternatives">예약을 유지하면 무엇을 더 책임져야 할까?</a><a href="#handoff-alternatives-part-2">큐의 크기만으로 처리 시간을 알 수 없는 이유</a><a href="#replacement-protocol">대안 설계에서도 마무리 책임과 재사용 허가는 나눈다</a><a href="#experiment">실제로 확인하려면 쓰기, 마무리, 제안, 수신을 따로 기록한다</a></nav></div><nav class="lecture-navigation" data-lecture-nav aria-label="장 탐색"><a data-session-return href="toc.html">세션 3 목차</a><a rel="prev" href="04-page-flush.html#workload">이전 장</a><a rel="next" href="06-maintenance.html#workload">다음 장</a></nav><footer class="footer">CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code> · PostgreSQL <code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code></footer></main>
+</section></article><nav class="lesson-nav" aria-label="이 장의 화면"><a href="#workload">페이지를 썼는데, 왜 메모리 칸은 아직 못 줄까?</a><a href="#two-waits">“이번 쓰기를 마쳐 주세요”와 “빈 칸을 주세요”</a><a href="#flush-waiter-registration">요청 스레드는 어떻게 flush 대기자가 될까?</a><a href="#allocator-registration">프레임을 찾던 요청은 언제 할당 대기자가 될까?</a><a href="#successful-submission">1. 페이지 사본의 쓰기 호출이 성공한다</a><a href="#completion-handoff">2. 메모리 칸의 기록을 마무리 담당자에게 넘긴다</a><a href="#successful-offer">3. 지금 넘겨도 되는지 확인하고, 제안과 마무리를 한다</a><a href="#successful-receipt">4. 받는 요청이 확인한 뒤, 이전 페이지를 빼고 칸을 쓴다</a><a href="#flush-waiter-completion">한쪽 대기가 끝나도, 빈 칸을 기다리는 요청은 남는다</a><a href="#handoff-part-2">다른 상황 1: 큐가 가득 차면 직접 마무리한다</a><a href="#redirty-case">다른 상황 2: 사본을 쓴 뒤 원래 페이지가 다시 바뀐다</a><a href="#post-part-3">다른 상황 3: 받기 전에 다른 요청이 페이지를 사용한다</a><a href="#handoff">쓰기 성공에서 칸 확보까지, 무엇을 따로 확인할까?</a><a href="#handoff-map">전체 그림은 기본 흐름을 읽은 뒤 펼쳐 본다</a><a href="#post-flush-code-path">소스 찾기: 큐에 넣는 곳, 꺼내는 곳, 직접 마치는 곳</a><a href="#waiter-storage">세 자료 구조에는 서로 다른 것이 들어 있다</a><a href="#flush-waiter-wakeup">페이지의 대기 목록에서 flush 대기자만 깨운다</a><a href="#allocator-wakeup">칸을 기다리는 요청에게 제안하고 깨우는 순서</a><a href="#post">큐의 기록은 과거이고, 넘길지 판단하는 기준은 현재다</a><a href="#handoff-part-3">상태로 확인하기: 큐가 가득 찬 경우</a><a href="#post-part-4">상태로 확인하기: 이전 사본과 새 수정은 다르다</a><a href="#post-part-2">안전한 칸이어도, 현재 보유 정책이 전달을 막을 수 있다</a><a href="#post-part-5">상태로 확인하기: 정책상 거절과 제안 취소를 구별한다</a><a href="#clean-unfix-handoff">사용을 끝낸 페이지가 바로 다른 요청에게 가는 것은 아니다</a><a href="#clean-unfix-handoff-part-2">나중에 반납해도, 취소된 제안이 저절로 살아나지는 않는다</a><a href="#handoff-mechanism">같은 메모리 주소가 같은 페이지를 뜻하지는 않는다</a><a href="#handoff-removal">상태로 확인하기: 재검사가 reader의 사용을 지킨다</a><a href="#handoff-alternatives">예약을 유지하면 무엇을 더 책임져야 할까?</a><a href="#handoff-alternatives-part-2">큐의 크기만으로 처리 시간을 알 수 없는 이유</a><a href="#replacement-protocol">대안 설계에서도 마무리 책임과 재사용 허가는 나눈다</a><a href="#experiment">실제로 확인하려면 쓰기, 마무리, 제안, 수신을 따로 기록한다</a></nav></div><nav class="lecture-navigation" data-lecture-nav aria-label="장 탐색"><a data-session-return href="toc.html">세션 3 목차</a><a rel="prev" href="04-page-flush.html#workload">이전 장</a><a rel="next" href="06-maintenance.html#workload">다음 장</a></nav><footer class="footer">CUBRID <code>f799e05d77d5300c6ea5753b4a6cc7caee6d8912</code> · PostgreSQL <code>fd2b89854d93d70fe8c9a69d5b8fafd5b9302cfc</code></footer></main>
 <nav class="presentation-controls" data-presentation-controls data-present-label="발표 모드" data-read-label="읽기 모드" hidden aria-label="발표 조작"><button type="button" data-presentation-toggle aria-pressed="false">발표 모드</button><button type="button" data-section-previous>이전 절</button><output aria-live="polite"></output><button type="button" data-section-next>다음 절</button></nav></body></html>
