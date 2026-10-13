@@ -2675,3 +2675,47 @@ retaining every other current-main manifest entry. On this latest parent,
 links, 351 served HTTP resources and 158 live-DOM pages passed. The aggregate
 source failures remain exactly the same 174 historical review-record items.
 Approved chapter/note hashes and the final task diff were verified again.
+
+## Page-flush successful-journey-first rewrite (2026-10-13)
+
+The user accepted the Korean opening sample and complete ten-step organization
+with `yes`. The paired chapter 04 now first follows why a missing page needs a
+frame, the relevant objects and actors, work opportunities, candidate collection,
+protected current checks, stable image/WAL/submission, and completion/reuse.
+Only then does it reset for reader use, changed identity and late WAL.
+The accepted design is retained in
+[the authoring record](../.scratch/page-flush-plain-language/design.md).
+
+Exact settings, independent size arithmetic, code excerpts, work-cost analysis,
+and reservation alternatives remain in adjacent native disclosures. Safety
+conditions and necessary meanings remain visible. Q07/Q08, both interactive
+traces and their local premises remain outside those disclosures. No technical
+claim is promoted to a runtime observation or an unconditional progress promise.
+
+### Definition and starting-state ledger
+
+| Screen | Visible premises and reset responsibility |
+| --- | --- |
+| `04-page-flush.html#workload` | P is a dirty resident page with the constructed change 10 to 20; Q is absent. There is neither an empty frame nor one the request can immediately reuse. Frame and buffer pool are explained before the candidate journey. |
+| `04-page-flush.html#handoff-problem` | Continues P/Q and defines F as the BCB address. Distinguishes page bytes, frame, control record, VPID and allocator. Introduces list and BCB mutexes separately. |
+| `04-page-flush.html#trigger` | Q is locally defined as absent; an allocator waits after failed frame discovery. Gate, wake opportunity and timer pressure are separate. Links the newly integrated missed-wakeup evidence in chapter 03. |
+| `04-page-flush.html#selection` | Continues a chosen dirty P with no present use and low retention priority. Defines LRU3 and candidate recording. Current-main clean/list and tail-removal cases remain independently constructed disclosures at their original anchors. |
+| `04-page-flush.html#selection-current-checks` | Locally defines P and F before current checks. Defines fix/fcnt, latch, DIRTY and FLUSHING. Visible table separates identity, dirty, old flush, zone and use conditions; capture also requires conflicting-writer exclusion. |
+| `04-page-flush.html#first-code-path` | Locally defines P as a candidate that passed checks. Defines image, log, WAL, LSA and submission. Copied bytes and LSA agree; required logged-image WAL precedes submission. Direct-write and DWB acceptance remain distinct from physical persistence. |
+| `04-page-flush.html#handoff-boundaries` | Defines P and absent Q locally; first finishes the uncomplicated successful case with no intervening use/change, shared LRU3, available post-flush and queue space. Offer and protected receipt remain conditional. Later explicitly resets for old image G and later resident G+1; new DIRTY survives old completion. The two waiting request purposes are explained separately. |
+| `04-page-flush.html#candidate-races` | Q07 starts afresh with dirty cold P, fcnt zero and no old flush. Reader trace resets the same case and defines P/F/A/Q. Identity trace then resets independently and defines X/P/R before any trace snapshot or generated status. Both retain their three original lane snapshots and terminal values. |
+| `04-page-flush.html#trigger-part-2` | Q08 resets independently: open gate, allocator waiting and an accepted wake while SLEEPING. Defines WAL/LSA before the required 300/current 250 example; observation ends before helper return with zero submissions. |
+| `04-page-flush.html#experiment` | Distinguishes observable events and grouped counters. The proposed probe remains unexecuted; vary identity, fixes and DIRTY in independent runs restored to the same premises. Probe perturbation and limited falsification claims remain explicit. |
+
+Existing registered teaching labels remain unchanged; no duplicate glossary or
+new domain role was added. Every previous chapter anchor and pinned source URL
+is retained, including those added on concurrently advanced main `2e0dc33`.
+Old detail anchors now select their owning screen and open the native disclosure.
+The local chapter maps, all three contents maps and complete Korean spoken map
+match the ten outer screens. Other chapters' maps and explanations are preserved.
+
+The author compared the actual paired prose and source qualifications. This is
+an AI author review, not a human Korean-naturalness or semantic-acceptance
+receipt. Only the two affected paired-page fingerprints are refreshed; human
+review remains pending. Final checks and independent review are recorded in the
+linked authoring record after completion.

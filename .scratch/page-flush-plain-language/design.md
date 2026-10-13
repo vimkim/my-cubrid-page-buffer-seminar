@@ -1,8 +1,9 @@
 # Page-flush plain-language rewrite
 
-Status: proposed on 2026-10-13; shared-understanding confirmation is pending.
-The HTML has not been changed. This record retains the user's settled criteria,
-the factual investigation and the concrete proposal for the design interview.
+Status: accepted by the user's `yes` on 2026-10-13. The paired HTML rewrite is
+implemented; final verification and two-axis review are being recorded.
+This record retains the settled criteria, factual investigation and the proposal
+the user accepted before implementation.
 
 ## Scope and authority
 
@@ -79,7 +80,7 @@ show why particular checks can stop that journey. Screen 7 keeps the possibility
 of new changes visible even when the old write succeeds; no false success
 guarantee is used to simplify the first journey.
 
-This is an editorial proposal, not a runtime claim or an accepted reordering.
+This is the accepted editorial structure, not a runtime claim.
 The final number can change if a screen becomes too dense, but the causal order
 and preserved content require confirmation in the interview.
 
@@ -189,13 +190,18 @@ daemon-first-principles design's treatment applies: explain them in the owning
 page rather than adding a duplicate glossary. No new domain role or irreversible
 product decision has been found; no new glossary or ADR is proposed.
 
-## Remaining design decision
+## Shared-understanding confirmation
 
-Does the user accept the sample's explanation level and the proposed successful
-journey first, followed by reset failure cases, with details disclosed beside
-their corresponding concepts? A yes confirms shared understanding and unlocks
-the requested implementation. Existing requirements do not need to be asked
-again.
+The user answered `yes` after reviewing the Korean opening, ten-step route and
+successful-journey-first organization. This confirmed the explanation level,
+later reset failure cases and adjacent technical disclosures. No unresolved
+design decision remains. The requested implementation is authorized.
+
+During implementation, local main advanced through `2e0dc33`, adding the simple
+search-loop explanation and the clean-tail-removal explanation. The isolated
+task branch was updated to include those changes. Their prose and source routes
+are retained in adjacent technical disclosures, with legacy anchors preserved.
+Other chapters, their maps, and the VS-20 issue-reference update are preserved.
 
 ## Verification after implementation
 
