@@ -1,0 +1,722 @@
+{
+  "status": "draft-awaiting-final-shared-understanding",
+  "baseline": "bedae28232ff59439b34a58bf8e2932f4a19d1c5",
+  "work_item": 354,
+  "accepted_questions": [
+    "Q1-secondary-material-optional",
+    "Q2-one-complete-calculation",
+    "Q3-spoken-prose-and-maps"
+  ],
+  "semantics": {
+    "keep": "Retain as a standalone essential section; shorten only repeated wording.",
+    "merge": "Move unique explanation into the retained owner and preserve the former section anchor locally.",
+    "disclose": "Retain secondary explanation in native details under the owner, keeping indispensable premises visible.",
+    "link": "Keep an anchored concise explanation or qualification and link to the established canonical owner."
+  },
+  "chapters": [
+    {
+      "file": "03-daemon-architecture.html",
+      "current_sections": 31,
+      "proposed_sections": 15,
+      "essential_order": [
+        "workload",
+        "why-background",
+        "why-background-part-2",
+        "cadence",
+        "cadence-part-4",
+        "cadence-part-5",
+        "scan-scope",
+        "daemon",
+        "daemon-part-2",
+        "daemon-wakeup-source",
+        "daemon-wakeup-remedies",
+        "lifecycle",
+        "lifecycle-part-2",
+        "replacement-protocol",
+        "experiment"
+      ],
+      "dispositions": [
+        {
+          "id": "workload",
+          "action": "keep",
+          "owner": "workload"
+        },
+        {
+          "id": "why-background",
+          "action": "keep",
+          "owner": "why-background"
+        },
+        {
+          "id": "why-background-part-2",
+          "action": "keep",
+          "owner": "why-background-part-2"
+        },
+        {
+          "id": "cadence",
+          "action": "keep",
+          "owner": "cadence"
+        },
+        {
+          "id": "cadence-part-2",
+          "action": "merge",
+          "owner": "cadence"
+        },
+        {
+          "id": "cadence-part-3",
+          "action": "merge",
+          "owner": "cadence-part-4"
+        },
+        {
+          "id": "cadence-part-4",
+          "action": "keep",
+          "owner": "cadence-part-4"
+        },
+        {
+          "id": "cadence-part-5",
+          "action": "keep",
+          "owner": "cadence-part-5"
+        },
+        {
+          "id": "cadence-loops",
+          "action": "merge",
+          "owner": "cadence"
+        },
+        {
+          "id": "scan-scope",
+          "action": "keep",
+          "owner": "scan-scope"
+        },
+        {
+          "id": "scan-page-flush",
+          "action": "link",
+          "owner": "scan-scope"
+        },
+        {
+          "id": "scan-maintenance",
+          "action": "link",
+          "owner": "scan-scope"
+        },
+        {
+          "id": "plain-language-bridge",
+          "action": "merge",
+          "owner": "cadence"
+        },
+        {
+          "id": "daemon",
+          "action": "keep",
+          "owner": "daemon"
+        },
+        {
+          "id": "daemon-part-2",
+          "action": "keep",
+          "owner": "daemon-part-2"
+        },
+        {
+          "id": "daemon-wakeup-risk",
+          "action": "merge",
+          "owner": "daemon-part-2"
+        },
+        {
+          "id": "daemon-wakeup-source",
+          "action": "keep",
+          "owner": "daemon-wakeup-source"
+        },
+        {
+          "id": "daemon-wakeup-remedies",
+          "action": "keep",
+          "owner": "daemon-wakeup-remedies"
+        },
+        {
+          "id": "lifecycle",
+          "action": "keep",
+          "owner": "lifecycle"
+        },
+        {
+          "id": "lifecycle-creation",
+          "action": "merge",
+          "owner": "lifecycle"
+        },
+        {
+          "id": "lifecycle-resources",
+          "action": "disclose",
+          "owner": "lifecycle"
+        },
+        {
+          "id": "lifecycle-errors",
+          "action": "disclose",
+          "owner": "lifecycle"
+        },
+        {
+          "id": "lifecycle-part-2",
+          "action": "keep",
+          "owner": "lifecycle-part-2"
+        },
+        {
+          "id": "lifecycle-part-3",
+          "action": "disclose",
+          "owner": "lifecycle-part-2"
+        },
+        {
+          "id": "lifecycle-part-4",
+          "action": "merge",
+          "owner": "lifecycle-part-2"
+        },
+        {
+          "id": "daemons-removal",
+          "action": "disclose",
+          "owner": "cadence-part-5"
+        },
+        {
+          "id": "daemons-boundaries",
+          "action": "merge",
+          "owner": "lifecycle-part-2"
+        },
+        {
+          "id": "daemons-defense",
+          "action": "disclose",
+          "owner": "cadence-part-4"
+        },
+        {
+          "id": "replacement-protocol",
+          "action": "keep",
+          "owner": "replacement-protocol"
+        },
+        {
+          "id": "experiment-setup",
+          "action": "disclose",
+          "owner": "experiment"
+        },
+        {
+          "id": "experiment",
+          "action": "keep",
+          "owner": "experiment"
+        }
+      ]
+    },
+    {
+      "file": "04-page-flush.html",
+      "current_sections": 10,
+      "proposed_sections": 9,
+      "essential_order": [
+        "workload",
+        "handoff-problem",
+        "trigger",
+        "selection",
+        "selection-current-checks",
+        "first-code-path",
+        "candidate-races",
+        "trigger-part-2",
+        "experiment"
+      ],
+      "dispositions": [
+        {
+          "id": "workload",
+          "action": "keep",
+          "owner": "workload"
+        },
+        {
+          "id": "handoff-problem",
+          "action": "keep",
+          "owner": "handoff-problem"
+        },
+        {
+          "id": "trigger",
+          "action": "keep",
+          "owner": "trigger"
+        },
+        {
+          "id": "selection",
+          "action": "keep",
+          "owner": "selection"
+        },
+        {
+          "id": "selection-current-checks",
+          "action": "keep",
+          "owner": "selection-current-checks"
+        },
+        {
+          "id": "first-code-path",
+          "action": "keep",
+          "owner": "first-code-path"
+        },
+        {
+          "id": "handoff-boundaries",
+          "action": "merge",
+          "owner": "first-code-path"
+        },
+        {
+          "id": "candidate-races",
+          "action": "keep",
+          "owner": "candidate-races"
+        },
+        {
+          "id": "trigger-part-2",
+          "action": "keep",
+          "owner": "trigger-part-2"
+        },
+        {
+          "id": "experiment",
+          "action": "keep",
+          "owner": "experiment"
+        }
+      ]
+    },
+    {
+      "file": "05-post-flush.html",
+      "current_sections": 29,
+      "proposed_sections": 14,
+      "essential_order": [
+        "workload",
+        "two-waits",
+        "successful-submission",
+        "completion-handoff",
+        "successful-offer",
+        "successful-receipt",
+        "flush-waiter-completion",
+        "handoff-part-2",
+        "redirty-case",
+        "post-part-2",
+        "post-part-3",
+        "handoff",
+        "handoff-alternatives",
+        "experiment"
+      ],
+      "dispositions": [
+        {
+          "id": "workload",
+          "action": "keep",
+          "owner": "workload"
+        },
+        {
+          "id": "two-waits",
+          "action": "keep",
+          "owner": "two-waits"
+        },
+        {
+          "id": "successful-submission",
+          "action": "keep",
+          "owner": "successful-submission"
+        },
+        {
+          "id": "completion-handoff",
+          "action": "keep",
+          "owner": "completion-handoff"
+        },
+        {
+          "id": "successful-offer",
+          "action": "keep",
+          "owner": "successful-offer"
+        },
+        {
+          "id": "successful-receipt",
+          "action": "keep",
+          "owner": "successful-receipt"
+        },
+        {
+          "id": "flush-waiter-completion",
+          "action": "keep",
+          "owner": "flush-waiter-completion"
+        },
+        {
+          "id": "handoff-part-2",
+          "action": "keep",
+          "owner": "handoff-part-2"
+        },
+        {
+          "id": "redirty-case",
+          "action": "keep",
+          "owner": "redirty-case"
+        },
+        {
+          "id": "post-part-3",
+          "action": "keep",
+          "owner": "post-part-3"
+        },
+        {
+          "id": "handoff",
+          "action": "keep",
+          "owner": "handoff"
+        },
+        {
+          "id": "handoff-map",
+          "action": "disclose",
+          "owner": "handoff"
+        },
+        {
+          "id": "post-flush-code-path",
+          "action": "merge",
+          "owner": "completion-handoff"
+        },
+        {
+          "id": "waiter-storage",
+          "action": "merge",
+          "owner": "two-waits"
+        },
+        {
+          "id": "flush-waiter-wakeup",
+          "action": "merge",
+          "owner": "two-waits"
+        },
+        {
+          "id": "allocator-wakeup",
+          "action": "merge",
+          "owner": "successful-receipt"
+        },
+        {
+          "id": "post",
+          "action": "merge",
+          "owner": "successful-offer"
+        },
+        {
+          "id": "handoff-part-3",
+          "action": "merge",
+          "owner": "handoff-part-2"
+        },
+        {
+          "id": "post-part-4",
+          "action": "merge",
+          "owner": "redirty-case"
+        },
+        {
+          "id": "post-part-2",
+          "action": "keep",
+          "owner": "post-part-2"
+        },
+        {
+          "id": "post-part-5",
+          "action": "merge",
+          "owner": "post-part-2"
+        },
+        {
+          "id": "clean-unfix-handoff",
+          "action": "disclose",
+          "owner": "post-part-3"
+        },
+        {
+          "id": "clean-unfix-handoff-part-2",
+          "action": "disclose",
+          "owner": "post-part-3"
+        },
+        {
+          "id": "handoff-mechanism",
+          "action": "link",
+          "owner": "successful-receipt"
+        },
+        {
+          "id": "handoff-removal",
+          "action": "merge",
+          "owner": "post-part-3"
+        },
+        {
+          "id": "handoff-alternatives",
+          "action": "keep",
+          "owner": "handoff-alternatives"
+        },
+        {
+          "id": "handoff-alternatives-part-2",
+          "action": "disclose",
+          "owner": "completion-handoff"
+        },
+        {
+          "id": "replacement-protocol",
+          "action": "disclose",
+          "owner": "handoff-alternatives"
+        },
+        {
+          "id": "experiment",
+          "action": "keep",
+          "owner": "experiment"
+        }
+      ]
+    },
+    {
+      "file": "06-maintenance.html",
+      "current_sections": 24,
+      "proposed_sections": 12,
+      "essential_order": [
+        "workload",
+        "retention-targets",
+        "activity-samples",
+        "first-code-path",
+        "maintain",
+        "maintain-part-3",
+        "quota-from-samples",
+        "quota-change",
+        "reuse-checks",
+        "chapter-recap",
+        "replacement-protocol",
+        "experiment"
+      ],
+      "dispositions": [
+        {
+          "id": "workload",
+          "action": "keep",
+          "owner": "workload"
+        },
+        {
+          "id": "fixed-targets",
+          "action": "merge",
+          "owner": "workload"
+        },
+        {
+          "id": "retention-targets",
+          "action": "keep",
+          "owner": "retention-targets"
+        },
+        {
+          "id": "activity-samples",
+          "action": "keep",
+          "owner": "activity-samples"
+        },
+        {
+          "id": "first-code-path",
+          "action": "keep",
+          "owner": "first-code-path"
+        },
+        {
+          "id": "quota-change",
+          "action": "keep",
+          "owner": "quota-change"
+        },
+        {
+          "id": "reuse-checks",
+          "action": "keep",
+          "owner": "reuse-checks"
+        },
+        {
+          "id": "maintain",
+          "action": "keep",
+          "owner": "maintain"
+        },
+        {
+          "id": "maintain-part-3",
+          "action": "keep",
+          "owner": "maintain-part-3"
+        },
+        {
+          "id": "maintain-part-4",
+          "action": "merge",
+          "owner": "maintain-part-3"
+        },
+        {
+          "id": "chapter-recap",
+          "action": "keep",
+          "owner": "chapter-recap"
+        },
+        {
+          "id": "admission-guards",
+          "action": "merge",
+          "owner": "maintain"
+        },
+        {
+          "id": "maintain-part-2",
+          "action": "disclose",
+          "owner": "maintain"
+        },
+        {
+          "id": "quota-from-samples",
+          "action": "keep",
+          "owner": "quota-from-samples"
+        },
+        {
+          "id": "computed-policy",
+          "action": "merge",
+          "owner": "quota-from-samples"
+        },
+        {
+          "id": "startup-inputs",
+          "action": "disclose",
+          "owner": "retention-targets"
+        },
+        {
+          "id": "startup-policy",
+          "action": "disclose",
+          "owner": "retention-targets"
+        },
+        {
+          "id": "cost-model",
+          "action": "disclose",
+          "owner": "first-code-path"
+        },
+        {
+          "id": "maintenance-boundary",
+          "action": "merge",
+          "owner": "reuse-checks"
+        },
+        {
+          "id": "source-guard",
+          "action": "disclose",
+          "owner": "reuse-checks"
+        },
+        {
+          "id": "maintenance-boundary-part-2",
+          "action": "disclose",
+          "owner": "reuse-checks"
+        },
+        {
+          "id": "pacing-boundaries",
+          "action": "merge",
+          "owner": "reuse-checks"
+        },
+        {
+          "id": "replacement-protocol",
+          "action": "keep",
+          "owner": "replacement-protocol"
+        },
+        {
+          "id": "experiment",
+          "action": "keep",
+          "owner": "experiment"
+        }
+      ]
+    },
+    {
+      "file": "07-flush-control.html",
+      "current_sections": 25,
+      "proposed_sections": 12,
+      "essential_order": [
+        "workload",
+        "flush-workloads",
+        "credit-code-path",
+        "control",
+        "token-waiter-wakeup",
+        "control-part-2",
+        "control-policy",
+        "control-feedback",
+        "soft",
+        "soft-part-2",
+        "replacement-protocol",
+        "experiment"
+      ],
+      "dispositions": [
+        {
+          "id": "workload",
+          "action": "keep",
+          "owner": "workload"
+        },
+        {
+          "id": "memory-write-and-flush",
+          "action": "merge",
+          "owner": "workload"
+        },
+        {
+          "id": "flush-workloads",
+          "action": "keep",
+          "owner": "flush-workloads"
+        },
+        {
+          "id": "credit-code-path",
+          "action": "keep",
+          "owner": "credit-code-path"
+        },
+        {
+          "id": "control-initialize",
+          "action": "disclose",
+          "owner": "credit-code-path"
+        },
+        {
+          "id": "control-init-errors",
+          "action": "disclose",
+          "owner": "credit-code-path"
+        },
+        {
+          "id": "control",
+          "action": "keep",
+          "owner": "control"
+        },
+        {
+          "id": "token-waiter-wakeup",
+          "action": "keep",
+          "owner": "token-waiter-wakeup"
+        },
+        {
+          "id": "control-part-2",
+          "action": "keep",
+          "owner": "control-part-2"
+        },
+        {
+          "id": "control-part-3",
+          "action": "merge",
+          "owner": "control-part-2"
+        },
+        {
+          "id": "control-policy",
+          "action": "keep",
+          "owner": "control-policy"
+        },
+        {
+          "id": "control-feedback",
+          "action": "keep",
+          "owner": "control-feedback"
+        },
+        {
+          "id": "fast-storage",
+          "action": "disclose",
+          "owner": "control-policy"
+        },
+        {
+          "id": "unlimited-tokens",
+          "action": "disclose",
+          "owner": "control-policy"
+        },
+        {
+          "id": "soft",
+          "action": "keep",
+          "owner": "soft"
+        },
+        {
+          "id": "soft-part-2",
+          "action": "keep",
+          "owner": "soft-part-2"
+        },
+        {
+          "id": "control-retirement",
+          "action": "disclose",
+          "owner": "credit-code-path"
+        },
+        {
+          "id": "outside",
+          "action": "disclose",
+          "owner": "flush-workloads"
+        },
+        {
+          "id": "sync-policy",
+          "action": "disclose",
+          "owner": "control"
+        },
+        {
+          "id": "pacing-removal",
+          "action": "disclose",
+          "owner": "control-part-2"
+        },
+        {
+          "id": "pacing-defense",
+          "action": "disclose",
+          "owner": "soft-part-2"
+        },
+        {
+          "id": "source-guard",
+          "action": "merge",
+          "owner": "control-part-2"
+        },
+        {
+          "id": "replacement-protocol",
+          "action": "keep",
+          "owner": "replacement-protocol"
+        },
+        {
+          "id": "statistics-setup",
+          "action": "disclose",
+          "owner": "experiment"
+        },
+        {
+          "id": "experiment",
+          "action": "keep",
+          "owner": "experiment"
+        }
+      ]
+    }
+  ],
+  "current_total": 119,
+  "proposed_total": 62
+}
