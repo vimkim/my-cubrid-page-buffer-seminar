@@ -24,6 +24,8 @@
 .daemon-request-step { background:var(--teal-soft); }
 .daemon-timeline > .daemon-write-step { background:var(--amber-soft); border-color:var(--amber); }
 .daemon-timeline > .daemon-check-step { border:2px dashed var(--ink); }
+.daemon-wake-table { min-width:48rem; }
+.daemon-wake-table th:first-child,.daemon-wake-table td:first-child { min-width:9rem; }
 @media(max-width:700px) {
   .daemon-snapshot-layout,.daemon-schedule-grid,.daemon-handoff-grid { grid-template-columns:1fr; }
   .daemon-connection > span:last-child { transform:rotate(90deg); }
