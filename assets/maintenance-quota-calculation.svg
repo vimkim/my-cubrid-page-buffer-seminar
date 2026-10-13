@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 850" role="img" aria-labelledby="title desc">
+  <title id="title">Two calculations meet to produce each private quota</title>
+  <desc id="desc">Constructed five-second update in a full 10000-frame pool. Current private and shared rates of 300 and 100 give a sample ratio of 0.75. Blending with the old ratio 0.5 gives 0.625 and a private budget of 6250. Separately, old private activities 300 and 200 blend with current rates 200 and 100 to give activities 250 and 150, or shares 62.5 and 37.5 percent. Multiplying budget by share and truncating gives quotas 3906 and 2343. Shared targets use the uncapped budget, giving 937 per shared list.</desc>
+  <defs>
+    <style>
+      .bg{fill:#faf9f5}.box{fill:#fff;stroke:#bccbc5;stroke-width:2}.budget{fill:#e7f0e9;stroke:#006b59}.activity{fill:#f8eee3;stroke:#ad5c16}.h{font:700 28px system-ui,sans-serif;fill:#172c2c}.t{font:700 22px system-ui,sans-serif;fill:#172c2c}.s{font:20px system-ui,sans-serif;fill:#314b48}.small{font:18px system-ui,sans-serif;fill:#526563}.arrow{stroke:#526563;stroke-width:3;fill:none;marker-end:url(#m)}
+    </style>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0l10 5-10 5z" fill="#526563"/></marker>
+  </defs>
+  <rect class="bg" width="1000" height="850" rx="8"/>
+  <text class="h" x="35" y="45">One budget × each list's share = each list's quota</text>
+  <text class="small" x="35" y="78">Constructed update: 5 seconds elapsed; 10,000 occupied frames; 4 shared lists</text>
+  <rect class="box budget" x="30" y="105" width="450" height="235" rx="8"/>
+  <text class="t" x="50" y="143">1 · How much goes to private?</text>
+  <text class="s" x="50" y="180">Current private rate = 200 + 100 = 300</text>
+  <text class="s" x="50" y="215">Current shared rate = 4 × 25 = 100</text>
+  <text class="s" x="50" y="250">Sample ratio = 300 / (300 + 100) = 0.75</text>
+  <text class="s" x="50" y="285">Stored ratio = (old 0.5 + new 0.75) / 2</text>
+  <text class="t" x="50" y="320">= 0.625 of occupied capacity</text>
+  <rect class="box activity" x="520" y="105" width="450" height="235" rx="8"/>
+  <text class="t" x="540" y="143">2 · How is private divided?</text>
+  <text class="s" x="540" y="180">List 1 activity = (old 300 + new 200) / 2</text>
+  <text class="s" x="540" y="215">= 250 samples/s</text>
+  <text class="s" x="540" y="250">List 2 activity = (old 200 + new 100) / 2</text>
+  <text class="s" x="540" y="285">= 150 samples/s</text>
+  <text class="t" x="540" y="320">Total activity = 250 + 150 = 400</text>
+  <path class="arrow" d="M255 340v40"/>
+  <path class="arrow" d="M745 340v40"/>
+  <rect class="box budget" x="30" y="380" width="450" height="100" rx="8"/>
+  <text class="t" x="50" y="420">Private budget = 6,250 pages</text>
+  <text class="s" x="50" y="455">int(10,000 × 0.625)</text>
+  <rect class="box activity" x="520" y="380" width="450" height="100" rx="8"/>
+  <text class="t" x="540" y="420">List shares = 62.5% / 37.5%</text>
+  <text class="s" x="540" y="455">250 / 400 = 5/8; 150 / 400 = 3/8</text>
+  <path class="arrow" d="M255 480v30h245v40"/>
+  <path class="arrow" d="M745 480v30h-245"/>
+  <rect class="box" x="140" y="550" width="720" height="125" rx="8"/>
+  <text class="t" x="165" y="588">3 · Multiply, truncate, then cap each quota</text>
+  <text class="s" x="165" y="625">List 1: int(6,250 × 0.625) = int(3,906.25) = 3,906</text>
+  <text class="s" x="165" y="660">List 2: int(6,250 × 0.375) = int(2,343.75) = 2,343</text>
+  <text class="small" x="140" y="706">Caps do not reduce these values. Sum = 6,249; the leftover 1 is not reassigned.</text>
+  <rect class="box" x="30" y="730" width="940" height="90" rx="8"/>
+  <text class="t" x="50" y="765">Shared target per list = (10,000 − 6,250) / 4 = 937</text>
+  <text class="s" x="50" y="800">Integer division drops .5; targets do not reserve or evict frames.</text>
+</svg>

@@ -343,6 +343,75 @@ pass does.
    private target, capped at 5,000 BCBs and `N/2`. Its LRU1 and LRU2 thresholds
    are each 5% of that quota.
 
+### Calculate the budget before dividing it among lists
+
+**Verified mechanism / Implementation policy.** The pool-wide private target
+uses the current private and shared sample rates, while the split among private
+lists uses their smoothed activities. These are two different denominators.
+The sampled private fraction is clamped to 0.01–0.998, or set to 0.01 on a
+low-activity pass; the stored fraction is then smoothed over the same ten-second
+horizon. Multiply it by `num_buffers - invalid_cnt` to get `all_private_quota`.
+If the new private activity total is zero, the explicit branch instead sets
+that budget and all private quotas and zone thresholds to zero.
+
+**Constructed calculation:** 10,000 frames are occupied, with four shared and
+four private lists. Only private lists 1 and 2 have samples or old activity.
+The stored private fraction is 0.5 and their old activities are 300 / 200.
+Five seconds have elapsed since the previous accepted update, with no
+intervening update or concurrent contribution. Counted unfix activity is 2,000,
+so this accepted pass is not low activity. Shared ratios use defaults 0.4 / 0.05.
+
+![Two separate calculations produce the private budget and each list's share, then meet to produce its quota](../assets/maintenance-quota-calculation.svg)
+
+| Calculation | Numeric result |
+| --- | --- |
+| Convert private raw samples 1,000 / 500 over five seconds | Current rates 200 / 100 samples/s |
+| Convert 125 samples on each of four shared lists | Each rate 25; shared total 100 samples/s |
+| Smooth each private activity with half old, half current rate | `(300 + 200) / 2 = 250`; `(200 + 100) / 2 = 150` |
+| Calculate current private fraction from current rates | `300 / (300 + 100) = 0.75` |
+| Smooth the stored fraction | `(0.5 + 0.75) / 2 = 0.625` |
+| Calculate the private budget from occupied frames | `int(10000 * 0.625f) = 6250` pages |
+| Divide using new activities, then truncate and cap | `int((250/400.0f) * 6250) = 3906`; `int((150/400.0f) * 6250) = 2343`; neither cap reduces them |
+| Private LRU1 and LRU2 thresholds, each 5% of its quota | 195 / 195 for list 1; 117 / 117 for list 2 |
+| Shared target per list, integer division with minimum 50 | `MAX((10000 - 6250) / 4, 50) = 937` |
+| Shared LRU1 and LRU2 thresholds from default ratios | `int(937 * 0.4f) = 374`; `int(937 * 0.05f) = 46` |
+
+The quotas total 6,249; the one-page truncation remainder is not redistributed.
+List 1's current rate is twice list 2's, but the smoothed activities are 250
+versus 150, so its quota is not twice as large. Publishing these targets does
+not reserve frames, evict pages, or change the hard reuse gates.
+
+### Caps do not trigger a second distribution
+
+Reset independently with 20,000 occupied frames, four shared and four private
+lists, ten seconds elapsed, and 20,000 counted unfixes. Private raw samples
+9,000 / 1,000 / 0 / 0 become rates and activities 900 / 100 / 0 / 0 directly.
+Each shared list's 2,500 samples become 250/s. The aggregate private and shared
+rates are both 1,000/s, so the stored fraction becomes 0.5 and the private
+budget is 10,000. The 90% / 10% split produces raw quotas 9,000 / 1,000.
+
+![Private quota caps reduce one list's target without redistributing the lost share or changing the shared calculation's budget](../assets/maintenance-quota-caps.svg)
+
+The 5,000 cap changes the first quota to 5,000; the second remains 1,000.
+The half-pool cap is 10,000 and changes neither result. The helper leaves the
+budget at 10,000 rather than replacing it with the capped quota sum 6,000.
+Each shared target is therefore `(20000 - 10000) / 4 = 2500`. With default
+ratios, private thresholds are 250 / 250 and 50 / 50; shared thresholds are
+1,000 / 125. The capped-away 4,000 is not redistributed.
+
+Two other branches matter when reproducing a calculation. With 10,000 frames,
+2,000 invalid frames, stored ratio 0.5 and two equal active private lists, the
+private budget is 4,000 and their quotas are 2,000 each, but the shared target
+is `(10000 - 4000) / 4 = 1500`: it uses full capacity. With zero new hits and
+at least ten seconds elapsed, all new private activities become zero, forcing
+budget and private quotas to zero. A shorter idle interval can retain old
+activity and nonzero quotas through smoothing.
+
+Source: [per-list rate conversion and activity smoothing](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14377),
+[private fraction and zero-activity branch](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14379-L14426),
+[budget, caps and private/shared thresholds](https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14429-L14501).
+These examples reproduce policy arithmetic rather than runtime residency.
+
 When the last context releases `p`, `pgbuf_release_private_lru()` resets
 `monitor.lru_activity[S+p]` to zero. It does not empty the list. Sampling
 questions that source inspection alone cannot settle are recorded as `VS-21` in

@@ -257,6 +257,37 @@ adjust_age = adjust_age + 1;
 
 
 <p>Like dividing shelf space between children, the helper asks which lists contributed activity. It blends the new counts with the old ones, so one busy interval does not immediately replace all earlier information. The exact arithmetic below retains the code’s rounding order.</p>
+<div id="worked-ratio-shift">
+<h3>Follow one update from sampled hits to published quotas</h3>
+<p><strong>Independent constructed calculation:</strong> 10,000 frames are all occupied, with four shared and four private lists. Only private lists 1 and 2 have activity; the others have zero samples and zero old activity. The stored private ratio is 0.5; the old private activities are 300 / 200 samples/s. This accepted update occurs 5 seconds after the previous accepted update, with no intervening update or concurrent contribution. Counted unfix activity is 2,000, so activity is not low. These are teaching inputs, not a measured daemon schedule.</p>
+<p>The helper answers <strong>two questions</strong>: how much of occupied capacity goes to private lists together, and how those lists divide that target. The first uses current private/shared rates. The second uses smoothed private activities.</p>
+<figure class="diagram"><img src="../../assets/maintenance-quota-calculation.svg" alt="The smoothed private ratio produces a 6,250-page budget; smoothed list activities divide it into quotas 3,906 and 2,343."><figcaption>Follow the left branch to the budget and the right branch to the list shares. Multiply when they meet.</figcaption></figure>
+<h3>1 · Convert the samples collected in 5 seconds into rates</h3>
+<table><thead><tr><th>List</th><th>Collected samples</th><th>Current rate</th><th>Old activity → new activity</th></tr></thead><tbody>
+<tr><td>Private list 1</td><td>1,000</td><td>1,000 / 5 = 200 samples/s</td><td>(300 + 200) / 2 = 250</td></tr>
+<tr><td>Private list 2</td><td>500</td><td>500 / 5 = 100 samples/s</td><td>(200 + 100) / 2 = 150</td></tr>
+<tr><td>Each of 4 shared lists</td><td>125</td><td>125 / 5 = 25 samples/s</td><td>No private-activity smoothing</td></tr>
+</tbody></table>
+<p>Current private rates total <code>200 + 100 = 300</code>; shared rates total <code>4 × 25 = 100</code>. Five seconds is half the 10-second smoothing horizon: old activity and current rate each get half the weight. New private activities total <code>250 + 150 = 400</code>.</p>
+<h3>2 · Calculate the total private budget</h3>
+<p>The current sample ratio is <code>300 / (300 + 100) = 0.75</code>, or 75%, within the 0.01–0.998 bounds. Blend with the stored 50%: <code>(0.5 + 0.75) / 2 = 0.625</code>, or 62.5%. Multiply by occupied frames: <code>int((10000 − 0) × 0.625f) = 6250</code> pages. This is <code>all_private_quota</code>.</p>
+<h3>3 · Divide that budget using the new private activities</h3>
+<table><thead><tr><th>List</th><th>Share of private activity</th><th>Budget × share, then truncate</th><th>Published quota</th></tr></thead><tbody>
+<tr><td>Private list 1</td><td>250 / 400 = 62.5%</td><td>6,250 × 0.625 = 3,906.25 → 3,906</td><td>3,906 pages</td></tr>
+<tr><td>Private list 2</td><td>150 / 400 = 37.5%</td><td>6,250 × 0.375 = 2,343.75 → 2,343</td><td>2,343 pages</td></tr>
+</tbody></table>
+<p>Each quota is then limited to 5,000 and half the pool (here 5,000); neither cap reduces these results. The other two private quotas are zero. Their sum is <code>3906 + 2343 = 6249</code>. The one-page rounding remainder is not redistributed.</p>
+<p><strong>Why not give list 1 twice as much?</strong> Its current rate is twice as large, but its smoothed activity is 250 versus 150. History still contributes. The first 62.5% above is private's share of occupied capacity; the second is list 1's share of private activity. They happen to match here and have different denominators.</p>
+<h3>4 · Derive the zone thresholds and shared targets</h3>
+<table><thead><tr><th>Output</th><th>Calculation</th><th>Result</th></tr></thead><tbody>
+<tr><td>Private list 1: LRU1 / LRU2 thresholds</td><td>int(3906 × 0.05f), for each zone</td><td>195 / 195 pages</td></tr>
+<tr><td>Private list 2: LRU1 / LRU2 thresholds</td><td>int(2343 × 0.05f), for each zone</td><td>117 / 117 pages</td></tr>
+<tr><td>Each shared list's target size</td><td>MAX((10000 − 6250) / 4, 50), integer division</td><td>937 pages</td></tr>
+<tr><td>Each shared list: LRU1 / LRU2 thresholds</td><td>LRU1: int(937 × 0.4f); LRU2: int(937 × 0.05f), defaults</td><td>374 / 46 pages</td></tr>
+</tbody></table>
+<p>Shared targets subtract the original budget 6,250, rather than the published-quota sum 6,249. The helper stores shared zone thresholds; it does not assign a shared <code>quota</code> field here. Publishing these numbers neither reserves frames nor evicts pages. Zone movement still depends on the guards explained earlier.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14501">Rates → both smoothing paths → quotas → thresholds</a></p>
+</div>
 <details id="exact-rates" class="answer-disclosure"><summary>Step 1 · Convert each list’s samples to an integer rate</summary>
 
 <p><code>i</code> is a list index. The drained <code>lru_hits</code> initially counts samples; after conversion it is samples per second. <code>monitor.lru_activity[i]</code> is an integer smoothed private activity in the same rate units. <code>diff_usec</code> is elapsed microseconds. The constants represent 1 second and 10 seconds.</p>
@@ -322,6 +353,20 @@ else
 <p>Multiplication by a fraction is performed in <code>float</code> before casting to <code>int</code>; <code>num_buffers / 2</code> is integer division. The caps are applied after the first truncation. The helper neither redistributes rounding leftovers nor recalculates <code>all_private_quota</code> from the capped quotas. A private quota sets a retention target, while its 5% + 5% thresholds set much smaller zone targets; these are different numbers with different guards.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14400-L14473">Zero activity, private budget, casts, caps and thresholds</a></p>
 </details>
+<details id="worked-quota-caps" class="answer-disclosure">
+<summary>Numeric edge cases · Caps, empty frames and zero activity</summary>
+<p><strong>Reset independently:</strong> 20,000 occupied frames, four shared and four private lists. Ten seconds elapsed; counted unfix activity is 20,000, so activity is not low. Private raw samples 9,000 / 1,000 / 0 / 0 give rates and new activities 900 / 100 / 0 / 0. Each shared list contributes 2,500 samples, or 250/s. Private and shared rate totals are both 1,000, so the stored private ratio becomes 0.5 and the budget is <code>int(20000 × 0.5f) = 10000</code>.</p>
+<figure class="diagram"><img src="../../assets/maintenance-quota-caps.svg" alt="Raw quotas 9,000 and 1,000 become 5,000 and 1,000 after caps. Shared targets still subtract the original 10,000-page budget."><figcaption>A capped quota does not send its missing share to another list.</figcaption></figure>
+<p>The 90% / 10% activity split produces raw quotas 9,000 / 1,000. The 5,000 cap makes them 5,000 / 1,000; half the pool is 10,000 and does not reduce them further. The 4,000 capped away is not redistributed. Each shared target remains <code>(20000 − 10000) / 4 = 2500</code>. With defaults, private thresholds are 250 / 250 and 50 / 50; shared thresholds are 1,000 / 125.</p>
+<p>Each row below resets independently with four shared and four private lists. Only the first two private lists can have activity; the others remain zero.</p>
+<table><thead><tr><th>Starting inputs</th><th>Arithmetic consequence</th></tr></thead><tbody>
+<tr><td>6,000 occupied frames; 10 seconds elapsed; 5,000 counted unfixes; private samples 5,000 / 0; shared samples zero</td><td>Private rate 500; shared denominator uses 1. Sample 500/501 is clamped to 0.998. Budget 5,988; first quota 5,988 → 5,000 → 3,000 because the half-pool cap also applies. Shared target MAX((6000 − 5988) / 4, 50) = 50.</td></tr>
+<tr><td>10,000 frames, 2,000 invalid; 10 seconds elapsed; 2,000 counted unfixes; private samples 2,000 / 2,000; each shared list 1,000</td><td>Private and shared rate totals are both 400; ratio 0.5. Occupied count 8,000 gives budget 4,000 and quotas 2,000 / 2,000. Shared uses full capacity: (10000 − 4000) / 4 = 1,500.</td></tr>
+<tr><td>10,000 occupied frames; 5 seconds elapsed; zero counted unfixes and hits; old ratio 0.5, old private activities 300 / 200</td><td>Low activity selects sample ratio 0.01. Stored ratio becomes 0.255; new activities are 150 / 100. Budget 2,550; quotas 1,530 / 1,020. Zero new hits can leave nonzero quotas.</td></tr>
+<tr><td>10,000 occupied frames; at least 10 seconds elapsed; zero counted unfixes and hits</td><td>New private activities are all zero. The explicit zero-activity branch forces the budget and every private quota/threshold to 0, even though the stored ratio is 0.01. Shared target is 10,000 / 4 = 2,500.</td></tr>
+</tbody></table>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14318-L14494">Low activity, zero-activity branch, caps and shared floor</a></p>
+</details>
 <details id="worked-epochs" class="answer-disclosure"><summary>Worked example · A workload shift across three accepted epochs</summary>
 
 <p><strong>Constructed calculation, not runtime evidence:</strong> start at <code>adjust_age=8</code>, <code>num_buffers=10000</code>, <code>invalid_cnt=0</code>, four shared lists and four private lists. Only two private lists have activity; their values and quotas appear in the table in the same order. The other two stay at zero. The stored private ratio starts at 0.5. Assume each accepted update is 5,000,000 µs after the previous one, with no intervening accepted update, concurrent contribution or wrap. This is a constructed sampling schedule, not the daemon’s usual 100 ms cadence. Counted unfix activity is 10,000 for each update, so it is not low.</p>
@@ -364,26 +409,7 @@ all three epochs:
 <p>The workload shifted toward the first private list. Its target grows over two accepted updates because activity is smoothed. The third update still consumes samples and advances the epoch even though both quotas remain unchanged. These target calculations do not predict actual resident-page counts.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14494">Arithmetic and publication sequence</a></p>
 </details>
-<details id="worked-ratio-shift" class="answer-disclosure"><summary>Independent example · The overall private share changes too</summary>
 
-<p>Reset independently: <code>num_buffers=10000</code>, <code>invalid_cnt=0</code>, four shared lists, only two active private lists. Old activities are 300 / 200, the stored ratio is 0.5, elapsed time is 5,000,000 µs and counted unfix activity is 2,000, so it is not low. Distribute the 500 raw shared samples as 125 per shared list, giving four rates of 25. The caps do not reduce either quota.</p>
-<pre><code>raw private samples = 1000 / 500; raw shared total = 500;
-current private rates = 200 / 100; shared rate = 100;
-new private activities = (300 + 200) / 2 = 250;
-                         (200 + 100) / 2 = 150;
-activity total = 400;
-sample ratio = 300 / (300 + 100) = 0.75;
-stored ratio = (0.5 + 0.75) / 2 = 0.625;
-private budget = int(10000 * 0.625f) = 6250;
-quotas = int(250 / 400.0f * 6250) = int(3906.25f) = 3906;
-         int(150 / 400.0f * 6250) = int(2343.75f) = 2343;
-private thresholds = 195 / 195; 117 / 117;
-quota sum = 6249; rounding leftover = 1;
-shared target = (10000 - 6250) / 4 = 937;
-shared thresholds = 374 / 46;</code></pre>
-<p>Integer division discards the shared target’s fractional part. The default ratios 0.4 / 0.05 are applied afterward. The displayed decimal intermediates are explanatory; final integers were reproduced with the source’s <code>float</code> operation order.</p>
-<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14379-L14494">Ratio smoothing and private/shared targets</a></p>
-</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Are these hit counts the same as every buffer-cache access?</summary><p>No. Eligible list-hit sampling normally suppresses repeat contributions within an epoch, and the counters have open approximation limits. They estimate policy activity rather than record a complete access history.</p></details>
 <details class="answer-disclosure"><summary>Q&amp;A · Why smooth activity instead of immediately adopting the latest ratio?</summary><p>Smoothing mixes recent samples with prior state over the stated horizon, limiting abrupt target changes from short intervals. It also delays response to a changed workload; no optimal responsiveness is established here.</p></details>

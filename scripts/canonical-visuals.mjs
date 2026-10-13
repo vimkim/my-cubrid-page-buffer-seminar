@@ -52,6 +52,8 @@ export const canonicalVisualOwners = Object.freeze({
   "page-buffer-daemon-cadence.svg": "reference/page-buffer-daemon-lifecycle-audit.md",
   "page-flush-post-flush-handoff.svg": "reference/page-buffer-daemon-lifecycle-audit.md",
   "maintenance-and-pacing-control.svg": "reference/page-buffer-daemon-lifecycle-audit.md",
+  "maintenance-quota-calculation.svg": "advanced/replacement-progress.md",
+  "maintenance-quota-caps.svg": "advanced/replacement-progress.md",
   "promotion-outcomes.svg": "advanced/acquisition-concurrency.md",
   "promotion-condition-choice.svg": "advanced/acquisition-concurrency.md",
   "pool-arrays-and-lru-recap.svg": "learning/01-contract-and-objects.md",
