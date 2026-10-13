@@ -100,9 +100,58 @@ resolved that environment failure without changing repository tooling.
 | Bilingual aggregate | No new failure: all 174 final failure messages equal the baseline set exactly. The nonzero result remains the pre-existing human-review gate, not a technical pass for that gate. |
 | Bilingual served gate | PASS: all 351 HTTP resources and 158 live-DOM pages; no unavailable gate. |
 | Complete repository test suite | PASS: 262 tests, zero failures, skips or cancellations. Covers both validators and reading, projection, narrow widths, native answers, direct anchors, trace outcomes/reset, no-JavaScript access and complete contents/spoken maps. |
-| Integrity comparison | All 41 prior IDs and 45 pinned source URLs retained in each language; all four traces retain their exact snapshot values. |
+| Integrity comparison | All 37 prior DOM IDs, four question IDs and 45 pinned source URLs retained in each language; all four traces retain their exact snapshot values. |
 | Author Markdown and diff | Both changed author documents pass the Copyparty Markdown source checker; `git diff --check` passes. |
 | Visual inspection | Korean opening, current-check/offer and recap projection previews inspected. The 390px reading view has no horizontal overflow or page runtime error. This is agent inspection, not human acceptance. |
 
-Both review axes are added when they finish. Human Korean and semantic-parity
-acceptance remain pending.
+Human Korean and semantic-parity acceptance remain pending.
+
+## Standards
+
+Independent read-only review compared `1d133309...4193228`.
+
+0 actionable Standards findings; no hard violations or baseline smells identified.
+
+The paired chapter explains roles before symbols, preserves the normal-path
+premises, and explicitly resets the later cases. Required qualifications remain
+visible: write success does not establish final durability, attached flush
+waiters block an offer, later dirty work survives completion, and offers remain
+revocable.
+
+The source-order explanation matches the pinned consumer and receiver paths:
+current checks precede the common completion tail; successful assignment sets
+DIRECT and clears FLUSHING together; protected receipt precedes old-identity
+removal. Korean and English preserve these distinctions and explanation order.
+
+The presenter material, route labels, and author records remain consistent with
+the rewrite. Verification records disclose pending human acceptance and
+distinguish the unchanged human-review failures from passing technical gates;
+no fabricated receipt or false acceptance claim appears.
+
+## Spec
+
+Independent read-only review compared `1d133309...4193228`.
+
+0 actionable Spec findings: no missing requirements, incorrect implementations,
+or unrequested scope changes found.
+
+The paired chapters satisfy the requested outcome: one page/frame story,
+gradual definitions, a completed normal path, two waiter roles, explicit
+BCB-pointer handoff, and independently reset queue-full, later-change, and
+reader cases. Detailed source and policy explanations follow the basic recap;
+necessary safety qualifications remain visible.
+
+Pinned-source review confirms current guards precede common completion,
+successful assignment sets the offer marker and clears FLUSHING together,
+rejection still completes the earlier flush without clearing new DIRTY work,
+and protected receipt precedes old-identity removal.
+
+Independent comparison confirms preservation of prior anchors, all 45 pinned
+source URLs per language, and snapshot values for all four traces. Navigation,
+presentation controls, and spoken cues remain aligned. Human Korean-language
+and semantic acceptance remain explicitly pending; no receipt is claimed.
+
+Standards: 0 findings. Spec: 0 findings. No unresolved issue within either axis.
+The final record clarifies the integrity count as 37 DOM IDs plus four question
+IDs, rather than grouping the 41 identifiers under one ambiguous label. This
+changes the audit description only.
