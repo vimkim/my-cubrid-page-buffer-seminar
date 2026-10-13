@@ -83,6 +83,9 @@ pthread_cond_broadcast (&amp;tb-&gt;waiter_cond);</code></pre>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Does broadcast give each sleeping writer its own allowance?</summary><p>No. They compete for the same refreshed balance after reacquiring the mutex. One writer can consume credit before another runs, so each must recheck its remaining request.</p></details>
 </div>
+
+<p class="data-structure-bridge">token_consumed aggregates credit consumed from the shared bucket. Participating writers account pages after successful OS writes. Control replaces the balance and notifies; awakened writers recheck the same balance. This does not consume BCB waiter lists or allocator queues.</p>
+<figure class="daemon-data-structures"><img class="diagram" src="../../assets/daemon-flush-control-data-structures.svg" alt="File writers and flush-control share one token bucket mutex and condition variable"><figcaption>Data structures and access order · pinned source schematic</figcaption></figure>
 </section>
 <section class="section" data-reset-answers="" id="control-part-2"><div class="eyebrow">07 · 9 / 25</div><h2>Why does the next allowance replace the old balance?</h2>
 <p>The refresh task and writers share one mutex-protected token balance. Each refresh publishes a new interval allowance; unused credits from the old interval are discarded.</p>

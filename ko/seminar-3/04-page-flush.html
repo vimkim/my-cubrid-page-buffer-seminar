@@ -103,6 +103,9 @@
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · helper가 수집한 후보 수보다 많은 페이지를 제출할 수 있나요?</summary><p>neighbor batching이 적절한 인접 페이지를 추가할 수 있습니다. 반대로 수집한 후보가 다수 거부될 수도 있습니다. 검사한 node·저장한 후보·제출 이미지 수는 서로 다른 작업을 셉니다.</p></details>
 </div>
+
+<p class="data-structure-bridge">목록 배열을 보는 일과 선택한 목록의 BCB 링크를 따라가는 일은 다릅니다. 오른쪽 bottom부터 왼쪽 prev_BCB 방향으로 읽습니다. Clean 방문도 검사량에 포함되며, 저장한 후보는 예약이 아닙니다.</p>
+<figure class="daemon-data-structures"><img class="diagram" src="../../assets/daemon-page-flush-data-structures.svg" alt="Page-flush가 목록 통계에서 탐색량을 계산하고 선택한 LRU3 꼬리부터 링크를 따라 후보를 기억한 뒤 BCB mutex 아래 재검사하는 순서"><figcaption>자료구조와 접근 순서 · 고정 소스에 근거한 개념도</figcaption></figure>
 </section>
 <section class="section" id="selection-current-checks"><div class="eyebrow">04 · 5 / 10</div><h2>골라 둔 페이지를 왜 다시 확인할까?</h2>
 <p data-teaching-def="P F"><strong>기본 사례의 다음 단계:</strong> <code>P</code>는 고른 dirty 페이지입니다. <code>F</code>는 그 프레임의 BCB 주소입니다. Page-flush는 목록 잠금을 놓은 뒤 F의 BCB mutex를 잡았습니다. 이제 예전에 본 상태가 아니라 지금 상태를 확인합니다.</p>

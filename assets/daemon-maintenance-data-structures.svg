@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 850" role="img" aria-labelledby="title desc">
+<title id="title">Maintenance: counter arrays, targets and list boundaries</title>
+<desc id="desc">First inspect thread counter shards and admission conditions. An accepted pass consumes per-list monitor hits, computes quotas and thresholds, then adjusts only overflowing LRU boundaries under the list mutex. It does not perform page I/O. Its separate direct-victim backup loops skip their bodies at the pinned revision.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10Z" fill="#526563"/>
+</marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 19px system-ui,sans-serif;fill:#172c2c}.text{font:17px system-ui,sans-serif;fill:#172c2c}.note{font:16px system-ui,sans-serif;fill:#526563}.mono{font:16px ui-monospace,monospace;fill:#172c2c}.box{fill:#fff;stroke:#bccdc5;stroke-width:2}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dashed{stroke-dasharray:7 5}.lock{fill:#e7f0e9;stroke:#006b59;stroke-width:2}.warn{fill:#f8eee3;stroke:#ad5c16;stroke-width:2}</style>
+</defs>
+<rect width="1200" height="850" fill="#faf9f5"/>
+<text class="title" x="40" y="48" text-anchor="start">Maintenance: counter arrays, targets and list boundaries</text>
+<text class="note" x="40" y="80" text-anchor="start">Verified mechanism at CUBRID f799e05; schematic, not a runtime snapshot.</text>
+<rect class="box" x="40" y="110" width="400" height="130" rx="6"/>
+<text class="head" x="58" y="140" text-anchor="start">1. Thread counter shards</text>
+<text class="text" x="58" y="171" text-anchor="start">Sum sampled final unfix counts.</text>
+<text class="text" x="58" y="196" text-anchor="start">Time + activity admit a quota pass.</text>
+<text class="text" x="58" y="221" text-anchor="start">Early return does not consume a pass.</text>
+<path class="flow" d="M450 170 H500"/>
+<rect class="box" x="520" y="110" width="640" height="130" rx="6"/>
+<text class="head" x="538" y="140" text-anchor="start">2. LRU monitor arrays</text>
+<text class="text" x="538" y="171" text-anchor="start">On an accepted pass, read and reset each list hit count.</text>
+<text class="text" x="538" y="196" text-anchor="start">Compute current rates and smoothed private activities.</text>
+<text class="text" x="538" y="221" text-anchor="start">adjust_age counts accepted passes, not elapsed time.</text>
+<path class="flow" d="M835 248 V278"/>
+<rect class="box" x="520" y="290" width="640" height="125" rx="6"/>
+<text class="head" x="538" y="320" text-anchor="start">3. Quota and zone thresholds</text>
+<text class="text" x="538" y="351" text-anchor="start">Split the private target using smoothed activity.</text>
+<text class="text" x="538" y="376" text-anchor="start">Publish private quota and private/shared zone thresholds.</text>
+<text class="text" x="538" y="401" text-anchor="start">Targets do not reserve frames or perform page I/O.</text>
+<rect class="box" x="40" y="290" width="400" height="125" rx="6"/>
+<text class="head" x="58" y="320" text-anchor="start">Descriptor array traversal</text>
+<text class="text" x="58" y="351" text-anchor="start">Visit all private/shared descriptors.</text>
+<text class="text" x="58" y="376" text-anchor="start">This reads per-list numbers.</text>
+<text class="text" x="58" y="401" text-anchor="start">It does not inspect every BCB hit.</text>
+<path class="flow" d="M835 423 V453"/>
+<rect class="box" x="40" y="465" width="1120" height="200" rx="6"/>
+<text class="head" x="58" y="495" text-anchor="start">4. Only when adjustment is required: hold one LRU mutex</text>
+<text class="text" x="58" y="526" text-anchor="start">Private call gate: count_lru1 + count_lru2 &gt; quota.</text>
+<text class="text" x="58" y="551" text-anchor="start">Shared call gate: protected counts &gt; combined zone thresholds.</text>
+<rect class="box" x="80" y="568" width="265" height="75" rx="6"/>
+<text class="head" x="98" y="598" text-anchor="start">LRU1</text>
+<text class="text" x="98" y="629" text-anchor="start">warmest zone</text>
+<rect class="box" x="405" y="568" width="265" height="75" rx="6"/>
+<text class="head" x="423" y="598" text-anchor="start">LRU2 boundary</text>
+<text class="text" x="423" y="629" text-anchor="start">bottom_2 or bottom_1</text>
+<rect class="box" x="855" y="568" width="265" height="75" rx="6"/>
+<text class="head" x="873" y="598" text-anchor="start">LRU3</text>
+<text class="text" x="873" y="629" text-anchor="start">cold candidates</text>
+<path class="flow" d="M680 601 H838"/>
+<path class="flow" d="M350 601 H388"/>
+<text class="note" x="78" y="682" text-anchor="start">LRU1 may also fall directly to LRU3; page bytes stay in place.</text>
+<rect class="warn" x="40" y="702" width="1120" height="87" rx="6"/>
+<text class="head" x="58" y="732" text-anchor="start">Separate backup: VS-20 at the pinned revision</text>
+<text class="text" x="58" y="763" text-anchor="start">Its two list loops skip their bodies. Quota adjustment and other suppliers still exist.</text>
+<text class="note" x="40" y="826" text-anchor="start">Arrows show access or control flow; shared metadata still requires its own protection.</text>
+</svg>

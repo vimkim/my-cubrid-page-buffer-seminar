@@ -83,6 +83,9 @@ pthread_cond_broadcast (&amp;tb-&gt;waiter_cond);</code></pre>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · broadcast가 자는 writer마다 별도 allowance를 주나요?</summary><p>아닙니다. writer들은 mutex를 다시 얻은 뒤 같은 갱신 잔액을 두고 경쟁합니다. 다른 writer가 실행되기 전에 하나가 credit을 소비할 수 있으므로 각자 남은 요청을 다시 확인해야 합니다.</p></details>
 </div>
+
+<p class="data-structure-bridge">token_consumed는 공유 bucket에서 소비한 credit의 집계입니다. Writer는 참여하는 OS 쓰기가 성공한 뒤 정산합니다. 제어 작업은 잔액을 교체하고 알리며, 깨어난 writer는 같은 잔액을 다시 검사합니다. BCB 대기 목록이나 allocator 큐를 꺼내는 경로가 아닙니다.</p>
+<figure class="daemon-data-structures"><img class="diagram" src="../../assets/daemon-flush-control-data-structures.svg" alt="여러 파일 writer와 flush-control이 같은 token bucket mutex와 condition variable을 공유하는 순서"><figcaption>자료구조와 접근 순서 · 고정 소스에 근거한 개념도</figcaption></figure>
 </section>
 <section class="section" data-reset-answers="" id="control-part-2"><div class="eyebrow">07 · 9 / 25</div><h2>다음 예산은 왜 이전 잔액을 교체할까요?</h2>
 <p>갱신 작업과 writer들은 mutex로 보호한 token 잔액 하나를 공유합니다. 매 갱신은 새 구간의 credit 예산을 게시하고, 이전 구간의 남은 credit은 버립니다.</p>

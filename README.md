@@ -18,11 +18,11 @@ The live seminar has three sessions: **3 hours + 4 hours + n hours**, with the t
 | 2 | 4 hours | Completed |
 | 3 (final) | n hours (flexible) | Remaining |
 
-Together, the first two sessions covered page-buffer basics, Buffer Control Blocks (BCBs), and private/shared LRU organization. The remaining session covers page-buffer daemon details and PostgreSQL buffer-management and replacement strategies.
+Together, the first two sessions covered page-buffer basics, Buffer Control Blocks (BCBs), and private/shared LRU organization. The selected remaining session covers page-buffer daemon details. PostgreSQL buffer-management and replacement strategies remain in the broader preparation material.
 
-The delivered sessions and remaining agenda govern current seminar preparation. The broader curriculum and Maintainer Guide remain available for deeper study.
+The delivered sessions and remaining agenda govern current seminar preparation. For the current delivery, the presenter selected **Session 3 chapters 03–07 only**, in that order. Use the [five-chapter Korean speaker script](my-presentation-script-session-3-03-07.html), with all 119 current screens, prerequisite explanations, four daemon data-structure diagrams, and a closing recap after chapter 07. The broader curriculum and Maintainer Guide remain available for deeper study.
 
-Open the current final presentation at [Session 3 contents](toc.html), with [Korean detailed contents](ko/seminar-3/toc.html) and [English contents](en/seminar-3/toc.html). Twelve dedicated chapters carry the complete daemon and PostgreSQL argument through the closing defense. Prepare with the [Session 3 plan](docs/final-session-preparation.md) and [Korean spoken script](my-presentation-script-session-3.html).
+The full presentation remains accessible at [Session 3 contents](toc.html), with [Korean detailed contents](ko/seminar-3/toc.html) and [English contents](en/seminar-3/toc.html). Twelve dedicated chapters carry the complete daemon and PostgreSQL argument through the closing defense. The [Session 3 plan](docs/final-session-preparation.md) and [full Korean spoken script](my-presentation-script-session-3.html) remain preparation references.
 
 The earlier seven defense pages remain supporting inputs at their stable URLs. The current presentation owns a dedicated order, 24 retained questions, nine additional defense questions, 25 independent state traces, concrete experiment proposals, and a staged final diagnosis. The [application record](docs/session-3-live-application.md) maps their provenance and exact new anchors.
 

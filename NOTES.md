@@ -10,7 +10,7 @@ The [accepted design](docs/seminar-curriculum-design.md) and [ADR 0005](docs/adr
 
 Use the [Seminar delivery record](README.md#seminar-delivery) for the three-session format, completed coverage, and remaining agenda. It takes precedence over earlier provisional timing and session-route plans when preparing the remaining session. Retain the broader curriculum as supporting material for deeper study.
 
-Session 3 is the final live session, with flexible duration. Use its [preparation plan](docs/final-session-preparation.md) and [Korean spoken script](my-presentation-script-session-3.html) for the detailed daemon/PostgreSQL route and closing workshop. Keep these presenter materials outside participant navigation. The earlier first-time participant script remains a reference for completed material.
+Session 3 is the final live session, with flexible duration. The current selected delivery covers chapters 03–07 only. Use the [five-chapter Korean script](my-presentation-script-session-3-03-07.html) for every current screen, local prerequisite explanations and a closing recap after chapter 07. Each daemon's data-structure diagram is displayed in its paired audience chapter and in the script. The [preparation plan](docs/final-session-preparation.md) and [full Korean script](my-presentation-script-session-3.html) retain the broader daemon/PostgreSQL route as preparation references. Keep presenter materials outside participant navigation. The earlier first-time participant script remains a reference for completed material.
 
 ## Editing a page
 

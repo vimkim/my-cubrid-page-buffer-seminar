@@ -47,6 +47,9 @@
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Does maintenance write pages when it moves them to a colder zone?</summary><p>Quota adjustment changes list metadata and retention preference. It copies no page bytes and performs no page I/O. A colder page still needs the relevant preservation and protected reuse checks.</p></details>
 </div>
+
+<p class="data-structure-bridge" data-teaching-def="VS-20">adjust_age counts accepted sample-update passes rather than elapsed time. The diagram separates statistics access from boundary adjustment. VS-20 records the separate backup loops whose bodies are skipped at this pin. Quota adjustment performs no page I/O.</p>
+<figure class="daemon-data-structures"><img class="diagram" src="../../assets/daemon-maintenance-data-structures.svg" alt="Maintenance reads thread unfix and per-list hit arrays, computes targets and adjusts only required list boundaries"><figcaption>Data structures and access order · pinned source schematic</figcaption></figure>
 </section>
 <section class="section" id="quota-change"><div class="eyebrow">06 · 6 / 24</div>
 <h2>What changes when a retention target falls?</h2>

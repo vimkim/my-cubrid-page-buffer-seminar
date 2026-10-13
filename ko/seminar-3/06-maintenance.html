@@ -47,6 +47,9 @@
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · maintenance가 페이지를 cold zone으로 옮길 때 페이지도 쓰나요?</summary><p>quota 조정은 list 메타데이터와 보존 선호를 바꿉니다. 페이지 바이트를 복사하거나 페이지 I/O를 수행하지 않습니다. 더 cold한 페이지에도 필요한 보존 작업과 보호된 재사용 검사가 남습니다.</p></details>
 </div>
+
+<p class="data-structure-bridge" data-teaching-def="VS-20">adjust_age는 허용된 표본 갱신 회차를 세는 값이며 경과 시간이 아닙니다. 그림은 통계 읽기와 목록 경계 조정을 나눕니다. VS-20은 고정 리비전에서 본문을 건너뛰는 별도 보조 루프에 관한 불확실성 기록입니다. quota 조정은 페이지 I/O를 하지 않습니다.</p>
+<figure class="daemon-data-structures"><img class="diagram" src="../../assets/daemon-maintenance-data-structures.svg" alt="Maintenance가 thread별 unfix와 목록별 hit 배열을 읽어 목표를 계산하고 필요한 목록 경계만 조정하는 순서"><figcaption>자료구조와 접근 순서 · 고정 소스에 근거한 개념도</figcaption></figure>
 </section>
 <section class="section" id="quota-change"><div class="eyebrow">06 · 6 / 24</div>
 <h2>보존 목표가 줄면 무엇이 달라질까?</h2>

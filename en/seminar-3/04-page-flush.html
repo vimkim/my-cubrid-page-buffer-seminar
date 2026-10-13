@@ -103,6 +103,9 @@
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Can a helper submit more pages than its collected candidate count?</summary><p>Neighbor batching can add suitable nearby pages. Conversely, many collected candidates can be rejected. Counts of inspected nodes, saved candidates and submitted images measure different work.</p></details>
 </div>
+
+<p class="data-structure-bridge">Reading the descriptor array differs from following BCB links within one selected list. Read from bottom on the right toward the head through prev_BCB. Clean entries count as visits; remembered candidates are not reservations.</p>
+<figure class="daemon-data-structures"><img class="diagram" src="../../assets/daemon-page-flush-data-structures.svg" alt="Page-flush reads list statistics, follows selected LRU3 tail links, remembers candidates, then rechecks under each BCB mutex"><figcaption>Data structures and access order · pinned source schematic</figcaption></figure>
 </section>
 <section class="section" id="selection-current-checks"><div class="eyebrow">04 · 5 / 10</div><h2>Why check a remembered page again?</h2>
 <p data-teaching-def="P F"><strong>Next step in the basic case:</strong> <code>P</code> is the chosen dirty page. <code>F</code> is its frame’s BCB address. Page-flush has released the list lock and acquired F’s BCB mutex. It checks the state now, rather than trusting the earlier observation.</p>

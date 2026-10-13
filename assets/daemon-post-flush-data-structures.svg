@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 840" role="img" aria-labelledby="title desc">
+<title id="title">Post-flush: three structures, separate results</title>
+<desc id="desc">A completion circular queue holds BCB pointers. Under the BCB mutex the consumer may offer an eligible frame to a separate allocator waiter queue and per-thread pointer slot. It finishes old FLUSHING and walks that BCB linked waiter list to wake only flush waiters. A recipient separately checks a revocable offer.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10Z" fill="#526563"/>
+</marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 19px system-ui,sans-serif;fill:#172c2c}.text{font:17px system-ui,sans-serif;fill:#172c2c}.note{font:16px system-ui,sans-serif;fill:#526563}.mono{font:16px ui-monospace,monospace;fill:#172c2c}.box{fill:#fff;stroke:#bccdc5;stroke-width:2}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dashed{stroke-dasharray:7 5}.lock{fill:#e7f0e9;stroke:#006b59;stroke-width:2}.warn{fill:#f8eee3;stroke:#ad5c16;stroke-width:2}</style>
+</defs>
+<rect width="1200" height="840" fill="#faf9f5"/>
+<text class="title" x="40" y="48" text-anchor="start">Post-flush: three structures, separate results</text>
+<text class="note" x="40" y="80" text-anchor="start">Verified mechanism at CUBRID f799e05; schematic, not a runtime snapshot.</text>
+<rect class="box" x="40" y="110" width="360" height="130" rx="6"/>
+<text class="head" x="58" y="140" text-anchor="start">1. Completion circular queue</text>
+<text class="text" x="58" y="171" text-anchor="start">flushed_bcbs: BCB pointers</text>
+<text class="text" x="58" y="196" text-anchor="start">Capacity: 8,192 pointer slots</text>
+<text class="text" x="58" y="221" text-anchor="start">Atomic producer / consumer cursors</text>
+<path class="flow" d="M410 172 H455"/>
+<rect class="lock" x="470" y="110" width="690" height="130" rx="6"/>
+<text class="head" x="488" y="140" text-anchor="start">2. Consume a pointer; hold that BCB mutex</text>
+<text class="text" x="488" y="171" text-anchor="start">Inspect current flags, fixes, linked waiters, zone and quota.</text>
+<text class="text" x="488" y="196" text-anchor="start">Only an eligible frame with a waiting recipient may be offered.</text>
+<text class="text" x="488" y="221" text-anchor="start">A consumed item is old work; eligibility uses current state.</text>
+<path class="flow" d="M780 247 V278"/>
+<rect class="box" x="470" y="290" width="690" height="140" rx="6"/>
+<text class="head" x="488" y="320" text-anchor="start">3. Conditional offer to a frame allocator</text>
+<text class="text" x="488" y="351" text-anchor="start">Separate high / low queues store THREAD_ENTRY pointers.</text>
+<text class="text" x="488" y="376" text-anchor="start">Under the recipient entry lock: notify and publish BCB offer.</text>
+<text class="text" x="488" y="401" text-anchor="start">bcb_victims[thread index] stores the BCB pointer.</text>
+<rect class="box" x="40" y="290" width="360" height="140" rx="6"/>
+<text class="head" x="58" y="320" text-anchor="start">Linked waiters on one BCB</text>
+<text class="text" x="58" y="351" text-anchor="start">BCB.next_wait_thrd</text>
+<text class="text" x="58" y="376" text-anchor="start">THREAD_ENTRY.next_wait_thrd</text>
+<text class="text" x="58" y="401" text-anchor="start">READ → FLUSH → WRITE → FLUSH</text>
+<path class="flow" d="M780 438 V469"/>
+<rect class="box" x="470" y="480" width="690" height="125" rx="6"/>
+<text class="head" x="488" y="510" text-anchor="start">4. Finish the old flush even without an offer</text>
+<text class="text" x="488" y="541" text-anchor="start">Clear old FLUSHING; preserve later DIRTY work.</text>
+<text class="text" x="488" y="566" text-anchor="start">Walk the linked list; remove and notify FLUSH waiters only.</text>
+<text class="text" x="488" y="591" text-anchor="start">READ / WRITE access grants belong to another helper.</text>
+<path class="flow" d="M400 350 H440 V220 H455"/>
+<path class="flow" d="M780 612 V645"/>
+<rect class="lock" x="470" y="657" width="690" height="95" rx="6"/>
+<text class="head" x="488" y="687" text-anchor="start">5. Recipient locks the BCB and rechecks</text>
+<text class="text" x="488" y="718" text-anchor="start">Reject a revoked offer; otherwise continue protected reuse.</text>
+<rect class="warn" x="40" y="480" width="360" height="125" rx="6"/>
+<text class="head" x="58" y="510" text-anchor="start">Queue-full fallback</text>
+<text class="text" x="58" y="541" text-anchor="start">No item was posted for this BCB.</text>
+<text class="text" x="58" y="566" text-anchor="start">Submitter finishes it locally.</text>
+<text class="text" x="58" y="591" text-anchor="start">This fallback makes no direct offer.</text>
+<text class="note" x="40" y="776" text-anchor="start">No page bytes in this queue; no new page I/O by post-flush; no guaranteed receipt.</text>
+<text class="note" x="40" y="816" text-anchor="start">Arrows show access or control flow; shared metadata still requires its own protection.</text>
+</svg>

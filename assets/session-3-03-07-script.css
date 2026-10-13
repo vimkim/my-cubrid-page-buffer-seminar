@@ -1,0 +1,58 @@
+/* Scoped presenter companion: retain the shared reading layout. */
+.scoped-speaker-script .screen-script {
+  padding-block: 2rem;
+  border-block-start: 1px solid var(--line);
+}
+.scoped-speaker-script .screen-number {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.scoped-speaker-script .screen-script h3 {
+  margin-block: 0.5rem 1.25rem;
+  font-size: 1.45rem;
+}
+.scoped-speaker-script .core {
+  padding: 0.75rem 1rem;
+  background: var(--teal-soft);
+}
+.scoped-speaker-script .transition {
+  margin-block-start: 1rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+.scoped-speaker-script :is(.chapter-map, .supplement) {
+  padding: 0.75rem 1rem;
+  margin-block: 1.25rem;
+  border: 1px solid var(--line);
+}
+.scoped-speaker-script summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.scoped-speaker-script h4 {
+  font-size: 1rem;
+  margin-block: 1.25rem 0.5rem;
+}
+.scoped-speaker-script .daemon-visual {
+  margin: 1.5rem 0;
+}
+.scoped-speaker-script .daemon-visual img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.scoped-speaker-script figcaption,
+.scoped-speaker-script .screen-links {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+@media print {
+  .scoped-speaker-script :is(.screen-links, .skip) { display: none; }
+  .scoped-speaker-script .screen-script { break-inside: auto; }
+  .scoped-speaker-script :is(h2, h3, h4, .core) { break-after: avoid; }
+  .scoped-speaker-script :is(.daemon-visual, .prompt) { break-inside: avoid; }
+  .scoped-speaker-script details > :not(summary) { display: block !important; }
+  .scoped-speaker-script .chapter { break-before: page; }
+  .scoped-speaker-script a { color: inherit; text-decoration: none; }
+}

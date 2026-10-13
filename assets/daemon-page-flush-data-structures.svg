@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
+<title id="title">Page-flush: from LRU statistics to protected candidates</title>
+<desc id="desc">Read the descriptor array, lock one selected LRU, walk backward from its cold tail with a visit budget, save BCB pointers and identities, then release the list lock and recheck each BCB under its mutex before a stable copy and WAL-ordered submission.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10Z" fill="#526563"/>
+</marker>
+<style>.title{font:700 28px system-ui,sans-serif;fill:#172c2c}.head{font:700 19px system-ui,sans-serif;fill:#172c2c}.text{font:17px system-ui,sans-serif;fill:#172c2c}.note{font:16px system-ui,sans-serif;fill:#526563}.mono{font:16px ui-monospace,monospace;fill:#172c2c}.box{fill:#fff;stroke:#bccdc5;stroke-width:2}.flow{fill:none;stroke:#526563;stroke-width:2.5;marker-end:url(#arrow)}.dashed{stroke-dasharray:7 5}.lock{fill:#e7f0e9;stroke:#006b59;stroke-width:2}.warn{fill:#f8eee3;stroke:#ad5c16;stroke-width:2}</style>
+</defs>
+<rect width="1200" height="820" fill="#faf9f5"/>
+<text class="title" x="40" y="48" text-anchor="start">Page-flush: from LRU statistics to protected candidates</text>
+<text class="note" x="40" y="80" text-anchor="start">Verified mechanism at CUBRID f799e05; schematic, not a runtime snapshot.</text>
+<rect class="box" x="40" y="110" width="1120" height="108" rx="6"/>
+<text class="head" x="58" y="140" text-anchor="start">1. LRU descriptor array: shared lists, then private lists</text>
+<text class="text" x="58" y="171" text-anchor="start">Read list size and quota; calculate each list’s visit share.</text>
+<text class="text" x="58" y="196" text-anchor="start">Skip a zero-share list. Statistics access is separate from following BCB links.</text>
+<rect class="box" x="70" y="240" width="245" height="62" rx="6"/>
+<text class="head" x="88" y="270" text-anchor="start">shared LRU</text>
+<rect class="box" x="340" y="240" width="245" height="62" rx="6"/>
+<text class="head" x="358" y="270" text-anchor="start">shared LRU</text>
+<rect class="box" x="610" y="240" width="245" height="62" rx="6"/>
+<text class="head" x="628" y="270" text-anchor="start">private LRU</text>
+<rect class="box" x="880" y="240" width="245" height="62" rx="6"/>
+<text class="head" x="898" y="270" text-anchor="start">private LRU</text>
+<path class="flow" d="M190 306 V340"/>
+<rect class="box" x="40" y="348" width="1120" height="186" rx="6"/>
+<text class="head" x="58" y="378" text-anchor="start">2. One selected list: hold its LRU mutex</text>
+<text class="text" x="58" y="409" text-anchor="start">Start at bottom; follow prev_BCB toward the head within LRU3.</text>
+<rect class="box" x="80" y="428" width="235" height="83" rx="6"/>
+<text class="head" x="98" y="458" text-anchor="start">LRU1 / LRU2</text>
+<text class="text" x="98" y="489" text-anchor="start">stop at zone boundary</text>
+<rect class="box" x="365" y="428" width="235" height="83" rx="6"/>
+<text class="head" x="383" y="458" text-anchor="start">dirty / unfixed</text>
+<text class="text" x="383" y="489" text-anchor="start">beyond two visits</text>
+<rect class="box" x="650" y="428" width="235" height="83" rx="6"/>
+<text class="head" x="668" y="458" text-anchor="start">dirty / fixed</text>
+<text class="text" x="668" y="489" text-anchor="start">visit 2; candidate</text>
+<rect class="box" x="935" y="428" width="205" height="83" rx="6"/>
+<text class="head" x="953" y="458" text-anchor="start">clean / bottom</text>
+<text class="text" x="953" y="489" text-anchor="start">visit 1; budget used</text>
+<path class="flow" d="M930 472 H890"/>
+<path class="flow" d="M645 472 H605"/>
+<path class="flow" d="M360 472 H320"/>
+<path class="flow" d="M280 537 V580"/>
+<text class="note" x="790" y="560" text-anchor="middle">Visit order: right to left; clean entries consume the visit budget.</text>
+<rect class="box" x="40" y="590" width="460" height="130" rx="6"/>
+<text class="head" x="58" y="620" text-anchor="start">3. Temporary candidate array</text>
+<text class="text" x="58" y="651" text-anchor="start">Each item: BCB pointer + saved VPID</text>
+<text class="text" x="58" y="676" text-anchor="start">Optional sort by volid, pageid</text>
+<text class="text" x="58" y="701" text-anchor="start">Release the list mutex.</text>
+<path class="flow" d="M510 650 H585"/>
+<rect class="lock" x="600" y="590" width="560" height="130" rx="6"/>
+<text class="head" x="618" y="620" text-anchor="start">4. Lock each BCB and recheck</text>
+<text class="text" x="618" y="651" text-anchor="start">Saved identity; DIRTY; no FLUSHING</text>
+<text class="text" x="618" y="676" text-anchor="start">LRU3; no current use / linked waiter</text>
+<text class="text" x="618" y="701" text-anchor="start">Stable copy + required WAL, then submission</text>
+<text class="note" x="40" y="759" text-anchor="start">A remembered pointer is not a reservation. This is not an all-BCB-array scan.</text>
+<text class="note" x="40" y="796" text-anchor="start">Arrows show access or control flow; shared metadata still requires its own protection.</text>
+</svg>
