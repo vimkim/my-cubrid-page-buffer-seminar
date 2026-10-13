@@ -1,6 +1,6 @@
 # Editorial design verification
 
-This receipt covers the [design proposal](design.md) and [section disposition map](section-plan.json) for work item 354 on 2026-10-13. Final shared understanding and local integration approval remain pending. It verifies the plan as an author artifact; implementation/browser acceptance is subsequent work.
+This receipt covers the [design proposal](design.md) and [section disposition map](section-plan.json) for work item 354 on 2026-10-13. The user confirmed final shared understanding and approved local integration on 2026-10-13. The original checks below cover the review baseline; integration checks are recorded separately. It verifies the plan as an author artifact; implementation/browser acceptance is subsequent work.
 
 ## Revision and scope
 
@@ -37,3 +37,9 @@ node scripts/check-bilingual-teaching-site.mjs
 ```
 
 The implementation must run the existing Session 3 tests and served/browser gates, including disclosed-trace access and every former standalone fragment. The [design's completion rules](design.md#verification-and-completion) retain those requirements. Human review remains distinct from automated checks.
+
+## Approved integration snapshot
+
+The task branch was rebased onto local `main` at `a2895e9520e139fcb43a5e8900cb53d2e394ae61`. The destination was clean and on `main`. Its five new scan/budget sections are covered by the updated disposition map: 124 current sections and 62 retained owners. The EN/KO section inventory remains paired. Their useful progress/cost limits remain visible in the proposed explanation, while detailed arithmetic and cost catalogs use the accepted optional-material policy.
+
+Integration checks passed for both Markdown files, all 17 relative links/fragments, all 124 current paired section dispositions, 62 retained owners, and four accepted decisions. The Maintainer Guide source aggregate passed again. The bilingual source aggregate retained exactly 78 missing review receipts and 96 stale fingerprints, with zero technical diagnostics. Copyparty at `http://127.0.0.1:3935` refused the connection, so served and live-DOM gates remain unavailable. `git diff --check` passed. No audience HTML change belongs to this design diff.

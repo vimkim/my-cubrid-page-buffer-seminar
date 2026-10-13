@@ -1,11 +1,12 @@
 {
-  "status": "draft-awaiting-final-shared-understanding",
-  "baseline": "bedae28232ff59439b34a58bf8e2932f4a19d1c5",
+  "status": "agreed-design",
+  "baseline": "a2895e9520e139fcb43a5e8900cb53d2e394ae61",
   "work_item": 354,
   "accepted_questions": [
     "Q1-secondary-material-optional",
     "Q2-one-complete-calculation",
-    "Q3-spoken-prose-and-maps"
+    "Q3-spoken-prose-and-maps",
+    "Q4-shared-understanding-and-local-design-merge"
   ],
   "semantics": {
     "keep": "Retain as a standalone essential section; shorten only repeated wording.",
@@ -16,7 +17,7 @@
   "chapters": [
     {
       "file": "03-daemon-architecture.html",
-      "current_sections": 31,
+      "current_sections": 36,
       "proposed_sections": 15,
       "essential_order": [
         "workload",
@@ -92,9 +93,34 @@
           "owner": "scan-scope"
         },
         {
+          "id": "scan-share",
+          "action": "disclose",
+          "owner": "scan-scope"
+        },
+        {
+          "id": "scan-budget",
+          "action": "disclose",
+          "owner": "scan-scope"
+        },
+        {
           "id": "scan-maintenance",
           "action": "link",
           "owner": "scan-scope"
+        },
+        {
+          "id": "scan-complexity",
+          "action": "disclose",
+          "owner": "scan-scope"
+        },
+        {
+          "id": "scan-queue-bound",
+          "action": "disclose",
+          "owner": "cadence-part-5"
+        },
+        {
+          "id": "scan-elapsed-time",
+          "action": "disclose",
+          "owner": "experiment"
         },
         {
           "id": "plain-language-bridge",
@@ -717,6 +743,8 @@
       ]
     }
   ],
-  "current_total": 119,
-  "proposed_total": 62
+  "current_total": 124,
+  "proposed_total": 62,
+  "original_baseline": "bedae28232ff59439b34a58bf8e2932f4a19d1c5",
+  "integration_notes": "Q4 accepted on 2026-10-13. Five scan/budget sections added on main after the initial review are retained as optional detail, with concise progress and scan-scope qualifications visible; the approved essential order remains unchanged."
 }

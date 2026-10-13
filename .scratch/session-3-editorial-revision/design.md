@@ -2,12 +2,13 @@
 
 The participant presentation repeats several mechanisms across standalone sections. Revise chapters 03–07 into a shorter causal route while keeping the technical argument, bilingual meaning, source evidence, and independently readable scenarios intact. Secondary material remains accessible in native disclosures or established references.
 
-**Status:** Round 1 decisions accepted; final shared-understanding confirmation pending. This file and the [section disposition map](section-plan.json) are a design proposal. Audience HTML, navigation code, source code, and spoken scripts have not been edited by this work.
+**Status:** Agreed. The user accepted Q1–Q3 and answered yes to Q4 on 2026-10-13, confirming shared understanding and approving local integration of these three design files. This file and the [section disposition map](section-plan.json) record the agreed design. Audience HTML, navigation code, source code, and spoken scripts have not been edited by this work.
 
 ## Scope and baseline
 
 - Work item: **354**, “Settle Session 3 chapters 03–07 editorial revision plan.”
-- Starting repository revision: `bedae28232ff59439b34a58bf8e2932f4a19d1c5` on local `main`.
+- Initial review revision: `bedae28232ff59439b34a58bf8e2932f4a19d1c5` on local `main`.
+- Integration source snapshot: `a2895e9520e139fcb43a5e8900cb53d2e394ae61`; subsequent maintenance-scope, wake-caller, and scan-cost explanations are preserved.
 - Design checkout: `/home/vimkim/gh/my-cubrid-page-buffer-seminar-editorial-design`, branch `docs/session-3-editorial-design`; merge destination is local `main`.
 - Product scope: the five paired chapters under `en/seminar-3/` and `ko/seminar-3/`, their root and paired contents maps, and the affected spoken explanations and screen maps.
 - CUBRID source baseline: `f799e05d77d5300c6ea5753b4a6cc7caee6d8912`.
@@ -19,7 +20,7 @@ The [seminar curriculum design](../../docs/seminar-curriculum-design.md) and [ac
 
 ## Accepted decisions
 
-The user accepted all three recommendations on 2026-10-13.
+The user accepted all three recommendations and final shared understanding on 2026-10-13.
 
 | Decision | Accepted answer | Consequence |
 | --- | --- | --- |
@@ -31,11 +32,11 @@ Established requirements already settle EN/KO editing, anchor retention, current
 
 ## Proposed essential route
 
-The proposed route has **62 standalone sections**, compared with **119** at the baseline. This is a consequence of conceptual grouping, not a fixed presentation-time limit or a quota to meet by hiding information. Split a retained section if projection would become too dense; record the reason and update its maps.
+The agreed route proposes **62 standalone sections**, compared with **124** at the integration source snapshot. The initial review covered 119 sections; five scan/budget sections subsequently landed on `main` and are now included in the disposition map. This is a consequence of conceptual grouping, not a fixed presentation-time limit or a quota to meet by hiding information. Split a retained section if projection would become too dense; record the reason and update its maps.
 
 | Chapter | Current sections | Proposed sections | Main editorial change |
 | --- | --- | --- | --- |
-| 03: daemon architecture | 31 | 15 | Separate responsibilities, scheduling, pending work, lost wakes, and lifecycle; route detailed page/list traversal to its owning chapters. |
+| 03: daemon architecture | 36 | 15 | Separate responsibilities, scheduling, pending work, lost wakes, and lifecycle; route detailed page/list traversal to its owning chapters. |
 | 04: page-flush | 10 | 9 | Keep the candidate-to-submission argument; make the post-flush material a short transition instead of a second completion lesson. |
 | 05: post-flush | 29 | 14 | Keep the normal journey, waiter distinction, and failure cases; combine each case with its explanation and trace. |
 | 06: maintenance | 24 | 12 | Connect sampling to one worked calculation and guarded zone movement; demote catalogs and secondary anomaly investigations. |
@@ -54,7 +55,7 @@ These are authoring dispositions, not new participant categories or evidence lab
 
 Retain the full-pool problem, background preparation, and reason for separate jobs. Use one role explanation and one schedule table. Fold `cadence-part-2`, `cadence-loops`, and `plain-language-bridge` into `cadence`; keep a concise distinction between completion waits and pacing waits. Move the boot/work checks from `cadence-part-3` beside the schedule.
 
-Keep `scan-scope` as the comparison of what each daemon visits. Replace `scan-page-flush` and `scan-maintenance` with anchored summaries linking to chapter 04's selection explanation and chapter 06's sampling/zone explanation. The architecture chapter still explains list-counter visits versus BCB traversal.
+Keep `scan-scope` as the comparison of what each daemon visits. Replace `scan-page-flush` and `scan-maintenance` with anchored summaries linking to chapter 04's selection explanation and chapter 06's sampling/zone explanation. The architecture chapter still explains list-counter visits versus BCB traversal. The newly integrated `scan-share`, `scan-budget`, and `scan-complexity` become details under `scan-scope`; `scan-queue-bound` becomes detail under the pending-work explanation, and `scan-elapsed-time` under the experiment. Keep short visible qualifications: zero scan weight excludes BCB visits rather than proving no dirty pages; one collection's allocation does not bound a whole daemon execution; queue capacity does not bound a concurrent drain or its elapsed time; credit calculation is distinct from writer-wakeup cost. Exact budget arithmetic, complexity terms, and illustrative elapsed-time calculations remain accessible.
 
 Keep Q05, its missed-wakeup risk, the decisive waiter code, and the remedy comparison visible. Combine `daemon-wakeup-risk` with `daemon-part-2`; keep `daemon-wakeup-source` and `daemon-wakeup-remedies` separate enough to preserve readable source reasoning. A retained work record does not itself schedule a sleeping consumer.
 
@@ -156,7 +157,7 @@ Rebuild root, EN, and KO `.screen-map` contents from the final standalone sectio
 
 Rewrite the chapters 03–07 blocks of [the full Session 3 script](../../my-presentation-script-session-3.html). Its `.screen-cues` map must match every retained Korean standalone screen and heading exactly. Adjust the actual narration and transitions, including the current page-3 instructions to visit the separate scan screens. Retain useful omitted narration as clearly optional presenter notes outside the main speaking sequence. The other seven blocks keep their scope.
 
-Work item **352** is independently writing a separate Korean chapters 03–07 speaker script. Work item **353** is clarifying maintenance LRU scope, and a separate daemon-wake worktree also exists. Preserve their checkouts and changes. At implementation start, rediscover current branches and artifacts; apply the editorial plan to the integrated current source without overwriting their work. Reconcile both script artifacts if the separate one has landed. Reconfirm only if an integrated technical correction changes the agreed editorial outcome.
+Work item **352** is independently writing a separate Korean chapters 03–07 speaker script. The maintenance-scope correction from work item **353** and direct-wake explanation are present in the integration source snapshot, together with the newer scan/budget sections. Retain their explanations and source qualifications; preserve remaining independent task checkouts and changes. At implementation start, rediscover current branches and artifacts; apply the editorial plan to the integrated current source without overwriting their work. Reconcile both script artifacts if the separate one has landed. Reconfirm only if an integrated technical correction changes the agreed editorial outcome.
 
 ## Verification and completion
 
@@ -174,7 +175,7 @@ Required implementation checks:
 
 For this design-only phase, check the Markdown source, relative links, disposition completeness/uniqueness, route owners/counts, source premises of the worked calculation, and diff. Audience rendering and runtime experiments are future implementation work.
 
-## Design tree and remaining frontier
+## Design tree and final confirmation
 
 | Branch | Prerequisite | State | Result |
 | --- | --- | --- | --- |
@@ -182,7 +183,7 @@ For this design-only phase, check the Markdown source, relative links, dispositi
 | Secondary material | Scope | Settled: Q1 | Optional access allowed; core cases remain essential |
 | Maintenance arithmetic | Scope | Settled: Q2 | One complete calculation stays essential; secondary variants remain accessible |
 | Spoken delivery | Scope | Settled: Q3 | Narration and maps both follow the revised route; concurrent script task preserved |
-| Section ownership and technical feasibility | Accepted choices and read-only fact review | Proposed concretely | Complete 119-section disposition map; 62 standalone owners; existing navigation reused |
-| Final shared understanding | Complete plan | Pending: Q4 | User confirms that this plan matches intent before HTML implementation |
+| Section ownership and technical feasibility | Accepted choices and read-only fact review | Settled: Q4 | Complete 124-section disposition map; 62 standalone owners; existing navigation reused |
+| Final shared understanding | Complete plan | Settled: Q4 | User answered yes, confirming the design and approving local integration of its three author artifacts |
 
-Final confirmation concerns this recorded plan. Implementation specification/tickets are the subsequent workflow, and this design record alone does not authorize starting HTML implementation or publishing changes remotely. Local integration of the design files has its own explicit Git approval unless the user's Q4 answer grants it together with shared understanding.
+The design frontier is empty. Q4 confirms this recorded plan and grants local rebase/merge approval for the design files. Implementation specification/tickets are the subsequent workflow; the approval does not start HTML implementation or authorize remote publication. The five newly integrated scan sections are mapped into the already agreed optional-detail policy without changing the essential order. Recheck later source/anchor additions when implementation starts.
