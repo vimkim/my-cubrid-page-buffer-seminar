@@ -11,9 +11,7 @@
 <p><strong>Page-flush</strong>는 이런 기록 작업을 미리 진행하는 백그라운드 서버 스레드입니다. 스레드는 서버 안에서 일을 수행하는 실행 흐름입니다. 요청을 처리하는 스레드와 page-flush는 별도로 움직입니다. 이번에는 page-flush가 P를 후보로 고른 경우를 따라갑니다.</p>
 <div class="callout">기본 흐름은 <strong>후보를 고른다 → 지금 상태를 확인한다 → 사본을 만든다 → 필요한 로그를 먼저 기록한다 → 사본 쓰기를 요청한다 → 남은 완료 처리를 한다 → 자리를 재사용해도 되는지 확인한다</strong>입니다. 실제 실행에서는 다른 페이지를 고르거나, 다른 스레드가 먼저 Q의 자리를 구해 줄 수도 있습니다.</div>
 <p class="source-note">소스 근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3780-L4165">page_buffer.c:L3780-L4165</a></p>
-<div class="section-qna" data-reset-answers="">
-<details class="answer-disclosure"><summary>Q&amp;A · 쓰기가 끝날 때까지 list mutex를 유지하면 안 되나요?</summary><p>그러면 BCB 잠금·WAL·저장소 대기 내내 list 접근을 배제하며 올바른 잠금 순서도 필요합니다. 설명한 설계는 list 보호를 풀고, 그 틈의 변화는 현재 상태 재검사로 처리합니다.</p></details>
-</div>
+
 </section>
 <section class="section" id="handoff-problem"><div class="eyebrow">04 · 2 / 10</div><h2>누가 페이지와 메모리 자리를 관리할까?</h2>
 <p data-teaching-def="P Q F"><strong>같은 사례를 이어갑니다.</strong> <code>P</code>는 메모리에 있는 dirty 페이지입니다. <code>Q</code>는 새로 읽으려는 페이지입니다. <code>F</code>는 P가 들어 있는 프레임의 관리 레코드 주소입니다. 이 관리 레코드를 <strong>BCB(buffer control block)</strong>라고 부릅니다.</p>
@@ -21,10 +19,8 @@
 <p>프레임을 다른 페이지에 써도 BCB의 저장 공간은 버퍼 풀이 존재하는 동안 유지됩니다. 그래서 주소 F가 같아도 그 안의 페이지는 바뀔 수 있습니다. 주소는 어디를 확인할지 알려 줍니다. VPID는 그 자리에 어떤 페이지가 있는지 알려 줍니다.</p>
 <p>여러 스레드가 같은 관리 정보를 만질 수 있습니다. <strong>Mutex</strong>는 그 정보에 한 번에 한 스레드만 접근하도록 하는 잠금입니다. 교체 목록을 보호하는 mutex와 BCB를 보호하는 mutex는 서로 다릅니다. Page-flush는 목록에서 후보를 찾은 뒤 목록 잠금을 놓고, 나중에 BCB를 잠가 다시 확인합니다.</p>
 <div class="callout">여기서 외울 것은 세 가지입니다. <strong>페이지는 데이터, 프레임은 자리, BCB는 그 자리의 관리 정보</strong>입니다. 관리 레코드가 계속 존재해도 페이지 식별자와 현재 사용 상태는 다시 확인해야 합니다.</div>
-<p class="source-note">소스 근거: </p>
-<div class="section-qna" data-reset-answers="">
-<details class="answer-disclosure"><summary>Q&amp;A · private list의 quota는 독점 소유권인가요?</summary><p>아닙니다. 교체 도메인의 보존 목표입니다. cold 프레임을 offer할지에는 영향을 주지만, 해당 페이지에 대한 특정 세션의 독점 접근 권한을 주지는 않습니다.</p></details>
-</div>
+<p class="source-note">소스 근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5667">page_buffer.c:5559–5667</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3789-L3848">page_buffer.c:3789–3848</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4063">page_buffer.c:4040–4063</a></p>
+
 </section>
 <section class="section" id="trigger"><div class="eyebrow">04 · 3 / 10</div><h2>Page-flush는 언제 움직일까?</h2>
 <p data-teaching-def="Q"><strong>계속되는 기본 사례:</strong> <code>Q</code>는 메모리에 없는 페이지입니다. Allocator는 Q를 담을 프레임을 찾지 못해 기다립니다. 이 프레임 대기자가 page-flush에 깨우기를 요청할 수 있습니다. <strong>깨우기</strong>는 백그라운드 스레드에 일을 확인할 기회를 주는 요청입니다.</p>
@@ -147,20 +143,24 @@
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · 카운터 이름만으로 이미 flush된 페이지라고 판단할 수 없는 이유는 무엇인가요?</summary><p>같은 증가 지점이 식별자 불일치·dirty 해제·flush 진행 중을 모두 묶습니다. 특정 후보를 진단하려면 보호된 검사에서 실제로 실패한 조건을 관측해야 합니다.</p></details>
 </div>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · 쓰기가 끝날 때까지 list mutex를 유지하면 안 되나요?</summary><p>목록 잠금을 계속 잡으면 BCB 잠금이나 데이터 기록을 기다리는 동안 다른 스레드도 그 목록을 사용하지 못합니다. 여러 잠금을 잡는 순서도 맞아야 합니다. 현재 설계는 목록 잠금을 놓고, 그 사이의 변화를 나중에 다시 확인합니다.</p></details>
+</div>
 </section>
 <section class="section" id="first-code-path"><div class="eyebrow">04 · 6 / 10</div><h2>왜 사본을 만들고 로그를 먼저 기록할까?</h2>
 <p data-teaching-def="P"><strong>기본 사례를 이어갑니다.</strong> <code>P</code>는 현재 검사를 통과한 dirty 페이지입니다. 이제 page-flush는 P의 바이트를 별도 공간에 복사합니다. <strong>사본(image)</strong>은 이때 복사한 페이지 내용입니다. 다른 작업이 나중에 원본을 바꿔도 이 사본은 바뀌지 않습니다.</p>
-<p>페이지를 변경하는 작업은 복구에 필요한 변경 기록도 만듭니다. 이 기록을 <strong>로그</strong>라고 부릅니다. 로그를 먼저 보존하고 그다음 페이지 사본을 제출하는 규칙이 <strong>WAL(write-ahead log)</strong>입니다. 로그를 남기는 변경에는 그 사본에 해당하는 로그까지 먼저 영속화돼 있어야 합니다.</p>
+<p>로그를 남기는 페이지 변경 작업은 복구에 필요한 변경 기록도 만듭니다. 이 기록을 <strong>로그</strong>라고 부릅니다. 로그를 먼저 보존하고 그다음 페이지 사본을 제출하는 규칙이 <strong>WAL(write-ahead log)</strong>입니다. 로그를 남기는 변경에는 그 사본에 해당하는 로그까지 먼저 영속화돼 있어야 합니다.</p>
 <p>로그의 위치를 <strong>LSA(log sequence address)</strong>라고 부릅니다. 사본을 만들 때 그 사본에 해당하는 LSA도 함께 확보합니다. 복사한 바이트와 로그 위치가 서로 맞아야 복구 순서를 지킬 수 있습니다.</p>
 <ol><li>다른 writer가 복사 중인 바이트를 바꾸지 못하게 보호합니다.</li><li>바뀌지 않을 사본과 그 사본의 로그 위치를 함께 확보합니다.</li><li>로그를 남기는 사본에 필요한 WAL 기록을 먼저 영속화합니다.</li><li>그 뒤 사본을 설정된 저장 경로로 전달합니다. 이 단계를 <strong>제출(submission)</strong>이라고 부릅니다. 반환 결과도 확인해야 합니다.</li></ol>
 <div class="callout">사본 쓰기를 요청하는 것, 요청이 성공하는 것, BCB의 완료 표시를 정리하는 것은 각각 다른 사건입니다. DWB 경로는 중간 버퍼가 사본을 받아 둔 단계일 수 있습니다. 성공 반환만으로 최종 볼륨 쓰기나 물리 저장 장치의 영속성을 입증하지 않습니다.</div>
-<details><summary>소스: 단일 페이지를 직접 쓰는 호출 경로</summary>
-<p>대표 호출 관계를 봅니다. 이 예시는 이웃 페이지 묶음과 DWB를 사용하지 않는 단일 페이지 직접 쓰기 분기입니다. 공통 함수는 <code>pgbuf_bcb_flush_with_wal</code>입니다. 먼저 필요한 로그를 처리하고 나중에 페이지 쓰기를 호출합니다.</p>
-<pre>pgbuf_page_flush_daemon_task::execute
+<figure class="source-call-path"><pre>pgbuf_page_flush_daemon_task::execute
   → pgbuf_flush_victim_candidates
     → pgbuf_bcb_flush_with_wal
       → logpb_flush_log_for_wal   [logged-image WAL step]
-      → fileio_write             [later direct-write step]</pre>
+      → fileio_write             [later direct-write step]</pre><figcaption>대표 호출 경로입니다. 이웃 묶음과 DWB를 사용하지 않는 단일 페이지 직접 쓰기 분기이며, 실행 중 수집한 스택은 아닙니다.</figcaption></figure>
+<details><summary>소스: 단일 페이지를 직접 쓰는 호출 경로</summary>
+<p>대표 호출 관계를 봅니다. 이 예시는 이웃 페이지 묶음과 DWB를 사용하지 않는 단일 페이지 직접 쓰기 분기입니다. 공통 함수는 <code>pgbuf_bcb_flush_with_wal</code>입니다. 먼저 필요한 로그를 처리하고 나중에 페이지 쓰기를 호출합니다.</p>
+
 <p>위 호출 관계는 고정 소스에서 확인했습니다. 실행 중 수집한 스택은 아닙니다. 함수 진입은 시도를 보여 줄 뿐이며 오류 반환은 성공 증거가 아닙니다. DWB는 선택적인 사본 저장 경로입니다. 사본 확보와 DWB의 장애 대비 역할은 <a href="02-flush-generations.html#copy-versus-dwb">앞의 flush 장</a>에서 더 자세히 다룹니다.</p>
 <p class="source-note">소스 근거: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17055">page_buffer.c:L17029-L17055</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4088">page_buffer.c:L4040-L4088</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10830-L10898">page_buffer.c:L10830-L10898</a></p>
 </details>
@@ -209,6 +209,10 @@
 </div>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · completion 큐를 늘리면 allocation 대기가 반드시 줄어드나요?</summary><p>아닙니다. 더 많은 항목을 보관할 수 있지만 consumer에는 스케줄링·잠금·적격한 수신자가 필요합니다. producer가 계속 채울 수 있고, 항목 완료가 재사용 프레임으로 이어지지 않을 수도 있습니다.</p></details>
+</div>
+<p>Private 목록은 작업 문맥에 배정해 사용하는 교체 목록의 한 종류입니다. 이 목록에서 남겨 두려는 목표 페이지 수를 <strong>quota</strong>라고 부릅니다. 제안 여부를 정하는 보존 정책에 쓰는 값입니다.</p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · private list의 quota는 독점 소유권인가요?</summary><p>아닙니다. 교체 도메인의 보존 목표입니다. cold 프레임을 offer할지에는 영향을 주지만, 해당 페이지에 대한 특정 세션의 독점 접근 권한을 주지는 않습니다.</p></details>
 </div>
 </section>
 <section class="section" id="candidate-races"><div class="eyebrow">04 · 8 / 10</div><h2>다른 작업이 끼어들면 무엇이 달라질까?</h2>

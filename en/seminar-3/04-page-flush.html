@@ -11,9 +11,7 @@
 <p><strong>Page-flush</strong> is a background server thread that helps do this writing ahead of reuse. A thread is an execution path inside the server. The requesting thread and page-flush run separately. We will follow a case in which page-flush chooses P as a candidate.</p>
 <div class="callout">The basic journey is <strong>choose a candidate → check its current state → make a copy → write the required log first → request the copy’s write → finish the old work → check permission to reuse the frame</strong>. An actual run may choose another page, or another thread may find a frame for Q first.</div>
 <p class="source-note">Source evidence: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3780-L4165">page_buffer.c:L3780-L4165</a></p>
-<div class="section-qna" data-reset-answers="">
-<details class="answer-disclosure"><summary>Q&amp;A · Why not keep the list mutex until the write finishes?</summary><p>That would extend list exclusion across BCB locking, WAL and storage waits, and requires a valid lock order. The shown design releases list protection and pays for that gap with current-state revalidation.</p></details>
-</div>
+
 </section>
 <section class="section" id="handoff-problem"><div class="eyebrow">04 · 2 / 10</div><h2>Who manages the page and its memory slot?</h2>
 <p data-teaching-def="P Q F"><strong>Continue the same case.</strong> <code>P</code> is the resident dirty page. <code>Q</code> is the page to read next. <code>F</code> is the address of the control record for P’s frame. This record is a <strong>BCB (buffer control block)</strong>.</p>
@@ -21,10 +19,8 @@
 <p>The BCB storage lasts while the buffer pool exists, even when its frame is reused for another page. The same address F can therefore describe a different page later. The address tells us where to look. The VPID tells us which page is there.</p>
 <p>Several threads can access the same control information. A <strong>mutex</strong> is a lock allowing one thread at a time to access that information. The replacement list and each BCB have different mutexes. Page-flush releases the list lock after collection, then locks a BCB to check again.</p>
 <div class="callout">Keep three objects separate: <strong>the page is the data, the frame is its slot, and the BCB is the slot’s control record</strong>. A surviving record still needs checks of its current page identity and use state.</div>
-<p class="source-note">Source evidence: </p>
-<div class="section-qna" data-reset-answers="">
-<details class="answer-disclosure"><summary>Q&amp;A · Is a private-list quota an exclusive ownership claim?</summary><p>No. It is a retention target for a replacement domain. It can affect whether a cold frame is offered, but does not give one session exclusive access to its page.</p></details>
-</div>
+<p class="source-note">Source evidence: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5559-L5667">page_buffer.c:5559–5667</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3789-L3848">page_buffer.c:3789–3848</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4063">page_buffer.c:4040–4063</a></p>
+
 </section>
 <section class="section" id="trigger"><div class="eyebrow">04 · 3 / 10</div><h2>When does page-flush get a chance to work?</h2>
 <p data-teaching-def="Q"><strong>Continue the basic case:</strong> <code>Q</code> is absent from memory. The allocator waits after failing to find a frame for Q. This frame waiter can request a page-flush wake. A <strong>wake</strong> asks a background thread to get a chance to check for work.</p>
@@ -147,6 +143,9 @@
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Why is the counter name insufficient to identify an already-flushed page?</summary><p>The same increment covers identity mismatch, no longer dirty and already flushing. To diagnose one nomination, observe the actual failing premise under the protected check.</p></details>
 </div>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Why not keep the list mutex until the write finishes?</summary><p>Keeping the list lock would block other threads from that list while waiting for the BCB lock or data writing. Multiple locks also need a valid acquisition order. The current design releases the list lock and later checks for changes made in between.</p></details>
+</div>
 </section>
 <section class="section" id="first-code-path"><div class="eyebrow">04 · 6 / 10</div><h2>Why capture a copy and write the log first?</h2>
 <p data-teaching-def="P"><strong>Continue the basic case.</strong> <code>P</code> is the dirty page that passed the current checks. Page-flush copies P’s bytes into separate storage. The <strong>image</strong> is this copy of the page contents. Later changes to the original cannot change that image.</p>
@@ -154,13 +153,14 @@
 <p>An <strong>LSA (log sequence address)</strong> identifies a position in the log. Capturing the page also captures its matching LSA. Matching copied bytes to the correct log position is necessary for recovery ordering.</p>
 <ol><li>Protect the bytes against a conflicting writer during copying.</li><li>Capture a stable copy and its matching log position.</li><li>Make the required WAL durable for a logged image.</li><li>Then pass the image to its configured write path. This is <strong>submission</strong>. Its return result must also be checked.</li></ol>
 <div class="callout">Requesting a write, getting a successful result and clearing the BCB’s completion state are separate events. On a DWB path, success can mean acceptance into an intermediate buffer. A success return alone proves neither a home-volume write nor physical-device persistence.</div>
-<details><summary>Source: the single-page direct-write call path</summary>
-<p>This representative call path is the single-page direct-write branch without neighbor batching or DWB. Its common function is <code>pgbuf_bcb_flush_with_wal</code>. It handles the required log before calling the page writer.</p>
-<pre>pgbuf_page_flush_daemon_task::execute
+<figure class="source-call-path"><pre>pgbuf_page_flush_daemon_task::execute
   → pgbuf_flush_victim_candidates
     → pgbuf_bcb_flush_with_wal
       → logpb_flush_log_for_wal   [logged-image WAL step]
-      → fileio_write             [later direct-write step]</pre>
+      → fileio_write             [later direct-write step]</pre><figcaption>Representative calls on the single-page direct-write branch without neighbor batching or DWB; not a captured runtime stack.</figcaption></figure>
+<details><summary>Source: the single-page direct-write call path</summary>
+<p>This representative call path is the single-page direct-write branch without neighbor batching or DWB. Its common function is <code>pgbuf_bcb_flush_with_wal</code>. It handles the required log before calling the page writer.</p>
+
 <p>These calls were verified in the pinned source, not captured as a runtime stack. Function entry shows an attempt; an error return does not prove success. DWB is an optional image-staging path. <a href="02-flush-generations.html#copy-versus-dwb">The earlier flush chapter</a> explains image capture and DWB’s failure-protection role in detail.</p>
 <p class="source-note">Source evidence: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17029-L17055">page_buffer.c:L17029-L17055</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4040-L4088">page_buffer.c:L4040-L4088</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10830-L10898">page_buffer.c:L10830-L10898</a></p>
 </details>
@@ -209,6 +209,10 @@
 </div>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Would a larger completion queue guarantee shorter allocation waits?</summary><p>No. More capacity can retain more outstanding items, but consumers still need scheduling, locks and eligible receivers. Producers may refill it, and an item’s completion may yield no reusable frame.</p></details>
+</div>
+<p>A private list is a kind of replacement list assigned to work contexts. Its <strong>quota</strong> is the target number of pages to retain there. It is a retention-policy input used when deciding whether to offer a frame.</p>
+<div class="section-qna" data-reset-answers="">
+<details class="answer-disclosure"><summary>Q&amp;A · Is a private-list quota an exclusive ownership claim?</summary><p>No. It is a retention target for a replacement domain. It can affect whether a cold frame is offered, but does not give one session exclusive access to its page.</p></details>
 </div>
 </section>
 <section class="section" id="candidate-races"><div class="eyebrow">04 · 8 / 10</div><h2>What changes when another task intervenes?</h2>
