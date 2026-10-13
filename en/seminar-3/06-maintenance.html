@@ -24,7 +24,7 @@
 <p>CUBRID groups resident pages into replacement lists. A list records where its pages stand in the replacement policy; it is not a separate allocation of memory slots.</p>
 <p>A <strong>private list</strong> is associated with sessions; several sessions can share one. A <strong>shared list</strong> provides common retention accounting. Both belong to the same buffer pool. Private does not mean exclusive page access, and shared does not mean scan pages.</p>
 <p>A <strong>quota</strong> is the target number of pages to retain for a private list. It is not a reservation or a hard limit on pages that may be present. Shared lists also have computed target sizes for their retention zones.</p>
-<p>Maintenance uses activity samples to recompute targets and zone-size thresholds. A zone is a part of a replacement list with a particular retention role. When adjustment conditions permit, excess entries move toward the candidate zone.</p>
+<p>Maintenance uses activity samples to recompute private-LRU quotas and private/shared LRU zone-size thresholds. Total buffer-pool frame capacity stays unchanged. A zone is a part of a replacement list with a particular retention role. When adjustment conditions permit, excess entries move toward the candidate zone.</p>
 <div class="callout">A changed target does not make a frame safe to overwrite. The paths that offer or reuse it must check its current users, waiters and pending write obligations under protection.</div>
 </section>
 <section class="section" id="activity-samples"><div class="eyebrow">06 · 4 / 24</div>
@@ -176,7 +176,7 @@ pgbuf_lru_adjust_zone1(thread_p, lru_list, false);
 <section class="section" id="chapter-recap"><div class="eyebrow">06 · 11 / 24</div>
 <h2>What can we now explain about maintenance?</h2>
 <p>Maintenance revisits retention targets as observed activity changes. Private and shared replacement lists are policy groups within the same buffer pool; they do not grant exclusive page access.</p>
-<ol><li><strong>Why adjust?</strong> A fixed target can become poorly suited to changing work.</li><li><strong>What changes?</strong> Quotas, zone-size thresholds and candidate-source information. Movement occurs only when its adjustment guards pass.</li><li><strong>When is there an update?</strong> When a helper call accepts a new sample set, not on every timer tick or call.</li><li><strong>What still needs checking?</strong> Current identity, use, waiters and write obligations before a candidate can be safely received and reused.</li></ol>
+<ol><li><strong>Why adjust?</strong> A fixed target can become poorly suited to changing work.</li><li><strong>What changes?</strong> Private-LRU quotas, private/shared LRU zone-size thresholds and candidate-source information. Movement occurs only when its adjustment guards pass.</li><li><strong>When is there an update?</strong> When a helper call accepts a new sample set, not on every timer tick or call.</li><li><strong>What still needs checking?</strong> Current identity, use, waiters and write obligations before a candidate can be safely received and reused.</li></ol>
 <p>The remaining screens make this model precise: exact admission conditions, sample calculations, startup inputs, CPU work and revision-specific backup findings. They elaborate the same mechanism; they do not change the meaning of quota.</p>
 </section>
 <section class="section" id="admission-guards"><div class="eyebrow">06 · 12 / 24</div>
