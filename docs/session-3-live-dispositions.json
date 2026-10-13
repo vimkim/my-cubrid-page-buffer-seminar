@@ -331,8 +331,10 @@
     "source": [
       "en/lessons/0006c-follow-maintenance-and-pacing.html#q14"
     ],
-    "target": "en/seminar-3/07-flush-control.html#q14",
-    "terminal": null
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the four-section token explanation at the user’s request; original supporting material remains at source links."
   },
   {
     "language": "en",
@@ -341,8 +343,10 @@
     "source": [
       "en/lessons/0006c-follow-maintenance-and-pacing.html#q15"
     ],
-    "target": "en/seminar-3/07-flush-control.html#q15",
-    "terminal": null
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the four-section token explanation at the user’s request; original supporting material remains at source links."
   },
   {
     "language": "en",
@@ -351,8 +355,10 @@
     "source": [
       "en/reference/defense-pacing.html#d28"
     ],
-    "target": "en/seminar-3/07-flush-control.html#d28",
-    "terminal": null
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the four-section token explanation at the user’s request; original supporting material remains at source links."
   },
   {
     "language": "en",
@@ -363,11 +369,12 @@
     ],
     "target": "en/seminar-3/07-flush-control.html#token-state-trace",
     "terminal": [
-      "A and B writes already succeeded",
-      "0 (fresh shortage case)",
-      "A: may wait; B: proceeds",
-      "soft pacing; no strict write ceiling"
-    ]
+      "13 pages",
+      "5",
+      "0 pages",
+      "continues"
+    ],
+    "reason": "Rewritten as one continuous fixed-rate example with no independent shortage reset."
   },
   {
     "language": "en",
@@ -376,13 +383,10 @@
     "source": [
       "en/reference/defense-pacing.html#pacing-defense-trace"
     ],
-    "target": "en/seminar-3/07-flush-control.html#pacing-defense-trace",
-    "terminal": [
-      "consume 3; deficit 1; wait/retry",
-      "consume 4; tokens=1",
-      "continue immediately",
-      "four pages already written"
-    ]
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the four-section token explanation at the user’s request; original supporting material remains at source links."
   },
   {
     "language": "en",
@@ -1032,8 +1036,10 @@
     "source": [
       "ko/lessons/0006c-follow-maintenance-and-pacing.html#q14"
     ],
-    "target": "ko/seminar-3/07-flush-control.html#q14",
-    "terminal": null
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the four-section token explanation at the user’s request; original supporting material remains at source links."
   },
   {
     "language": "ko",
@@ -1042,8 +1048,10 @@
     "source": [
       "ko/lessons/0006c-follow-maintenance-and-pacing.html#q15"
     ],
-    "target": "ko/seminar-3/07-flush-control.html#q15",
-    "terminal": null
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the four-section token explanation at the user’s request; original supporting material remains at source links."
   },
   {
     "language": "ko",
@@ -1052,8 +1060,10 @@
     "source": [
       "ko/reference/defense-pacing.html#d28"
     ],
-    "target": "ko/seminar-3/07-flush-control.html#d28",
-    "terminal": null
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the four-section token explanation at the user’s request; original supporting material remains at source links."
   },
   {
     "language": "ko",
@@ -1064,11 +1074,12 @@
     ],
     "target": "ko/seminar-3/07-flush-control.html#token-state-trace",
     "terminal": [
-      "A and B writes already succeeded",
-      "0 (fresh shortage case)",
-      "A: may wait; B: proceeds",
-      "soft pacing; no strict write ceiling"
-    ]
+      "13페이지",
+      "5",
+      "0페이지",
+      "계속 진행"
+    ],
+    "reason": "Rewritten as one continuous fixed-rate example with no independent shortage reset."
   },
   {
     "language": "ko",
@@ -1077,13 +1088,10 @@
     "source": [
       "ko/reference/defense-pacing.html#pacing-defense-trace"
     ],
-    "target": "ko/seminar-3/07-flush-control.html#pacing-defense-trace",
-    "terminal": [
-      "consume 3; deficit 1; wait/retry",
-      "consume 4; tokens=1",
-      "continue immediately",
-      "four pages already written"
-    ]
+    "target": null,
+    "terminal": null,
+    "disposition": "omitted",
+    "reason": "Removed from the four-section token explanation at the user’s request; original supporting material remains at source links."
   },
   {
     "language": "ko",

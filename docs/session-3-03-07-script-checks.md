@@ -1,5 +1,7 @@
 # Session 3 chapters 03–07 speaker script
 
+The work item 352 receipts below describe the earlier 124-screen version. Work item 359 narrows chapter 07 to four screens; the current companion has 103 screens. The former flush-control SVG is removed because no audience page displays it. The current scope and checks are recorded in [the chapter-07 revision](session-3-readability-review.md#chapter-07-token-and-refresh-rewrite-work-item-359).
+
 Work item 352 implements the selected five-chapter delivery. The Korean presenter companion is [my-presentation-script-session-3-03-07.html](../my-presentation-script-session-3-03-07.html). It follows all 124 current audience screens: 36 in chapter 03, 10 in 04, 29 in 05, 24 in 06 and 25 in 07. Each screen has its exact heading and anchor, a central claim, spoken paragraphs, a visual or control cue, a question, expected answer, misconception note and transition. The opening supplies the omitted prerequisite concepts; the ending closes after chapter 07.
 
 Four new English SVGs show each daemon's data structures and access order. They are displayed in the English/Korean audience pairs and in the Korean script, with Korean spoken diagram explanations:

@@ -2857,3 +2857,79 @@ Technical receipts for this continuation:
   answer closed. The updated SVG's text stays within its viewBox; the inspected
   pages have no JavaScript error. These are author observations, not participant
   comprehension or engine-runtime evidence.
+
+
+## Chapter 07 token and refresh rewrite (work item 359)
+
+The user requested four short sections explaining only tokens and the daemon's
+allowance calculation. The paired chapter now owns token meaning and post-write
+consumption, the elapsed-time/compute/replace/wake cycle, fixed versus adaptive
+calculation, and one continuous ordinary-writer trace. It replaces 25 screens
+with four. The three contents maps and both Korean presenter companions follow
+these four headings; the selected 03–07 companion now covers 103 screens.
+Other chapter bodies are unchanged.
+
+All implementation claims were checked in the detached CUBRID worktree at
+`f799e05d77d5300c6ea5753b4a6cc7caee6d8912`: `file_io.c:281–297,751–929,4197–4204`,
+`page_buffer.c:14853–14884,17100–17133,17210–17234`, and
+`system_parameter.c:1830–1865`. The adaptive dirty helper retains an earlier count
+and updates it only when the current count grows; it is not a comparison with
+the immediately preceding interval. The allowance starts from the previous
+generated number, not the unspent balance. The fixed-rate setting is not an
+adaptive ceiling. Integer truncation applies to the 10%/50% adjustments.
+
+The independent fixed calculation is 10,000 pages/s × 0.05 s = 500 tokens. The
+independent adaptive example starts at 128 tokens, exhausts the balance with a
+zero dirty suggestion, adds 64 and publishes 192; its 16 KiB/50 ms minimum is
+128. Neither example reports throughput.
+
+The single trace uses fixed mode at 140 pages/s, actual 50 ms intervals, an
+initialized bucket, and one ordinary participating writer with no log critical
+section. Its timeline is continuous: publish 7; successfully write 4 then charge
+to leave 3; replace 3 with 7; successfully write 9 more, consume 7 and wait for
+2; refresh to 7, wake, charge 2 and leave 5. OS-write counts total 13 at the end;
+unaccounted page charges are zero. No branch resets into a second writer.
+The trace carries its assumptions before controls, so generated status does not
+introduce undefined actor notation. The page introduces no A/B labels; its
+teaching-label registrations are empty. Each calculation defines its inputs
+before use, including the buffer pool and dirty pages.
+
+Retired section and question bookmarks remain as aliases inside relevant live
+sections. Q14, Q15, D28 and the pacing-policy comparison trace leave the active
+Session 3 population; their original supporting material remains linked through
+the disposition registry. The retained token trace has language-specific terminal
+receipts. The Session 3 validator requires this chapter's exact four-screen
+order, still requires the other chapters' protocol/proposal sections, and still
+checks all retained questions, traces and every contents map. A regression
+rejects missing, reordered and additional chapter-07 screens.
+
+The now-unused flush-control data-structure SVG was deleted to satisfy the
+root-asset ownership rule. The other three new daemon diagrams remain displayed.
+Only the changed chapter/contents fingerprints were refreshed; human review
+states remain pending. This is an AI author review, not a human acceptance record.
+
+Validation used a read-only Copyparty root at `http://127.0.0.1:3943` and headless
+Chromium through the installed Playwright module:
+
+- Full repository suite: 263 tests passed, zero failures or skips. Final
+  prerequisite wording was additionally checked with the focused browser and
+  contents suites.
+- Focused chapter browser checks: 78 passed across fresh entries, reading and
+  presentation at 1920/1366/390/320 widths, all five trace steps/reset, old anchor
+  entry and no-JavaScript reading. No horizontal overflow or browser errors.
+- Session 3 route/audience contract and technical EN/KO parity: PASS.
+- Maintainer Guide aggregate: PASS, 43 source/DOM pages, 74 displayed SVGs,
+  zero orphans, 117 HTTP resources.
+- Served bilingual aggregate: technical gates have no new failures. Overall
+  FAIL remains attributable to 78 pending Korean receipts and 102 stale
+  fingerprints. An immutable copy of the actual task baseline `f5f5d6dc` has
+  78 pending receipts and 104 stale fingerprints.
+- Korean calculation and trace screenshots were inspected. The calculation
+  section needs vertical scrolling in projection mode; mobile reading remains
+  within the viewport. `git diff --check` and JavaScript syntax checks pass.
+
+Temporary logs, screenshots, normalized fingerprints and the focused harness
+are under `/tmp/flush-control-simple-359/`. No storage experiment was run.
+The task checkout is `/home/vimkim/gh/my-cubrid-page-buffer-seminar-flush-control-simple`,
+branch `docs/flush-control-simple`, based on `f5f5d6dc0a6f09d5b0906e544084af125f453b93`.
+Local integration into `main` requires the repository's one merge approval.

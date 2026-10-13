@@ -35,8 +35,8 @@
     },
     {
       "file": "07-flush-control.html",
-      "en": "Pace work after the write",
-      "ko": "쓰기 이후의 속도 조절"
+      "en": "Tokens and the flush-control daemon",
+      "ko": "Token과 flush-control 데몬"
     },
     {
       "file": "08-postgresql-buffers.html",

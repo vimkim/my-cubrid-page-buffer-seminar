@@ -60,10 +60,7 @@
       "L",
       "D"
     ],
-    "en/seminar-3/07-flush-control.html": [
-      "A",
-      "B"
-    ],
+    "en/seminar-3/07-flush-control.html": [],
     "en/seminar-3/08-postgresql-buffers.html": [
       "D",
       "A",
@@ -189,10 +186,7 @@
       "L",
       "D"
     ],
-    "ko/seminar-3/07-flush-control.html": [
-      "A",
-      "B"
-    ],
+    "ko/seminar-3/07-flush-control.html": [],
     "ko/seminar-3/08-postgresql-buffers.html": [
       "D",
       "A",

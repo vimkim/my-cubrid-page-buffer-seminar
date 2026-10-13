@@ -8,7 +8,7 @@ import { checkTeachingDefinitions } from './session-3-definitions.mjs';
 const route = JSON.parse(await fs.readFile('session-3-route.json', 'utf8'));
 const dispositions = JSON.parse(await fs.readFile('docs/session-3-live-dispositions.json', 'utf8'));
 
-test('the real dedicated product delivers all questions, traces and the closed route', async () => {
+test('the real dedicated product delivers the retained questions, traces and the closed route', async () => {
   assert.deepEqual(await validateSession3(process.cwd()), { count: 27, failures: [] });
   assert.equal(requiresLegacyRedirect({ path: 'lessons/0006-flush-one-generation.html', legacyRedirect: false }), true,
     'existing migrated routes retain source and served redirect checks');
@@ -194,10 +194,10 @@ for (const lang of ['en', 'ko']) {
     } finally { await page.close(); }
   });
 
-  test(`${lang}: all 25 relocated/new traces retain outcomes and independent keyboard reset`, { skip: unavailable }, async () => {
+  test(`${lang}: retained traces preserve outcomes and independent keyboard reset`, { skip: unavailable }, async () => {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
     try {
-      const grouped = Map.groupBy(dispositions.filter(d => d.language === lang && d.kind === 'trace'), d => d.target.split('#')[0]);
+      const grouped = Map.groupBy(dispositions.filter(d => d.language === lang && d.kind === 'trace' && d.target), d => d.target.split('#')[0]);
       for (const [file, traces] of grouped) {
         await page.goto(base + '/' + file);
         for (const record of traces) {

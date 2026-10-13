@@ -3,7 +3,7 @@ import test from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { chapterScreens, checkContentsScreens, validateSession3 } from './session-3-contract.mjs';
+import { chapterScreens, checkContentsScreens, checkSessionChapter, validateSession3 } from './session-3-contract.mjs';
 const chapter = '<section class="section" id="workload"><h2>A missing page needs a frame</h2></section><section class="section" id="new-setup"><h2>Explain the actors &amp; their starting state</h2></section>';
 const screens = chapterScreens(chapter, '01-opening.html');
 const map = '<details class="screen-map"><summary>Screens</summary><a href="01-opening.html#workload">A missing page needs a frame</a><a href="01-opening.html#new-setup">Explain the actors &amp; their starting state</a></details>';
@@ -16,6 +16,17 @@ test('stale headings and reordered screens fail even when their anchors still ex
   assert.ok(checkContentsScreens(map.replace('A missing page needs a frame', 'What remains blocked?'), screens).length);
   assert.ok(checkContentsScreens(map, screens.toReversed()).length);
   assert.deepEqual(checkContentsScreens(map.replaceAll('href="01-', 'href="ko/seminar-3/01-'), screens, 'ko/seminar-3/'), []);
+});
+test('the token chapter accepts four screens and rejects a missing, reordered or extra screen', async () => {
+  const route = JSON.parse(await fs.readFile('session-3-route.json', 'utf8'));
+  const chapter = route.chapters[6];
+  const html = await fs.readFile('en/seminar-3/' + chapter.file, 'utf8');
+  const check = text => checkSessionChapter(text, chapter, 6, route, 'en');
+  assert.deepEqual(check(html), []);
+  assert.ok(check(html.replace('class="section" id="credit-code-path"', 'class="section" id="missing"')).length);
+  assert.ok(check(html.replace(/class="section" id="(credit-code-path|control-policy)"/g,
+    (_, id) => `class="section" id="${id === 'credit-code-path' ? 'control-policy' : 'credit-code-path'}"`)).length);
+  assert.ok(check(html.replace('</article>', '<section class="section" id="extra"><h2>Extra screen</h2></section></article>')).length);
 });
 test('a null registry cannot silently disable the mandatory product check', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'session3-registry-'));

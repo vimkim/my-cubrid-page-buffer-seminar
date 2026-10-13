@@ -27,8 +27,15 @@ export function checkContentsScreens(html, screens, prefix = '') {
 
 export function checkSessionChapter(html, chapter, index, route, lang) {
   const failures = [];
-  const expected = ['data-session-3', 'data-lecture-nav', 'data-presentation-controls',
-    'id="workload"', 'id="replacement-protocol"', 'id="experiment"'];
+  const tokenChapter = chapter.file === '07-flush-control.html';
+  const expected = ['data-session-3', 'data-lecture-nav', 'data-presentation-controls', 'id="workload"'];
+  if (tokenChapter) {
+    const actual = chapterScreens(html, chapter.file).map(screen => screen.href.split('#')[1]);
+    if (JSON.stringify(actual) !== JSON.stringify(['workload', 'credit-code-path', 'control-policy', 'control-part-3']))
+      failures.push('token chapter must contain the four ordered explanation screens');
+  } else {
+    expected.push('id="replacement-protocol"', 'id="experiment"');
+  }
   for (const marker of expected) if (!html.includes(marker)) failures.push(`missing ${marker}`);
   const nav = html.match(/<nav\b[^>]*data-lecture-nav[^>]*>([\s\S]*?)<\/nav>/)?.[1] || '';
   if (!links(nav, 'data-session-return').includes('toc.html')) failures.push('return must reach the dedicated TOC');
@@ -93,9 +100,10 @@ export async function validateSession3(root) {
       traces += [...html.matchAll(/\bdata-state-trace(?:\s|=|>)/g)].length;
       for (const pin of [route.cubrid, route.postgres]) if (!html.includes(pin)) failures.push(`${file}: missing pin ${pin}`);
     }
-    const wanted = [...Array.from({ length: 24 }, (_, i) => `Q${String(i + 1).padStart(2, '0')}`), ...Array.from({ length: 9 }, (_, i) => `D${i + 25}`).filter(id => id !== 'D27')].sort();
-    if (JSON.stringify(questions.sort()) !== JSON.stringify(wanted)) failures.push(`${lang}: Q01-Q24/D25-D33 except omitted D27 must each occur once`);
-    if (traces < 25) failures.push(`${lang}: preserve 22 traces and the three new cases`);
+    const omitted = new Set(['D27', 'Q14', 'Q15', 'D28']);
+    const wanted = [...Array.from({ length: 24 }, (_, i) => `Q${String(i + 1).padStart(2, '0')}`), ...Array.from({ length: 9 }, (_, i) => `D${i + 25}`)].filter(id => !omitted.has(id)).sort();
+    if (JSON.stringify(questions.sort()) !== JSON.stringify(wanted)) failures.push(`${lang}: retained questions must each occur once; D27/Q14/Q15/D28 are omitted`);
+    if (traces < 24) failures.push(`${lang}: preserve the other traces and the continuous token example`);
     const toc = await readFile(path.join(root, lang, 'seminar-3/toc.html'), 'utf8');
     screensByLanguage[lang] = screens;
     failures.push(...checkContentsScreens(toc, screens).map(f => `${lang}/seminar-3/toc.html: ${f}`));
