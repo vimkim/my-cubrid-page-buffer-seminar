@@ -2,6 +2,8 @@
 
 This is an author audit outside participant navigation. The rewrite makes the starting page, frame, actor and outstanding work visible before each causal example. English owns seminar wording; Korean preserves the same premises, guards and outcomes. Pinned source remains technical authority. Agent editorial review and automated checks do not supply human language acceptance; work item 55 remains pending.
 
+Work item 343 subsequently revises Chapter 05 into twelve first-pass screens and sixteen maintainer-analysis screens. Its [accepted outline, six new local-definition/reset entries and source qualifications](post-flush-readability-design.md) supplement the historical Chapter 05 ledger below. All original anchors, questions, source routes and trace snapshots are retained. Current page fingerprints remain pending human acceptance.
+
 ## Physical-page ownership
 
 Exactly 27 distinct clean-context authors own the 27 physical HTML pages. Revisions return to the original author. Every author used a separate sibling worktree and staged only the assigned HTML. Input and final author commits below are integration-history evidence; a continued author records the selected continuation input. Each original Korean dispatch contained the reviewed initial English rewrite. Later English corrections were returned to the same physical-page authors and compared again. Shared definitions, metadata, visuals, script and checks belong to the coordinator.
