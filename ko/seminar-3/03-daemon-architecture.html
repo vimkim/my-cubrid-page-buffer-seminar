@@ -70,12 +70,20 @@
 <div class="table-scroll"><table><thead><tr><th>데몬</th><th>작업</th><th>목표 주기 또는 대기 증가 정책</th><th>누가 깨우기를 요청하는가?</th><th>페이지 이미지 I/O?</th></tr></thead><tbody>
 <tr><td><code>pgbuf-maintain</code></td><td>풀의 목표 몫(quota)과 보존 zone 조정</td><td>100 ms마다 시도; 컴파일된 정책</td><td>일반 작업용 깨우기 없음</td><td>아니요</td></tr>
 <tr><td><code>pgbuf-page-flush</code></td><td>차가운 dirty 페이지를 보존해 프레임이 재사용 가능해지도록 준비</td><td><code>page_flush_interval</code>: 기본값 1,000 ms; 0은 깨우기 전용 대기</td><td>프레임을 찾지 못한 요청 또는 교체 후보 탐색 압력</td><td><strong>예</strong></td></tr>
-<tr><td><code>pgbuf-page-post-flush</code></td><td>BCB(프레임 관리 레코드)를 마무리하고 프레임을 제안할 수 있음</td><td>1 → 10 → 100 ms 후 깨우기 전용 대기; 컴파일된 정책</td><td>생산자가 완료 큐인 <code>flushed_bcbs</code>에 BCB 포인터 추가</td><td>새 기록 없음</td></tr>
+<tr><td><code>pgbuf-page-post-flush</code></td><td>BCB(프레임 관리 레코드)를 마무리하고 프레임을 제안할 수 있음</td><td>1 → 10 → 100 ms 후 깨우기 전용 대기; 컴파일된 정책</td><td>Page-flush가 완료 큐인 <code>flushed_bcbs</code>에 BCB 포인터를 넣는 데 성공한 뒤 깨우기 요청</td><td>새 기록 없음</td></tr>
 <tr><td><code>pgbuf-flush-control</code></td><td>OS 기록 후 참여하는 기록 스레드를 멈춰 기다리게 할 수 있는 페이지 단위 크레딧 교체</td><td>목표 50 ms; 컴파일된 정책</td><td>일반 작업용 깨우기 없음</td><td>아니요</td></tr>
 </tbody></table></div>
 <p class="source-note"><a href="04-page-flush.html#trigger">설정 가능한 Page-flush 주기</a>는 다른 역할들의 컴파일된 대기 주기와 다릅니다.</p>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · post-flush가 결국 타이머 없이 기다리는 이유는 무엇인가요?</summary><p>대기 시간을 늘리면 유휴 polling을 줄일 수 있고, producer가 작업을 넣으면 깨울 수 있습니다. 이 정책에는 유지된 큐 상태와 올바른 wake·확인 순서가 필요하며 완료 기한을 보장하지는 않습니다.</p></details>
+<details class="answer-disclosure"><summary>Q&amp;A · 그럼 post-flush를 깨우는 주체는 누구인가요?</summary>
+<p><strong>정상 작업에서는 page-flush 데몬이 직접 깨웁니다.</strong> 앞 답변의 producer는 페이지 이미지를 제출하고 완료 처리를 큐에 넘기는 page-flush 스레드입니다. <code>pgbuf_bcb_flush_with_wal()</code>에서 이미지 제출에 성공한 뒤 다음 조건을 모두 만족해야 합니다.</p>
+<ol><li>Page-flush 경로의 호출입니다(<code>is_page_flush_thread == true</code>).</li><li>Post-flush 데몬이 존재합니다.</li><li>재사용할 프레임을 기다리는 allocator 요청이 있습니다.</li><li><code>pgbuf_Pool.flushed_bcbs-&gt;produce(bufptr)</code>가 성공해 BCB 포인터를 큐에 넣습니다.</li></ol>
+<p>이후 <code>pgbuf_Page_post_flush_daemon-&gt;wakeup()</code>을 호출합니다. 순서는 <strong>큐에 작업 게시 → 깨우기 요청</strong>입니다. 조건이 하나라도 실패하면 제출한 스레드가 해당 BCB의 완료 처리를 직접 수행합니다. Allocator는 프레임을 구하지 못했을 때 page-flush를 깨우고, page-flush가 위 조건을 만족하면 post-flush를 깨웁니다. 두 깨우기는 서로 다른 호출입니다.</p>
+<p><strong>서버 종료 때는 공통 데몬 종료 코드가 깨웁니다.</strong> <code>pgbuf_daemons_destroy()</code>가 post-flush 데몬을 파괴할 때 <code>daemon::stop_execution()</code>이 stop을 설정하고 <code>wakeup()</code> 후 <code>join()</code>합니다. 이 깨우기는 종료를 위한 것이며, 남은 큐 작업을 모두 처리한다는 보장은 아닙니다.</p>
+<p>실행 중인 스레드에 보낸 wake는 다음 대기를 위한 알림으로 저장되지 않습니다. 큐에 작업이 남아 있다는 사실과 다시 실행할 기회가 생긴다는 사실을 구분해야 합니다. <a href="#daemon-part-2">대기 직전 wake의 한계</a>에서 이 순서를 이어 봅니다.</p>
+<p class="source-note">고정 소스: <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10929-L10954">큐 삽입·wake·직접 처리</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L8304-L8309">Allocator의 page-flush 깨우기</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L17249-L17255">데몬 그룹 종료</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/thread/thread_daemon.cpp#L76-L104">stop·wake·join</a></p>
+</details>
 </div>
 </section><section class="section" id="cadence-part-5"><div class="eyebrow">03 · 8 / 25</div><h2>깨우기가 사라져도 공유 상태에는 작업이 남는다</h2><p>생산자는 작업을 만들고 소비자는 처리합니다. <strong>큐</strong>는 대기 중인 항목을 공유 메모리에 보관합니다. <strong>검사 조건(predicate)</strong>은 요청이 여전히 프레임을 필요로 하는지처럼 태스크가 확인하는 조건입니다. 이 보존된 상태는 너무 이른 깨우기 이후에도 검사할 때까지 남습니다. RAM의 상태이며 장애 후에도 남는 저장장치 영속성을 뜻하지 않습니다.</p>
 <div class="callout"><strong>깨우기는 힌트일 뿐입니다:</strong> <code>wakeup()</code>은 잠든 waiter를 깨웁니다. 스레드가 실행 중일 때는 다음 대기를 위한 신호를 저장하지 않습니다. 소비자는 다음 태스크 진입 때 큐나 압력을 다시 확인해야 합니다.</div>
