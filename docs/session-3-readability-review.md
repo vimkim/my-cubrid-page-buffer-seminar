@@ -762,6 +762,18 @@ Pin overrides older manual prose. No matching local 11.5 manual or runtime confi
 
 No English correction is requested. This is the page author's semantic review, not a human Korean-language acceptance receipt.
 
+### Reader clarification: RAM changes, file writes, and post-write accounting
+
+The 2026-10-13 amendment adds `memory-write-and-flush` and `flush-workloads` immediately after `workload`, before controller lifecycle details. Chapter 07 now has 25 projected screens in both languages. Its local navigation, all three contents maps/counts, and the Korean spoken screen map follow the same order. No separate reference page was added.
+
+- `memory-write-and-flush` defines the CUBRID-managed RAM page buffer, dirty marking, flush, and the memory-to-file direction of `pwrite()`. DWB-disabled/default-mode/controller/lock premises and WAL are defined before the simplified sequence. Token units are I/O pages, not rows; OS acceptance remains distinct from synchronized persistence.
+- `flush-workloads` separates SQL changes and scan pressure from later victim/checkpoint/foreground flush work. A read alone does not dirty a page. Frame and DWB roles are defined locally. Direct writes with DWB disabled participate; the pinned DWB staging and home-page writes use `FILEIO_WRITE_NO_COMPENSATE_WRITE`.
+- `control` adds an independent three-page batch with two remaining credits, no overlapping refresh or consumption, and an ordinary writer. The missing credit can delay later work after the batch succeeds. The source establishes the order; no undocumented original design intent is asserted. Existing bypass and untimed-wait qualifications remain.
+
+The agent compared the changed English and Korean prose, tables, sequence, and numeric premises against each other and the pinned source: `page_buffer.c:10801–10898,11656–11675`, `file_io.c:751–829,4113–4204,4285–4373`, and `double_write_buffer.cpp:2085–2087,2328–2341`. Existing Q14/Q15/D28, source pins, trace states, and anchors are retained. This is an editorial amendment, not a human language-review receipt or a new runtime observation; paired manifest review states remain pending.
+
+Validation used the task worktree served at the Copyparty URL root. The Maintainer Guide aggregate passed its 43-page source/DOM and 114-resource HTTP checks. Bilingual technical/language/audience/route checks passed; the served aggregate passed 351-resource HTTP and 158-page DOM checks. Six focused Session 3 browser tests passed with `--test-isolation=none`, covering both languages, reading/projection/keyboard/disclosures/mobile/no-JavaScript access, all three contents maps, and the spoken map. The 16 contents/definition tests passed. The full bilingual source aggregate retains exactly the destination baseline's 78 missing human receipts and 96 stale fingerprints on untouched pairs; no new failure was introduced. Changed-pair fingerprints are current, without supplying human acceptance.
+
 ## Chapter 08: [en/seminar-3/08-postgresql-buffers.html](../en/seminar-3/08-postgresql-buffers.html) and [Korean counterpart](../ko/seminar-3/08-postgresql-buffers.html)
 
 ### Current concurrency and I/O qualification ledger
