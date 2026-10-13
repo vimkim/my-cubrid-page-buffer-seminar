@@ -98,10 +98,11 @@ resolved that environment failure without changing repository tooling.
 | --- | --- |
 | Maintainer Guide aggregate | PASS: 43 Markdown pages, links, 71 displayed SVGs with no orphans, English prose, 114 HTTP resources and 43 live-DOM pages. |
 | Bilingual aggregate | No new failure: all 174 final failure messages equal the baseline set exactly. The nonzero result remains the pre-existing human-review gate, not a technical pass for that gate. |
+| Bilingual served gate | PASS: all 351 HTTP resources and 158 live-DOM pages; no unavailable gate. |
 | Complete repository test suite | PASS: 262 tests, zero failures, skips or cancellations. Covers both validators and reading, projection, narrow widths, native answers, direct anchors, trace outcomes/reset, no-JavaScript access and complete contents/spoken maps. |
 | Integrity comparison | All 41 prior IDs and 45 pinned source URLs retained in each language; all four traces retain their exact snapshot values. |
 | Author Markdown and diff | Both changed author documents pass the Copyparty Markdown source checker; `git diff --check` passes. |
 | Visual inspection | Korean opening, current-check/offer and recap projection previews inspected. The 390px reading view has no horizontal overflow or page runtime error. This is agent inspection, not human acceptance. |
 
-The separate bilingual served-gate result and both review axes are added when
-they finish. Human Korean and semantic-parity acceptance remain pending.
+Both review axes are added when they finish. Human Korean and semantic-parity
+acceptance remain pending.
