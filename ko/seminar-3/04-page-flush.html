@@ -54,7 +54,49 @@
 <section class="section" id="selection-current-checks">
 <div class="eyebrow">04 · 7 / 23</div><h2>사본 확보를 허용하는 현재 조건은 무엇일까?</h2>
 <p>앞의 후보 수집 경로를 이어갑니다. 목록 보호를 끝낸 page-flush가 후보 하나의 BCB, 즉 프레임 관리 레코드를 잠급니다. <code>VPID</code>는 현재 페이지를 식별하고, <code>DIRTY</code>는 아직 저장소에 기록해야 할 메모리의 변경 내용을 나타냅니다. <code>FLUSHING</code>은 이전 이미지의 완료 처리가 아직 남아 있음을 나타냅니다.</p>
-<p><strong>Fix</strong>는 caller가 페이지를 계속 사용하는 동안 그 사용을 보호합니다. <code>fcnt</code>는 fix 개수입니다. <code>LRU3</code>는 cold 교체 영역입니다. <strong>WAL</strong>은 복구 로그이며, 이미지의 데이터를 제출하기 전에 그 이미지의 로그 위치까지 영속화돼 있어야 합니다.</p><ol start="4"><li><strong>현재 상태 검사.</strong> 각 BCB를 잠급니다. 저장한 식별자와 일치하고, 현재 DIRTY이며, 진행 중인 FLUSHING이 없고, 여전히 cold 영역이어야 합니다. Fixed-by-any helper는 현재 fix, 연결된 대기자, 작업을 막는 latch 상태도 거절하므로 단순히 <code>fcnt=0</code>인 것만으로는 부족합니다.</li><li><strong>복구 로그 검사.</strong> 필요한 WAL이 영속화되지 않았으면 후보를 건너뛰고 log-flush를 깨웁니다. Allocator가 기다리고 모든 후보가 WAL 때문에 건너뛰어졌다면 필요한 위치까지 한 번 강제 기록한 뒤 재시도합니다.</li><li><strong>확보와 제출.</strong> 공통 flush 프로토콜은 안정된 이미지 하나와 그에 맞는 로그 위치를 보존합니다. 선택적인 페이지 이미지 임시 버퍼인 DWB 또는 직접 I/O로 제출하며, 적합한 인접 페이지를 이웃 묶음으로 함께 처리할 수 있습니다.</li></ol><div class="callout">BCB mutex는 메타데이터 검사를 보호합니다. 공통 helper를 호출하는 쪽은 사본 확보 중 충돌하는 내용 writer가 접근하지 못하게 해야 합니다. 메타데이터 잠금만으로 그 조건을 대신할 수는 없습니다.</div>
+<p><strong>Fix</strong>는 caller가 페이지를 계속 사용하는 동안 그 사용을 보호합니다. <code>fcnt</code>는 fix 개수입니다. <code>LRU3</code>는 cold 교체 영역입니다. <strong>WAL</strong>은 복구 로그이며, 이미지의 데이터를 제출하기 전에 그 이미지의 로그 위치까지 영속화돼 있어야 합니다.</p><ol start="4"><li><strong>현재 상태 검사.</strong> 각 BCB를 잠급니다. 저장한 식별자와 일치하고, 현재 DIRTY이며, 진행 중인 FLUSHING이 없고, 여전히 cold 영역이어야 합니다. Fixed-by-any helper는 현재 fix, 연결된 대기자, 작업을 막는 latch 상태도 거절하므로 단순히 <code>fcnt=0</code>인 것만으로는 부족합니다.</li><li><strong>복구 로그 검사.</strong> 필요한 WAL이 영속화되지 않았으면 후보를 건너뛰고 log-flush를 깨웁니다. 서버 모드에서 allocator가 direct victim을 기다리고 수집한 후보 전부가 WAL 때문에 건너뛰어졌다면, 그 후보들의 가장 큰 로그 위치까지 이 helper 호출에서 한 번 강제 기록한 뒤 같은 후보들을 다시 검사합니다.</li><li><strong>확보와 제출.</strong> 공통 flush 프로토콜은 안정된 이미지 하나와 그에 맞는 로그 위치를 보존합니다. 선택적인 페이지 이미지 임시 버퍼인 DWB 또는 직접 I/O로 제출하며, 적합한 인접 페이지를 이웃 묶음으로 함께 처리할 수 있습니다.</li></ol><div class="callout">BCB mutex는 메타데이터 검사를 보호합니다. 공통 helper를 호출하는 쪽은 사본 확보 중 충돌하는 내용 writer가 접근하지 못하게 해야 합니다. 메타데이터 잠금만으로 그 조건을 대신할 수는 없습니다.</div>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4064-L4079">후보 건너뛰기와 log-flush 깨우기:4064–4079</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4131-L4148">강제 기록과 재시도:4131–4148</a></p>
+<details class="source-disclosure"><summary>소스코드 근거: WAL 대기와 한 번의 동기 재시도</summary>
+<p><code>pgbuf_flush_victim_candidates()</code>의 두 분기입니다. 기준 리비전은 <code>f799e05</code>이며 아래 코드는 해당 소스에서 발췌했습니다.</p>
+<p><strong>1. 후보 건너뛰기.</strong> 페이지에 기록된 로그 위치(PageLSA)인 <code>iopage.prv.lsa</code>를 <code>logpb_need_wal()</code>에 넘깁니다. WAL이 더 필요하면 <code>count_need_wal</code>을 늘리고, <code>lsa_need_wal</code>에 건너뛴 후보들의 가장 큰 PageLSA를 보존합니다. BCB mutex를 놓은 뒤 서버 모드에서 log-flush를 깨우고 <code>continue</code>로 다음 후보에 넘어갑니다.</p>
+<pre><code>      if (logpb_need_wal (&amp;bufptr-&gt;iopage_buffer-&gt;iopage.prv.lsa))
+        {
+          /* we cannot flush a page unless log has been flushed up until page LSA. otherwise we might have recovery
+           * issues. */
+          count_need_wal++;
+          if (LSA_ISNULL (&amp;lsa_need_wal) || LSA_LE (&amp;lsa_need_wal, &amp;(bufptr-&gt;iopage_buffer-&gt;iopage.prv.lsa)))
+            {
+              LSA_COPY (&amp;lsa_need_wal, &amp;(bufptr-&gt;iopage_buffer-&gt;iopage.prv.lsa));
+            }
+          PGBUF_BCB_UNLOCK (bufptr);
+          ++num_skipped_need_wal;
+#if defined (SERVER_MODE)
+          log_wakeup_log_flush_daemon ();
+#endif /* SERVER_MODE */
+          continue;
+        }</code></pre>
+<p><strong>2. 전부 WAL에 막힌 경우의 재시도.</strong> 대기 중인 direct-victim allocator가 있고, 후보가 하나 이상이며, <code>count_need_wal == victim_count</code>여야 합니다. 다른 현재 상태 검사에서 건너뛴 후보가 하나라도 있으면 이 조건은 성립하지 않습니다. <code>repeated</code>는 함수 진입 시 <code>false</code>로 시작하며 첫 재시도 전에 <code>true</code>가 됩니다. 따라서 동기 WAL 강제 기록과 <code>goto repeat</code>는 이 호출에서 한 번만 실행됩니다. <code>repeat</code>에서는 WAL 대기 개수를 0으로 돌리고 같은 후보 목록의 식별자·현재 상태·WAL을 다시 검사합니다.</p>
+<pre><code>#if defined (SERVER_MODE)
+  if (pgbuf_is_any_thread_waiting_for_direct_victim () &amp;&amp; victim_count != 0 &amp;&amp; count_need_wal == victim_count)
+    {
+      /* log flush thread did not wake up in time. we must make sure log is flushed and retry. */
+      if (repeated)
+        {
+          /* already waited and failed again? all bcb&#x27;s must have changed again (confirm by comparing save_lsa_need_wal
+           * and lsa_need_wal. */
+          assert (LSA_LT (&amp;save_lsa_need_wal, &amp;lsa_need_wal));
+        }
+      else
+        {
+          repeated = true;
+          save_lsa_need_wal = lsa_need_wal;
+          logpb_flush_log_for_wal (thread_p, &amp;lsa_need_wal);
+          goto repeat;
+        }
+    }</code></pre>
+<p><code>logpb_flush_log_for_wal()</code>는 로그 임계 구역에서 WAL 필요 여부를 다시 확인하고, 여전히 필요하면 <code>logpb_flush_pages_direct()</code>를 호출합니다. 이미 다른 스레드가 로그를 기록했다면 그 쓰기를 반복하지 않습니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L11255-L11267">WAL 필요 여부:11255–11267</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L4162-L4180">동기 WAL 기록:4162–4180</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3883-L3890">재시도 초기 상태:3883–3890</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4030-L4064">재시도 진입과 현재 상태 재검사:4030–4064</a></p>
+</details>
 </section>
 <section class="section" data-reset-answers="" id="selection-part-2">
 <div class="eyebrow">04 · 8 / 23</div><h2>같은 페이지도 부적합한 후보로 바뀔 수 있을까?</h2>

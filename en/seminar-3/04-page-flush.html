@@ -54,7 +54,49 @@
 <section class="section" id="selection-current-checks">
 <div class="eyebrow">04 · 7 / 23</div><h2>Which current conditions permit capture?</h2>
 <p>Continue the collection path: list protection has ended, and page-flush now locks one candidate’s BCB, the frame’s control record. <code>VPID</code> names its current page; <code>DIRTY</code> marks a resident write still owed; <code>FLUSHING</code> marks an earlier image still awaiting completion.</p>
-<p>A <strong>fix</strong> protects a caller’s continued use; <code>fcnt</code> counts fixes. <code>LRU3</code> is the cold replacement zone. <strong>WAL</strong> is the recovery log, which must be durable through this image’s log position before its data is submitted.</p><ol start="4"><li><strong>Check the present.</strong> Lock each BCB. Require the saved identity, current DIRTY state, no outstanding FLUSHING, and current cold-zone membership. The fixed-by-any helper also rejects current fixes, attached waiters, or a blocking latch state; raw <code>fcnt=0</code> alone is insufficient.</li><li><strong>Check the recovery log.</strong> If the required WAL is not durable, skip the candidate and wake log-flush. With an allocator waiting and all candidates skipped for WAL, force the needed boundary once and retry.</li><li><strong>Capture and submit.</strong> The common flush protocol preserves one stable image and its matching log boundary. It submits through the optional DWB page-image staging buffer or direct I/O, possibly grouping suitable nearby pages into a neighbor batch.</li></ol><div class="callout">The BCB mutex protects metadata checks. The common helper’s caller-eligibility protocol also excludes a conflicting content writer during capture; a metadata lock alone does not replace that obligation.</div>
+<p>A <strong>fix</strong> protects a caller’s continued use; <code>fcnt</code> counts fixes. <code>LRU3</code> is the cold replacement zone. <strong>WAL</strong> is the recovery log, which must be durable through this image’s log position before its data is submitted.</p><ol start="4"><li><strong>Check the present.</strong> Lock each BCB. Require the saved identity, current DIRTY state, no outstanding FLUSHING, and current cold-zone membership. The fixed-by-any helper also rejects current fixes, attached waiters, or a blocking latch state; raw <code>fcnt=0</code> alone is insufficient.</li><li><strong>Check the recovery log.</strong> If the required WAL is not durable, skip the candidate and wake log-flush. In server mode, with an allocator waiting for a direct victim and every collected candidate skipped for WAL, force through their greatest log position once in this helper call, then recheck the same candidates.</li><li><strong>Capture and submit.</strong> The common flush protocol preserves one stable image and its matching log boundary. It submits through the optional DWB page-image staging buffer or direct I/O, possibly grouping suitable nearby pages into a neighbor batch.</li></ol><div class="callout">The BCB mutex protects metadata checks. The common helper’s caller-eligibility protocol also excludes a conflicting content writer during capture; a metadata lock alone does not replace that obligation.</div>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4064-L4079">Skip and wake log-flush:4064–4079</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4131-L4148">Force and retry:4131–4148</a></p>
+<details class="source-disclosure"><summary>Source evidence: WAL blocking and one synchronous retry</summary>
+<p>These are two branches of <code>pgbuf_flush_victim_candidates()</code>, excerpted from the pinned <code>f799e05</code> source.</p>
+<p><strong>1. Skip the candidate.</strong> Pass the page’s recorded log position (PageLSA), <code>iopage.prv.lsa</code>, to <code>logpb_need_wal()</code>. If more WAL is needed, increment <code>count_need_wal</code> and preserve the greatest skipped PageLSA in <code>lsa_need_wal</code>. Release the BCB mutex, wake log-flush in server mode, and <code>continue</code> to the next candidate.</p>
+<pre><code>      if (logpb_need_wal (&amp;bufptr-&gt;iopage_buffer-&gt;iopage.prv.lsa))
+        {
+          /* we cannot flush a page unless log has been flushed up until page LSA. otherwise we might have recovery
+           * issues. */
+          count_need_wal++;
+          if (LSA_ISNULL (&amp;lsa_need_wal) || LSA_LE (&amp;lsa_need_wal, &amp;(bufptr-&gt;iopage_buffer-&gt;iopage.prv.lsa)))
+            {
+              LSA_COPY (&amp;lsa_need_wal, &amp;(bufptr-&gt;iopage_buffer-&gt;iopage.prv.lsa));
+            }
+          PGBUF_BCB_UNLOCK (bufptr);
+          ++num_skipped_need_wal;
+#if defined (SERVER_MODE)
+          log_wakeup_log_flush_daemon ();
+#endif /* SERVER_MODE */
+          continue;
+        }</code></pre>
+<p><strong>2. Retry when every candidate is WAL-blocked.</strong> Require a waiting direct-victim allocator, at least one candidate, and <code>count_need_wal == victim_count</code>. A candidate skipped by another current-state check prevents this condition from holding. <code>repeated</code> starts <code>false</code> on function entry and becomes <code>true</code> before the first retry, limiting the synchronous WAL force and <code>goto repeat</code> to once per call. At <code>repeat</code>, reset the WAL-blocked count to zero and recheck the same candidate list’s identity, current state, and WAL.</p>
+<pre><code>#if defined (SERVER_MODE)
+  if (pgbuf_is_any_thread_waiting_for_direct_victim () &amp;&amp; victim_count != 0 &amp;&amp; count_need_wal == victim_count)
+    {
+      /* log flush thread did not wake up in time. we must make sure log is flushed and retry. */
+      if (repeated)
+        {
+          /* already waited and failed again? all bcb&#x27;s must have changed again (confirm by comparing save_lsa_need_wal
+           * and lsa_need_wal. */
+          assert (LSA_LT (&amp;save_lsa_need_wal, &amp;lsa_need_wal));
+        }
+      else
+        {
+          repeated = true;
+          save_lsa_need_wal = lsa_need_wal;
+          logpb_flush_log_for_wal (thread_p, &amp;lsa_need_wal);
+          goto repeat;
+        }
+    }</code></pre>
+<p><code>logpb_flush_log_for_wal()</code> rechecks whether WAL is needed inside the log critical section and calls <code>logpb_flush_pages_direct()</code> if it still is. If another thread has already flushed the log, it does not repeat that write.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L11255-L11267">WAL readiness:11255–11267</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/transaction/log_page_buffer.c#L4162-L4180">Synchronous WAL flush:4162–4180</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L3883-L3890">Initial retry state:3883–3890</a> · <a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L4030-L4064">Retry entry and current-state rechecks:4030–4064</a></p>
+</details>
 </section>
 <section class="section" data-reset-answers="" id="selection-part-2">
 <div class="eyebrow">04 · 8 / 23</div><h2>Can the same page become an unsuitable candidate?</h2>
