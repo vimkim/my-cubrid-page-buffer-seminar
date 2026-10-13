@@ -2586,3 +2586,92 @@ This is an AI author readability/source review, not a human language-acceptance 
 Approved integration of the plain-language rewrite: rebased onto local main after its concurrent page-flush and clean-tail additions, then onto `2e0dc33` (an independent VS-20 issue link). The current chapter has 31 screens and 27 native Q&As per language. All six added main screen bodies and the extra producer/wakeup Q&A were retained, as were all prior main/task IDs and link targets. Other chapters' contents, spoken explanations, review records and fingerprints were preserved. The changed chapter and contents fingerprints remain pending human review.
 
 Final integration checks passed all 59 source/validator/Session3 browser tests, with zero failures or skips. A focused headless run passed all 62 direct screen entries, native answers where present, both traces, and 390/320 px no-JavaScript reading. The guide aggregate passed 43 source/DOM pages and 114 HTTP resources. The bilingual audience, technical and link contracts passed; its full served aggregate retains 78 pending human receipts, 96 stale historical fingerprints, and the unchanged root index's missing favicon console error. Logs and screenshots use `/tmp/daemon-346-integration-*`. This is an AI author/integration review, not human language acceptance.
+
+
+## Work item 350: exact maintenance arithmetic in accessible prose
+
+The paired Chapter 06 additions are based on clean CUBRID
+`f799e05d77d5300c6ea5753b4a6cc7caee6d8912`; the task starts from seminar
+`0c4db67` in `docs/maintenance-calculations`. The English
+[source and standalone arithmetic evidence](maintenance-calculations-evidence.md)
+records primary-source links, the exact typed operations, an independently
+compiled C++ calculation receipt and a follow-up audit of the chapter examples.
+These are constructed calculations and static source traces, not engine runtime
+observations or performance measurements.
+
+Five existing screens gain thirteen native disclosures. The other nineteen
+section bodies, all twenty-four section IDs/headings, the existing questions,
+trace snapshots, source routes and chapter navigation are preserved. No contents
+or spoken map changes are needed because no screen was added or renamed.
+
+| Existing screen | Local definitions and independent starting state |
+| --- | --- |
+| `quota-change` | Shelf analogy defines zone labels without implying memory partitions. Counts, thresholds, bottom pointers and traversal direction precede the control-flow sketch. The private 100-to-60 quota example starts with 20/50/30 entries and explicitly excludes a waiting allocator or concurrent mutation; the separate below-quota case resets to 20/10/70. The shared 100-to-60 target example independently starts at 30/15/55 and excludes the same interference. The optional direct-assignment branch retains its protected checks and is excluded from both count tables. Metadata-only changes, tick counters and quota epoch are distinguished. |
+| `admission-guards` | Accepted turn is defined before `adjust_age` reasoning. Time units, pool capacity and the two separate unfix summations are defined before the admission transcription; counters, timestamp and age advance retain source order. The hit-age example resets independently to pool age 9 and BCB age 8. Initial age zero, approximate concurrency, BCB reuse and signed-wrap qualifications remain explicit. |
+| `maintain-part-2` | Each boundary-table row independently starts with enabled private quotas, no active adjustment, age 8, no wrap and equal non-reset/reset unfix observations. The existing visible definition of pool size B remains. |
+| `quota-from-samples` | Source variables and units precede each formula. The three-epoch example independently starts at age 8, 10,000 occupied frames, four shared and four private lists, two active private lists, old activities 500/500 and old private ratio 0.5. Its constructed 5-second schedule, raw samples, per-list rate truncation, nonlow unfix inputs, default shared ratios and absent concurrent update are explicit. The overall-ratio example resets to activities 300/200 and ratio 0.5; it also gives complete raw shared distribution and counted unfix input. |
+| `computed-policy` | The full pool, nominal private budget, shared-only list count and cached ratios precede shared arithmetic. The cap example explicitly starts after smoothing with four lists of each kind; the floor case and half-pool cap are independent snapshots. The quiet example resets to 10,000 occupied frames, activities 500/500, ratio 0.5 and no new samples or counted unfixes over 5 seconds. The following zero-activity case states its additional interval of at least 10 seconds. |
+
+Korean explains the mechanism with shelf labels, short sentences and a verbal
+walkthrough before the numerical derivations. English retains equivalent
+premises, conditions, formulas and qualifications. The author compared the
+pairs for audience/voice, causal narrative, numerical accuracy, density,
+semantic parity and natural Korean, and responsive/presentation access. This
+is agent author review, not an ADR 0004 human language-acceptance receipt.
+Only the changed chapter's two manifest fingerprints are refreshed; the
+human-review state remains pending. No new audience actor/letter labels,
+shared UI code, displayed SVGs, engine changes or runtime probes are introduced.
+
+Validation of the final authored content:
+
+- Pinned source and independent arithmetic audit confirm all quota/threshold
+  integers, the two distinct private/shared caller guards, combined cold-first
+  zone adjustment, optional direct assignment and unchanged-quota epochs.
+- Existing Session 3 contents/definitions/live/trace suites: 43 tests passed,
+  zero failures or skips, served from this worktree with headless Chromium.
+- Focused final headless checks: 60 screen combinations across both languages,
+  1440/390/320 reading widths, 1920/1366 presentation widths and 390px
+  no-JavaScript access; 26 new disclosure direct links also passed. Keyboard
+  opening, initially collapsed explanations, natural image dimensions, no
+  relevant page/console errors and no horizontal page overflow were checked.
+  Korean projection/mobile zone tables and the epoch table were visually
+  inspected. Longer opened disclosures require vertical scrolling; code blocks
+  retain their local horizontal scrolling on narrow screens.
+- Guide aggregate: source, links, English prose and all 71 displayed SVGs passed
+  for 43 pages; the served run passed 114 HTTP resources and 43 live-DOM pages.
+  Its unchanged Markdown pages and assets were checked again at the end with
+  the source-only command, whose HTTP/DOM gates are explicitly unavailable
+  without a URL; the earlier served receipt supplies those gates.
+- Bilingual link closure and exact technical parity passed for all 78 pairs.
+  Research-note Markdown source, relative targets/fragments and whitespace
+  checks passed. The complete bilingual served aggregate is compared to the
+  pre-edit baseline: the known 78 pending human receipts and 96 stale historical
+  fingerprints remain open. That full aggregate is not reported as passed.
+  The final served-only gate explicitly passed 351 HTTP resources and 158 live
+  DOM pages; the complete aggregate has exactly the same 174 baseline failures
+  and no additional failure. Audience/route and technical gates also passed.
+
+Verification logs, the temporary focused harness, screenshots and its JSON
+receipt use `/tmp/maintenance-350-*`. The read-only Copyparty worktree preview
+uses `http://127.0.0.1:3990`. Local main integration remains subject to the
+repository's one merge approval; concurrent worktrees and local main changes
+are preserved.
+
+
+Approved integration verification (2026-10-13): the first rebase onto local main
+`548b380` preserved all other chapter records and the complete existing review
+ledger while resolving the two metadata conflicts. The approved English/Korean
+chapter bodies and source/arithmetic note retained identical SHA-256 hashes.
+All 43 Session 3 tests passed again with zero skips, as did 60 focused screen
+checks and 26 disclosure direct links; the guide passed 114 HTTP resources and
+43 live-DOM pages. The full bilingual served aggregate retained exactly the
+174 current-main review-record failures, with no new failure.
+
+While checks ran, local main advanced to `8092c84` with the independently
+approved D27 omission. A second rebase preserved that change and resolved only
+the adjacent manifest conflict, updating the Chapter 06 fingerprints while
+retaining every other current-main manifest entry. On this latest parent,
+16 contents/definition source tests, all 60 focused screen checks and 26 direct
+links, 351 served HTTP resources and 158 live-DOM pages passed. The aggregate
+source failures remain exactly the same 174 historical review-record items.
+Approved chapter/note hashes and the final task diff were verified again.

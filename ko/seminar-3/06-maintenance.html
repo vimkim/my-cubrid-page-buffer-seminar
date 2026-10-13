@@ -54,6 +54,57 @@
 <p>새 표본으로 더 작은 quota를 계산했다고 합시다. Maintenance는 새 목표와 더 작은 영역별 크기 기준을 반영합니다. private 목록에서는 LRU1과 LRU2의 페이지 수를 합친 값이 새 quota를 넘을 때만 영역 조정 함수를 호출합니다. shared 목록은 별도로 영역 크기 기준을 검사합니다.</p>
 <table><thead><tr><th>단계</th><th>달라지는 것</th></tr></thead><tbody><tr><td>새 목표 반영</td><td>quota와 영역별 크기 기준이 바뀝니다. 값을 저장하는 것만으로 페이지가 제거되지는 않습니다.</td></tr><tr><td>조건을 통과한 영역 조정</td><td>목록 mutex를 잡고 초과한 항목을 LRU3 쪽으로 내립니다. 직접 제안에 성공하지 않았다면 이 항목들은 계속 메모리에 있습니다.</td></tr><tr><td>후보 공급 목록 등록</td><td>quota를 넘고 조건을 만족하는 후보가 있는 private 목록을 교체 후보 탐색에 등록할 수 있습니다.</td></tr></tbody></table>
 <p>이렇게 정책이 해당 목록에서 교체 후보를 찾도록 유도할 수 있습니다. quota를 줄이는 것만으로 빈 프레임이 생긴 것은 아닙니다. 항목을 내리는 중 직접 제안을 시도할 수도 있지만, 그 안전성 검사는 quota 계산과 별개입니다.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14473">private 목표와 후보 공급 등록 조건</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9993-L10047">조건을 통과한 영역 이동</a></p>
+
+
+<p>책장 하나에 “오래 남길 책”, “중간”, “교체를 검토할 책”이라는 표시를 붙였다고 생각해 봅시다. 표시를 바꾸어도 책 내용은 지워지지 않습니다. 코드에서는 먼저 앞 두 영역의 합계를 줄여 LRU3 쪽으로 보내고, 그다음 LRU1 크기를 맞추려고 LRU2로 내립니다. 따라서 LRU1에서 LRU3으로 바로 내려가는 경우도 있습니다.</p>
+<details id="exact-zone-order" class="answer-disclosure"><summary>private/shared의 정확한 조건과 이동 순서</summary>
+
+<p><code>count_lru1</code>, <code>count_lru2</code>, <code>count_lru3</code>는 각 영역에 현재 들어 있는 항목 수입니다. <code>threshold_lru1</code>과 <code>threshold_lru2</code>는 목표 개수입니다. <code>bottom_1</code>과 <code>bottom_2</code>는 하나의 연결 목록에서 각 영역의 차가운 끝을 가리킵니다. <code>prev_BCB</code>를 따라가면 더 따뜻한 쪽의 항목으로 이동합니다.</p>
+<pre><code>// The quota path calls with min_one = false.
+private: count_lru1 + count_lru2 &gt; quota;
+shared:  count_lru1 + count_lru2
+         &gt; threshold_lru1 + threshold_lru2;
+
+// Control-flow sketch, while holding the list mutex:
+if (count_lru1 + count_lru2 &gt; threshold_lru1 + threshold_lru2) {
+    cursor = bottom_2 != NULL ? bottom_2 : bottom_1;
+    while (count_lru1 + count_lru2 &gt; threshold_lru1 + threshold_lru2) {
+        saved_prev = cursor-&gt;prev_BCB;
+        pgbuf_lru_fall_bcb_to_zone_3(thread_p, cursor, lru_list);
+        cursor = saved_prev;
+    }
+    repair bottom_1 / bottom_2 using cursor and surviving counts;
+}
+pgbuf_lru_adjust_zone1(thread_p, lru_list, false);
+// Its loop walks backward from bottom_1, changes LRU1 to LRU2,
+// then repairs bottom_1 after the loop.</code></pre>
+<ol><li>LRU2에 항목이 있으면 <code>bottom_2</code>부터, 없으면 <code>bottom_1</code>부터 시작합니다. 앞 두 영역의 합계가 두 기준의 합계에 맞을 때까지 차가운 항목을 LRU3 쪽으로 내립니다. LRU2 항목이 먼저 내려갑니다. 그것으로 부족하면 LRU1 항목도 LRU3으로 바로 내려갑니다.</li><li>직접 프레임 제안에 성공하면 항목이 목록에서 빠질 수도 있으므로, 처리 전에 <code>prev_BCB</code>를 저장합니다. 비워진 영역의 끝은 null로 바꾸고, 항목이 남으면 마지막으로 남은 항목을 가리키게 합니다. 보통의 영역 변경은 이전 영역 개수를 하나 줄이고 새 영역 개수를 하나 늘립니다.</li><li>그다음 남아 있는 LRU1이 기준보다 크면 <code>bottom_1</code>부터 LRU2로 내립니다. LRU2가 비어 있었다면 그 끝은 예전 LRU1의 끝이 됩니다. <code>bottom_1</code>은 마지막으로 남은 LRU1 항목을 가리키고, 다 비었으면 null이 됩니다.</li></ol>
+<p>quota 호출자는 이동하는 동안 <code>lru_list->mutex</code>를 잡습니다. quota와 기준값을 저장하는 것은 그 잠금을 잡기 전입니다. <code>pgbuf_lru_adjust_zone2()</code>라는 별도 함수도 있지만, 이 quota 경로는 앞 두 영역을 함께 조정하는 함수를 부릅니다. <code>min_one=false</code>로 호출하므로 목표가 0이면 앞 두 영역을 모두 비울 수 있습니다. 반대로 목표가 커졌다는 이유만으로 차가운 항목을 올려 주지는 않습니다.</p>
+<p>보통의 이동은 그 자리에서 영역 표시를 바꿉니다. 페이지를 복사하거나 항목을 연결 목록의 다른 위치로 붙이는 작업이 아닙니다. <code>pgbuf_bcb_change_zone()</code>은 compare-and-swap으로 목록·영역 표시를 바꾸면서 다른 플래그를 보존합니다. 이전 영역 개수는 하나 줄이고 새 영역 개수는 하나 늘립니다. LRU3에 들어갈 때 플래그 조건에 맞으면 후보 집계도 바꿉니다. 그래도 재사용 전의 보호된 검사를 생략할 수는 없습니다. 보통의 하강에서는 <code>bcb-&gt;tick_lru3 = lru_list-&gt;tick_lru3</code>로 목록의 현재 나이를 기록합니다. 목록 tick에 1을 더하고 <code>DB_INT32_MAX</code>에 도달하면 0으로 되돌립니다. 이 목록 안의 나이와 quota epoch인 <code>adjust_age</code>는 서로 다른 숫자입니다.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15889-L15985">영역 표시·플래그·영역 개수</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10113-L10121">보통의 LRU3 이동에서 tick 기록과 wrap</a></p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1059-L1067">shared의 합계 비교 조건</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14494">quota 경로의 private/shared 조건과 목록 mutex</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9882-L10047">영역 끝 포인터와 실제 이동 순서</a></p>
+</details>
+<details id="worked-private-zones" class="answer-disclosure"><summary>private 예제 · quota가 줄어든 양보다 많이 내려갈 수 있다</summary>
+
+<p><strong>앞 계산과 이어지지 않는 독립 구성 예제입니다.</strong> 예전 quota 100이 60이 됩니다. 이 private 목록에는 항목 100개가 있고, 프레임을 기다리는 요청은 없습니다. 조정 중 다른 thread가 목록을 바꾸지도 않습니다. 새 영역 기준은 각각 <code>int(60*0.05f)=3</code>입니다. <code>20+50=70 &gt; 60</code>이므로 private 호출 조건을 통과합니다. 그런데 함수 안에서 맞추는 목표는 60이 아니라 <code>3+3=6</code>입니다.</p>
+<table><thead><tr><th>단계</th><th>LRU1 / LRU2 / LRU3</th></tr></thead><tbody>
+<tr><td>조정 전</td><td>20 / 50 / 30</td></tr>
+<tr><td>앞 두 영역 합계 맞추기</td><td>6 / 0 / 94</td></tr>
+<tr><td>LRU1 크기 맞추기</td><td>3 / 3 / 94</td></tr></tbody></table>
+<p><code>70-6=64</code>개를 LRU3 쪽으로 내립니다. LRU2의 50개를 모두 내리고, LRU1에서도 14개를 바로 내립니다. LRU1에는 6개가 남습니다. 그중 <code>6-3=3</code>개를 LRU2로 내립니다. 전체 100개는 계속 메모리에 있습니다. 대기 요청이 없는 이 예제에서는 페이지 내용을 쓰거나 내보내지 않습니다.</p>
+<p><strong>다른 독립 초기 상태도 보겠습니다.</strong> 새 quota와 기준은 똑같이 60과 3 / 3인데, 영역 개수가 20 / 10 / 70입니다. 합계가 <code>20+10=30 ≤ 60</code>이므로 이 quota 호출에서는 영역을 조정하지 않습니다. 앞 두 영역 각각이 기준보다 커도 20 / 10 / 70 그대로입니다. private에서는 기준값이 작아졌다는 이유만으로 이 함수를 부르지 않습니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14463">호출 조건과 내부 목표가 다른 private 경로</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9993-L10047">합계 조정 뒤 LRU1 조정</a></p>
+</details>
+<details id="worked-shared-zones" class="answer-disclosure"><summary>shared 예제 · 두 영역의 기준을 더해서 비교한다</summary>
+
+<p><strong>새로 시작하는 독립 예제입니다.</strong> shared 목록 하나의 계산된 목표가 100에서 60으로 줄어듭니다. 기본 비율 0.4 / 0.05를 쓰면 새 기준은 <code>int(60*0.4f)=24</code>와 <code>int(60*0.05f)=3</code>입니다. 항목은 100개이며, 프레임을 기다리는 요청이나 동시에 목록을 바꾸는 thread는 없습니다.</p>
+<table><thead><tr><th>단계</th><th>LRU1 / LRU2 / LRU3</th></tr></thead><tbody>
+<tr><td>조정 전</td><td>30 / 15 / 55</td></tr>
+<tr><td>앞 두 영역 합계 맞추기</td><td>27 / 0 / 73</td></tr>
+<tr><td>LRU1 크기 맞추기</td><td>24 / 3 / 73</td></tr></tbody></table>
+<p>shared 조건은 <code>30+15=45 &gt; 24+3=27</code>을 비교합니다. <code>45-27=18</code>개를 LRU3 쪽으로 내립니다. LRU2에서 15개, LRU1에서 바로 3개입니다. 그다음 LRU1에 남은 항목 중 <code>27-24=3</code>개를 LRU2로 내립니다. 전체 100개는 여전히 메모리에 있습니다. 합계를 비교하는 조건이므로, 한 영역만 기준을 넘었더라도 합계가 기준 안에 들어오면 여기서는 조정 함수를 부르지 않습니다.</p>
+<p><strong>프레임을 기다리는 요청이 있다면:</strong> LRU3으로 내리는 대신 조건을 만족한 프레임을 직접 제안할 수도 있습니다. 후보 조건을 확인하고, vacuum할 BCB에는 직접 제안을 건너뜁니다. BCB mutex는 기다리지 않고 잡아 보고, 현재 후보 조건을 다시 확인한 뒤 배정을 시도합니다. 성공하면 기존 LRU에서 항목을 뺍니다. 실패하면 보통의 영역 변경으로 이어집니다. 받는 요청도 재사용 전에 다시 확인해야 합니다. 이 경우에는 개수 계산이 달라지므로 위의 대기 요청 없는 표를 그대로 적용하면 안 됩니다. 어느 경우에도 여기서 페이지 I/O를 하지는 않습니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14485-L14494">shared 조정 조건</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10059-L10120">직접 제안과 보통의 영역 이동</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15606-L15626">받는 요청의 재검사</a></p>
+</details>
 </section>
 <section class="section" id="reuse-checks"><div class="eyebrow">06 · 7 / 24</div>
 <h2>교체 후보가 되어도 바로 재사용할 수 없는 이유는?</h2>
@@ -135,12 +186,60 @@
 <p>다음 조건에서는 <code>pgbuf_adjust_quotas()</code> 호출이 표본을 소비하기 전에 반환합니다.</p>
 <ul><li>private quota가 비활성화되어 있거나, 다른 조정이 진행 중인 것으로 보입니다.</li><li>마지막으로 허용된 갱신 이후 1 ms가 지나지 않았습니다.</li><li>집계한 final unfix 수가 풀 크기의 4분의 1보다 적고 <em>동시에</em> 500 ms도 지나지 않았습니다.</li></ul>
 <p><strong>epoch</strong>는 허용된 표본 갱신 한 번을 뜻하며, <code>adjust_age</code>가 그 횟수를 기록합니다. 허용된 호출만 unfix 카운터를 초기화하고, 이 횟수를 늘리며, 목록별 hit 표본을 소비해 정책을 다시 계산합니다. 요청 thread도 private 목록을 배정하거나 해제할 때 이 함수를 호출할 수 있습니다. 따라서 이 함수의 모든 호출이 daemon 실행인 것은 아닙니다.</p>
-<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14599-L14623">요청 thread의 quota 조정 호출</a></p></section>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14599-L14623">요청 thread의 quota 조정 호출</a></p>
+
+<p>책장 정리를 새로 시작해도 좋다는 허락을 받을 때마다 종이에 빗금을 하나 긋는다고 생각해 봅시다. 이 빗금 수가 <code>adjust_age</code>입니다. 타이머가 울렸다고 바로 빗금을 긋지는 않습니다. 정리를 시작할 조건을 통과해야 합니다. 걸린 시간이나 quota가 바뀐 양을 세는 숫자가 아닙니다.</p>
+<details id="exact-epoch" class="answer-disclosure"><summary>정확한 조건과 시간 계산, 카운터를 비우는 순서</summary>
+
+<p><code>num_buffers</code>는 풀에 있는 프레임 수입니다. <code>diff_usec</code>는 마지막으로 허용된 갱신 이후 흐른 시간이며, 단위는 마이크로초입니다. 1초는 1,000,000마이크로초입니다. 아래의 <code>unfix_sum</code>과 <code>reset_unfix_sum</code>은 설명용 이름입니다. 각각 <code>pgbuf_monitor_sum_pg_unfix(false)</code>와 <code>pgbuf_monitor_sum_pg_unfix(true)</code>를 따로 호출한 결과입니다. 두 호출 모두 main thread를 포함해 thread별로 센 final unfix 수를 더합니다.</p>
+<pre><code>return if quotas disabled or is_adjusting != 0;
+is_adjusting = 1;
+tsc_getticks(&amp;curr_tick);
+diff_usec = tsc_elapsed_utime(curr_tick, last_adjust_time);
+PGBUF_TRAN_THRESHOLD_ACTIVITY = num_buffers / 4;
+return if diff_usec &lt; 1000;
+return if unfix_sum &lt; num_buffers / 4
+          AND diff_usec &lt; 500000;
+
+low_overall_activity = reset_unfix_sum &lt; (num_buffers / 4) / 100;
+last_adjust_time = curr_tick;
+adjust_age = adjust_age + 1;
+// Then read-and-reset every list hit counter.</code></pre>
+<p>위 코드는 실제 분기 순서를 옮긴 설명용 표현이며, 그대로 컴파일하는 코드는 아닙니다. 기능이 꺼져 있거나 다른 조정이 진행 중인 것으로 보이면 돌아갑니다. 이 검사를 통과하면 <code>is_adjusting=1</code>로 표시합니다. 시간·활동 조건에서 돌아갈 때는 이 표시를 다시 지웁니다. 갱신이 허용되면 unfix 카운터를 비우고, 현재 시간을 기록하고, <code>adjust_age</code>에 원자적으로 1을 더합니다. 그다음 목록마다 hit 카운터 값을 원자적으로 가져오면서 0으로 바꿉니다. 마지막에 <code>is_adjusting</code> 표시를 지웁니다. thread 인자가 null이면 assertion을 켠 빌드에서는 assertion에 걸립니다. 그 외에는 현재 thread 정보를 얻습니다.</p>
+<p>unfix 수를 읽는 두 호출 사이에도 다른 thread가 일할 수 있어서, 두 합계는 다를 수 있습니다. 이 카운터와 단순한 진행 표시가 모든 thread의 작업을 정확하게 갈라 주지는 않습니다. 주석에는 5분이 나오지만, 이 코드가 실제로 비교하는 시간은 1 ms와 500 ms입니다.</p>
+<p>타이머는 초와 마이크로초를 <code>diff_usec = tv_sec * 1000000LL + tv_usec</code>로 합칩니다. CPU tick을 사용하는 모드에서는 tick 차이를 측정해 둔 주파수로 나눠 초를 구합니다. 나머지에 1,000,000을 곱하고 같은 주파수로 정수 나눗셈하면 마이크로초가 됩니다. tick이 거꾸로 간 값이면 흐른 시간을 0으로 처리합니다. 다른 Linux 모드에서는 <code>CLOCK_REALTIME_COARSE</code>로 얻은 두 시간값을 빼고, 필요하면 1초를 빌려 마이크로초를 맞춥니다. 이는 시간이 충분히 지났는지 판단하는 입력입니다. epoch를 시간으로 나눠 계산하는 것은 아닙니다. 저장하는 시간도 작업이 끝난 시각이 아니라 조정 작업 전에 읽은 시각입니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14260-L14348">갱신 조건·시간 기록·epoch 증가·hit 카운터 소비</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2204-L2244">unfix 합계와 초기화</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/tsc_timer.c#L43-L150">흐른 시간을 마이크로초로 계산</a></p>
+</details>
+<details id="exact-hit-age" class="answer-disclosure"><summary>열 번 읽어도 표본이 열 개가 아닌 이유</summary>
+
+<p>BCB는 프레임 하나의 관리 카드입니다. <code>hit_age</code>는 이 카드가 마지막으로 hit 표본을 낸 epoch를 적어 둔 숫자입니다. 표본을 낼 때는 읽은 세션이 아니라, 그 순간 이 카드가 들어 있는 목록에 1을 더합니다.</p>
+<pre><code>if (bcb-&gt;hit_age &lt; quota.adjust_age) {
+    monitor.lru_hits[current_lru_index]++;
+    bcb-&gt;hit_age = quota.adjust_age;
+}</code></pre>
+<p><strong>동시에 다른 갱신이 없는 독립 예제:</strong> <code>adjust_age=9</code>, <code>hit_age=8</code>에서 시작합니다. 조건을 만족한 첫 등록은 1을 더하고 <code>hit_age=9</code>로 적습니다. epoch가 계속 9이면 아홉 번 더 등록해도 추가되는 값은 0입니다. 다음 갱신이 허용되어 <code>adjust_age=10</code>이 되면, 다시 조건을 만족한 등록에서 1을 더할 수 있습니다. 호출 경로에 따라 등록 조건이 있으므로 모든 fix나 읽기를 세는 것은 아닙니다.</p>
+<p>처음에는 두 나이가 모두 0입니다. 따라서 엄격한 비교 조건을 통과하려면 먼저 허용된 갱신이 풀의 나이를 올려야 합니다. 나이를 올린 뒤에 목록 카운터를 비우므로, 경계에서 동시에 들어오는 표본은 정확하게 나뉘지 않을 수 있습니다. hit 증가에는 일반 증가 연산을 쓰고, BCB를 다시 사용할 때 <code>hit_age</code>를 초기화하는 코드가 이 경로에는 보이지 않습니다. 숫자 범위를 넘는 signed wrap도 여기서 따로 처리하지 않습니다. 이는 알려진 표본의 한계이며, 측정한 오차가 아닙니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16594-L16610">hit_age의 실제 비교 조건</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5605-L5643">BCB hit_age의 초기값</a></p><p><a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md#6-evidence-boundaries-and-source-level-anomalies">표본에 관한 근거와 아직 확인할 점</a></p>
+</details>
+</section>
 <section class="section" id="maintain-part-2"><div class="eyebrow">06 · 13 / 24</div>
 <h2>활동이 적은 풀은 언제 갱신 조건을 통과할까?</h2>
 <p data-teaching-def="B"><strong>독립된 계산 예제:</strong> 이 예제에서 <strong>B</strong>는 버퍼 풀의 프레임 수이며, 여기서는 32,768입니다. 활동량은 마지막으로 허용된 quota 갱신 이후 집계한 final unfix 수, 즉 페이지에 남은 마지막 fix를 해제한 횟수입니다. 모든 읽기의 횟수나 경과 시간이 아닙니다.</p>
 <p>갱신 허용에 필요한 활동량 기준은 <code>B/4 = 8,192</code>회입니다. 적어도 1 ms가 지난 뒤 이 횟수에 도달하면 500 ms 전에도 갱신이 허용될 수 있습니다. 횟수가 기준에 못 미쳐도 500 ms가 지나면 시간 조건은 갱신을 허용합니다. 100 ms 주기의 daemon은 보통 500 ms가 지난 뒤 첫 시도에서 이 지점에 도달하지만, 그 시점까지 반드시 실행된다는 보장은 없습니다.</p>
 <p>일단 갱신이 허용되면 함수는 카운터를 초기화합니다. 집계한 횟수가 <code>integer(B/4)/100 = 81</code>회보다 적으면 활동량이 낮다고 분류합니다. 이 분류는 뒤에서 살펴볼 비율 계산을 바꾸며, 이미 허용된 갱신을 취소하지 않습니다.</p>
+
+<details id="admission-numbers" class="answer-disclosure"><summary>프레임 32,768개로 경계값을 직접 계산하기</summary>
+
+<p><strong>각 줄은 새로 시작하는 독립 예제입니다.</strong> 기능은 켜져 있고, 다른 조정은 없으며, <code>adjust_age=8</code>입니다. 동시 갱신이나 wrap도 없습니다. 활동 기준은 <code>32768 / 4 = 8192</code>입니다. 적은 활동의 기준은 정수 나눗셈으로 <code>8192 / 100 = 81</code>입니다. 각 줄에서 unfix 수를 두 번 읽는 사이에 값이 바뀌지 않는다고 가정합니다.</p>
+<table><thead><tr><th>흐른 시간 / unfix 수</th><th>판단</th><th>epoch / 카운터</th></tr></thead><tbody>
+<tr><td>500 µs / 8,192</td><td>1,000 µs보다 짧아서 돌아갑니다.</td><td>8; 표본을 남겨 둡니다.</td></tr>
+<tr><td>1,000 µs / 8,192</td><td>활동 기준에 딱 도달했으므로 허용합니다.</td><td>9; 카운터를 소비하고 비웁니다.</td></tr>
+<tr><td>100,000 µs / 8,191</td><td>활동이 적고 500,000 µs도 안 지났습니다.</td><td>8; 표본을 남겨 둡니다.</td></tr>
+<tr><td>500,000 µs / 0</td><td>허용합니다. 0 &lt; 81이므로 활동이 적다고 분류합니다.</td><td>9; 카운터를 소비하고 비웁니다.</td></tr>
+<tr><td>500,000 µs / 81</td><td>허용합니다. 활동이 적다는 비교 조건은 거짓입니다.</td><td>9; 카운터를 소비하고 비웁니다.</td></tr>
+</tbody></table><p>허용은 “이제 다시 계산해 보자”라는 뜻입니다. quota 숫자가 달라지는지는 그 뒤 계산 결과를 봐야 합니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14297-L14340">경계값 비교와 허용된 epoch의 시작</a></p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · 조용한 풀에서도 quota 갱신이 일어나는 이유는 무엇인가요?</summary><p>낮은 활동은 시간 조건이 시도를 허용할 때까지 진입을 늦추며, 재계산을 끄지는 않습니다. 수락된 뒤의 low-activity 분류는 정책 입력을 바꾸며 그 epoch를 취소하지 않습니다.</p></details>
 </div>
@@ -152,6 +251,136 @@
 <ol><li><code>private rate / (private rate + shared rate)</code>로 비율을 계산합니다. shared의 초당 hit 수는 적어도 1로 두어 0으로 나누는 일을 막습니다. 표본 비율은 0.01–0.998 범위로 제한하고, 활동량이 낮다고 분류한 갱신에서는 0.01을 사용합니다.</li><li>이 비율과 각 private 목록의 활동량에 10초를 기준으로 평활화를 적용합니다. 갱신 간격이 짧으면 이전 값과 새 표본을 섞고, 10초 이상 지났으면 새 표본을 그대로 사용합니다.</li><li>페이지가 들어 있는 프레임 수에 평활화한 private 비율을 곱해 private 전체의 보존 목표를 구합니다. 각 private 목록에는 평활화한 활동량에 비례해 그 목표를 나누어 줍니다.</li></ol>
 <p>페이지가 들어 있는 프레임 수에는 invalid 목록의 빈 슬롯을 포함하지 않습니다. 이 값들은 대략적인 정책 입력입니다. hit 표본이나 계산한 몫만으로 프레임을 재사용할 수는 없습니다.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14455">초당 hit 수, 평활화, quota 계산</a></p>
+
+
+<p>아이들이 책장을 나눠 쓰는 상황으로 생각해 봅시다. 각자 책을 얼마나 꺼내 썼는지 보고 자리를 다시 나눕니다. 다만 방금 센 값만 쓰지 않고 예전 값도 섞습니다. 잠깐 바빴다고 바로 책장 전체를 새로 나누지는 않는 셈입니다. 아래에는 실제 코드의 계산 순서와 소수점을 버리는 위치를 그대로 넣었습니다.</p>
+<details id="exact-rates" class="answer-disclosure"><summary>1단계 · 목록마다 표본을 초당 횟수로 바꾸기</summary>
+
+<p><code>i</code>는 목록 번호입니다. 가져온 <code>lru_hits</code>는 처음에는 표본 개수이고, 나눗셈 뒤에는 초당 표본 수가 됩니다. <code>monitor.lru_activity[i]</code>는 예전 값과 섞어 둔 private 활동량이며, 역시 초당 횟수 단위의 정수입니다. <code>diff_usec</code>는 흐른 시간이고 단위는 마이크로초입니다. 상수는 각각 1초와 10초를 뜻합니다.</p>
+<pre><code>// Do this separately for EVERY list before summing rates.
+lru_hits = ATOMIC_TAS_32(&amp;monitor.lru_hits[i], 0);
+lru_hits = (int)(1000000LL * lru_hits / diff_usec);
+
+// Private-list activity; the right-hand activity is the old value.
+if (diff_usec &gt;= 10000000LL)
+    monitor.lru_activity[i] = lru_hits;
+else
+    monitor.lru_activity[i] = (int)(
+        ((10000000LL - diff_usec) * monitor.lru_activity[i]
+         + diff_usec * lru_hits) / 10000000LL);
+
+sum_private_lru_activity_total = sum of NEW private activities;
+lru_private_hits = sum of current private integer rates;
+lru_shared_hits = sum of current shared integer rates;</code></pre>
+<p>마이크로초 상수의 자료형은 <code>INT64</code>이며, 여기의 곱셈과 나눗셈은 정수 계산입니다. 음수가 아닌 값에서는 나눗셈과 마지막 변환 때 소수 부분을 버립니다. 반드시 목록마다 먼저 나누고 나중에 더합니다. 예를 들어 목록 세 개가 2초 동안 각각 표본 하나를 냈다면, 각 목록에서 <code>integer(1000000 / 2000000) = 0</code>입니다. 세 결과를 더해도 0입니다. 먼저 합쳐서 <code>integer(3000000 / 2000000) = 1</code>로 계산하면 코드와 달라집니다. private 활동을 예전 값과 섞은 뒤에도 소수 부분을 버리고, 이렇게 나온 새 정수들을 더합니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14377">목록별 정수 속도와 활동량을 섞는 계산</a></p>
+</details>
+<details id="exact-ratio" class="answer-disclosure"><summary>2단계 · private에 줄 비율을 계산하고 예전 비율과 섞기</summary>
+
+<p><code>private_ratio</code>는 이번 표본만으로 계산한 비율입니다. <code>quota.private_pages_ratio</code>는 예전 비율과 섞어서 저장한 값입니다. <code>lru_private_hits</code>와 <code>lru_shared_hits</code>는 이번에 계산한 목록별 초당 횟수의 합계입니다. 예전 값과 섞은 활동량의 합계가 아닙니다.</p>
+<pre><code>if (low_overall_activity)
+    private_ratio = 0.01f;
+else {
+    lru_shared_hits = MAX(1, lru_shared_hits);
+    private_ratio = (float)lru_private_hits
+        / (float)(lru_private_hits + lru_shared_hits);
+    private_ratio = MIN(0.998f, private_ratio);
+    private_ratio = MAX(0.01f, private_ratio);
+}
+
+if (diff_usec &gt;= 10000000LL)
+    quota.private_pages_ratio = private_ratio;
+else
+    quota.private_pages_ratio = (
+        quota.private_pages_ratio * (float)(10000000LL - diff_usec)
+        + private_ratio * (float)diff_usec) / (float)10000000LL;</code></pre>
+<p>5초가 지났으면 예전 비율과 새 비율을 반씩 섞습니다. 500 ms가 지났으면 예전 비율 95%, 새 비율 5%를 섞습니다. 10초 이상이면 예전 비율 대신 새 비율을 씁니다. 0.01–0.998로 제한하는 대상은 이번 표본의 비율입니다. 섞은 뒤 다시 제한하지는 않습니다. private quota가 켜져 있을 때 저장된 비율은 처음에 1.0이므로, 처음 몇 번은 섞은 결과가 0.998보다 클 수도 있습니다. 활동량 계산과 달리 이 계산은 <code>float</code>를 씁니다. 따라서 십진수 소수를 항상 정확히 저장할 수 있는 것은 아닙니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14379-L14398">새 비율의 범위와 float 계산</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14032-L14038">private 비율의 초기값</a></p>
+</details>
+<details id="exact-private-quota" class="answer-disclosure"><summary>3단계 · private 전체 몫을 나누고 목록별 상한 적용하기</summary>
+
+<p><code>num_buffers</code>는 모든 프레임 수입니다. <code>invalid_cnt</code>는 invalid 목록에 있는 빈 프레임 수입니다. 둘의 차이로 private 전체 목표인 <code>all_private_quota</code>를 계산합니다. 단위는 페이지 수입니다. <code>new_lru_ratio</code>는 새 활동량 합계 중 한 private 목록의 몫입니다. <code>new_quota</code>와 두 영역 기준도 페이지 수입니다.</p>
+<pre><code>if (sum_private_lru_activity_total == 0) {
+    all_private_quota = 0;
+    every private quota = 0;
+    every private threshold_lru1 = threshold_lru2 = 0;
+} else {
+    all_private_quota = (int)(
+        (num_buffers - invalid_cnt) * quota.private_pages_ratio);
+    new_lru_ratio = (float)monitor.lru_activity[i]
+        / (float)sum_private_lru_activity_total;
+    // Use 0.0f when this list has no activity.
+    new_quota = (int)(new_lru_ratio * all_private_quota);
+    new_quota = MIN(new_quota, 5000);
+    new_quota = MIN(new_quota, num_buffers / 2);
+    threshold_lru1 = (int)(new_quota * 0.05f);
+    threshold_lru2 = (int)(new_quota * 0.05f);
+}</code></pre>
+<p>비율을 곱할 때는 <code>float</code>로 계산하고, 그 뒤 <code>int</code>로 바꾸면서 소수 부분을 버립니다. <code>num_buffers / 2</code>는 정수 나눗셈입니다. 처음 소수 부분을 버린 뒤에 상한을 적용합니다. 남은 조각이나 상한 때문에 줄어든 몫을 다른 목록에 다시 나누지는 않습니다. 상한을 적용한 quota를 더해서 <code>all_private_quota</code>를 다시 계산하지도 않습니다. private quota는 남길 페이지 수의 목표이고, 5% + 5%는 각 영역의 훨씬 작은 목표입니다. 두 숫자는 쓰임새와 검사 조건이 다릅니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14400-L14473">활동이 없을 때의 처리·전체 몫·변환·상한·영역 기준</a></p>
+</details>
+<details id="worked-epochs" class="answer-disclosure"><summary>숫자 예제 · 일이 바뀐 뒤 세 번 정리하기</summary>
+
+<p><strong>실행을 측정한 것이 아니라, 계산을 위해 만든 예제입니다.</strong> <code>adjust_age=8</code>, <code>num_buffers=10000</code>, <code>invalid_cnt=0</code>에서 시작합니다. shared 목록 네 개와 private 목록 네 개가 있습니다. private 중 두 목록만 활동하며, 표에는 그 두 목록을 늘 같은 순서로 씁니다. 다른 두 목록의 활동과 quota는 계속 0입니다. 저장된 private 비율은 0.5입니다. 허용된 갱신 사이의 간격은 각각 5,000,000 µs이며, 그 사이에 다른 허용된 갱신·동시 기여·wrap이 없다고 가정합니다. 보통의 100 ms daemon 주기를 재현한 것이 아니라, 계산을 위해 만든 표본 일정입니다. 각 갱신의 집계된 unfix는 10,000개이므로 적은 활동으로 분류되지 않습니다.</p>
+<p>첫 두 갱신에서 private 두 목록의 원래 표본은 4,500 / 500이고, shared 네 목록은 각각 1,250입니다. 초당 횟수로 바꾼 private 합계와 shared 합계는 모두 1,000입니다. shared 비율은 기본값 0.4 / 0.05를 사용합니다.</p>
+<p>첫 정리에서는 전체 10,000칸의 절반인 <code>10000 × 0.5 = 5000</code>페이지가 private의 목표 몫입니다. 새 활동량 700 / 300은 70% / 30%라는 뜻입니다. 그래서 목표는 <code>5000 × 0.7 = 3500</code>과 <code>5000 × 0.3 = 1500</code>입니다. 다음 정리에서는 활동 몫이 80% / 20%가 되어 4,000 / 1,000으로 나눕니다. 세 번째에도 정리는 다시 하지만, 나눈 숫자는 똑같을 수 있습니다.</p>
+<table><thead><tr><th>Epoch</th><th>private 초당 횟수</th><th>섞은 활동량</th><th>private quota</th></tr></thead><tbody>
+<tr><td>8</td><td>—</td><td>500 / 500</td><td>2,500 / 2,500</td></tr>
+<tr><td>9</td><td>900 / 100</td><td>700 / 300</td><td>3,500 / 1,500</td></tr>
+<tr><td>10</td><td>900 / 100</td><td>800 / 200</td><td>4,000 / 1,000</td></tr>
+<tr><td>11</td><td>800 / 200</td><td>800 / 200</td><td>4,000 / 1,000</td></tr>
+</tbody></table><pre><code>epoch 9:
+  rates = 1000000 * 4500 / 5000000 = 900;
+          1000000 * 500 / 5000000 = 100;
+  shared: each 1000000 * 1250 / 5000000 = 250;
+          sum = 4 * 250 = 1000;
+  sample ratio = 1000 / (1000 + 1000) = 0.5;
+  stored ratio = (0.5 * 5000000 + 0.5 * 5000000) / 10000000 = 0.5;
+  activities = (500 + 900) / 2 = 700;
+               (500 + 100) / 2 = 300;
+  total activity = 1000;
+  private budget = int((10000 - 0) * 0.5) = 5000;
+  quotas = int(700 / 1000.0f * 5000) = 3500;
+           int(300 / 1000.0f * 5000) = 1500;
+  caps = MIN(each quota, 5000, 10000 / 2): no reduction;
+  private zone thresholds = 175 / 175; 75 / 75;
+epoch 10:
+  same rates and ratio; activities = (700 + 900) / 2 = 800;
+                                    (300 + 100) / 2 = 200;
+  quotas = int(0.8f * 5000) = 4000; int(0.2f * 5000) = 1000;
+  private zone thresholds = 200 / 200; 50 / 50;
+epoch 11:
+  raw private samples = 4000 / 1000; rates = 800 / 200;
+  same private/shared total rates and stored ratio;
+  activities = (800 + 800) / 2 = 800; (200 + 200) / 2 = 200;
+  quotas and thresholds unchanged; adjust_age still advances to 11.
+all three epochs:
+  shared target = MAX((10000 - 5000) / 4, 50) = 1250;
+  shared thresholds = int(1250 * 0.4f) = 500;
+                      int(1250 * 0.05f) = 62;</code></pre>
+<p>첫 번째 private 목록이 더 바빠졌습니다. 예전 활동과 섞기 때문에 목표가 두 번에 걸쳐 커집니다. 세 번째 갱신에서도 표본은 새로 소비하고 epoch는 증가합니다. quota 숫자만 그대로입니다. 책장 정리를 한 번 더 했지만, 자리를 나눈 결과는 같을 수 있다는 뜻입니다. 실제로 남아 있는 페이지 수를 예측한 표는 아닙니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14494">계산과 목표 반영의 순서</a></p>
+</details>
+<details id="worked-ratio-shift" class="answer-disclosure"><summary>별도 예제 · private 전체 몫도 달라질 때</summary>
+
+<p>앞 예제와 이어지지 않는 새 상태입니다. <code>num_buffers=10000</code>, <code>invalid_cnt=0</code>이고 shared 목록은 네 개입니다. private는 두 목록만 활동합니다. 예전 활동량은 300 / 200, 저장된 비율은 0.5, 흐른 시간은 5,000,000 µs입니다. 집계된 unfix는 2,000개이므로 활동이 적은 상황은 아닙니다. shared 원래 표본 500개는 네 목록에 125개씩 나눠 주어, 초당 횟수가 각각 25가 됩니다. 두 private quota 모두 상한에 걸리지 않습니다.</p>
+<pre><code>raw private samples = 1000 / 500; raw shared total = 500;
+current private rates = 200 / 100; shared rate = 100;
+new private activities = (300 + 200) / 2 = 250;
+                         (200 + 100) / 2 = 150;
+activity total = 400;
+sample ratio = 300 / (300 + 100) = 0.75;
+stored ratio = (0.5 + 0.75) / 2 = 0.625;
+private budget = int(10000 * 0.625f) = 6250;
+quotas = int(250 / 400.0f * 6250) = int(3906.25f) = 3906;
+         int(150 / 400.0f * 6250) = int(2343.75f) = 2343;
+private thresholds = 195 / 195; 117 / 117;
+quota sum = 6249; rounding leftover = 1;
+shared target = (10000 - 6250) / 4 = 937;
+shared thresholds = 374 / 46;</code></pre>
+<p>shared 목표를 나누면서 소수 부분을 먼저 버리고, 그 뒤 기본 비율 0.4 / 0.05를 곱합니다. 중간의 십진수는 이해를 돕는 표현입니다. 마지막 정수 결과는 소스의 <code>float</code> 연산 순서로 따로 계산해 확인했습니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14379-L14494">비율을 섞는 계산과 private/shared 목표</a></p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · 여기서 hit count는 모든 버퍼 캐시 접근 수인가요?</summary><p>아닙니다. 적격한 list-hit 표본은 보통 같은 epoch 내 반복 기여를 억제하며, 카운터의 근사 한계도 열려 있습니다. 완전한 접근 이력 대신 정책용 활동을 추정합니다.</p></details>
 <details class="answer-disclosure"><summary>Q&amp;A · 최신 비율을 바로 쓰지 않고 활동을 평활화하는 이유는 무엇인가요?</summary><p>명시된 기간에 걸쳐 최근 표본과 이전 상태를 섞어, 짧은 구간으로 목표가 급변하는 것을 줄입니다. 대신 작업량 변화에 대한 반응도 늦어지며, 여기서 최적 반응성이 입증된 것은 아닙니다.</p></details>
@@ -166,6 +395,51 @@
 <tr><td>shared 목록의 보존 목표</td><td>전체 용량에서 private 전체 목표를 제외한 나머지를 shared 목록에 나눕니다. 각 목표는 최소 50페이지로 둡니다. 시작 시 읽어 둔 영역 비율로 hot과 buffer 영역의 크기 기준을 정합니다.</td></tr></tbody></table>
 <p>maintenance는 후보가 있는 목록을 후보 공급 목록에 등록할 수 있습니다. 또한 후보 수로 <code>victim_rich</code>를 계산하며, 기준은 풀의 10%입니다. 이 값은 후보 공급량에 관한 힌트일 뿐, 특정 프레임을 재사용할 수 있다는 증거는 아닙니다. quota 조정 함수는 페이지 데이터를 복사하거나 선행 기록 로그를 강제로 저장하지 않으며, 페이지 I/O도 수행하지 않습니다.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14400-L14511">quota 한계, 영역 조정, 후보 공급 힌트</a></p>
+
+
+<p>shared 계산은 상한을 적용하기 전의 private 전체 목표를 사용합니다. 책장에 붙일 목표 숫자를 계산하는 것이라고 생각해 봅시다. 실제 책장 칸을 그 숫자만큼 따로 예약하는 것은 아닙니다.</p>
+<details id="exact-shared" class="answer-disclosure"><summary>shared 몫, 시작할 때의 비율, 최소 50페이지 계산</summary>
+
+<p><code>num_LRU_list</code>는 shared 목록 수만 셉니다. <code>avg_shared_lru_size</code>는 shared 영역 기준을 계산하기 위한 페이지 수 목표입니다. 이 함수는 shared 영역 기준을 저장하며, shared 목록의 <code>quota</code> 필드를 새로 대입하지는 않습니다. <code>ratio_lru1</code>과 <code>ratio_lru2</code>는 시작할 때 저장해 둔 비율이며, 보통 0.4 / 0.05입니다.</p>
+<pre><code>avg_shared_lru_size = (num_buffers - all_private_quota)
+                      / num_LRU_list;
+avg_shared_lru_size = MAX(avg_shared_lru_size, 50);
+shared_threshold_lru1 = (int)(avg_shared_lru_size * ratio_lru1);
+shared_threshold_lru2 = (int)(avg_shared_lru_size * ratio_lru2);
+
+// Startup caching, in this order:
+ratio_lru1 = MAX(configured_hot_ratio, 0.05f);
+ratio_lru1 = MIN(ratio_lru1, 0.90f);
+ratio_lru2 = MAX(configured_buffer_ratio, 0.05f);
+ratio_lru2 = MIN(ratio_lru2, 1.0f - 0.05f - ratio_lru1);</code></pre>
+<p>분자는 빈 칸까지 포함한 전체 풀에서 <code>all_private_quota</code>를 뺀 값입니다. 사용 중인 칸에서 상한 적용 후의 private quota 합계를 빼는 계산이 아닙니다. 정수로 먼저 나누고, 50보다 작으면 50으로 올리고, 그 뒤 각 비율을 곱해 소수 부분을 버립니다. 시작할 때의 비율 제한은 앞 두 영역의 목표 밖에 적어도 명목상 5%를 남기는 정책입니다. 실제 교체 후보가 그만큼 있다는 보장은 아닙니다.</p>
+<p><strong>독립된 최소값 예제:</strong> <code>num_buffers=20000</code>, <code>all_private_quota=19960</code>, shared 목록 네 개이면 <code>(20000-19960)/4 = 10</code>입니다. 최소값을 적용하면 목표는 50입니다. 기본 영역 기준은 <code>int(50*0.4f)=20</code>과 <code>int(50*0.05f)=2</code>입니다. 남았다고 계산한 40페이지보다 목표 합계가 클 수도 있습니다. 그래도 실제 프레임을 더 만들어 주거나 예약하지는 않습니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14477-L14494">shared 목표와 영역 기준</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1730-L1742">시작할 때 비율을 제한하는 순서</a></p>
+</details>
+<details id="cap-and-quiet" class="answer-disclosure"><summary>독립 숫자 예제 · 상한, 조용한 갱신, 활동이 0일 때</summary>
+
+<p><strong>비율과 활동량을 섞은 뒤부터 시작하는 상한 예제:</strong> shared와 private 목록은 각각 네 개입니다. 프레임 20,000개가 모두 차 있고, 저장된 private 비율은 0.75입니다. private 두 목록의 활동량은 900 / 100이고, 나머지는 0입니다.</p>
+<pre><code>private budget = int(20000 * 0.75f) = 15000;
+activity shares = 0.9f / 0.1f;
+uncapped quotas = 13500 / 1500;
+after MIN(quota, 5000) = 5000 / 1500;
+after MIN(quota, 20000 / 2) = 5000 / 1500;
+private thresholds = 250 / 250; 75 / 75;
+sum of quotas = 6500; unused target difference = 15000 - 6500 = 8500;
+shared target = (20000 - 15000) / 4 = 1250;
+shared thresholds = 500 / 62;</code></pre>
+<p>차이인 8,500페이지를 다시 나누지는 않습니다. 따로 프레임 6,000개인 풀에서 private 전체 몫이 5,400이고 한 private 목록만 활동한다면, quota는 <code>5400 → 5000 → 3000</code> 순서로 줄어듭니다. 풀 절반이라는 상한이 5,000페이지 상한보다 더 작을 수 있습니다.</p>
+<p><strong>조용해도 허용되는 갱신:</strong> 새로 시작하는 예제입니다. 프레임 10,000개가 모두 차 있고 shared 목록은 네 개입니다. 예전 private 활동은 500 / 500, 예전 private 비율은 0.5입니다. hit 표본과 집계된 unfix가 모두 없고, 5,000,000 µs가 지났습니다. 시간이 충분해서 갱신은 허용됩니다. <code>0 &lt; (10000/4)/100 = 25</code>이므로 활동이 적을 때의 표본 비율을 씁니다.</p>
+<pre><code>sample ratio = 0.01f;
+new stored ratio = (0.5f + 0.01f) / 2 = approximately 0.255;
+new private activities = 250 / 250; total = 500;
+private budget = int(10000 * new stored ratio) = 2550;
+quotas = 1275 / 1275; private thresholds = 63 / 63 each;
+shared target = (10000 - 2550) / 4 = 1862;
+shared thresholds = 744 / 93;</code></pre>
+<p><strong>활동량이 0이 되면:</strong> 다음 허용된 호출이 적어도 10,000,000 µs 뒤에 오고 hit 표본이 계속 없다면, 두 private 활동량은 0이 됩니다. 합계도 0이므로 <code>all_private_quota=0</code>이고, 모든 private quota와 영역 기준은 0입니다. shared 목표는 <code>10000/4=2500</code>, 기본 영역 기준은 1,000 / 125가 됩니다. 저장된 private 비율 자체를 0으로 바꾸는 것은 아닙니다. 짧게 조용했던 동안에는 예전 활동이 남을 수 있으므로, 이번 표본이 0이라고 quota가 항상 0인 것은 아닙니다.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14323-L14484">적은 활동의 분류·활동 교체·0인 합계의 처리·상한</a></p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · victim_rich이면 allocator가 프레임을 얻는 것이 보장되나요?</summary><p>아닙니다. 정책을 위해 후보 공급을 요약하는 값입니다. 특정 후보가 현재 보호·정책 검사를 통과하지 못할 수 있고, allocator가 실제로 확보하는 단계도 필요합니다.</p></details>
 </div>

@@ -54,6 +54,57 @@
 <p>Suppose a new sample set produces a smaller quota. Maintenance writes that target and its smaller zone thresholds. For a private list, it calls zone adjustment only if the combined LRU1 and LRU2 count exceeds the new quota. Shared lists use a separate zone-threshold guard.</p>
 <table><thead><tr><th>Stage</th><th>What changes</th></tr></thead><tbody><tr><td>Publish the new target</td><td>Quota and zone thresholds change; no page is removed just by storing these values.</td></tr><tr><td>Adjust zones when the guard passes</td><td>Excess warmer entries move toward LRU3 under the list mutex. Without a successful direct offer, those entries remain resident.</td></tr><tr><td>Advertise a candidate source</td><td>A private list over quota with eligible candidates can be registered for victim discovery.</td></tr></tbody></table>
 <p>The policy can now direct more replacement attention to that list. It has not created an empty frame merely by reducing quota. During demotion it can try a direct offer, whose safety checks are separate from the quota arithmetic.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14473">Private target and advertisement guards</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9993-L10047">Conditional zone movement</a></p>
+
+
+<p>Imagine one shelf with three labeled stretches: keep longer, middle, and consider replacing. Moving a book’s label does not erase its contents. The code first shrinks the first two stretches together toward LRU3, then shrinks LRU1 toward LRU2. A page can therefore move directly from LRU1 to LRU3.</p>
+<details id="exact-zone-order" class="answer-disclosure"><summary>Exact private/shared guards and movement order</summary>
+
+<p><code>count_lru1</code>, <code>count_lru2</code> and <code>count_lru3</code> count entries currently in each zone. <code>threshold_lru1</code> and <code>threshold_lru2</code> are target counts. <code>bottom_1</code> and <code>bottom_2</code> point to the colder end of their respective stretches of one linked list; <code>prev_BCB</code> walks toward warmer entries.</p>
+<pre><code>// The quota path calls with min_one = false.
+private: count_lru1 + count_lru2 &gt; quota;
+shared:  count_lru1 + count_lru2
+         &gt; threshold_lru1 + threshold_lru2;
+
+// Control-flow sketch, while holding the list mutex:
+if (count_lru1 + count_lru2 &gt; threshold_lru1 + threshold_lru2) {
+    cursor = bottom_2 != NULL ? bottom_2 : bottom_1;
+    while (count_lru1 + count_lru2 &gt; threshold_lru1 + threshold_lru2) {
+        saved_prev = cursor-&gt;prev_BCB;
+        pgbuf_lru_fall_bcb_to_zone_3(thread_p, cursor, lru_list);
+        cursor = saved_prev;
+    }
+    repair bottom_1 / bottom_2 using cursor and surviving counts;
+}
+pgbuf_lru_adjust_zone1(thread_p, lru_list, false);
+// Its loop walks backward from bottom_1, changes LRU1 to LRU2,
+// then repairs bottom_1 after the loop.</code></pre>
+<ol><li>Choose <code>bottom_2</code> if LRU2 is nonempty; otherwise choose <code>bottom_1</code>. Move colder entries toward LRU3 until the combined count reaches the combined thresholds. LRU2 entries go first; if they run out, LRU1 entries can go directly to LRU3.</li><li>Save <code>prev_BCB</code> before processing each entry because a successful direct-victim offer can remove it. Set an emptied zone’s bottom to null; otherwise its bottom points to the last surviving entry. Ordinary zone changes decrement the old zone count and increment the new one.</li><li>Then move the remaining LRU1 overflow to LRU2, starting at <code>bottom_1</code>. If LRU2 was empty, its bottom becomes the old LRU1 bottom. Update <code>bottom_1</code> to the last surviving LRU1 entry or null.</li></ol>
+<p>The quota caller locks <code>lru_list->mutex</code> around movement; it publishes quota/threshold values before that lock. The separate <code>pgbuf_lru_adjust_zone2()</code> helper adjusts LRU2 alone, but this quota path calls the combined helper. It passes <code>min_one=false</code>, so a zero target can empty both warmer zones. Bigger targets alone do not promote colder entries.</p>
+<p>Ordinary demotion changes zone metadata in place; it does not copy the page or relink the entry. <code>pgbuf_bcb_change_zone()</code> uses compare-and-swap to update the encoded list/zone while preserving the other flags, decrements the old zone count and increments the new one. Entering LRU3 also updates candidate accounting when the flags permit it; this does not replace protected reuse checks. An ordinary fall records <code>bcb-&gt;tick_lru3 = lru_list-&gt;tick_lru3</code>, increments the list tick and resets that tick to 0 when it reaches <code>DB_INT32_MAX</code>. This list-local age is separate from quota epoch <code>adjust_age</code>.</p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15889-L15985">Encoded zone, flags and membership counts</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10113-L10121">Ordinary LRU3 tick assignment and wrap</a></p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1059-L1067">Combined shared-threshold comparison</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14494">Quota-path private/shared guards and list mutex</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9882-L10047">Zone boundaries and exact demotion order</a></p>
+</details>
+<details id="worked-private-zones" class="answer-disclosure"><summary>Private example · A smaller quota can demote much more than its decrease</summary>
+
+<p><strong>Independent constructed state:</strong> old quota 100 becomes 60. This private list has 100 entries, nobody is waiting for a direct victim, and no other thread changes the list during adjustment. New thresholds are <code>int(60*0.05f)=3</code> each. Since <code>20+50=70 &gt; 60</code>, the private call guard passes. Inside the helper, the target is <code>3+3=6</code>, not 60.</p>
+<table><thead><tr><th>Step</th><th>LRU1 / LRU2 / LRU3</th></tr></thead><tbody>
+<tr><td>Before adjustment</td><td>20 / 50 / 30</td></tr>
+<tr><td>Combined target reached</td><td>6 / 0 / 94</td></tr>
+<tr><td>LRU1 target reached</td><td>3 / 3 / 94</td></tr></tbody></table>
+<p>Move <code>70-6=64</code> entries toward LRU3: all 50 from LRU2, then 14 directly from LRU1. Six LRU1 entries remain. Move <code>6-3=3</code> of those to LRU2. Total residency stays 100. No page bytes are written or evicted in this no-waiter example.</p>
+<p><strong>Different independent starting state:</strong> the same new quota 60 and thresholds 3 / 3, but zone counts 20 / 10 / 70. The combined count is <code>20+10=30 ≤ 60</code>, so this quota call does not adjust zones. The counts remain 20 / 10 / 70 even though each warmer zone exceeds its threshold. A smaller threshold alone does not trigger this private call.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14449-L14463">Private guard differs from the inner target</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L9993-L10047">Combined demotion then zone-1 adjustment</a></p>
+</details>
+<details id="worked-shared-zones" class="answer-disclosure"><summary>Shared example · The guard compares the sum of both thresholds</summary>
+
+<p><strong>Reset independently:</strong> one shared list’s calculated target falls from 100 to 60. Default ratios 0.4 / 0.05 give new thresholds <code>int(60*0.4f)=24</code> and <code>int(60*0.05f)=3</code>. It has 100 entries, no waiting allocator and no concurrent list changes.</p>
+<table><thead><tr><th>Step</th><th>LRU1 / LRU2 / LRU3</th></tr></thead><tbody>
+<tr><td>Before adjustment</td><td>30 / 15 / 55</td></tr>
+<tr><td>Combined target reached</td><td>27 / 0 / 73</td></tr>
+<tr><td>LRU1 target reached</td><td>24 / 3 / 73</td></tr></tbody></table>
+<p>The shared guard sees <code>30+15=45 &gt; 24+3=27</code>. Move <code>45-27=18</code> entries toward LRU3: 15 from LRU2 and 3 directly from LRU1. Then move <code>27-24=3</code> remaining LRU1 entries to LRU2. All 100 entries remain resident. The guard compares the combined counts: exceeding only one threshold does not by itself call this helper if the combined count still fits.</p>
+<p><strong>When an allocator is waiting:</strong> a fall toward LRU3 can instead offer an eligible frame directly. The helper checks victim eligibility, skips direct assignment for a to-vacuum BCB, tries the BCB mutex without blocking, rechecks eligibility and attempts assignment. Success removes the entry from its old LRU; failure falls through to an ordinary zone change. The receiver must still revalidate before reuse. This branch changes the count arithmetic, so the no-waiter tables do not describe it. Neither branch performs page I/O here.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14485-L14494">Shared adjustment guard</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L10059-L10120">Optional direct assignment versus ordinary fall</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L15606-L15626">Receiver recheck</a></p>
+</details>
 </section>
 <section class="section" id="reuse-checks"><div class="eyebrow">06 · 7 / 24</div>
 <h2>Why is a replacement candidate not yet safe to reuse?</h2>
@@ -135,12 +186,60 @@
 <p>A call to <code>pgbuf_adjust_quotas()</code> returns before consuming these samples if:</p>
 <ul><li>Private quotas are disabled, or another adjustment appears active.</li><li>Less than 1 ms has elapsed since the last accepted update.</li><li>Counted final unfixes are below one quarter of the pool size <em>and</em> less than 500 ms has elapsed.</li></ul>
 <p>An <strong>epoch</strong> is one accepted sampling update, counted by <code>adjust_age</code>. Only an accepted call resets the unfix counters, advances that count, consumes list-hit samples and recomputes policy. Private-list assignment and release can also call the helper in request threads, so helper calls are not all daemon executions.</p>
-<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14599-L14623">Foreground quota callers</a></p></section>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14599-L14623">Foreground quota callers</a></p>
+
+<p>Think of an epoch as one accepted turn of counting the books on a shelf. A timer tick only asks whether another turn may begin. <code>adjust_age</code> counts accepted turns; it is neither a duration nor the amount by which a quota changed.</p>
+<details id="exact-epoch" class="answer-disclosure"><summary>Exact admission, elapsed time and reset order</summary>
+
+<p><code>num_buffers</code> is the pool capacity in frames; <code>diff_usec</code> is elapsed microseconds since the last accepted update. One second is 1,000,000 microseconds. <code>unfix_sum</code> and <code>reset_unfix_sum</code> below are explanatory names for the two separate calls to <code>pgbuf_monitor_sum_pg_unfix(false)</code> and <code>pgbuf_monitor_sum_pg_unfix(true)</code>. Each sums counted final unfixes across thread counters, including the main thread.</p>
+<pre><code>return if quotas disabled or is_adjusting != 0;
+is_adjusting = 1;
+tsc_getticks(&amp;curr_tick);
+diff_usec = tsc_elapsed_utime(curr_tick, last_adjust_time);
+PGBUF_TRAN_THRESHOLD_ACTIVITY = num_buffers / 4;
+return if diff_usec &lt; 1000;
+return if unfix_sum &lt; num_buffers / 4
+          AND diff_usec &lt; 500000;
+
+low_overall_activity = reset_unfix_sum &lt; (num_buffers / 4) / 100;
+last_adjust_time = curr_tick;
+adjust_age = adjust_age + 1;
+// Then read-and-reset every list hit counter.</code></pre>
+<p>This is a control-flow transcription, not compilable source. After the disabled/busy check, the function sets <code>is_adjusting=1</code>. Either time/activity rejection clears it again. An accepted call resets the unfix counters, records the current tick, increments <code>adjust_age</code> atomically, then atomically exchanges each list-hit counter with zero. At the end it clears <code>is_adjusting</code>. A null thread argument hits an assertion in assertion-enabled builds; otherwise the helper obtains the current thread entry.</p>
+<p>The two unfix sums are separate observations, so concurrent activity can make them differ. The counters and the plain busy flag are approximate policy accounting, not an exact concurrent epoch barrier. The code comment mentions five minutes; the executable gates here use only 1 ms and 500 ms.</p>
+<p>The timer converts elapsed seconds and microseconds as <code>diff_usec = tv_sec * 1000000LL + tv_usec</code>. In CPU-tick mode it divides the tick difference by the calibrated frequency for seconds, and divides the remainder times 1,000,000 by that frequency for microseconds, using integer division; a backward tick reading produces zero. In the other Linux mode it subtracts timevals captured from <code>CLOCK_REALTIME_COARSE</code>, borrowing a second when needed. These are elapsed-time inputs to admission, not an epoch formula. The saved tick is captured before adjustment work, rather than when that work finishes.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14260-L14348">Admission, timestamp, epoch and hit-counter drain</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L2204-L2244">Unfix summation and reset</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/base/tsc_timer.c#L43-L150">Elapsed-time conversion</a></p>
+</details>
+<details id="exact-hit-age" class="answer-disclosure"><summary>Why ten reads do not necessarily contribute ten samples</summary>
+
+<p>A BCB is one frame’s control record. <code>hit_age</code> records the accepted epoch in which it last contributed an eligible list-hit sample. The registration helper uses the BCB’s current list index, not the session that happened to read it.</p>
+<pre><code>if (bcb-&gt;hit_age &lt; quota.adjust_age) {
+    monitor.lru_hits[current_lru_index]++;
+    bcb-&gt;hit_age = quota.adjust_age;
+}</code></pre>
+<p><strong>Independent serial example:</strong> <code>adjust_age=9</code>, <code>hit_age=8</code>. The first eligible registration adds 1 and sets <code>hit_age=9</code>. Nine more registrations while the epoch remains 9 add 0. After the next accepted update makes <code>adjust_age=10</code>, another eligible registration adds 1. Eligibility depends on the caller path; this is not a count of every fix or every read.</p>
+<p>Initially both ages are 0, so the strict comparison does not register a normal initial hit until an accepted update advances the pool age. The age advances before list counters are drained; concurrent boundary contributions are therefore approximate. Hit increments are plain increments, ordinary BCB reuse does not visibly reset <code>hit_age</code>, and signed wrap has no explicit handling here. These are the existing sampling qualifications, not measured errors.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L16594-L16610">Exact hit-age comparison</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L5605-L5643">Initial BCB hit age</a></p><p><a href="../../reference/private-lru-domain-hit-age-and-unfix-placement.md#6-evidence-boundaries-and-source-level-anomalies">Canonical sampling evidence and open boundaries</a></p>
+</details>
+</section>
 <section class="section" id="maintain-part-2"><div class="eyebrow">06 · 13 / 24</div>
 <h2>When does a quiet pool pass the activity gate?</h2>
 <p data-teaching-def="B"><strong>Independent arithmetic example:</strong> let <strong>B</strong> be the number of frames in the buffer pool, here 32,768. Activity means counted releases of a page’s last current fix since the last accepted quota update; it is not a count of all reads or elapsed time.</p>
 <p>The admission threshold is <code>B/4 = 8,192</code> events. After at least 1 ms, reaching that count can admit an update before 500 ms. If the count stays below it, the time gate admits an attempt at or after 500 ms. A 100 ms daemon schedule usually reaches that point on its first attempt at or after 500 ms; this is no deadline guarantee.</p>
 <p>Once admitted, the helper resets the counters. It classifies fewer than <code>integer(B/4)/100 = 81</code> events as low activity. That classification changes the ratio calculation in the later sample calculation; it does not veto the already accepted update.</p>
+
+<details id="admission-numbers" class="answer-disclosure"><summary>Try the exact boundaries with 32,768 frames</summary>
+
+<p><strong>Independent calls:</strong> each row starts with an enabled, idle helper and <code>adjust_age=8</code>; there is no concurrent update or wrap. The threshold is <code>32768 / 4 = 8192</code>; integer division gives <code>8192 / 100 = 81</code> for low activity. The unfix count is unchanged between the two observations in each row.</p>
+<table><thead><tr><th>Elapsed time / unfixes</th><th>Decision</th><th>Epoch / counters</th></tr></thead><tbody>
+<tr><td>500 µs / 8,192</td><td>Too early: below 1,000 µs</td><td>8; samples retained</td></tr>
+<tr><td>1,000 µs / 8,192</td><td>Accepted at the activity boundary</td><td>9; counters consumed/reset</td></tr>
+<tr><td>100,000 µs / 8,191</td><td>Both insufficient activity and below 500,000 µs</td><td>8; samples retained</td></tr>
+<tr><td>500,000 µs / 0</td><td>Accepted; low activity because 0 &lt; 81</td><td>9; counters consumed/reset</td></tr>
+<tr><td>500,000 µs / 81</td><td>Accepted; low-activity comparison is false</td><td>9; counters consumed/reset</td></tr>
+</tbody></table><p>Being accepted does not imply a changed quota. A quota change is the result of the later arithmetic.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14297-L14340">Strict comparisons and accepted-epoch boundary</a></p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Why can a quiet pool still receive a quota update?</summary><p>Low activity delays admission until the time gate permits an attempt; it does not disable recalculation. Once accepted, the low-activity classification changes policy inputs rather than cancelling that epoch.</p></details>
 </div>
@@ -152,6 +251,136 @@
 <ol><li>Compute <code>private rate / (private rate + shared rate)</code>, using at least 1 for the shared rate to avoid division by zero. Clamp the sampled result to 0.01–0.998; a low-activity pass uses 0.01.</li><li>Smooth that ratio and each private list’s activity over a 10-second horizon. Short intervals mix old and new values; after at least 10 seconds, use the new sample directly.</li><li>Multiply occupied-frame count by the smoothed private ratio to get a total private target. Divide that target among private lists in proportion to their smoothed activity.</li></ol>
 <p>Occupied frames exclude unused slots on the invalid list. These are approximate policy inputs; neither a hit sample nor a computed share authorizes frame reuse.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14455">Sample rates, smoothing and quota calculation</a></p>
+
+
+<p>Like dividing shelf space between children, the helper asks which lists contributed activity. It blends the new counts with the old ones, so one busy interval does not immediately replace all earlier information. The exact arithmetic below retains the code’s rounding order.</p>
+<details id="exact-rates" class="answer-disclosure"><summary>Step 1 · Convert each list’s samples to an integer rate</summary>
+
+<p><code>i</code> is a list index. The drained <code>lru_hits</code> initially counts samples; after conversion it is samples per second. <code>monitor.lru_activity[i]</code> is an integer smoothed private activity in the same rate units. <code>diff_usec</code> is elapsed microseconds. The constants represent 1 second and 10 seconds.</p>
+<pre><code>// Do this separately for EVERY list before summing rates.
+lru_hits = ATOMIC_TAS_32(&amp;monitor.lru_hits[i], 0);
+lru_hits = (int)(1000000LL * lru_hits / diff_usec);
+
+// Private-list activity; the right-hand activity is the old value.
+if (diff_usec &gt;= 10000000LL)
+    monitor.lru_activity[i] = lru_hits;
+else
+    monitor.lru_activity[i] = (int)(
+        ((10000000LL - diff_usec) * monitor.lru_activity[i]
+         + diff_usec * lru_hits) / 10000000LL);
+
+sum_private_lru_activity_total = sum of NEW private activities;
+lru_private_hits = sum of current private integer rates;
+lru_shared_hits = sum of current shared integer rates;</code></pre>
+<p>These products and divisions use integer arithmetic with the microsecond constants as <code>INT64</code>. For nonnegative values, integer division and the final cast discard the fractional part. Normalize each list first, then sum: three lists with one sample each over 2 seconds each produce <code>integer(1000000 / 2000000) = 0</code>, so their total rate is 0, not <code>integer(3000000 / 2000000) = 1</code>. Each private activity is truncated again after smoothing; the total uses those new integer activities.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14377">Per-list integer rates and activity smoothing</a></p>
+</details>
+<details id="exact-ratio" class="answer-disclosure"><summary>Step 2 · Calculate and smooth the private share</summary>
+
+<p><code>private_ratio</code> is the new sample’s fraction. <code>quota.private_pages_ratio</code> is the stored smoothed fraction. <code>lru_private_hits</code> and <code>lru_shared_hits</code> are sums of the current per-list integer rates, not sums of smoothed activities.</p>
+<pre><code>if (low_overall_activity)
+    private_ratio = 0.01f;
+else {
+    lru_shared_hits = MAX(1, lru_shared_hits);
+    private_ratio = (float)lru_private_hits
+        / (float)(lru_private_hits + lru_shared_hits);
+    private_ratio = MIN(0.998f, private_ratio);
+    private_ratio = MAX(0.01f, private_ratio);
+}
+
+if (diff_usec &gt;= 10000000LL)
+    quota.private_pages_ratio = private_ratio;
+else
+    quota.private_pages_ratio = (
+        quota.private_pages_ratio * (float)(10000000LL - diff_usec)
+        + private_ratio * (float)diff_usec) / (float)10000000LL;</code></pre>
+<p>At 5 seconds the old fraction and the new fraction each receive half the weight. At 500 ms they receive 95% and 5%. At or beyond 10 seconds, the new sample replaces the old value. The 0.01–0.998 bounds apply to the new sample; there is no second clamp after smoothing. The stored value starts at 1.0 with private quotas enabled and can therefore stay above 0.998 during its initial decay. Unlike activity smoothing, this computation uses <code>float</code>, so decimal fractions need not be represented exactly.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14379-L14398">Sample bounds and float smoothing</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14032-L14038">Initial private share</a></p>
+</details>
+<details id="exact-private-quota" class="answer-disclosure"><summary>Step 3 · Divide the private target, then apply each list’s caps</summary>
+
+<p><code>num_buffers</code> counts all frames. <code>invalid_cnt</code> counts unused frames on the invalid list. <code>all_private_quota</code> is a target in pages computed from their difference. <code>new_lru_ratio</code> is one private list’s share of the new integer activity total; <code>new_quota</code> and both thresholds count pages.</p>
+<pre><code>if (sum_private_lru_activity_total == 0) {
+    all_private_quota = 0;
+    every private quota = 0;
+    every private threshold_lru1 = threshold_lru2 = 0;
+} else {
+    all_private_quota = (int)(
+        (num_buffers - invalid_cnt) * quota.private_pages_ratio);
+    new_lru_ratio = (float)monitor.lru_activity[i]
+        / (float)sum_private_lru_activity_total;
+    // Use 0.0f when this list has no activity.
+    new_quota = (int)(new_lru_ratio * all_private_quota);
+    new_quota = MIN(new_quota, 5000);
+    new_quota = MIN(new_quota, num_buffers / 2);
+    threshold_lru1 = (int)(new_quota * 0.05f);
+    threshold_lru2 = (int)(new_quota * 0.05f);
+}</code></pre>
+<p>Multiplication by a fraction is performed in <code>float</code> before casting to <code>int</code>; <code>num_buffers / 2</code> is integer division. The caps are applied after the first truncation. The helper neither redistributes rounding leftovers nor recalculates <code>all_private_quota</code> from the capped quotas. A private quota sets a retention target, while its 5% + 5% thresholds set much smaller zone targets; these are different numbers with different guards.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14400-L14473">Zero activity, private budget, casts, caps and thresholds</a></p>
+</details>
+<details id="worked-epochs" class="answer-disclosure"><summary>Worked example · A workload shift across three accepted epochs</summary>
+
+<p><strong>Constructed calculation, not runtime evidence:</strong> start at <code>adjust_age=8</code>, <code>num_buffers=10000</code>, <code>invalid_cnt=0</code>, four shared lists and four private lists. Only two private lists have activity; their values and quotas appear in the table in the same order. The other two stay at zero. The stored private ratio starts at 0.5. Assume each accepted update is 5,000,000 µs after the previous one, with no intervening accepted update, concurrent contribution or wrap. This is a constructed sampling schedule, not the daemon’s usual 100 ms cadence. Counted unfix activity is 10,000 for each update, so it is not low.</p>
+<p>For the first two updates, the two private lists provide 4,500 / 500 raw samples, and each shared list provides 1,250. The current private and shared rate totals both remain 1,000. With default cached shared ratios 0.4 / 0.05, the arithmetic is:</p>
+<p>For the first update, the private target is <code>10000 × 0.5 = 5000</code> pages. The new activities 700 / 300 mean shares of 70% / 30%, so the targets are <code>5000 × 0.7 = 3500</code> and <code>5000 × 0.3 = 1500</code>. The next update gives shares of 80% / 20%, producing 4,000 / 1,000. A third accepted update can produce those same numbers again.</p>
+<table><thead><tr><th>Epoch</th><th>Private rates</th><th>Smoothed activity</th><th>Private quotas</th></tr></thead><tbody>
+<tr><td>8</td><td>—</td><td>500 / 500</td><td>2,500 / 2,500</td></tr>
+<tr><td>9</td><td>900 / 100</td><td>700 / 300</td><td>3,500 / 1,500</td></tr>
+<tr><td>10</td><td>900 / 100</td><td>800 / 200</td><td>4,000 / 1,000</td></tr>
+<tr><td>11</td><td>800 / 200</td><td>800 / 200</td><td>4,000 / 1,000</td></tr>
+</tbody></table><pre><code>epoch 9:
+  rates = 1000000 * 4500 / 5000000 = 900;
+          1000000 * 500 / 5000000 = 100;
+  shared: each 1000000 * 1250 / 5000000 = 250;
+          sum = 4 * 250 = 1000;
+  sample ratio = 1000 / (1000 + 1000) = 0.5;
+  stored ratio = (0.5 * 5000000 + 0.5 * 5000000) / 10000000 = 0.5;
+  activities = (500 + 900) / 2 = 700;
+               (500 + 100) / 2 = 300;
+  total activity = 1000;
+  private budget = int((10000 - 0) * 0.5) = 5000;
+  quotas = int(700 / 1000.0f * 5000) = 3500;
+           int(300 / 1000.0f * 5000) = 1500;
+  caps = MIN(each quota, 5000, 10000 / 2): no reduction;
+  private zone thresholds = 175 / 175; 75 / 75;
+epoch 10:
+  same rates and ratio; activities = (700 + 900) / 2 = 800;
+                                    (300 + 100) / 2 = 200;
+  quotas = int(0.8f * 5000) = 4000; int(0.2f * 5000) = 1000;
+  private zone thresholds = 200 / 200; 50 / 50;
+epoch 11:
+  raw private samples = 4000 / 1000; rates = 800 / 200;
+  same private/shared total rates and stored ratio;
+  activities = (800 + 800) / 2 = 800; (200 + 200) / 2 = 200;
+  quotas and thresholds unchanged; adjust_age still advances to 11.
+all three epochs:
+  shared target = MAX((10000 - 5000) / 4, 50) = 1250;
+  shared thresholds = int(1250 * 0.4f) = 500;
+                      int(1250 * 0.05f) = 62;</code></pre>
+<p>The workload shifted toward the first private list. Its target grows over two accepted updates because activity is smoothed. The third update still consumes samples and advances the epoch even though both quotas remain unchanged. These target calculations do not predict actual resident-page counts.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14332-L14494">Arithmetic and publication sequence</a></p>
+</details>
+<details id="worked-ratio-shift" class="answer-disclosure"><summary>Independent example · The overall private share changes too</summary>
+
+<p>Reset independently: <code>num_buffers=10000</code>, <code>invalid_cnt=0</code>, four shared lists, only two active private lists. Old activities are 300 / 200, the stored ratio is 0.5, elapsed time is 5,000,000 µs and counted unfix activity is 2,000, so it is not low. Distribute the 500 raw shared samples as 125 per shared list, giving four rates of 25. The caps do not reduce either quota.</p>
+<pre><code>raw private samples = 1000 / 500; raw shared total = 500;
+current private rates = 200 / 100; shared rate = 100;
+new private activities = (300 + 200) / 2 = 250;
+                         (200 + 100) / 2 = 150;
+activity total = 400;
+sample ratio = 300 / (300 + 100) = 0.75;
+stored ratio = (0.5 + 0.75) / 2 = 0.625;
+private budget = int(10000 * 0.625f) = 6250;
+quotas = int(250 / 400.0f * 6250) = int(3906.25f) = 3906;
+         int(150 / 400.0f * 6250) = int(2343.75f) = 2343;
+private thresholds = 195 / 195; 117 / 117;
+quota sum = 6249; rounding leftover = 1;
+shared target = (10000 - 6250) / 4 = 937;
+shared thresholds = 374 / 46;</code></pre>
+<p>Integer division discards the shared target’s fractional part. The default ratios 0.4 / 0.05 are applied afterward. The displayed decimal intermediates are explanatory; final integers were reproduced with the source’s <code>float</code> operation order.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14379-L14494">Ratio smoothing and private/shared targets</a></p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Are these hit counts the same as every buffer-cache access?</summary><p>No. Eligible list-hit sampling normally suppresses repeat contributions within an epoch, and the counters have open approximation limits. They estimate policy activity rather than record a complete access history.</p></details>
 <details class="answer-disclosure"><summary>Q&amp;A · Why smooth activity instead of immediately adopting the latest ratio?</summary><p>Smoothing mixes recent samples with prior state over the stated horizon, limiting abrupt target changes from short intervals. It also delays response to a changed workload; no optimal responsiveness is established here.</p></details>
@@ -166,6 +395,51 @@
 <tr><td>Shared-list targets</td><td>Divide capacity outside the total private target among shared lists, with a 50-page floor per target. Cached zone ratios set their hot and buffer thresholds.</td></tr></tbody></table>
 <p>Maintenance can advertise lists that have candidates and computes <code>victim_rich</code> from candidate counts: the threshold is 10% of the pool. This is a supply hint, not proof that a particular frame can be reused. The helper copies no page bytes, forces no write-ahead log and performs no page I/O.</p>
 <p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14400-L14511">Quota bounds, zone adjustment and supply hint</a></p>
+
+
+<p>Shared space is calculated from the original total private target, not the sum left after private caps. Think of the calculation as writing target numbers on shelf labels: those numbers do not partition the physical pool into reserved slots.</p>
+<details id="exact-shared" class="answer-disclosure"><summary>Shared target, startup ratios and the 50-page floor</summary>
+
+<p><code>num_LRU_list</code> counts shared lists only. <code>avg_shared_lru_size</code> is a target in pages used to derive their thresholds. This helper writes shared thresholds; it does not assign a shared list’s <code>quota</code> field. <code>ratio_lru1</code> and <code>ratio_lru2</code> are cached startup fractions, normally 0.4 / 0.05.</p>
+<pre><code>avg_shared_lru_size = (num_buffers - all_private_quota)
+                      / num_LRU_list;
+avg_shared_lru_size = MAX(avg_shared_lru_size, 50);
+shared_threshold_lru1 = (int)(avg_shared_lru_size * ratio_lru1);
+shared_threshold_lru2 = (int)(avg_shared_lru_size * ratio_lru2);
+
+// Startup caching, in this order:
+ratio_lru1 = MAX(configured_hot_ratio, 0.05f);
+ratio_lru1 = MIN(ratio_lru1, 0.90f);
+ratio_lru2 = MAX(configured_buffer_ratio, 0.05f);
+ratio_lru2 = MIN(ratio_lru2, 1.0f - 0.05f - ratio_lru1);</code></pre>
+<p>The numerator uses full pool capacity, including invalid slots, minus <code>all_private_quota</code>. It is not occupied capacity minus the sum of capped private quotas. First truncate the integer division, then apply the 50-page floor, then multiply each cached fraction and truncate. Startup clamps leave at least the nominal 5% fraction outside the first two zone targets; this is a policy target, not proof of candidate supply.</p>
+<p><strong>Independent floor example:</strong> <code>num_buffers=20000</code>, <code>all_private_quota=19960</code> and four shared lists give <code>(20000-19960)/4 = 10</code>. The floor changes the target to 50. Default thresholds become <code>int(50*0.4f)=20</code> and <code>int(50*0.05f)=2</code>. The floor therefore need not fit the nominal 40-page remainder; it does not reserve extra physical frames.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14477-L14494">Shared target and thresholds</a></p><p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L1730-L1742">Startup ratio clamp order</a></p>
+</details>
+<details id="cap-and-quiet" class="answer-disclosure"><summary>Independent examples · Caps, a quiet update and zero activity</summary>
+
+<p><strong>Cap example, starting after ratio/activity smoothing:</strong> four shared and four private lists exist, all 20,000 frames are occupied, the stored private fraction is 0.75, and two private activities are 900 / 100. The other private activities are zero.</p>
+<pre><code>private budget = int(20000 * 0.75f) = 15000;
+activity shares = 0.9f / 0.1f;
+uncapped quotas = 13500 / 1500;
+after MIN(quota, 5000) = 5000 / 1500;
+after MIN(quota, 20000 / 2) = 5000 / 1500;
+private thresholds = 250 / 250; 75 / 75;
+sum of quotas = 6500; unused target difference = 15000 - 6500 = 8500;
+shared target = (20000 - 15000) / 4 = 1250;
+shared thresholds = 500 / 62;</code></pre>
+<p>The 8,500-page difference is not redistributed. In a separate 6,000-frame pool with private budget 5,400 and only one active private list, its quota goes <code>5400 → 5000 → 3000</code>: the half-pool cap can tighten the 5,000-page cap.</p>
+<p><strong>Quiet accepted update:</strong> independently use 10,000 occupied frames, four shared lists, old private activities 500 / 500, old private fraction 0.5, no hit samples or counted unfixes, and elapsed time 5,000,000 µs. Time admits the call; <code>0 &lt; (10000/4)/100 = 25</code> selects the low-activity sample fraction.</p>
+<pre><code>sample ratio = 0.01f;
+new stored ratio = (0.5f + 0.01f) / 2 = approximately 0.255;
+new private activities = 250 / 250; total = 500;
+private budget = int(10000 * new stored ratio) = 2550;
+quotas = 1275 / 1275; private thresholds = 63 / 63 each;
+shared target = (10000 - 2550) / 4 = 1862;
+shared thresholds = 744 / 93;</code></pre>
+<p><strong>Zero activity:</strong> if the next accepted call is at least 10,000,000 µs later and has zero hit samples, both private activities become 0. Their total is 0, so <code>all_private_quota=0</code>, every private quota and threshold becomes 0, and the shared target is <code>10000/4=2500</code>, with default thresholds 1,000 / 125. The smoothed private fraction is not itself overwritten with zero. Short quiet intervals can retain nonzero old activity; a zero current sample does not always mean zero quota.</p>
+<p class="source-note"><a href="https://github.com/CUBRID/CUBRID/blob/f799e05d77d5300c6ea5753b4a6cc7caee6d8912/src/storage/page_buffer.c#L14323-L14484">Quiet classification, activity replacement, zero branch and caps</a></p>
+</details>
 <div class="section-qna" data-reset-answers="">
 <details class="answer-disclosure"><summary>Q&amp;A · Does victim_rich guarantee that an allocator can obtain a frame?</summary><p>No. It summarizes candidate supply for policy. A particular candidate can fail current protection or policy checks, and the allocator still needs a successful claim.</p></details>
 </div>
