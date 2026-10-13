@@ -1,0 +1,23 @@
+✔ the real dedicated product delivers all questions, traces and the closed route (618.747453ms)
+✔ a wrong next chapter, old-library return, wrong counterpart and missing closure are rejected (1.679153ms)
+✔ every registered page exposes its real definitions before examples in the reading DOM (9964.692417ms)
+✔ root TOC opens the entire Korean journey and reaches closure (1197.47547ms)
+✔ every chapter supports fresh direct entry to each projected screen (37012.15466ms)
+✔ all three contents pages expose complete native screen maps without JavaScript (603.988641ms)
+✔ en: deep trace entry starts at its screen top and staged evidence resets (178.598031ms)
+✔ en: every new page renders, pairs, reveals answers and steps by keyboard (3097.794499ms)
+✔ en: all 25 relocated/new traces retain outcomes and independent keyboard reset (2109.020165ms)
+✔ en: no-JavaScript mobile access exposes all screens/snapshots and native evidence (1119.194185ms)
+✔ ko: deep trace entry starts at its screen top and staged evidence resets (193.119118ms)
+✔ ko: every new page renders, pairs, reveals answers and steps by keyboard (4899.619762ms)
+✔ ko: all 25 relocated/new traces retain outcomes and independent keyboard reset (2603.431925ms)
+✔ ko: no-JavaScript mobile access exposes all screens/snapshots and native evidence (1352.438806ms)
+✔ all Korean spoken screen cues resolve to the exact served chapter/anchor (3029.782384ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 68198.393777

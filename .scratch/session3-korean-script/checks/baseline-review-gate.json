@@ -1,0 +1,9 @@
+{
+  "baseline": "85d0368",
+  "reviewMissing": 78,
+  "historicalFingerprintsStale": 96,
+  "otherFailures": 0,
+  "exactFailureSetMatchesBaseline": true,
+  "failureSetSha256": "44414e00b66954fe554147918730493b932a5b1bbf4222ad1b8dbc794b0f8b94",
+  "scriptSha256": "b738743fbf4ef802317f16d8fcbdde9daf2b590906d8c043037598d314172630"
+}

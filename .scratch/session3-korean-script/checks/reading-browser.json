@@ -1,0 +1,47 @@
+{
+  "viewports": [
+    {
+      "javaScript": true,
+      "width": 1920,
+      "overflow": false
+    },
+    {
+      "javaScript": true,
+      "width": 1280,
+      "overflow": false
+    },
+    {
+      "javaScript": true,
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "javaScript": true,
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "javaScript": false,
+      "width": 1920,
+      "overflow": false
+    },
+    {
+      "javaScript": false,
+      "width": 1280,
+      "overflow": false
+    },
+    {
+      "javaScript": false,
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "javaScript": false,
+      "width": 320,
+      "overflow": false
+    }
+  ],
+  "nativeAnswers": 29,
+  "pageErrors": [],
+  "noJavaScript": true
+}

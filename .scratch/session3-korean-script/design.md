@@ -1,6 +1,6 @@
 # Session 3 Korean spoken-script readability
 
-Status: user criteria recorded; representative wording and one read-aloud-depth choice await shared-understanding confirmation.
+Status: accepted by the user on 2026-10-13; complete script rewrite and available verification finished. Local integration awaits the repository-required approval.
 
 ## Scope and reader
 
@@ -28,13 +28,13 @@ Three samples from the baseline script illustrate distinct problems:
 2. Line 231, post-flush consumption: dense current-state checks obscure two waiter types and the order of direct-victim offer versus FLUSHING cleanup. An offer is separate from allocator receipt and safe reuse; rejected reuse still requires old-flush completion.
 3. Line 476, BULKREAD writeback: ring-slot removal and candidate release obscure which state changes and which does not. Keep the ring-selected dirty permanent page plus additional WAL-flush premise, released pin and retry, shared DIRTY preservation, and strategy-specific behavior.
 
-## Remaining decision
+## Accepted read-aloud depth
 
-Recommended: expand technical conditions and exceptions into complete, speakable Korean sentences even where this increases the script length. Keep source URLs and screen operations as separate cues. The user will review the three concrete examples and confirm whether this read-aloud depth fits the intended delivery. That answer will also confirm the shared understanding required by the invoked grilling workflow.
+The user answered "yes" after reviewing all three concrete examples. Expand technical conditions and exceptions into complete, speakable Korean sentences even where this increases the script length. Keep source URLs and screen operations as separate cues. This confirmation also settled the shared understanding required by the invoked grilling workflow; no further design question remains.
 
 ## Implementation and verification plan
 
-After confirmation, work through all twelve run-sheet sections and their questions/answers. Retain the `.cue` and `.screen-cues` structural seams and exact link labels that mirror existing chapter headings. Use `.scratch` authoring records for the agreed style; do not change technical vocabulary in `CONTEXT.md` merely to accommodate a Korean wording preference.
+All twelve run-sheet sections and their questions/answers have been reviewed. The rewrite changes 270 baseline paragraphs, while retaining five already-clear introductory/transition/link paragraphs. The `.cue` and `.screen-cues` structural seams and exact link labels mirror the existing chapter headings. Screen-operation paragraphs carry a visible Korean cue label. `.scratch` authoring records preserve the agreed style; technical vocabulary in `CONTEXT.md` is unchanged.
 
 The script is outside `teaching-pages.json` and the 27-page teaching-label registry, so script-only wording edits do not change the paired-page review fingerprints. Existing human review gaps remain separate.
 
@@ -45,3 +45,5 @@ Starting checkout: `/home/vimkim/gh/my-cubrid-page-buffer-seminar`, clean `main`
 Task checkout: `/home/vimkim/gh/my-cubrid-page-buffer-seminar-session3-korean-script`, branch `docs/session3-korean-script`. Local `main` is the merge destination; integration requires the repository's separate approval. No push or deployment is authorized.
 
 Work-tracker item: 339.
+
+The [verification record](verification.md) records the completed checks and the unchanged, pre-existing human-review failures.
