@@ -208,3 +208,30 @@ reference after the exact label, without accepting another label or changing
 the required `Open source anomaly` status. This one-line test correction
 preserves the previously integrated JIRA link; it changes no engine behavior
 or uncertainty classification.
+
+Subsequent destination advances contained the maintenance calculations and
+page-flush rewrite. These were retained under the same approval. Final content
+reconciliation used the immutable destination `e54a337` for contents, spoken
+maps and unrelated fingerprints. Selecting that fixed snapshot also removed a
+transient Chapter 04 fingerprint mismatch caused by reading a moving destination
+during concurrent integration. The final source failure set again equals the
+174-message human-review baseline exactly.
+
+The final rebase target is `63eff310345e941550c6763a7e3e29ad338b5db2`.
+Its only difference from `e54a337` is two page-flush author-record files;
+participant content, scripts, assets and validation inputs are identical.
+Those records were retained by a clean rebase.
+
+| Final integration check | Result |
+| --- | --- |
+| Full suite after VS-20 correction | PASS: 262 tests, zero failures, skips or cancellations. |
+| Fresh Session 3 tests after final content reconciliation | PASS: 31 tests, zero failures or skips; includes all chapter definitions, full contents/spoken maps, presentation and mobile/no-JavaScript access. |
+| VS-20 reference ownership tests | PASS: 5 tests. |
+| Guide aggregate | PASS: 43 Markdown pages, relative links, 71 SVGs, 114 HTTP resources and 43 live-DOM pages. |
+| Bilingual served gate | PASS: 351 HTTP resources and 158 live-DOM pages. |
+| Bilingual source aggregate | Exactly 174 existing human-review messages; no added failure. |
+| Destination preservation | Other page-flush and maintenance chapters, omission contract/dispositions, unrelated manifest entries and non-post-flush spoken chapters match the pinned destination. |
+
+No human language acceptance is manufactured. Fast-forward integration proceeds
+under the user's approval after these checks; the task checkout and branch are
+then removed after verifying ancestry and preserving all valuable files.
